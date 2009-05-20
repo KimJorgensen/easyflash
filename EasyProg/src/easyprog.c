@@ -5,6 +5,7 @@
 
 #include "cart.h"
 #include "screen.h"
+#include "flashcode.h"
 
 static const char* apStrJumperTest[] =
 {
@@ -18,13 +19,31 @@ int main(void)
 {
 	char strFileName[40];
     int fd;
+    uint8_t i;
+
+    // um zu sehen, ob schreiben in den RAM geht
+    *((uint8_t*)0x8000) = 0xfe;
 
     screenInit();
     screenPrintFrame();
     screenPrintDialog(apStrJumperTest);
     screenWaitOKKey();
 
+    screenInit();
+    screenPrintFrame();
+
     gotoxy(2, 5);
+
+    printf("Lo Chip ID: %04x\n", flashCodeReadIds((void*) 0x8000));
+    printf("Hi Chip ID: %04x\n", flashCodeReadIds((void*) 0xe000));
+
+    for (fd = 0; fd < 10000; ++fd);
+
+    flashCodeSectorErase((void*) 0x8000);
+    for (i = 0; i < 18; ++i)
+        printf("0x8000: %02x\n", *((uint8_t*)0x8000));
+
+    for (;;);
 
 	printf("Cartridge file name:");
     scanf("%s", strFileName);
