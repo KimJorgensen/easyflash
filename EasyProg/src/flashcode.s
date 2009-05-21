@@ -22,35 +22,13 @@
 
 ; flashcode.s
 ;
-; This file contains relocatable low level code for accessing the flash memory
-; chips.
+; This file contains low level code for accessing the flash memory chips.
 ;
-; The main program moves this code to a RAM area below 0x1000, because this
-; code switches the machine to Ultimax mode. This is the reason the base address
-; of the ROMH chip is $E000, not $A000 - even if the stuff you write is intended
-; to run from $A000 later.
-;
-; This is a single function. To say what you want, use an job code. It can be
-; called from Assembly or from C with prototype void flashCodeExec(void).
-; Job code, parameters and return values are transferred in zero page
-; addresses. The C calling conventions are not used to make this code more
-; independent from cc65. The CPU registers are not preserved. The arguments you
-; write to the zeropage addresses are preserved.
+; This code switches the machine to Ultimax mode. This is the reason the base
+; address of the ROMH chip is $E000, not $A000 - even if the stuff you write
+; is intended to run from $A000 later.
 ;
 ; NOTE: Banking not implemented yet. All operations work on the first bank.
-;
-; On entry:
-;
-;               2:  Sector Erase
-;
-;               3:  Write - currently a dummy which writes 0x22 to 0x8000
-;
-;               4:  Read
-;                   ZP_FLASHCODE_ADDR contains address to be read in current
-;                   page (todo: paging not implemented yet, always page 0).
-;                   Note that the chip base address (i.e. $8000 or $E000) must
-;                   be added already.
-;                   Value returned in ZP_FLASHCODE_VAL
 ;
 ;       Interrupts will be disabled during execution
 ;
@@ -62,6 +40,8 @@
     .importzp       ptr1, ptr2, ptr3, ptr4
     .importzp       tmp1, tmp2, tmp3, tmp4
     .importzp       regbank
+
+    .import         popax
 
 
 ; base address of chip (2 bytes, LE)
@@ -195,7 +175,7 @@ flashCodePrepareWrite:
 ;
 ; Read Manufacturer ID and Device ID from the chip at the given address.
 ;
-; unsigned __fastcall__ flashCodeReadIds(void* base);
+; unsigned __fastcall__ flashCodeReadIds(uint8_t* pBase);
 ;
 ; parameters:
 ;       base in AX (A = low), $8000 or $E000
@@ -239,11 +219,10 @@ _flashCodeReadIds:
 ;
 ; Erase the sector at the given address.
 ;
-; This is done in background by the chip, Use Jobcode "Read" from any address
-; to check the progress: When you read $FF there, the erasure has been
-; completed.
+; This is done in background by the chip, the caller should check the progress
+; according to the flash spec.
 ;
-; void __fastcall__ flashCodeSectorErase(void* base);
+; void __fastcall__ flashCodeSectorErase(uint8_t* pBase);
 ;
 ; parameters:
 ;       base in AX (A = low), $8000 or $E000
@@ -276,39 +255,51 @@ _flashCodeSectorErase:
         jmp flashCodeDeactivateUltimax
 
 
+; =============================================================================
+;
+; Write a byte to the given address.
+;
+; This is done in background by the chip, the caller should check the progress
+; according to the flash spec.
+;
+; void __fastcall__ flashCodeWrite(uint8_t* pAddr, uint8_t nVal);
+;
+; parameters:
+;       value in A
+;       address on cc65-stack $8xxx/$9xxx or $Exxx/$Fxxx
+;
+; return:
+;       -
+;
+; =============================================================================
+        .export _flashCodeWrite
+_flashCodeWrite:
+        ; remember value
+        pha
 
+        ; get and save address
+        jsr popax
+        sta zp_flashcode_addr
+        stx zp_flashcode_addr + 1
 
+        ; calculate base address, i.e. $8000 or $E000
+        lda #0
+        sta zp_flashcode_base
+        txa
+        and #$c0
+        sta zp_flashcode_base + 1
 
-.if 0 = 1
+        jsr flashCodePrepareWrite
 
-        ; ======== Job: Read from ZP_FLASHCODE_ADDR to ZP_FLASHCODE_VAL ========
-        ldy #0
-        lda (ZP_FLASHCODE_ADDR), y
-        sta ZP_FLASHCODE_VAL
-        clc
-        bcc exit
-
-NotJobRead:
-
-
-checkJobWrite:
-        cpx #EASYFLASH_JOB_WRITE
-        bne exit
-
-        ; ======== Job: Write ========
         ; cycle 3: write $A0 to $555
-        lda #$A0
-        sta (ZP_FLASHCODE_555),y
+        ldy #0
+        lda #$a0
+        sta (zp_flashcode_555),y
         ; cycle 4: write data
-        lda #$22
-        sta (ZP_FLASHCODE_BASE),y
+        pla
+        sta (zp_flashcode_addr),y
 
-exit:
+        ; that's it
+        jmp flashCodeDeactivateUltimax
 
-; =============================================================================
-; This label marks the end of the low level functions
-; =============================================================================
-        .export _flashCodeEnd
-_flashCodeEnd:
-
-.endif
+; EOF

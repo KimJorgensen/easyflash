@@ -8,7 +8,10 @@
 #ifndef FLASHCODE_H_
 #define FLASHCODE_H_
 
-unsigned __fastcall__ flashCodeReadIds(void* base);
-void __fastcall__ flashCodeSectorErase(void* base);
+#include <stdint.h>
+
+unsigned __fastcall__ flashCodeReadIds(uint8_t* pBase);
+void __fastcall__ flashCodeSectorErase(uint8_t* pBase);
+void __fastcall__ flashCodeWrite(uint8_t* pAddr, uint8_t nVal);
 
 #endif /* FLASHCODE_H_ */

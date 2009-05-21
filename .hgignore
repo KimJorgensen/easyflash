@@ -2,4 +2,5 @@ syntax: glob
 *.o
 *~
 *.map
+*.prg
 EasyProg/easyprog

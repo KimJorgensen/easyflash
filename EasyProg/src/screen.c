@@ -27,15 +27,17 @@
 #include <string.h>
 #include <stdio.h>
 
+#include "screen.h"
+
 /******************************************************************************/
 /**
  * Initialize the screen. Set up colors and clear it.
  */
 void screenInit(void)
 {
-	bgcolor(COLOR_GRAY3);
-    bordercolor(COLOR_GRAY3);
-    textcolor(COLOR_BLACK);
+	bgcolor(COLOR_BACKGROUND);
+    bordercolor(COLOR_BACKGROUND);
+    textcolor(COLOR_FOREGROUND);
     clrscr();
 }
 
@@ -122,7 +124,8 @@ void screenPrintBottomLine(uint8_t xStart, uint8_t xEnd, uint8_t y)
 void screenPrintFreeLine(uint8_t xStart, uint8_t xEnd, uint8_t y)
 {
     cputcxy(xStart, y, 0x7d);
-    cputcxy(xEnd, y, 0x7d);
+    cclear(xEnd - xStart - 1);
+    cputc(0x7d);
 }
 
 
@@ -147,6 +150,32 @@ void screenPrintFrame(void)
     screenPrintBottomLine(0, 39, 24);
 
     cputsxy(1, 1, "EasyProg");
+}
+
+
+/******************************************************************************/
+/**
+ * Draw the big screen and the screen divisions.
+ *
+ * The size is incl. border
+ */
+void screenPrintBox(uint8_t x, uint8_t y, uint8_t w, uint8_t h)
+{
+    uint8_t i;
+
+    --w;
+
+    // Top line
+    screenPrintTopLine(x, x + w, y);
+
+    for (i = h - 2; i; --i)
+    {
+        // text line
+        screenPrintFreeLine(x, x + w, ++y);
+    }
+
+    // Bottom line
+    screenPrintBottomLine(x, x + w, ++y);
 }
 
 
@@ -237,6 +266,7 @@ void screenPrintDialog(const char* apStrLines[])
     }
 
     screenPrintButton(xEnd - 4, yEnd - 3, "OK");
+    screenWaitOKKey();
 }
 
 
