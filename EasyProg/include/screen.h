@@ -14,5 +14,6 @@ void screenPrintFrame(void);
 void screenPrintBox(uint8_t x, uint8_t y, uint8_t w, uint8_t h);
 void screenPrintDialog(const char* apStrLines[]);
 void screenWaitOKKey(void);
+const char* screenReadInput(const char* pStrTitle, const char* pStrPrompt);
 
 #endif /* SCREEN_H_ */

@@ -286,7 +286,7 @@ _flashCodeWrite:
         lda #0
         sta zp_flashcode_base
         txa
-        and #$c0
+        and #$e0
         sta zp_flashcode_base + 1
 
         jsr flashCodePrepareWrite

@@ -23,8 +23,6 @@
  */
 
 #include <stdint.h>
-#include <fcntl.h>
-#include <unistd.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -40,10 +38,9 @@ static const char strCartSignature[16] = CART_SIGNATURE;
 static const char strChipSignature[4] = CHIP_SIGNATURE;
 
 
-uint8_t readCartHeader(int fd)
+uint8_t readCartHeader(FILE *fp)
 {
-    if (read(fd, &cartHeader, sizeof(cartHeader)) != 
-        sizeof(cartHeader))
+    if (fread(&cartHeader, sizeof(cartHeader), 1, fp) != 1)
     {
         printf("??? Reading file header failed\n");
         return 0;
@@ -90,46 +87,39 @@ void eraseFlash()
 {
 }
 
-uint8_t readNextChipHeader(int fd)
+uint8_t readNextChip(ChipHeader* pChipHeader, uint8_t* pBuffer, FILE* fp)
 {
     uint16_t n, i;
+    uint16_t nSize;
+    uint16_t nRead;
     uint8_t dummy;
-    ChipHeader chipHeader;
 
-    if (read(fd, &chipHeader, sizeof(chipHeader)) !=
-        sizeof(chipHeader))
+    if (fread(pChipHeader, sizeof(ChipHeader), 1, fp) != 1)
     {
         // EOF
         return 0;
     }
 
-    if (memcmp(chipHeader.signature, strChipSignature, 
+    if (memcmp(pChipHeader->signature, strChipSignature,
                sizeof(strChipSignature)) != 0)
     {
-        printf("??? Wrong chip signature, file damaged?\n");
+        printf("Wrong chip signature, file damaged?\n");
         return 0;
     }
 
-    printf("Found chip/bank\n");
-    printf("Bank number :  %4d\n", chipHeader.bank[1]);
-    n = 256 * chipHeader.loadAddr[0] + chipHeader.loadAddr[1];
-    printf("Load address: $%04X\n", n);
-    n = 256 * chipHeader.romLen[0] + chipHeader.romLen[1];
-    printf("Bank size   : $%04X (%d kByte)\n", n, n / 1024);
-    nCartBytes += n;
-    ++nChips;
+    nSize = 256 * pChipHeader->romLen[0] + pChipHeader->romLen[1];
 
-    // skip rest of bank
-#if 0 // lseek missing in cc65?
-    if (lseek(fd, n, SEEK_CUR) == -1)
-#endif
-    for (i = 0; i < n; ++i)
+    if (nSize > 0x4000)
     {
-        if (read(fd, &dummy, 1) != 1)
-        {
-            printf("??? Chip data incomplete, file damaged?\n");
-            return 0;
-        }
+        printf("Bank too large\n");
+        return 0;
+    }
+
+    nRead = (uint16_t) fread(pBuffer, 1, nSize, fp);
+    if (nRead != nSize)
+    {
+        printf("Read error (%u)\n", nRead);
+        return 0;
     }
 
     return 1;

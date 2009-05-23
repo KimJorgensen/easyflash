@@ -22,14 +22,15 @@ uint8_t  bWrongFlash;
 /// String describes the current action
 char strStatus[41];
 
+/// buffer for up to 16 kByte
+uint8_t aBankBuffer[16 * 1024];
 
 /******************************************************************************/
 
 static const char* apStrJumperTest[] =
 {
         "Make sure the jumpers are set to",
-        "\"auto\". Otherwise set them now",
-        "and press <Enter>.",
+        "\"auto\". Otherwise set them now.",
         NULL
 };
 
@@ -52,6 +53,12 @@ static const char* apStrEraseFailed[] =
 {
         "Flash erase failed,",
         "check your hardware.",
+        NULL
+};
+
+static const char* apStrFileOpenError[] =
+{
+        "Cannot open image file.",
         NULL
 };
 
@@ -82,7 +89,7 @@ static void showFlashTypeBox(uint8_t x, uint8_t y, uint8_t nChip)
 /**
  * Show or update a box with the current action.
  */
-static void showStatusBox()
+static void refreshStatusBox()
 {
     textcolor(COLOR_LIGHTFRAME);
     screenPrintBox(9, 9, 30, 3);
@@ -101,12 +108,12 @@ static void showStatusBox()
 /**
  * Show the Screen which reports the Flash IDs.
  */
-static void showMainScreen(void)
+static void refreshMainScreen(void)
 {
     screenPrintFrame();
     showFlashTypeBox(1, 3, 0);
     showFlashTypeBox(1, 6, 1);
-    showStatusBox();
+    refreshStatusBox();
 }
 
 
@@ -116,9 +123,9 @@ static void showMainScreen(void)
  */
 static void checkJumpers(void)
 {
-    showMainScreen();
+    refreshMainScreen();
     screenPrintDialog(apStrJumperTest);
-    showMainScreen();
+    refreshMainScreen();
 }
 
 
@@ -137,14 +144,14 @@ static void checkFlashTypes(void)
     anFlashId[1] = flashCodeReadIds(ROM1_BASE_ULTIMAX);
 #endif
 
-    showMainScreen();
+    refreshMainScreen();
 
     if ((anFlashId[0] != FLASH_TYPE_AMD_AM29F040) ||
             (anFlashId[1] != FLASH_TYPE_AMD_AM29F040))
     {
         bWrongFlash = 1;
         screenPrintDialog(apStrWrongFlash);
-        showMainScreen();
+        refreshMainScreen();
     }
 }
 
@@ -157,7 +164,107 @@ void setStatus(const char* pStrStatus)
 {
     strncpy(strStatus, pStrStatus, sizeof(strStatus - 1));
     strStatus[sizeof(strStatus) - 1] = '\0';
-    showStatusBox();
+    refreshStatusBox();
+}
+
+
+/******************************************************************************/
+/**
+ *
+ */
+void checkWriteImage(void)
+{
+    const char *pStrInput;
+    char strFileName[FILENAME_MAX];
+    FILE* fp;
+    uint8_t nChip;
+    uint16_t nOffset;
+    uint8_t  nBank;
+    uint8_t  nVal;
+    uint16_t nAddress;
+    uint16_t nStart;
+    uint16_t nEnd;
+    uint16_t nSize;
+    ChipHeader chipHeader;
+
+    pStrInput = screenReadInput("Write cartridge image", "Enter file name");
+    refreshMainScreen();
+
+    if (!pStrInput)
+        return;
+
+    strcpy(strFileName, pStrInput);
+
+    sprintf(strStatus, "Checking %s...\n", strFileName);
+    refreshStatusBox();
+
+    fp = fopen(strFileName, "r");
+
+    if (fp == NULL)
+    {
+        screenPrintDialog(apStrFileOpenError);
+        return;
+    }
+
+    if (!readCartHeader(fp))
+    {
+        fclose(fp);
+        return;
+    }
+
+    if (!eraseAll())
+    {
+        screenPrintDialog(apStrEraseFailed);
+        fclose(fp);
+        return;
+    }
+
+    sprintf(strStatus, "Reading next bank");
+    refreshStatusBox();
+
+    while (readNextChip(&chipHeader, aBankBuffer, fp))
+    {
+        nBank = chipHeader.bank[1];
+        nAddress = 256 * chipHeader.loadAddr[0] + chipHeader.loadAddr[1];
+        nSize = 256 * chipHeader.romLen[0] + chipHeader.romLen[1];
+
+        nEnd = nAddress + nSize;
+
+        // Chip 0 and Chip 1 needed?
+        if ((nAddress == (uint16_t)ROM0_BASE) && (nSize > 0x2000))
+        {
+            // flash first chip
+            nStart = 0;
+            nEnd   = 0x2000;
+            nChip  = 0;
+
+            sprintf(strStatus, "Writing %u bytes to %02X:%X", 0x2000,
+                    0, nChip);
+            refreshStatusBox();
+
+            for (nOffset = 0; nOffset < nEnd; ++nOffset)
+            {
+                flashWrite(nChip, nOffset, aBankBuffer[nOffset]);
+            }
+
+            // flash second chip
+            nStart = 0x2000;
+            nEnd   = nSize - 0x2000;
+            nChip  = 1;
+            sprintf(strStatus, "Writing %u bytes to %02X:%X", 0x2000,
+                    0, nChip);
+            refreshStatusBox();
+
+            for (nOffset = 0; nOffset < nEnd; ++nOffset)
+            {
+                flashWrite(nChip, nOffset, aBankBuffer[nOffset + 0x2000]);
+            }
+        }
+    }
+
+    screenWaitOKKey();
+
+    printCartInfo();
 }
 
 
@@ -167,69 +274,18 @@ void setStatus(const char* pStrStatus)
  */
 int main(void)
 {
-	char strFileName[40];
-    int fd;
-    uint8_t nChip;
-    uint16_t nOffset;
-
     screenInit();
     checkJumpers();
     checkFlashTypes();
 
     if (bWrongFlash)
-    {
         for (;;);
-    }
 
-    if (!eraseAll())
+    for (;;)
     {
-        screenPrintDialog(apStrEraseFailed);
-        showMainScreen();
-        for (;;);
+        checkWriteImage();
+        screenWaitOKKey();
     }
 
-    for (nChip = 0; nChip < 2; ++nChip)
-    {
-        for (nOffset = 0; nOffset < 8 * 1024; ++nOffset)
-        {
-            if ((nOffset & 0xff) == 0)
-            {
-                sprintf(strStatus, "Writing: %02X:%X:%04X", 0, nChip, nOffset);
-                setStatus(strStatus);
-            }
-            if (!flashWrite(nChip, nOffset, nOffset & 0xff))
-            {
-                for (;;)
-                    ;
-            }
-        }
-    }
-
-    // impossible
-    flashWrite(0, 3, 255);
-
-    for (;;);
-#if 0
-	printf("Cartridge file name:");
-    scanf("%s", strFileName);
-
-    printf("Checking %s...\n", strFileName);
-
-    fd = open(strFileName, O_RDONLY);
-
-    if (fd == -1)
-    {
-        printf("Cannot open input file\n");
-        return 1;
-    }
-
-    if (!readCartHeader(fd))
-        return 1;
-
-    eraseFlash();
-
-    while (readNextChipHeader(fd));
-    printCartInfo();
-#endif
     return 0;
 }

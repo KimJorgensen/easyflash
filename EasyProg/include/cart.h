@@ -2,6 +2,7 @@
 #ifndef CART_H
 
 #include <stdint.h>
+#include <stdio.h>
 
 // Reference: http://ist.uwaterloo.ca/~schepers/formats/CRT.TXT
 typedef struct CartHeader_s
@@ -90,10 +91,9 @@ extern CartHeader   cartHeader;
 extern uint8_t      nChips;
 extern uint32_t     nCartBytes;
 
-uint8_t readCartHeader(int fd);
+uint8_t readCartHeader(FILE* fp);
 void eraseFlash(void);
 void printCartInfo(void);
-uint8_t readNextChipHeader(int fd);
-
+uint8_t readNextChip(ChipHeader* pChipHeader, uint8_t* pBuffer, FILE* fp);
 
 #endif // CART_H

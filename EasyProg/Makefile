@@ -9,7 +9,7 @@ OBJ += obj/screen.o
 OBJ += obj/easyprog.o
 
 INCLUDE := include
-#DEFINE  := -D EASYFLASH_FAKE
+DEFINE  := -D EASYFLASH_FAKE
 
 .PHONY: all
 all: easyprog

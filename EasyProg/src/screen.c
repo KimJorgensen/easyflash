@@ -181,33 +181,23 @@ void screenPrintBox(uint8_t x, uint8_t y, uint8_t w, uint8_t h)
 
 /******************************************************************************/
 /**
- * Print a Button with a label. x/y is the upper left corner. The first
- * character of the label is printed inverse
+ * Print a Button with a label. x/y is the upper left corner.
  */
 void screenPrintButton(uint8_t x, uint8_t y, const char* pStrLabel)
 {
-    unsigned char oldColor;
     uint8_t len;
     uint8_t xEnd;
 
-    oldColor = textcolor(COLOR_BLUE);
     len = strlen(pStrLabel);
     xEnd = x + len + 1;
 
     screenPrintTopLine(x, xEnd, y++);
 
     cputcxy(x, y++, 0x7d);
-    textcolor(COLOR_BLACK);
-    revers(1);
-    cputc(pStrLabel[0]);
-    revers(0);
-    cputs(pStrLabel + 1);
-    textcolor(COLOR_BLUE);
+    cputs(pStrLabel);
     cputc(0x7d);
 
     screenPrintBottomLine(x, xEnd, y);
-
-    textcolor(oldColor);
 }
 
 
@@ -265,7 +255,7 @@ void screenPrintDialog(const char* apStrLines[])
         cputsxy(20 - t / 2, yStart++, apStrLines[y]);
     }
 
-    screenPrintButton(xEnd - 4, yEnd - 3, "OK");
+    screenPrintButton(xEnd - 7, yEnd - 3, "Enter");
     screenWaitOKKey();
 }
 
@@ -283,4 +273,71 @@ void screenWaitOKKey(void)
         key = cgetc();
     }
     while ((key != '\n') && (key != 'o'));
+}
+
+
+/******************************************************************************/
+/**
+ *
+ * Return the string entered.
+ * Return NULL if the user pressed <stop>.
+ * Not reentrant ;-)
+ */
+const char* screenReadInput(const char* pStrTitle, const char* pStrPrompt)
+{
+    uint8_t y, len;
+    static char strInput[FILENAME_MAX];
+    char c;
+
+    // Top line
+    y = 6;
+    screenPrintTopLine(2, 37, y);
+    screenPrintFreeLine(2, 37, ++y);
+    cputsxy(3, y, pStrTitle);
+    screenPrintSepLine(2, 37, ++y);
+
+    // some lines
+    for (++y; y < 19; ++y)
+        screenPrintFreeLine(2, 37, y);
+    // Bottom line
+    screenPrintBottomLine(2, 37, y);
+
+    // the prompt
+    cputsxy(4, 9, pStrPrompt);
+
+    // the input field
+    textcolor(COLOR_LIGHTFRAME);
+    screenPrintBox(4, 11, 32, 3);
+    textcolor(COLOR_FOREGROUND);
+
+    screenPrintButton(3, 16, "Stop");
+    screenPrintButton(30, 16, "Enter");
+
+    strInput[0] = '\0';
+    len = 0;
+    cursor(1);
+    do
+    {
+        cputsxy(5, 12, strInput);
+        cputc(' ');
+        gotox(5 + len);
+
+        c = cgetc();
+        if ((c >= 32) && (c < 127) && (len < sizeof(strInput) - 1))
+        {
+            strInput[len++] = c;
+        }
+        else if (c == CH_DEL)
+        {
+            if (len)
+                strInput[--len] = '\0';
+        }
+    } while((c != CH_ENTER) && (c != CH_STOP));
+
+    cursor(0);
+
+    if (c == CH_STOP)
+        return NULL;
+    else
+        return strInput;
 }

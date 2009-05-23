@@ -163,8 +163,18 @@ uint8_t eraseAll(void)
  * return 1 for success, 0 for failure
  */
 #ifdef EASYFLASH_FAKE
-uint8_t flashWrite(uint8_t nChip, uint16_t nOffset, uint8_t val)
+uint8_t flashWrite(uint8_t nChip, uint16_t nOffset, uint8_t nVal)
 {
+    uint8_t* pUltimaxBase;
+    uint8_t* pNormalBase;
+    char strStatus[30];
+
+    pNormalBase  = apNormalRomBase[nChip];
+    pUltimaxBase = apUltimaxRomBase[nChip];
+
+    // send the write command
+    flashCodeWrite(pUltimaxBase + nOffset, nVal);
+
     return 1;
 }
 #else
