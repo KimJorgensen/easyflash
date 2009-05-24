@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <fcntl.h>
 #include <conio.h>
+#include <stdlib.h>
 
 #include "easyprog.h"
 #include "cart.h"
@@ -13,26 +14,39 @@
 
 /******************************************************************************/
 
-/// Low/High flash chip menufacturer/device ID
+// Low/High flash chip manufacturer/device ID
 uint16_t anFlashId[2];
 
-/// Is != 0 if we didn't find the right flash chips
-uint8_t  bWrongFlash;
+/******************************************************************************/
+/* Static variables */
 
-/// String describes the current action
-char strStatus[41];
+// String describes the current action
+static char strStatus[41];
 
-/// buffer for up to 16 kByte
-uint8_t aBankBuffer[16 * 1024];
+// buffer for up to 16 kByte
+static uint8_t aBankBuffer[16 * 1024];
+
+// Index to the currently chosen menu entry
+static uint8_t nMenuSelection;
 
 /******************************************************************************/
 
-static const char* apStrJumperTest[] =
+ScreenMenuEntry aMainMenuEntries[] =
 {
-        "Make sure the jumpers are set to",
-        "\"auto\". Otherwise set them now.",
-        NULL
+        { EASYPROG_MENU_ENTRY_WRITE_CRT,  "Write cartridge image" },
+        { EASYPROG_MENU_ENTRY_CHECK_TYPE, "Check flash type" },
+        { EASYPROG_MENU_ENTRY_ERASE_ALL,  "Erase all" },
+        { EASYPROG_MENU_ENTRY_QUIT,       "Quit" },
+        { 0, NULL }
 };
+
+
+ScreenMenuEntry aHelpMenuEntries[] =
+{
+        { EASYPROG_MENU_ENTRY_ABOUT,      "About" },
+        { 0, NULL }
+};
+
 
 static const char* apStrLowHigh[] =
 {
@@ -43,8 +57,9 @@ static const char* apStrLowHigh[] =
 static const char* apStrWrongFlash[] =
 {
         "A flash chip does not work",
-        "or has a wrong type. Check",
-        "jumpers and hardware, then",
+        "or has a wrong type. Set the",
+        "jumpers to \"Flash\" or"
+        "check your hardware, then"
         "run EasyProg again.",
         NULL
 };
@@ -62,11 +77,20 @@ static const char* apStrFileOpenError[] =
         NULL
 };
 
+static const char* apStrAbout[] =
+{
+        "EasyProg Version 0.1",
+        "",
+        "(C) 2009 Thomas 'skoe' Giesel",
+        "Free under the zlib license",
+        NULL
+};
+
 /******************************************************************************/
 /**
  * Show a box with the current Flash type.
  */
-static void showFlashTypeBox(uint8_t x, uint8_t y, uint8_t nChip)
+static void showFlashTypeBox(uint8_t y, uint8_t nChip)
 {
     uint16_t id;
 
@@ -89,18 +113,11 @@ static void showFlashTypeBox(uint8_t x, uint8_t y, uint8_t nChip)
 /**
  * Show or update a box with the current action.
  */
-static void refreshStatusBox()
+static void refreshStatusLine(void)
 {
-    textcolor(COLOR_LIGHTFRAME);
-    screenPrintBox(9, 9, 30, 3);
-    textcolor(COLOR_FOREGROUND);
-
-    cputsxy(2, 10, "Status:");
-
-    gotoxy (10, 10);
-    cclear(28);
-    gotoxy (10, 10);
+    gotoxy (1, 23);
     cputs(strStatus);
+    cclear(39 - wherex());
 }
 
 
@@ -111,30 +128,30 @@ static void refreshStatusBox()
 static void refreshMainScreen(void)
 {
     screenPrintFrame();
-    showFlashTypeBox(1, 3, 0);
-    showFlashTypeBox(1, 6, 1);
-    refreshStatusBox();
-}
+    showFlashTypeBox(15, 0);
+    showFlashTypeBox(18, 1);
+    refreshStatusLine();
 
+    gotoxy (1, 1);
+    textcolor(COLOR_EXTRA);
+    cputc('M');
+    textcolor(COLOR_FOREGROUND);
+    cputs("enu  ");
 
-/******************************************************************************/
-/**
- * Show the Screen asking for the Flash jumper setting.
- */
-static void checkJumpers(void)
-{
-    refreshMainScreen();
-    screenPrintDialog(apStrJumperTest);
-    refreshMainScreen();
+    textcolor(COLOR_EXTRA);
+    cputc('H');
+    textcolor(COLOR_FOREGROUND);
+    cputs("elp");
 }
 
 
 /******************************************************************************/
 /**
  * Read Flash manufacturer and device IDs, print then on the screen.
- * If they are not okay, print an error message and set bWrongFlash.
+ * If they are not okay, print an error message and return 0.
+ * If everything is okay, return 1.
  */
-static void checkFlashTypes(void)
+static uint8_t checkFlashType(void)
 {
 #ifdef EASYFLASH_FAKE
     anFlashId[0] = FLASH_TYPE_AMD_AM29F040;
@@ -144,15 +161,16 @@ static void checkFlashTypes(void)
     anFlashId[1] = flashCodeReadIds(ROM1_BASE_ULTIMAX);
 #endif
 
-    refreshMainScreen();
-
     if ((anFlashId[0] != FLASH_TYPE_AMD_AM29F040) ||
             (anFlashId[1] != FLASH_TYPE_AMD_AM29F040))
     {
-        bWrongFlash = 1;
-        screenPrintDialog(apStrWrongFlash);
+        screenPrintSimpleDialog(apStrWrongFlash);
         refreshMainScreen();
+        return 0;
     }
+
+    refreshMainScreen();
+    return 1;
 }
 
 
@@ -160,11 +178,11 @@ static void checkFlashTypes(void)
 /**
  * Set the status text and update the display.
  */
-void setStatus(const char* pStrStatus)
+void __fastcall__ setStatus(const char* pStrStatus)
 {
     strncpy(strStatus, pStrStatus, sizeof(strStatus - 1));
     strStatus[sizeof(strStatus) - 1] = '\0';
-    refreshStatusBox();
+    refreshStatusLine();
 }
 
 
@@ -196,13 +214,13 @@ void checkWriteImage(void)
     strcpy(strFileName, pStrInput);
 
     sprintf(strStatus, "Checking %s...\n", strFileName);
-    refreshStatusBox();
+    refreshStatusLine();
 
     fp = fopen(strFileName, "r");
 
     if (fp == NULL)
     {
-        screenPrintDialog(apStrFileOpenError);
+        screenPrintSimpleDialog(apStrFileOpenError);
         return;
     }
 
@@ -214,13 +232,13 @@ void checkWriteImage(void)
 
     if (!eraseAll())
     {
-        screenPrintDialog(apStrEraseFailed);
+        screenPrintSimpleDialog(apStrEraseFailed);
         fclose(fp);
         return;
     }
 
     sprintf(strStatus, "Reading next bank");
-    refreshStatusBox();
+    refreshStatusLine();
 
     while (readNextChip(&chipHeader, aBankBuffer, fp))
     {
@@ -240,7 +258,7 @@ void checkWriteImage(void)
 
             sprintf(strStatus, "Writing %u bytes to %02X:%X", 0x2000,
                     0, nChip);
-            refreshStatusBox();
+            refreshStatusLine();
 
             for (nOffset = 0; nOffset < nEnd; ++nOffset)
             {
@@ -253,7 +271,7 @@ void checkWriteImage(void)
             nChip  = 1;
             sprintf(strStatus, "Writing %u bytes to %02X:%X", 0x2000,
                     0, nChip);
-            refreshStatusBox();
+            refreshStatusLine();
 
             for (nOffset = 0; nOffset < nEnd; ++nOffset)
             {
@@ -262,9 +280,71 @@ void checkWriteImage(void)
         }
     }
 
-    screenWaitOKKey();
+    screenWaitKey(BUTTON_ENTER);
 
     printCartInfo();
+}
+
+
+/******************************************************************************/
+/**
+ * Execute the currently selected menu entry.
+ */
+void execMenuEntry(void)
+{
+    switch (nMenuSelection)
+    {
+    case EASYPROG_MENU_ENTRY_CHECK_TYPE:
+        checkFlashType();
+        break;
+
+    case EASYPROG_MENU_ENTRY_ERASE_ALL:
+        if (checkFlashType())
+        {
+            checkWriteImage();
+        }
+        break;
+    }
+}
+
+
+/******************************************************************************/
+/**
+ * Execute an action according to the given menu ID.
+ */
+static void __fastcall__ execMenu(uint8_t x, uint8_t y,
+                                  const ScreenMenuEntry* pMenuEntries)
+{
+    switch (screenDoMenu(x, y, pMenuEntries))
+    {
+    case EASYPROG_MENU_ENTRY_WRITE_CRT:
+        checkFlashType();
+        checkWriteImage();
+        break;
+
+    case EASYPROG_MENU_ENTRY_CHECK_TYPE:
+        checkFlashType();
+        break;
+
+    case EASYPROG_MENU_ENTRY_ERASE_ALL:
+        checkFlashType();
+        eraseAll();
+        break;
+
+    case EASYPROG_MENU_ENTRY_QUIT:
+        clrscr();
+        exit(0);
+        break;
+
+    case EASYPROG_MENU_ENTRY_ABOUT:
+        screenPrintSimpleDialog(apStrAbout);
+        break;
+
+    default:
+        break;
+    }
+
+    refreshMainScreen();
 }
 
 
@@ -274,18 +354,27 @@ void checkWriteImage(void)
  */
 int main(void)
 {
-    screenInit();
-    checkJumpers();
-    checkFlashTypes();
+    char key;
 
-    if (bWrongFlash)
-        for (;;);
+    screenInit();
+    setStatus("Press <m> for Menu.");
+    refreshMainScreen();
 
     for (;;)
     {
-        checkWriteImage();
-        screenWaitOKKey();
-    }
+        key = cgetc();
+        switch (key)
+        {
+        case 'm':
+            execMenu(3, 2, aMainMenuEntries);
+            break;
 
-    return 0;
+        case 'h':
+            execMenu(7, 2, aHelpMenuEntries);
+            break;
+
+        default:
+            break;
+        }
+    }
 }

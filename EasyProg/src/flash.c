@@ -64,32 +64,6 @@ static uint8_t __fastcall__ checkFlashProgress(uint8_t* pNormalBase)
 
 /******************************************************************************/
 /**
- * Calculate the bank number from an offset. Each bank has 16 kByte, so simply
- * divide it by 16k.
- *
- * nOffset is the logical chip address between 0 and 1 M.
- */
-uint8_t bankFromOffset(uint32_t nOffset)
-{
-   return nOffset / (16 * 1024);
-}
-
-
-/******************************************************************************/
-/**
- * Calculate the chip number from an offset. Each bank has 16 kByte, the first
- * 8 kByte are in the first chip, the second 8 kByte are in the second chip.
- *
- * nOffset is the logical chip address between 0 and 1 M.
- */
-uint8_t chipFromOffset(uint32_t nOffset)
-{
-    return (nOffset % (16 * 1024)) / (8 * 1024);
-}
-
-
-/******************************************************************************/
-/**
  * Erase a sector and print the progress.
  * For the details about reading the progress refer to the flash spec.
  *

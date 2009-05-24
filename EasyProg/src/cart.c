@@ -23,7 +23,7 @@
  */
 
 #include <stdint.h>
-#include <stdio.h>
+#include <conio.h>
 #include <string.h>
 
 #include "cart.h"
@@ -42,13 +42,13 @@ uint8_t readCartHeader(FILE *fp)
 {
     if (fread(&cartHeader, sizeof(cartHeader), 1, fp) != 1)
     {
-        printf("??? Reading file header failed\n");
+        cprintf("??? Reading file header failed\n");
         return 0;
     }
     if (memcmp(cartHeader.signature, strCartSignature,
                sizeof(strCartSignature)) != 0)
     {
-        printf("??? Wrong signature, file damaged?\n");
+        cprintf("??? Wrong signature, file damaged?\n");
         return 0;
     }
 
@@ -103,7 +103,7 @@ uint8_t readNextChip(ChipHeader* pChipHeader, uint8_t* pBuffer, FILE* fp)
     if (memcmp(pChipHeader->signature, strChipSignature,
                sizeof(strChipSignature)) != 0)
     {
-        printf("Wrong chip signature, file damaged?\n");
+        cprintf("Wrong chip signature, file damaged?\n");
         return 0;
     }
 
@@ -111,14 +111,14 @@ uint8_t readNextChip(ChipHeader* pChipHeader, uint8_t* pBuffer, FILE* fp)
 
     if (nSize > 0x4000)
     {
-        printf("Bank too large\n");
+        cprintf("Bank too large\n");
         return 0;
     }
 
     nRead = (uint16_t) fread(pBuffer, 1, nSize, fp);
     if (nRead != nSize)
     {
-        printf("Read error (%u)\n", nRead);
+        cprintf("Read error (%u)\n", nRead);
         return 0;
     }
 
@@ -130,7 +130,7 @@ void printCartInfo()
     const char* pStr;
 
     // fixme: name is not 0-terminated if it is 32 chars long
-    printf("Name: %s\n", cartHeader.name);
+    cprintf("Name: %s\n", cartHeader.name);
 
     switch (internalCartType)
     {
@@ -149,9 +149,9 @@ void printCartInfo()
     default:
         pStr = "Not supported";
     }
-    printf("Type: %s\n", pStr);
+    cprintf("Type: %s\n", pStr);
 
-    printf("Number of chips/banks: %d\n", nChips);
-    printf("Size                 : %d kByte\n", nCartBytes / 1024);
+    cprintf("Number of chips/banks: %d\n", nChips);
+    cprintf("Size                 : %d kByte\n", nCartBytes / 1024);
 }
 

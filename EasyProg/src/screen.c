@@ -25,6 +25,7 @@
 #include <stdint.h>
 #include <conio.h>
 #include <string.h>
+#include <ctype.h>
 #include <stdio.h>
 
 #include "screen.h"
@@ -144,12 +145,14 @@ void screenPrintFrame(void)
     // separation line
     screenPrintSepLine(0, 39, 2);
     // some free lines
-    for (y = 3; y < 24; ++y)
+    for (y = 3; y < 22; ++y)
         screenPrintFreeLine(0, 39, y);
+    // separation line
+    screenPrintSepLine(0, 39, 22);
+    // 1 text line
+    screenPrintFreeLine(0, 39, 23);
     // Bottom line
     screenPrintBottomLine(0, 39, 24);
-
-    cputsxy(1, 1, "EasyProg");
 }
 
 
@@ -203,16 +206,122 @@ void screenPrintButton(uint8_t x, uint8_t y, const char* pStrLabel)
 
 /******************************************************************************/
 /**
- * Print a dialog with some text lines.
- * The array of lines apStrLines must be terminated with a NULL pointer.
+ * Show or update the menu.
+ *
+ * If bPrintFrame is set, also draw the frame.
  */
-void screenPrintDialog(const char* apStrLines[])
+void __fastcall__ screenPrintMenu(uint8_t x, uint8_t y,
+                                  const ScreenMenuEntry* pMenuEntries,
+                                  uint8_t nSelected, uint8_t bPrintFrame)
+{
+    uint8_t nEntry, nEntries;
+    uint8_t tmp;
+    uint8_t len;
+    const char* pStr;
+
+    // calculate length of longest entry
+    len = 2;
+    for (nEntry = 0; (pStr = pMenuEntries[nEntry].pStrLabel); ++nEntry)
+    {
+        tmp = strlen(pStr);
+        if (tmp > len)
+            len = tmp;
+    }
+    len += 2;
+    nEntries = nEntry;
+
+    if (bPrintFrame)
+    {
+        screenPrintBox(x, y, len + 2, nEntries + 3);
+    }
+
+    for (nEntry = 0; nEntry != nEntries; ++nEntry)
+    {
+        gotoxy(x + 1, ++y);
+
+        pStr = pMenuEntries[nEntry].pStrLabel;
+
+        if (nEntry == nSelected)
+            revers(1);
+
+        cputc(' ');
+        textcolor(COLOR_EXTRA);
+        cputc(*pStr);
+        textcolor(COLOR_FOREGROUND);
+        cputs(pStr + 1);
+        cclear(len + x - wherex() + 1);
+
+        revers(0);
+    }
+}
+
+
+/******************************************************************************/
+/**
+ * Show and handle the menu and return the item Id selected or 0.
+ */
+uint8_t __fastcall__ screenDoMenu(uint8_t x, uint8_t y,
+                                  const ScreenMenuEntry* pMenuEntries)
+{
+    uint8_t nEntry, nEntries;
+    uint8_t nSelected;
+    char key;
+
+    screenPrintMenu(x, y, pMenuEntries, nSelected, 1);
+
+    // count the entries
+    nEntries = 0;
+    for (nEntry = 0; pMenuEntries[nEntry].pStrLabel; ++nEntry)
+        ++nEntries;
+
+    nSelected = 0;
+
+    do
+    {
+        screenPrintMenu(x, y, pMenuEntries, nSelected, 0);
+        key = cgetc();
+        switch (key)
+        {
+        case CH_CURS_UP:
+            if (nSelected)
+                --nSelected;
+            else
+                nSelected = nEntries - 1;
+            break;
+
+        case CH_CURS_DOWN:
+            if (++nSelected == nEntries)
+                nSelected = 0;
+            break;
+
+        case CH_ENTER:
+            return pMenuEntries[nSelected].nId;
+            break;
+
+        default:
+            for (nEntry = 0; nEntry != nEntries; ++nEntry)
+                if (key == tolower(pMenuEntries[nEntry].pStrLabel[0]))
+                    return pMenuEntries[nEntry].nId;
+        }
+    } while (key != CH_STOP);
+
+    return 0;
+}
+
+/******************************************************************************/
+/**
+ * Print a dialog with some text lines and wait for a key.
+ * The array of lines apStrLines must be terminated with a NULL pointer.
+ *
+ * flags            can contain BUTTON_ENTER and/or BUTTON_STOP.
+ * return           the button which has been pressed
+ */
+uint8_t __fastcall__ screenPrintDialog(const char* apStrLines[], uint8_t flags)
 {
     uint8_t y, t;
     uint8_t nLines;
     uint8_t nLongestLength = 1;
-    uint8_t xStart, xEnd;
-    uint8_t yStart, yEnd;
+    uint8_t xStart, xEnd, yStart, yEnd;
 
     for (y = 0; apStrLines[y]; ++y)
     {
@@ -255,24 +364,48 @@ void screenPrintDialog(const char* apStrLines[])
         cputsxy(20 - t / 2, yStart++, apStrLines[y]);
     }
 
-    screenPrintButton(xEnd - 7, yEnd - 3, "Enter");
-    screenWaitOKKey();
+    if (flags & BUTTON_ENTER)
+        screenPrintButton(xEnd - 7, yEnd - 3, "Enter");
+
+    if (flags & BUTTON_STOP)
+        screenPrintButton(xStart + 1, yEnd - 3, "Stop");
+
+    return screenWaitKey(flags);
 }
 
 
 /******************************************************************************/
 /**
- * Print a dialog with some text lines.
+ * Print a dialog with some text lines and wait for <Enter>.
  * The array of lines apStrLines must be terminated with a NULL pointer.
  */
-void screenWaitOKKey(void)
+void __fastcall__ screenPrintSimpleDialog(const char* apStrLines[])
+{
+    screenPrintDialog(apStrLines, BUTTON_ENTER);
+}
+
+
+/******************************************************************************/
+/**
+ * Wait until one of the keys has been pressed.
+ *
+ * flags        contains the keys allowed: BUTTON_ENTER and/or BUTTON_STOP
+ * return       BUTTON_ENTER or BUTTON_STOP
+ */
+uint8_t __fastcall__ screenWaitKey(uint8_t flags)
 {
     char key;
-    do
+
+    for (;;)
     {
         key = cgetc();
+
+        if ((flags & BUTTON_ENTER) && key == CH_ENTER)
+            return BUTTON_ENTER;
+
+        if ((flags & BUTTON_STOP) && key == CH_STOP)
+            return BUTTON_STOP;
     }
-    while ((key != '\n') && (key != 'o'));
 }
 
 
@@ -283,7 +416,7 @@ void screenWaitOKKey(void)
  * Return NULL if the user pressed <stop>.
  * Not reentrant ;-)
  */
-const char* screenReadInput(const char* pStrTitle, const char* pStrPrompt)
+const char* __fastcall__ screenReadInput(const char* pStrTitle, const char* pStrPrompt)
 {
     uint8_t y, len;
     static char strInput[FILENAME_MAX];
