@@ -1,5 +1,8 @@
 
 
+# do not remove intermediate targets
+.SECONDARY:
+
 OBJ :=
 OBJ += obj/crt0.o
 OBJ += obj/flashcode.o
@@ -7,9 +10,10 @@ OBJ += obj/flash.o
 OBJ += obj/cart.o
 OBJ += obj/screen.o
 OBJ += obj/easyprog.o
+OBJ += obj/texts.o
 
 INCLUDE := include
-DEFINE  := -D EASYFLASH_FAKE
+#DEFINE  := -D EASYFLASH_FAKE
 
 .PHONY: all
 all: easyprog

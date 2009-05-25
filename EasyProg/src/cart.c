@@ -25,8 +25,11 @@
 #include <stdint.h>
 #include <conio.h>
 #include <string.h>
+#include <cbm.h>
 
 #include "cart.h"
+#include "screen.h"
+#include "texts.h"
 
 // global variables to make the code more compact on cc65
 uint8_t      internalCartType;
@@ -38,17 +41,19 @@ static const char strCartSignature[16] = CART_SIGNATURE;
 static const char strChipSignature[4] = CHIP_SIGNATURE;
 
 
-uint8_t readCartHeader(FILE *fp)
+uint8_t readCartHeader(uint8_t lfn)
 {
-    if (fread(&cartHeader, sizeof(cartHeader), 1, fp) != 1)
+    int rv;
+
+    rv = cbm_read(lfn, &cartHeader, sizeof(cartHeader));
+    if (rv != sizeof(cartHeader))
     {
-        cprintf("??? Reading file header failed\n");
         return 0;
     }
+
     if (memcmp(cartHeader.signature, strCartSignature,
                sizeof(strCartSignature)) != 0)
     {
-        cprintf("??? Wrong signature, file damaged?\n");
         return 0;
     }
 
@@ -87,42 +92,48 @@ void eraseFlash()
 {
 }
 
-uint8_t readNextChip(ChipHeader* pChipHeader, uint8_t* pBuffer, FILE* fp)
+
+/******************************************************************************/
+/**
+ * Read the next chip header and data.
+ *
+ * return   CART_RV_ERR     if wrong data has been read
+ *          CART_RV_OKAY    if everything was oky
+ *          CART_RV_EOF     if everything has been read already
+ */
+uint8_t readNextChip(ChipHeader* pChipHeader, uint8_t* pBuffer, uint8_t lfn)
 {
     uint16_t n, i;
     uint16_t nSize;
     uint16_t nRead;
     uint8_t dummy;
 
-    if (fread(pChipHeader, sizeof(ChipHeader), 1, fp) != 1)
+    if (cbm_read(lfn, pChipHeader, sizeof(ChipHeader)) !=
+        sizeof(ChipHeader))
     {
-        // EOF
-        return 0;
+        return CART_RV_EOF;
     }
 
     if (memcmp(pChipHeader->signature, strChipSignature,
                sizeof(strChipSignature)) != 0)
     {
-        cprintf("Wrong chip signature, file damaged?\n");
-        return 0;
+        return CART_RV_ERR;
     }
 
     nSize = 256 * pChipHeader->romLen[0] + pChipHeader->romLen[1];
 
     if (nSize > 0x4000)
     {
-        cprintf("Bank too large\n");
-        return 0;
+        return CART_RV_ERR;
     }
 
-    nRead = (uint16_t) fread(pBuffer, 1, nSize, fp);
+    nRead = (uint16_t) cbm_read(lfn, pBuffer, nSize);
     if (nRead != nSize)
     {
-        cprintf("Read error (%u)\n", nRead);
-        return 0;
+        return CART_RV_ERR;
     }
 
-    return 1;
+    return CART_RV_OK;
 }
 
 void printCartInfo()

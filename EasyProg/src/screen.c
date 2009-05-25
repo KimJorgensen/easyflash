@@ -355,20 +355,21 @@ uint8_t __fastcall__ screenPrintDialog(const char* apStrLines[], uint8_t flags)
 
     // Write the text lines
     yStart += 4;
+    ++xStart;
     for (y = 0; y < nLines; ++y)
     {
         t = strlen(apStrLines[y]);
         if (t > 38)
             continue;
 
-        cputsxy(20 - t / 2, yStart++, apStrLines[y]);
+        cputsxy(xStart, yStart++, apStrLines[y]);
     }
 
     if (flags & BUTTON_ENTER)
         screenPrintButton(xEnd - 7, yEnd - 3, "Enter");
 
     if (flags & BUTTON_STOP)
-        screenPrintButton(xStart + 1, yEnd - 3, "Stop");
+        screenPrintButton(xStart, yEnd - 3, "Stop");
 
     return screenWaitKey(flags);
 }

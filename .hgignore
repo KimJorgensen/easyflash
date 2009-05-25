@@ -1,5 +1,5 @@
 syntax: glob
-*.o
+obj/*
 *~
 *.map
 *.prg

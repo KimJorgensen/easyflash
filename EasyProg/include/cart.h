@@ -2,7 +2,10 @@
 #ifndef CART_H
 
 #include <stdint.h>
-#include <stdio.h>
+
+#define CART_RV_ERR  0
+#define CART_RV_OK   1
+#define CART_RV_EOF  2
 
 // Reference: http://ist.uwaterloo.ca/~schepers/formats/CRT.TXT
 typedef struct CartHeader_s
@@ -91,9 +94,9 @@ extern CartHeader   cartHeader;
 extern uint8_t      nChips;
 extern uint32_t     nCartBytes;
 
-uint8_t readCartHeader(FILE* fp);
+uint8_t readCartHeader(uint8_t lfn);
 void eraseFlash(void);
 void printCartInfo(void);
-uint8_t readNextChip(ChipHeader* pChipHeader, uint8_t* pBuffer, FILE* fp);
+uint8_t readNextChip(ChipHeader* pChipHeader, uint8_t* pBuffer, uint8_t lfn);
 
 #endif // CART_H
