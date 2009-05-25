@@ -24,11 +24,10 @@ uint16_t anFlashId[2];
 // String describes the current action
 static char strStatus[41];
 
-// buffer for up to 16 kByte
-static uint8_t aBankBuffer[16 * 1024];
-
 // Index to the currently chosen menu entry
 static uint8_t nMenuSelection;
+
+static uint8_t aBankBuffer[16 * 1024];
 
 /******************************************************************************/
 
@@ -150,6 +149,80 @@ void __fastcall__ setStatus(const char* pStrStatus)
 
 /******************************************************************************/
 /**
+ * Write a crt image from the given file to flash. Before doing this, the
+ * flash will be erased.
+ *
+ * return CART_RV_OK or CART_RV_ERR
+ */
+static uint8_t writeCrtImage(uint8_t lfn)
+{
+    uint8_t rv;
+    uint8_t nChip;
+    uint8_t  nBank;
+    uint16_t nAddress;
+    uint16_t nSize;
+    ChipHeader chipHeader;
+    char strStatus[40];
+
+    setStatus("Reading header");
+    if (!readCartHeader(lfn))
+    {
+        screenPrintSimpleDialog(apStrHeaderReadError);
+        return CART_RV_ERR;
+    }
+
+    setStatus("Erasing flash memory");
+    if (!eraseAll())
+    {
+        screenPrintSimpleDialog(apStrEraseFailed);
+        return CART_RV_ERR;
+    }
+
+    do
+    {
+        setStatus("Reading chip data");
+        rv = readNextChip(&chipHeader, aBankBuffer, lfn);
+        if (rv == CART_RV_OK)
+        {
+            setStatus("Flashing chip data");
+
+            nBank = chipHeader.bank[1];
+            nAddress = 256 * chipHeader.loadAddr[0] + chipHeader.loadAddr[1];
+            nSize = 256 * chipHeader.romLen[0] + chipHeader.romLen[1];
+
+            // Chip 0 and Chip 1 needed?
+            if ((nAddress == (uint16_t) ROM0_BASE) && (nSize > 0x2000))
+            {
+                // flash first chip
+                nChip = 0;
+
+                sprintf(strStatus, "Writing %u bytes to %02X:%X", 0x2000, 0,
+                        nChip);
+                setStatus(strStatus);
+
+                flashWriteBlock(nChip, 0, 0x2000, aBankBuffer);
+
+                // flash second chip
+                nChip = 1;
+                sprintf(strStatus, "Writing %u bytes to %02X:%X", 0x2000, 0, nChip);
+                setStatus(strStatus);
+
+                flashWriteBlock(nChip, 0, nSize - 0x2000, aBankBuffer + 0x2000);
+            }
+            else if (rv == CART_RV_ERR)
+            {
+                screenPrintSimpleDialog(apStrChipReadError);
+                return CART_RV_ERR;
+            }
+        }
+    } while (rv == CART_RV_OK);
+
+    return CART_RV_OK;
+}
+
+
+/******************************************************************************/
+/**
  *
  */
 void checkWriteImage(void)
@@ -157,15 +230,6 @@ void checkWriteImage(void)
     const char *pStrInput;
     char strFileName[FILENAME_MAX];
     uint8_t lfn, rv;
-    uint8_t nChip;
-    uint16_t nOffset;
-    uint8_t  nBank;
-    uint8_t  nVal;
-    uint16_t nAddress;
-    uint16_t nStart;
-    uint16_t nEnd;
-    uint16_t nSize;
-    ChipHeader chipHeader;
 
     pStrInput = screenReadInput("Write cartridge image", "Enter file name");
     refreshMainScreen();
@@ -179,7 +243,6 @@ void checkWriteImage(void)
     refreshStatusLine();
 
     lfn = 2;
-
     rv = cbm_open(lfn, 8, CBM_READ, strFileName);
 
     if (rv)
@@ -188,82 +251,8 @@ void checkWriteImage(void)
         return;
     }
 
-    setStatus("Reading header");
-
-    if (!readCartHeader(lfn))
-    {
-        screenPrintSimpleDialog(apStrHeaderReadError);
-        cbm_close(lfn);
-        return;
-    }
-
-    setStatus("Erasing flash memory");
-
-    if (!eraseAll())
-    {
-        screenPrintSimpleDialog(apStrEraseFailed);
-        cbm_close(lfn);
-        return;
-    }
-
-    sprintf(strStatus, "Reading chip data");
-    refreshStatusLine();
-
-    do
-    {
-        rv = readNextChip(&chipHeader, aBankBuffer, lfn);
-        if (rv == CART_RV_OK)
-        {
-            sprintf(strStatus, "Flashing chip data");
-            refreshStatusLine();
-
-            nBank = chipHeader.bank[1];
-            nAddress = 256 * chipHeader.loadAddr[0] + chipHeader.loadAddr[1];
-            nSize = 256 * chipHeader.romLen[0] + chipHeader.romLen[1];
-
-            nEnd = nAddress + nSize;
-
-            // Chip 0 and Chip 1 needed?
-            if ((nAddress == (uint16_t)ROM0_BASE) && (nSize > 0x2000))
-            {
-                // flash first chip
-                nStart = 0;
-                nEnd = 0x2000;
-                nChip = 0;
-
-                sprintf(strStatus, "Writing %u bytes to %02X:%X", 0x2000,
-                        0, nChip);
-                refreshStatusLine();
-
-                for (nOffset = 0; nOffset < nEnd; ++nOffset)
-                {
-                    flashWrite(nChip, nOffset, aBankBuffer[nOffset]);
-                }
-
-                // flash second chip
-                nStart = 0x2000;
-                nEnd = nSize - 0x2000;
-                nChip = 1;
-                sprintf(strStatus, "Writing %u bytes to %02X:%X", 0x2000,
-                        0, nChip);
-                refreshStatusLine();
-
-                for (nOffset = 0; nOffset < nEnd; ++nOffset)
-                {
-                    flashWrite(nChip, nOffset, aBankBuffer[nOffset + 0x2000]);
-                }
-            }
-            else if (rv == CART_RV_ERR)
-            {
-                screenPrintSimpleDialog(apStrChipReadError);
-            }
-        }
-    } while (rv == CART_RV_OK);
-
+    writeCrtImage(lfn);
     cbm_close(lfn);
-
-
-    //screenWaitKey(BUTTON_ENTER);
 
     //printCartInfo();
 }

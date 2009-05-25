@@ -165,4 +165,3 @@ void printCartInfo()
     cprintf("Number of chips/banks: %d\n", nChips);
     cprintf("Size                 : %d kByte\n", nCartBytes / 1024);
 }
-

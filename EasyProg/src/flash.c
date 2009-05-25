@@ -131,44 +131,67 @@ uint8_t eraseAll(void)
 
 /******************************************************************************/
 /**
- * Write a byte and print the progress.
- * For the details about reading the progress refer to the flash spec.
+ * Write a byte to the flash and check the progress.
  *
  * return 1 for success, 0 for failure
  */
-#ifdef EASYFLASH_FAKE
 uint8_t flashWrite(uint8_t nChip, uint16_t nOffset, uint8_t nVal)
 {
-    uint8_t* pUltimaxBase;
+    uint8_t* pUltimax;
     uint8_t* pNormalBase;
     char strStatus[30];
 
-    pNormalBase  = apNormalRomBase[nChip];
-    pUltimaxBase = apUltimaxRomBase[nChip];
+    pNormalBase = apNormalRomBase[nChip];
+    pUltimax    = apUltimaxRomBase[nChip];
 
     // send the write command
-    flashCodeWrite(pUltimaxBase + nOffset, nVal);
+    flashCodeWrite(pUltimax + nOffset, nVal);
+
+#ifndef EASYFLASH_FAKE
+    if (!checkFlashProgress(pNormalBase))
+    {
+        sprintf(strStatus, "Write error %02X:%X:%04X", 0, nChip, nOffset);
+        setStatus(strStatus);
+        return 0;
+    }
+#endif
 
     return 1;
 }
-#else
-uint8_t flashWrite(uint8_t nChip, uint16_t nOffset, uint8_t nVal)
+
+
+/******************************************************************************/
+/**
+ * Write a block of bytes to the flash and check the progress.
+ *
+ * return 1 for success, 0 for failure
+ */
+uint8_t flashWriteBlock(uint8_t nChip, uint16_t nStart, uint16_t nSize,
+                        uint8_t* pBlock)
 {
-    uint8_t* pUltimaxBase;
+    uint16_t nOffset;
+    uint16_t nEnd;
+    uint8_t* pUltimax;
     uint8_t* pNormalBase;
     char strStatus[30];
 
     pNormalBase  = apNormalRomBase[nChip];
-    pUltimaxBase = apUltimaxRomBase[nChip];
+    pUltimax     = apUltimaxRomBase[nChip];
 
-    // send the write command
-    flashCodeWrite(pUltimaxBase + nOffset, nVal);
+    nEnd = nStart + nSize;
+    for (nOffset = nStart; nOffset < nEnd; ++nOffset)
+    {
+        // send the write command
+        flashCodeWrite(pUltimax++, *pBlock++);
 
-    if (checkFlashProgress(pNormalBase))
-        return 1;
-
-    sprintf(strStatus, "Write error %02X:%X:%04X", 0, nChip, nOffset);
-    setStatus(strStatus);
-    return 0;
-}
+#ifndef EASYFLASH_FAKE
+        if (!checkFlashProgress(pNormalBase))
+        {
+            sprintf(strStatus, "Write error %02X:%X:%04X", 0, nChip, nOffset);
+            setStatus(strStatus);
+            return 0;
+        }
 #endif
+    }
+    return 1;
+}
