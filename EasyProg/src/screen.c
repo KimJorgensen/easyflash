@@ -55,13 +55,10 @@ void screenInit(void)
  */
 void screenPrintTopLine(uint8_t xStart, uint8_t xEnd, uint8_t y)
 {
-    uint8_t x;
-
     --xEnd;
 
     cputcxy(xStart, y, 0xb0);
-    for (x = xStart; x != xEnd; ++x)
-        cputc(0x60);
+    chline(xEnd - xStart);
     cputc(0xae);
 }
 
@@ -78,13 +75,10 @@ void screenPrintTopLine(uint8_t xStart, uint8_t xEnd, uint8_t y)
  */
 void screenPrintSepLine(uint8_t xStart, uint8_t xEnd, uint8_t y)
 {
-    uint8_t x;
-
     --xEnd;
 
     cputcxy(xStart, y, 0xab);
-    for (x = xStart; x != xEnd; ++x)
-        cputc(0x60);
+    chline(xEnd - xStart);
     cputc(0xb3);
 }
 
@@ -101,20 +95,17 @@ void screenPrintSepLine(uint8_t xStart, uint8_t xEnd, uint8_t y)
  */
 void screenPrintBottomLine(uint8_t xStart, uint8_t xEnd, uint8_t y)
 {
-    uint8_t x;
-
     --xEnd;
 
     cputcxy(xStart, y, 0xad);
-    for (x = xStart; x != xEnd; ++x)
-        cputc(0x60);
+    chline(xEnd - xStart);
     cputc(0xbd);
 }
 
 
 /******************************************************************************/
 /**
- * Print a separation line at y between xStart and xEnd (incl).
+ * Print a free line at y between xStart and xEnd (incl).
  *
  * ++++++++
  * +      + <= This one
@@ -158,7 +149,7 @@ void screenPrintFrame(void)
 
 /******************************************************************************/
 /**
- * Draw the big screen and the screen divisions.
+ * Draw a box.
  *
  * The size is incl. border
  */
