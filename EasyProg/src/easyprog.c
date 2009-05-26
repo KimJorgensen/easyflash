@@ -1,3 +1,26 @@
+/*
+ * EasyProg - easyprog.c - The main module
+ *
+ * (c) 2009 Thomas Giesel
+ *
+ * This software is provided 'as-is', without any express or implied
+ * warranty.  In no event will the authors be held liable for any damages
+ * arising from the use of this software.
+ *
+ * Permission is granted to anyone to use this software for any purpose,
+ * including commercial applications, and to alter it and redistribute it
+ * freely, subject to the following restrictions:
+ *
+ * 1. The origin of this software must not be misrepresented; you must not
+ *    claim that you wrote the original software. If you use this software
+ *    in a product, an acknowledgment in the product documentation would be
+ *    appreciated but is not required.
+ * 2. Altered source versions must be plainly marked as such, and must not be
+ *    misrepresented as being the original software.
+ * 3. This notice may not be removed or altered from any source distribution.
+ *
+ * Thomas Giesel skoe@directbox.com
+ */
 
 #include <stdio.h>
 #include <string.h>
@@ -12,6 +35,8 @@
 #include "flashcode.h"
 #include "flash.h"
 #include "texts.h"
+#include "filedlg.h"
+#include "buffer.h"
 
 /******************************************************************************/
 
@@ -26,8 +51,6 @@ static char strStatus[41];
 
 // Index to the currently chosen menu entry
 static uint8_t nMenuSelection;
-
-static uint8_t aBankBuffer[16 * 1024];
 
 /******************************************************************************/
 
@@ -162,6 +185,8 @@ static uint8_t writeCrtImage(uint8_t lfn)
     uint16_t nAddress;
     uint16_t nSize;
     ChipHeader chipHeader;
+    uint8_t* pBuffer;
+
     char strStatus[40];
 
     setStatus("Reading header");
@@ -178,10 +203,19 @@ static uint8_t writeCrtImage(uint8_t lfn)
         return CART_RV_ERR;
     }
 
+    pBuffer = bufferAlloc();
+
+    if (!pBuffer)
+    {
+        cputsxy(0, 0, "Out of memory");
+        for (;;);
+    }
+
     do
     {
         setStatus("Reading chip data");
-        rv = readNextChip(&chipHeader, aBankBuffer, lfn);
+        rv = readNextChip(&chipHeader, pBuffer, lfn);
+
         if (rv == CART_RV_OK)
         {
             setStatus("Flashing chip data");
@@ -200,23 +234,28 @@ static uint8_t writeCrtImage(uint8_t lfn)
                         nChip);
                 setStatus(strStatus);
 
-                flashWriteBlock(nChip, 0, 0x2000, aBankBuffer);
+                flashWriteBlock(nChip, 0, 0x2000, pBuffer);
 
                 // flash second chip
                 nChip = 1;
                 sprintf(strStatus, "Writing %u bytes to %02X:%X", 0x2000, 0, nChip);
                 setStatus(strStatus);
 
-                flashWriteBlock(nChip, 0, nSize - 0x2000, aBankBuffer + 0x2000);
+                flashWriteBlock(nChip, 0, nSize - 0x2000, pBuffer + 0x2000);
             }
-            else if (rv == CART_RV_ERR)
-            {
-                screenPrintSimpleDialog(apStrChipReadError);
-                return CART_RV_ERR;
-            }
+        }
+        else if (rv == CART_RV_ERR)
+        {
+            screenPrintSimpleDialog(apStrChipReadError);
+            bufferFree(pBuffer);
+            return CART_RV_ERR;
         }
     } while (rv == CART_RV_OK);
 
+    setStatus("OK");
+    for (;;);
+
+    bufferFree(pBuffer);
     return CART_RV_OK;
 }
 
@@ -345,6 +384,11 @@ int main(void)
         case 'h':
             execMenu(7, 2, aHelpMenuEntries);
             break;
+
+		// for testing
+		case 'f':
+		  //  fileDlg();
+			break;
 
         default:
             break;

@@ -187,6 +187,7 @@ uint8_t flashWriteBlock(uint8_t nChip, uint16_t nStart, uint16_t nSize,
 #ifndef EASYFLASH_FAKE
         if (!checkFlashProgress(pNormalBase))
         {
+            // todo: Show a real error message
             sprintf(strStatus, "Write error %02X:%X:%04X", 0, nChip, nOffset);
             setStatus(strStatus);
             return 0;
