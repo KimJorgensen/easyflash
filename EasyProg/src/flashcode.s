@@ -24,7 +24,7 @@
 ;
 ; This file contains low level code for accessing the flash memory chips.
 ;
-; This code switches the machine to Ultimax mode. This is the reason the base
+; This code switches the machine to Ultimax mode. Because of this the base
 ; address of the ROMH chip is $E000, not $A000 - even if the stuff you write
 ; is intended to run from $A000 later.
 ;
@@ -33,8 +33,7 @@
 ;       Interrupts will be disabled during execution
 ;
 ; On exit:
-;       Interrupts enabled, Module ROM disabled
-;       Return values: Refer to job code descriptions
+;       Interrupts enabled, Module ROM enabled
 
     .importzp       sp, sreg, regsave
     .importzp       ptr1, ptr2, ptr3, ptr4
@@ -173,6 +172,29 @@ flashCodePrepareWrite:
 
 ; =============================================================================
 ;
+; Set the bank. This will take effect immediately for read access and will be
+; used for the next write and erase commands.
+;
+; void __fastcall__ flashCodeSetBank(uint8_t nBank);
+;
+; parameters:
+;       bank in A (0..63)
+;
+; return:
+;       -
+;
+; =============================================================================
+        .export _flashCodeSetBank
+_flashCodeSetBank:
+        ; leave /GAME low, /EXROM low
+        and #~(EASYFLASH_IO_BIT_EXROM | EASYFLASH_IO_BIT_GAME)
+        sta bank
+        sta EASYFLASH_IO
+        rts
+
+
+; =============================================================================
+;
 ; Read Manufacturer ID and Device ID from the chip at the given address.
 ;
 ; unsigned __fastcall__ flashCodeReadIds(uint8_t* pBase);
@@ -301,5 +323,16 @@ _flashCodeWrite:
 
         ; that's it
         jmp flashCodeDeactivateUltimax
+
+
+; =============================================================================
+; Data
+; =============================================================================
+
+.bss
+
+; Current bank
+bank:
+        .res 1
 
 ; EOF
