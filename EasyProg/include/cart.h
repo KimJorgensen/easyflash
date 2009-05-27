@@ -37,7 +37,7 @@ typedef struct CartHeader_s
 CartHeader;
 
 
-typedef struct ChipHeader_s
+typedef struct BankHeader_s
 {
     // Contained ROM signature "CHIP"
     char signature[4];
@@ -57,12 +57,12 @@ typedef struct ChipHeader_s
     // ROM image size (high/low format, typically $2000 or $4000)
     uint8_t romLen[2];
 }
-ChipHeader;
+BankHeader;
 
 
 typedef struct CartChip_s
 {
-    ChipHeader header;
+    BankHeader header;
 
     // For a linked list of several chips
     struct CartChip_s* pNext;
@@ -97,6 +97,6 @@ extern uint32_t     nCartBytes;
 uint8_t readCartHeader(uint8_t lfn);
 void eraseFlash(void);
 void printCartInfo(void);
-uint8_t readNextChip(ChipHeader* pChipHeader, uint8_t* pBuffer, uint8_t lfn);
+uint8_t readNextBankHeader(BankHeader* pBankHeader, uint8_t lfn);
 
 #endif // CART_H

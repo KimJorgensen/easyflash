@@ -116,7 +116,7 @@ flashCodeCalcMagicAddresses:
 ; =============================================================================
 flashCodeActivateUltimax:
         sei
-        ; switch to Ultimax mode and select ROM bank 0
+        ; switch to Ultimax mode and select bank 0
         ; set /GAME low, /EXROM high => Ultimax
         lda #EASYFLASH_IO_BIT_EXROM
         sta EASYFLASH_IO
@@ -125,14 +125,15 @@ flashCodeActivateUltimax:
 
 ; =============================================================================
 ;
-; Turn off Ultimax mode (show 16k at $8000) and enable interrupts.
+; Turn off Ultimax mode (show 16k of the currently selected bank at $8000)
+; and enable interrupts.
 ;
 ; modify: A
 ;
 ; =============================================================================
 flashCodeDeactivateUltimax:
-        ; set /GAME low, /EXROM low => enable cartridge ROM
-        lda #0
+        ; set /GAME low, /EXROM low => leave Ultimax, enable cartridge ROM
+        lda bank
         sta EASYFLASH_IO
         cli
         rts
@@ -160,8 +161,8 @@ flashCodeCommandCycles12:
 
 ; =============================================================================
 ;
-; Calculate the magic addresses, go to Ultimax mode and send command cycles
-; 1 and 2.
+; Calculate the magic addresses, go to Ultimax mode, bank 0 and send command
+; cycles 1 and 2.
 ;
 ; =============================================================================
 flashCodePrepareWrite:
@@ -269,6 +270,13 @@ _flashCodeSectorErase:
         ; cycle 5: write $55 to $2AA
         lda #$55
         sta (zp_flashcode_2aa),y
+
+        ; now we have to activate the right bank and stay in Ultimax
+        lda bank
+        ; set /GAME low, /EXROM high => Ultimax
+        ora #EASYFLASH_IO_BIT_EXROM
+        sta EASYFLASH_IO
+
         ; cycle 6: write $30 to base + SA
         lda #$30
         sta (zp_flashcode_base),y
@@ -317,6 +325,13 @@ _flashCodeWrite:
         ldy #0
         lda #$a0
         sta (zp_flashcode_555),y
+
+        ; now we have to activate the right bank and stay in Ultimax
+        lda bank
+        ; set /GAME low, /EXROM high => Ultimax
+        ora #EASYFLASH_IO_BIT_EXROM
+        sta EASYFLASH_IO
+
         ; cycle 4: write data
         pla
         sta (zp_flashcode_addr),y
@@ -326,10 +341,8 @@ _flashCodeWrite:
 
 
 ; =============================================================================
-; Data
+; Data in same segment, must be visible in Ultimax mode
 ; =============================================================================
-
-.bss
 
 ; Current bank
 bank:

@@ -52,6 +52,9 @@ static char strStatus[41];
 // Index to the currently chosen menu entry
 static uint8_t nMenuSelection;
 
+// Number of bytes flashed so far
+static uint32_t nBytesFlashed;
+
 /******************************************************************************/
 
 ScreenMenuEntry aMainMenuEntries[] =
@@ -84,12 +87,33 @@ static void showFlashTypeBox(uint8_t y, uint8_t nChip)
 
     id = anFlashId[nChip];
 
-    gotoxy (2, y + 1);
+    gotoxy (2, ++y);
     cprintf("%4s Flash ID:", apStrLowHigh[nChip]);
 
-    gotoxy (17, y + 1);
+    gotoxy (17, y);
     cprintf("%04X (%s)", id,
         id == FLASH_TYPE_AMD_AM29F040 ? "Am29F040(B)" : "unknown");
+}
+
+
+/******************************************************************************/
+/**
+ * Show or update a box with the bytes flashed so far.
+ */
+static void showBytesFlashedBox(void)
+{
+	uint8_t  y;
+
+	y = 12;
+    textcolor(COLOR_LIGHTFRAME);
+    screenPrintBox(16, y, 23, 3);
+    textcolor(COLOR_FOREGROUND);
+
+    gotoxy (2, ++y);
+    cprintf("Bytes flashed:");
+
+    gotoxy (17 + 8, y);
+    cprintf("%4ld kByte", nBytesFlashed / 1024L);
 }
 
 
@@ -112,10 +136,8 @@ static void refreshStatusLine(void)
 static void refreshMainScreen(void)
 {
     screenPrintFrame();
-    showFlashTypeBox(15, 0);
-    showFlashTypeBox(18, 1);
-    refreshStatusLine();
 
+	// menu entries
     gotoxy (1, 1);
     textcolor(COLOR_EXTRA);
     cputc('M');
@@ -126,6 +148,13 @@ static void refreshMainScreen(void)
     cputc('H');
     textcolor(COLOR_FOREGROUND);
     cputs("elp");
+
+	showBytesFlashedBox();
+    showFlashTypeBox(15, 0);
+    showFlashTypeBox(18, 1);
+
+    refreshStatusLine();
+
 }
 
 
@@ -172,6 +201,17 @@ void __fastcall__ setStatus(const char* pStrStatus)
 
 /******************************************************************************/
 /**
+ * Increase the number of bytes written so far and update the display.
+ */
+void __fastcall__ addBytesFlashed(uint16_t nAdd)
+{
+    nBytesFlashed += nAdd;
+    showBytesFlashedBox();
+}
+
+
+/******************************************************************************/
+/**
  * Write a crt image from the given file to flash. Before doing this, the
  * flash will be erased.
  *
@@ -180,14 +220,10 @@ void __fastcall__ setStatus(const char* pStrStatus)
 static uint8_t writeCrtImage(uint8_t lfn)
 {
     uint8_t rv;
-    uint8_t nChip;
     uint8_t  nBank;
     uint16_t nAddress;
     uint16_t nSize;
-    ChipHeader chipHeader;
-    uint8_t* pBuffer;
-
-    char strStatus[40];
+    BankHeader bankHeader;
 
     setStatus("Reading header");
     if (!readCartHeader(lfn))
@@ -203,59 +239,50 @@ static uint8_t writeCrtImage(uint8_t lfn)
         return CART_RV_ERR;
     }
 
-    pBuffer = bufferAlloc();
-
-    if (!pBuffer)
-    {
-        cputsxy(0, 0, "Out of memory");
-        for (;;);
-    }
-
     do
     {
-        setStatus("Reading chip data");
-        rv = readNextChip(&chipHeader, pBuffer, lfn);
+        setStatus("Reading header from file");
+        rv = readNextBankHeader(&bankHeader, lfn);
 
         if (rv == CART_RV_OK)
         {
-            setStatus("Flashing chip data");
+            nBank = bankHeader.bank[1];
+            nAddress = 256 * bankHeader.loadAddr[0] + bankHeader.loadAddr[1];
+            nSize = 256 * bankHeader.romLen[0] + bankHeader.romLen[1];
 
-            nBank = chipHeader.bank[1];
-            nAddress = 256 * chipHeader.loadAddr[0] + chipHeader.loadAddr[1];
-            nSize = 256 * chipHeader.romLen[0] + chipHeader.romLen[1];
-
-            // Chip 0 and Chip 1 needed?
-            if ((nAddress == (uint16_t) ROM0_BASE) && (nSize > 0x2000))
-            {
-                // flash first chip
-                nChip = 0;
-
-                sprintf(strStatus, "Writing %u bytes to %02X:%X", 0x2000, 0,
-                        nChip);
-                setStatus(strStatus);
-
-                flashWriteBlock(nChip, 0, 0x2000, pBuffer);
-
-                // flash second chip
-                nChip = 1;
-                sprintf(strStatus, "Writing %u bytes to %02X:%X", 0x2000, 0, nChip);
-                setStatus(strStatus);
-
-                flashWriteBlock(nChip, 0, nSize - 0x2000, pBuffer + 0x2000);
-            }
+			if ((nAddress == (uint16_t) ROM0_BASE) && (nSize <= 0x4000))
+			{
+				if (nSize > 0x2000)
+				{
+	                flashWriteBlockFromFile(nBank, 0, 0x2000, lfn);
+	                flashWriteBlockFromFile(nBank, 1, nSize - 0x2000, lfn);
+				}
+				else
+				{
+	                flashWriteBlockFromFile(nBank, 0, nSize, lfn);
+				}
+			}
+			else if (((nAddress == (uint16_t) ROM1_BASE) ||
+                      (nAddress == (uint16_t) ROM1_BASE_ULTIMAX))
+                     && (nSize <= 0x2000))
+			{
+	                flashWriteBlockFromFile(nBank, 1, nSize, lfn);
+			}
+			else
+			{
+				// todo: error message
+				cputsxy(0, 0, "Illegal CHIP address or size");
+				for (;;);
+			}
         }
         else if (rv == CART_RV_ERR)
         {
             screenPrintSimpleDialog(apStrChipReadError);
-            bufferFree(pBuffer);
             return CART_RV_ERR;
         }
     } while (rv == CART_RV_OK);
 
     setStatus("OK");
-    for (;;);
-
-    bufferFree(pBuffer);
     return CART_RV_OK;
 }
 
@@ -269,6 +296,9 @@ void checkWriteImage(void)
     const char *pStrInput;
     char strFileName[FILENAME_MAX];
     uint8_t lfn, rv;
+
+	nBytesFlashed = 0;
+	showBytesFlashedBox();
 
     pStrInput = screenReadInput("Write cartridge image", "Enter file name");
     refreshMainScreen();

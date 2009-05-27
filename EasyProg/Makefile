@@ -11,11 +11,10 @@ OBJ += obj/cart.o
 OBJ += obj/screen.o
 OBJ += obj/easyprog.o
 OBJ += obj/texts.o
-OBJ += obj/buffer.o
 #OBJ += obj/filedlg.o
 
 INCLUDE := include
-#DEFINE  := -D EASYFLASH_FAKE
+DEFINE  := -D EASYFLASH_FAKE
 
 .PHONY: all
 all: easyprog

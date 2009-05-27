@@ -101,34 +101,16 @@ void eraseFlash()
  *          CART_RV_OKAY    if everything was oky
  *          CART_RV_EOF     if everything has been read already
  */
-uint8_t readNextChip(ChipHeader* pChipHeader, uint8_t* pBuffer, uint8_t lfn)
+uint8_t readNextBankHeader(BankHeader* pBankHeader, uint8_t lfn)
 {
-    uint16_t n, i;
-    uint16_t nSize;
-    uint16_t nRead;
-    uint8_t dummy;
-
-    if (cbm_read(lfn, pChipHeader, sizeof(ChipHeader)) !=
-        sizeof(ChipHeader))
+    if (cbm_read(lfn, pBankHeader, sizeof(BankHeader)) !=
+        sizeof(BankHeader))
     {
         return CART_RV_EOF;
     }
 
-    if (memcmp(pChipHeader->signature, strChipSignature,
+    if (memcmp(pBankHeader->signature, strChipSignature,
                sizeof(strChipSignature)) != 0)
-    {
-        return CART_RV_ERR;
-    }
-
-    nSize = 256 * pChipHeader->romLen[0] + pChipHeader->romLen[1];
-
-    if (nSize > 0x4000)
-    {
-        return CART_RV_ERR;
-    }
-
-    nRead = (uint16_t) cbm_read(lfn, pBuffer, nSize);
-    if (nRead != nSize)
     {
         return CART_RV_ERR;
     }
