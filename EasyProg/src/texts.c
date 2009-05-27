@@ -29,9 +29,9 @@ const char* apStrWrongFlash[] =
 {
         "A flash chip does not work",
         "or has a wrong type. Set the",
-        "jumpers to \"Flash\" or"
-        "check your hardware, then"
-        "run EasyProg again.",
+        "jumpers to \"Flash\" or",
+        "check your hardware, then",
+        "try again.",
         NULL
 };
 
