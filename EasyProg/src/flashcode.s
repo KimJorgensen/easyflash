@@ -59,14 +59,20 @@ zp_flashcode_2aa    = ptr4
 zp_flashcode_val    = tmp1
 
 
-; I/O address used to select the bank, /GAME and /EXROM states
-EASYFLASH_IO = $de00
+; I/O address used to select the bank
+EASYFLASH_IO_BANK    = $de00
 
-; Bit for Expansion Port /GAME line (inverted: 1 = low)
-EASYFLASH_IO_BIT_GAME = $40
+; I/O address for enabling memory configuration, /GAME and /EXROM states
+EASYFLASH_IO_CONTROL = $de01
 
-; Bit for Expansion Port /EXROM line (inverted: 1 = low)
-EASYFLASH_IO_BIT_EXROM = $80
+; Bit for memory control (1 = enabled)
+EASYFLASH_IO_BIT_MEMCTRL = $20
+
+; Bit for Expansion Port /GAME line (0 = low)
+EASYFLASH_IO_BIT_GAME    = $40
+
+; Bit for Expansion Port /EXROM line (0 = low)
+EASYFLASH_IO_BIT_EXROM   = $80
 
 ; Job codes
 EASYFLASH_JOB_READ_MANUFACTURER_ID  = 0
@@ -116,10 +122,9 @@ flashCodeCalcMagicAddresses:
 ; =============================================================================
 flashCodeActivateUltimax:
         sei
-        ; switch to Ultimax mode and select bank 0
-        ; set /GAME low, /EXROM high => Ultimax
-        lda #EASYFLASH_IO_BIT_EXROM
-        sta EASYFLASH_IO
+        ; switch to Ultimax mode (/GAME low, /EXROM high)
+        lda #EASYFLASH_IO_BIT_MEMCTRL | EASYFLASH_IO_BIT_EXROM
+        sta EASYFLASH_IO_CONTROL
         rts
 
 
@@ -133,8 +138,10 @@ flashCodeActivateUltimax:
 ; =============================================================================
 flashCodeDeactivateUltimax:
         ; set /GAME low, /EXROM low => leave Ultimax, enable cartridge ROM
+        lda #EASYFLASH_IO_BIT_MEMCTRL
+        sta EASYFLASH_IO_CONTROL
         lda bank
-        sta EASYFLASH_IO
+        sta EASYFLASH_IO_BANK
         cli
         rts
 
@@ -152,6 +159,8 @@ flashCodeCommandCycles12:
         ; cycle 1: write $AA to $555
         lda #$aa
         ldy #0
+        ; select bank 0
+        sty EASYFLASH_IO_BANK
         sta (zp_flashcode_555),y
         ; cycle 2: write $55 to $2AA
         lda #$55
@@ -187,10 +196,8 @@ flashCodePrepareWrite:
 ; =============================================================================
         .export _flashCodeSetBank
 _flashCodeSetBank:
-        ; leave /GAME low, /EXROM low
-        and #~(EASYFLASH_IO_BIT_EXROM | EASYFLASH_IO_BIT_GAME)
         sta bank
-        sta EASYFLASH_IO
+        sta EASYFLASH_IO_BANK
         rts
 
 
@@ -273,9 +280,7 @@ _flashCodeSectorErase:
 
         ; now we have to activate the right bank and stay in Ultimax
         lda bank
-        ; set /GAME low, /EXROM high => Ultimax
-        ora #EASYFLASH_IO_BIT_EXROM
-        sta EASYFLASH_IO
+        sta EASYFLASH_IO_BANK
 
         ; cycle 6: write $30 to base + SA
         lda #$30
@@ -330,7 +335,7 @@ _flashCodeWrite:
         lda bank
         ; set /GAME low, /EXROM high => Ultimax
         ora #EASYFLASH_IO_BIT_EXROM
-        sta EASYFLASH_IO
+        sta EASYFLASH_IO_CONTROL
 
         ; cycle 4: write data
         pla
