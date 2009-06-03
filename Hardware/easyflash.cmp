@@ -1,24 +1,38 @@
-Cmp-Mod V01 Created by CVpcb (20080825c) date = 20/5/2009-19:26:56
+Cmp-Mod V01 Created by CVpcb (20080825c) date = 3/6/2009-18:08:10
+
+BeginCmp
+TimeStamp = /4A257DFF;
+Reference = C1;
+ValeurCmp = 100n;
+IdModule  = C2;
+EndCmp
 
 BeginCmp
 TimeStamp = /49FC870C;
-Reference = C1;
+Reference = C2;
 ValeurCmp = 100n;
-IdModule  = C1;
+IdModule  = C2;
 EndCmp
 
 BeginCmp
 TimeStamp = /49FC8714;
-Reference = C2;
+Reference = C3;
 ValeurCmp = 100n;
-IdModule  = C1;
+IdModule  = C2;
 EndCmp
 
 BeginCmp
 TimeStamp = /49FC8717;
-Reference = C3;
+Reference = C4;
 ValeurCmp = 100n;
-IdModule  = C1;
+IdModule  = C2;
+EndCmp
+
+BeginCmp
+TimeStamp = /4A257DE3;
+Reference = C5;
+ValeurCmp = 100n;
+IdModule  = C2;
 EndCmp
 
 BeginCmp
@@ -29,52 +43,73 @@ IdModule  = expansion-port;
 EndCmp
 
 BeginCmp
-TimeStamp = /4A1454BB;
-Reference = P1;
-ValeurCmp = CONN_3X2;
-IdModule  = pin_array_3x2;
+TimeStamp = /4A25792F;
+Reference = JP1;
+ValeurCmp = GAME;
+IdModule  = PIN_ARRAY_2X1;
 EndCmp
 
 BeginCmp
-TimeStamp = /4A145695;
-Reference = P2;
-ValeurCmp = CONN_3X2;
-IdModule  = pin_array_3x2;
+TimeStamp = /4A257939;
+Reference = JP2;
+ValeurCmp = EXROM;
+IdModule  = PIN_ARRAY_2X1;
+EndCmp
+
+BeginCmp
+TimeStamp = /4A2579DA;
+Reference = R1;
+ValeurCmp = 10k;
+IdModule  = R3;
+EndCmp
+
+BeginCmp
+TimeStamp = /4A2579F1;
+Reference = R2;
+ValeurCmp = 10k;
+IdModule  = R3;
+EndCmp
+
+BeginCmp
+TimeStamp = /4A242C30;
+Reference = U1;
+ValeurCmp = 74ACT139;
+IdModule  = 16DIP-ELL300;
 EndCmp
 
 BeginCmp
 TimeStamp = /49FDE452;
 Reference = U2;
 ValeurCmp = 29F040;
-IdModule  = 32DIP-ELL600;
+IdModule  = PLCC32MS;
 EndCmp
 
 BeginCmp
 TimeStamp = /49FDE408;
 Reference = U3;
 ValeurCmp = 29F040;
-IdModule  = 32DIP-ELL600;
+IdModule  = PLCC32MS;
 EndCmp
 
 BeginCmp
-TimeStamp = /49FB6B69;
+TimeStamp = /4A257657;
 Reference = U4;
-ValeurCmp = 74LS273;
-IdModule  = 20DIP-ELL300;
+ValeurCmp = 74HCT174;
+IdModule  = 16DIP-ELL300;
 EndCmp
 
 BeginCmp
-TimeStamp = /4A0B10A6;
+TimeStamp = /4A24488B;
 Reference = U5;
-ValeurCmp = 74LS00;
-IdModule  = 14DIP-ELL300;
+ValeurCmp = 74HCT157;
+IdModule  = 16DIP-ELL300;
 EndCmp
 
 BeginCmp
-TimeStamp = /4A0C6258;
+TimeStamp = /4A25760B;
 Reference = U6;
-ValeurCmp = 74LS02;
-IdModule  = 14DIP-ELL300;
+ValeurCmp = 74HCT174;
+IdModule  = 16DIP-ELL300;
 EndCmp
 
 EndListe
