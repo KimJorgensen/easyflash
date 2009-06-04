@@ -164,21 +164,14 @@ uint8_t flashWriteBlock(uint8_t nChip, uint16_t nOffset, uint16_t nSize,
 
     for (nRemaining = nSize; nRemaining; --nRemaining)
     {
-#if 0
-        if ((nOffset == 0) || (nOffset == 0x1fff))
-		{
-			gotoxy(nOffset > 0 ? 20 : 2, 10 + nChip);
-			cprintf("0:%X:%04X = %02X", nChip, nOffset, *pBlock);
-		}
-#endif
-
         // send the write command
         flashCodeWrite(pDest++, *pBlock++);
 #ifndef EASYFLASH_FAKE
         if (!checkFlashProgress(pNormalBase))
         {
             // todo: Show a real error message
-            sprintf(strStatus, "Write error %02X:%X:%04X", 0 /*nBank*/, nChip, nOffset);
+            sprintf(strStatus, "Write error %02X:%X:%04X",
+                    0 /*nBank*/, nChip, nOffset, pNormalBase[nOffset]);
             setStatus(strStatus);
             for (;;);
         }

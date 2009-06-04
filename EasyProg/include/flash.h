@@ -8,6 +8,8 @@
 #ifndef FLASH_H_
 #define FLASH_H_
 
+#include <stdint.h>
+
 /// Manufacturer and Device ID
 #define FLASH_TYPE_AMD_AM29F040  0x01A4
 
