@@ -37,6 +37,7 @@
 #include "texts.h"
 #include "filedlg.h"
 #include "buffer.h"
+#include "hex.h"
 
 /******************************************************************************/
 
@@ -62,6 +63,7 @@ ScreenMenuEntry aMainMenuEntries[] =
         { EASYPROG_MENU_ENTRY_WRITE_CRT,  "Write cartridge image" },
         { EASYPROG_MENU_ENTRY_CHECK_TYPE, "Check flash type" },
         { EASYPROG_MENU_ENTRY_ERASE_ALL,  "Erase all" },
+        { EASYPROG_MENU_ENTRY_HEX_VIEWER, "Hex viewer" },
         { EASYPROG_MENU_ENTRY_QUIT,       "Quit" },
         { 0, NULL }
 };
@@ -370,6 +372,10 @@ static void __fastcall__ execMenu(uint8_t x, uint8_t y,
     case EASYPROG_MENU_ENTRY_ERASE_ALL:
         checkFlashType();
         eraseAll();
+        break;
+
+    case EASYPROG_MENU_ENTRY_HEX_VIEWER:
+        hexViewer();
         break;
 
     case EASYPROG_MENU_ENTRY_QUIT:

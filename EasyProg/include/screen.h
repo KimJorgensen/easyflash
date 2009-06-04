@@ -25,6 +25,9 @@ typedef struct ScreenMenuEntry_s
 ScreenMenuEntry;
 
 void screenInit(void);
+void __fastcall__ screenPrintHex2(uint8_t n);
+void __fastcall__ screenPrintHex4(uint16_t n);
+void __fastcall__ screenPrintAddr(uint8_t nBank, uint8_t nChip, uint16_t nOffset);
 void screenPrintFrame(void);
 void screenPrintBox(uint8_t x, uint8_t y, uint8_t w, uint8_t h);
 uint8_t __fastcall__ screenPrintDialog(const char* apStrLines[], uint8_t flags);

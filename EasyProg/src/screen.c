@@ -30,6 +30,8 @@
 
 #include "screen.h"
 
+static const char* pStrHexDigits = "0123456789ABCDEF";
+
 /******************************************************************************/
 /**
  * Initialize the screen. Set up colors and clear it.
@@ -40,6 +42,45 @@ void screenInit(void)
     bordercolor(COLOR_BACKGROUND);
     textcolor(COLOR_FOREGROUND);
     clrscr();
+}
+
+/******************************************************************************/
+/**
+ */
+void __fastcall__ screenPrintHex2(uint8_t n)
+{
+    uint8_t tmp;
+
+    tmp = n >> 4;
+    cputc(pStrHexDigits[tmp]);
+    cputc(pStrHexDigits[n & 0xf]);
+}
+
+/******************************************************************************/
+/**
+ */
+void __fastcall__ screenPrintHex4(uint16_t n)
+{
+    uint8_t tmp;
+
+    tmp = n >> 8;
+    screenPrintHex2(tmp);
+    screenPrintHex2((uint8_t) n);
+}
+
+/******************************************************************************/
+/**
+ */
+void __fastcall__ screenPrintAddr(uint8_t nBank, uint8_t nChip, uint16_t nOffset)
+{
+    screenPrintHex2(nBank);
+    cputc(':');
+    if (nChip)
+        cputc('1');
+    else
+        cputc('0');
+    cputc(':');
+    screenPrintHex4(nOffset);
 }
 
 
