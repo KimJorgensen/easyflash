@@ -137,7 +137,7 @@ flashCodeActivateUltimax:
 ;
 ; =============================================================================
 flashCodeDeactivateUltimax:
-        ; set /GAME low, /EXROM low => leave Ultimax, enable cartridge ROM
+        ; set /GAME low, /EXROM low => leave Ultimax, enable 16k cartridge ROM
         lda #EASYFLASH_IO_BIT_MEMCTRL
         sta EASYFLASH_IO_CONTROL
         lda bank
@@ -331,11 +331,9 @@ _flashCodeWrite:
         lda #$a0
         sta (zp_flashcode_555),y
 
-        ; now we have to activate the right bank and stay in Ultimax
+        ; now we have to activate the right bank
         lda bank
-        ; set /GAME low, /EXROM high => Ultimax
-        ora #EASYFLASH_IO_BIT_EXROM
-        sta EASYFLASH_IO_CONTROL
+        sta EASYFLASH_IO_BANK
 
         ; cycle 4: write data
         pla
