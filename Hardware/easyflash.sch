@@ -5,7 +5,7 @@ EELAYER END
 $Descr A4 11700 8267
 Sheet 1 1
 Title ""
-Date "9 jun 2009"
+Date "20 jun 2009"
 Rev ""
 Comp ""
 Comment1 ""
@@ -13,8 +13,27 @@ Comment2 ""
 Comment3 ""
 Comment4 ""
 $EndDescr
-Text Notes 9700 2550 0    60   ~
-Cp1 low =
+Wire Wire Line
+	2700 6750 2700 7600
+Wire Wire Line
+	2700 7600 3400 7600
+Wire Wire Line
+	3400 7600 3400 7500
+Connection ~ 2700 6750
+Connection ~ 650  6950
+Wire Wire Line
+	650  7600 650  2850
+Wire Wire Line
+	650  7600 2550 7600
+Wire Wire Line
+	1750 7500 800  7500
+Wire Wire Line
+	800  6750 1150 6750
+Wire Wire Line
+	4000 5100 800  5100
+Connection ~ 4500 5450
+Wire Wire Line
+	3950 5450 4500 5450
 Wire Wire Line
 	10600 2200 10850 2200
 Wire Wire Line
@@ -58,16 +77,9 @@ Wire Wire Line
 Wire Wire Line
 	4000 2550 3550 2550
 Wire Wire Line
-	4750 5100 4750 6150
+	1500 4950 4750 4950
 Wire Wire Line
-	4750 5100 1500 5100
-Connection ~ 2550 5750
-Wire Wire Line
-	2750 6450 2550 6450
-Wire Wire Line
-	2550 6450 2550 5750
-Wire Wire Line
-	5200 6350 3950 6350
+	5200 6350 4500 6350
 Wire Wire Line
 	1300 5650 1300 2750
 Connection ~ 2200 900 
@@ -82,7 +94,7 @@ Wire Wire Line
 Wire Wire Line
 	4000 650  11000 650 
 Wire Wire Line
-	1500 5100 1500 3350
+	1500 4950 1500 3350
 Wire Wire Line
 	5200 3100 4500 3100
 Wire Wire Line
@@ -137,12 +149,11 @@ Connection ~ 1800 900
 Wire Wire Line
 	4750 2900 5200 2900
 Wire Wire Line
-	4750 6150 5200 6150
+	5200 6150 4750 6150
 Wire Wire Line
 	4250 3000 4250 6250
 Wire Wire Line
 	1300 2750 2050 2750
-Connection ~ 4500 6350
 Connection ~ 4500 3100
 Connection ~ 1400 1300
 Wire Wire Line
@@ -154,13 +165,9 @@ Wire Wire Line
 	4250 5750 2500 5750
 Connection ~ 4250 5750
 Wire Wire Line
-	2750 6250 2750 5550
-Wire Wire Line
 	3550 2750 4000 2750
 Wire Wire Line
-	2750 5550 4000 5550
-Wire Wire Line
-	4000 5550 4000 2750
+	4000 2750 4000 5100
 Wire Wire Line
 	4500 6350 4500 1250
 Wire Wire Line
@@ -207,6 +214,60 @@ Wire Wire Line
 Connection ~ 7400 1150
 Wire Wire Line
 	10600 1850 10600 1500
+Wire Wire Line
+	4750 6150 4750 4950
+Wire Wire Line
+	2750 5750 2750 5550
+Connection ~ 2750 5750
+Wire Wire Line
+	2350 6750 2800 6750
+Connection ~ 1750 7500
+Wire Wire Line
+	800  5100 800  7500
+Connection ~ 800  6750
+Wire Wire Line
+	650  2850 2050 2850
+Wire Wire Line
+	650  6950 1150 6950
+Wire Wire Line
+	4000 6750 4000 6200
+Wire Wire Line
+	4000 6200 2650 6200
+Wire Wire Line
+	2650 6200 2650 5350
+Wire Wire Line
+	2650 5350 2750 5350
+Wire Wire Line
+	3400 6400 1050 6400
+Wire Wire Line
+	1050 6400 1050 5850
+Connection ~ 1750 6400
+Wire Wire Line
+	2800 6950 2550 6950
+Wire Wire Line
+	2550 6950 2550 7600
+NoConn ~ 2350 7150
+NoConn ~ 4000 7150
+$Comp
+L 74LS74 U7
+U 2 1 4A3D442F
+P 3400 6950
+F 0 "U7" H 3550 7250 60  0000 C C
+F 1 "74LS74" H 3700 6655 60  0000 C C
+	2    3400 6950
+	1    0    0    -1  
+$EndComp
+$Comp
+L 74LS74 U7
+U 1 1 4A3D4417
+P 1750 6950
+F 0 "U7" H 1900 7250 60  0000 C C
+F 1 "74LS74" H 2050 6655 60  0000 C C
+	1    1750 6950
+	1    0    0    -1  
+$EndComp
+Text Notes 9700 2550 0    60   ~
+Cp1 low =
 Text Label 9400 1400 2    60   ~
 A0
 $Comp
@@ -245,10 +306,10 @@ $DE02:G
 Text Notes 7150 5950 0    60   ~
 $DE02:M
 $Comp
-L VCC #PWR11
+L VCC #PWR10
 U 1 1 4A2EA8E7
 P 8600 4600
-F 0 "#PWR11" H 8600 4700 30  0001 C C
+F 0 "#PWR10" H 8600 4700 30  0001 C C
 F 1 "VCC" H 8600 4700 30  0000 C C
 	1    8600 4600
 	1    0    0    -1  
@@ -272,10 +333,10 @@ F 1 "1k5" V 8350 4700 50  0000 C C
 	0    1    1    0   
 $EndComp
 $Comp
-L VCC #PWR12
+L VCC #PWR11
 U 1 1 4A2EA6CD
 P 10000 5350
-F 0 "#PWR12" H 10000 5450 30  0001 C C
+F 0 "#PWR11" H 10000 5450 30  0001 C C
 F 1 "VCC" H 10000 5450 30  0000 C C
 	1    10000 5350
 	1    0    0    -1  
@@ -326,9 +387,9 @@ Text Notes 9300 2650 0    60   ~
 WIO1 high and A0,A1 low
 Text Notes 5050 900  0    60   ~
 WIO1 high = /IO1 low and /WE low
-Text Notes 1100 6200 0    60   ~
+Text Notes 2700 5900 0    60   ~
 /OE low = /WR high
-Text Notes 2950 6700 0    60   ~
+Text Notes 2150 5200 0    60   ~
 /WE low = Phi2 high and /WR low
 Text Label 8650 3150 0    60   ~
 D0
@@ -375,10 +436,10 @@ WIO1
 $Comp
 L 74HCT00 U1
 U 2 1 4A2D6DF8
-P 3350 6350
-F 0 "U1" H 3350 6400 60  0000 C C
-F 1 "74HCT00" H 3350 6300 60  0000 C C
-	2    3350 6350
+P 3350 5450
+F 0 "U1" H 3350 5500 60  0000 C C
+F 1 "74HCT00" H 3350 5400 60  0000 C C
+	2    3350 5450
 	1    0    0    -1  
 $EndComp
 $Comp
@@ -431,10 +492,10 @@ F 1 "74HCT174" H 9950 3550 60  0000 C C
 	-1   0    0    -1  
 $EndComp
 $Comp
-L GND #PWR13
+L GND #PWR12
 U 1 1 49FC864B
 P 10000 6900
-F 0 "#PWR13" H 10000 6900 30  0001 C C
+F 0 "#PWR12" H 10000 6900 30  0001 C C
 F 1 "GND" H 10000 6830 30  0001 C C
 	1    10000 6900
 	1    0    0    -1  
@@ -528,7 +589,6 @@ Text Label 9250 3300 2    60   ~
 A13
 NoConn ~ 2050 3550
 NoConn ~ 2050 3450
-NoConn ~ 2050 2850
 NoConn ~ 2050 2650
 NoConn ~ 3550 3050
 NoConn ~ 3550 2950
