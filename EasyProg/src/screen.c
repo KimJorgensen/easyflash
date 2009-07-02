@@ -420,6 +420,22 @@ void __fastcall__ screenPrintSimpleDialog(const char* apStrLines[])
 
 /******************************************************************************/
 /**
+ * Print a dialog with two text lines and wait for <Stop> or <Enter>.
+ *
+ * return           the button which has been pressed
+ */
+uint8_t __fastcall__ screenPrintTwoLinesDialog(const char* p1, const char* p2)
+{
+    const char* apStrLines[3];
+    apStrLines[0] = p1;
+    apStrLines[1] = p2;
+    apStrLines[2] = NULL;
+    return screenPrintDialog(apStrLines, BUTTON_ENTER | BUTTON_STOP);
+}
+
+
+/******************************************************************************/
+/**
  * Wait until one of the keys has been pressed.
  *
  * flags        contains the keys allowed: BUTTON_ENTER and/or BUTTON_STOP

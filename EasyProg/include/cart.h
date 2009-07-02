@@ -97,6 +97,6 @@ extern uint32_t     nCartBytes;
 uint8_t readCartHeader(uint8_t lfn);
 void eraseFlash(void);
 void printCartInfo(void);
-uint8_t readNextBankHeader(BankHeader* pBankHeader, uint8_t lfn);
+uint8_t __fastcall__ readNextBankHeader(BankHeader* pBankHeader, uint8_t lfn);
 
 #endif // CART_H

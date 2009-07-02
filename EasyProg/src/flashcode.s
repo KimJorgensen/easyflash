@@ -28,8 +28,6 @@
 ; address of the ROMH chip is $E000, not $A000 - even if the stuff you write
 ; is intended to run from $A000 later.
 ;
-; NOTE: Banking not implemented yet. All operations work on the first bank.
-;
 ;       Interrupts will be disabled during execution
 ;
 ; On exit:
@@ -42,6 +40,8 @@
 
     .import         popax
 
+; Set this to if you have easyflash-draft3 hardware or later
+HW_DRAFT3 = 1
 
 ; base address of chip (2 bytes, LE)
 zp_flashcode_base   = ptr1
@@ -62,7 +62,25 @@ zp_flashcode_val    = tmp1
 ; I/O address used to select the bank
 EASYFLASH_IO_BANK    = $de00
 
+.ifdef HW_DRAFT3
+
 ; I/O address for enabling memory configuration, /GAME and /EXROM states
+EASYFLASH_IO_CONTROL = $de02
+
+; Bit for Expansion Port /GAME line (1 = low)
+EASYFLASH_IO_BIT_GAME    = $01
+
+; Bit for Expansion Port /EXROM line (1 = low)
+EASYFLASH_IO_BIT_EXROM   = $02
+
+; Bit for memory control (1 = enabled)
+EASYFLASH_IO_BIT_MEMCTRL = $04
+
+; Bit for status LED (1 = on)
+EASYFLASH_IO_BIT_LED     = $80
+
+.else
+
 EASYFLASH_IO_CONTROL = $de01
 
 ; Bit for memory control (1 = enabled)
@@ -74,12 +92,12 @@ EASYFLASH_IO_BIT_GAME    = $40
 ; Bit for Expansion Port /EXROM line (0 = low)
 EASYFLASH_IO_BIT_EXROM   = $80
 
-; Job codes
-EASYFLASH_JOB_READ_MANUFACTURER_ID  = 0
-EASYFLASH_JOB_READ_DEVICE_ID        = 1
-EASYFLASH_JOB_SECTOR_ERASE          = 2
-EASYFLASH_JOB_WRITE                 = 3
-EASYFLASH_JOB_READ                  = 4
+; Bit for status LED (dummy in this version)
+EASYFLASH_IO_BIT_LED     = $01
+
+.endif
+
+FLASH_ALG_ERROR_BIT      = $20
 
 .segment "LOWCODE"
 
@@ -117,13 +135,17 @@ flashCodeCalcMagicAddresses:
 
 ; =============================================================================
 ;
-; Disable interrupts and turn on Ultimax mode.
+; Disable interrupts and turn on Ultimax mode and LED.
 ;
 ; =============================================================================
 flashCodeActivateUltimax:
         sei
-        ; switch to Ultimax mode (/GAME low, /EXROM high)
+        ; /GAME low, /EXROM high, LED on
+.ifdef HW_DRAFT3
+        lda #EASYFLASH_IO_BIT_MEMCTRL | EASYFLASH_IO_BIT_GAME | EASYFLASH_IO_BIT_LED
+.else
         lda #EASYFLASH_IO_BIT_MEMCTRL | EASYFLASH_IO_BIT_EXROM
+.endif
         sta EASYFLASH_IO_CONTROL
         rts
 
@@ -131,14 +153,18 @@ flashCodeActivateUltimax:
 ; =============================================================================
 ;
 ; Turn off Ultimax mode (show 16k of the currently selected bank at $8000)
-; and enable interrupts.
+; and enable interrupts. Turn off the LED.
 ;
 ; modify: A
 ;
 ; =============================================================================
 flashCodeDeactivateUltimax:
-        ; set /GAME low, /EXROM low => leave Ultimax, enable 16k cartridge ROM
+        ; /GAME low, /EXROM low, LED off
+.ifdef HW_DRAFT3
+        lda #EASYFLASH_IO_BIT_MEMCTRL | EASYFLASH_IO_BIT_GAME | EASYFLASH_IO_BIT_EXROM
+.else
         lda #EASYFLASH_IO_BIT_MEMCTRL
+.endif
         sta EASYFLASH_IO_CONTROL
         lda bank
         sta EASYFLASH_IO_BANK
@@ -194,7 +220,7 @@ flashCodePrepareWrite:
 ;       -
 ;
 ; =============================================================================
-        .export _flashCodeSetBank
+.export _flashCodeSetBank
 _flashCodeSetBank:
         sta bank
         sta EASYFLASH_IO_BANK
@@ -214,7 +240,7 @@ _flashCodeSetBank:
 ;       result in AX (A = low = Device ID, X = high = Manufacturer ID)
 ;
 ; =============================================================================
-        .export _flashCodeReadIds
+.export _flashCodeReadIds
 _flashCodeReadIds:
         sta zp_flashcode_base
         stx zp_flashcode_base + 1
@@ -261,7 +287,7 @@ _flashCodeReadIds:
 ;       -
 ;
 ; =============================================================================
-        .export _flashCodeSectorErase
+.export _flashCodeSectorErase
 _flashCodeSectorErase:
         sta zp_flashcode_base
         stx zp_flashcode_base + 1
@@ -307,7 +333,7 @@ _flashCodeSectorErase:
 ;       -
 ;
 ; =============================================================================
-        .export _flashCodeWrite
+.export _flashCodeWrite
 _flashCodeWrite:
         ; remember value
         pha
@@ -341,6 +367,73 @@ _flashCodeWrite:
 
         ; that's it
         jmp flashCodeDeactivateUltimax
+
+
+; =============================================================================
+;
+; Write a byte to the given address.
+;
+; Check the program or erase progress of the flash chip at the given base
+; address (normal base).
+;
+; Return 1 for success, 0 for error;
+; uint8_t __fastcall__ flashCodeCheckProgress(uint8_t* pAddr);
+;
+; parameters:
+;       base in AX (A = low), $8000 or $A000
+;
+; return:
+;       result in AX (A = low), 1 = okay, 0 = error
+;
+; =============================================================================
+.export _flashCodeCheckProgress
+.proc   _flashCodeCheckProgress
+_flashCodeCheckProgress:
+        cpx #$a0
+        beq l_a000
+        ; check progress of flash memory at $8000
+
+        ; wait as long as the toggle bit toggles
+l8_1:
+        lda $8000
+        cmp $8000
+        bne l8_different
+        ; read once more to catch the case status => data
+        cmp $8000
+        beq ret_ok
+l8_different:
+        ; check if the error bit is set
+        and #FLASH_ALG_ERROR_BIT
+        bne ret_err
+        ; wait longer if not
+        beq l8_1        ; always
+
+l_a000:
+        ; same code for $e000
+        ; wait as long as the toggle bit toggles
+la_1:
+        lda $a000
+        cmp $a000
+        bne la_different
+        ; read once more to catch the case status => data
+        cmp $a000
+        beq ret_ok
+la_different:
+        ; check if the error bit is set
+        and #FLASH_ALG_ERROR_BIT
+        bne ret_err
+        ; wait longer if not
+        beq la_1
+
+ret_err:
+        ldx #0
+        txa
+        rts
+ret_ok:
+        ldx #0
+        lda #1
+        rts
+.endproc
 
 
 ; =============================================================================

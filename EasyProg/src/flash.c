@@ -12,6 +12,7 @@
 #include <unistd.h>
 
 #include "flash.h"
+#include "screen.h"
 #include "flashcode.h"
 #include "easyprog.h"
 
@@ -171,7 +172,7 @@ uint8_t flashWriteBlock(uint8_t nChip, uint16_t nOffset, uint16_t nSize,
         {
             // todo: Show a real error message
             sprintf(strStatus, "Write error %02X:%X:%04X",
-                    0 /*nBank*/, nChip, nOffset, pNormalBase[nOffset]);
+                    0 /*nBank*/, nChip, nOffset);
             setStatus(strStatus);
             for (;;);
         }
@@ -182,50 +183,107 @@ uint8_t flashWriteBlock(uint8_t nChip, uint16_t nOffset, uint16_t nSize,
     return 1;
 }
 
+
+/******************************************************************************/
+/**
+ * Compare a block of bytes with the flash content. The bank must already be
+ * set up. The whole block must be located in one bank and in one flash chip.
+ *
+ * return 1 for success (same), 0 for failure
+ */
+uint8_t flashVerifyBlock(uint8_t nChip, uint16_t nOffset, uint16_t nSize,
+                        uint8_t* pBlock)
+{
+    uint16_t nRemaining;
+    uint8_t* pDest;
+    uint8_t* pNormalBase;
+    uint8_t  nFileVal;
+    uint8_t  nFlashVal;
+#ifndef EASYFLASH_FAKE
+    char strStatus[41];
+#endif
+
+    pNormalBase  = apNormalRomBase[nChip];
+    pDest = pNormalBase + nOffset;
+
+    for (nRemaining = nSize; nRemaining; --nRemaining)
+    {
+        nFlashVal = *pDest++;
+        nFileVal  = *pBlock++;
+#ifndef EASYFLASH_FAKE
+        if (nFlashVal != nFileVal)
+        {
+            sprintf(strStatus, "%02X:%X:%04X: file %02X != flash %02X",
+                    0 /*nBank*/, nChip, nOffset,
+                    nFileVal, nFlashVal);
+            if (screenPrintTwoLinesDialog("Verify error at", strStatus) ==
+                BUTTON_STOP)
+                return 0;
+        }
+#endif
+        ++nOffset;
+    }
+
+    return 1;
+}
+
+
 /******************************************************************************/
 /**
  * Write a block of bytes to the flash.
  * The block will be written to offset 0 of this bank/chip.
  * The whole block must be located in one bank and in one flash chip.
  *
+ * If bWrite is 0, verify only.
+ *
  * return 1 for success, 0 for failure
  */
 uint8_t flashWriteBlockFromFile(uint8_t nBank, uint8_t nChip,
-                                uint16_t nSize, uint8_t lfn)
+                                uint16_t nSize, uint8_t bWrite, uint8_t lfn)
 {
-	uint16_t nOffset;
-	uint16_t nBytes;
+    uint16_t nOffset;
+    uint16_t nBytes;
     char strStatus[41];
 
-	flashCodeSetBank(nBank);
+    flashCodeSetBank(nBank);
 
-	nOffset = 0;
-	while (nSize)
-	{
-		nBytes = (nSize > FLASH_WRITE_SIZE) ? FLASH_WRITE_SIZE : nSize;
+    nOffset = 0;
+    while (nSize)
+    {
+        nBytes = (nSize > FLASH_WRITE_SIZE) ? FLASH_WRITE_SIZE : nSize;
 
-		sprintf(strStatus, "Reading %d bytes from file", nBytes);
-		setStatus(strStatus);
+        sprintf(strStatus, "Reading %d bytes from file", nBytes);
+        setStatus(strStatus);
 
-	    if (cbm_read(lfn, buffer, nBytes) != nBytes)
-	    {
-	        // todo: Show a real error message
-	        setStatus("File too short");
-			for (;;);
-	        return 0;
-	    }
+        if (cbm_read(lfn, buffer, nBytes) != nBytes)
+        {
+            // todo: Show a real error message
+            setStatus("File too short");
+            for (;;)
+                ;
+            return 0;
+        }
 
-		sprintf(strStatus, "Flashing %d bytes to %02X:%X:%04X",
-				nBytes, nBank, nChip, nOffset);
-		setStatus(strStatus);
+        if (bWrite)
+        {
+            sprintf(strStatus, "Flashing %d bytes to %02X:%X:%04X", nBytes,
+                    nBank, nChip, nOffset);
+            setStatus(strStatus);
 
-		if (!flashWriteBlock(nChip, nOffset, nBytes, buffer))
-			return 0;
+            if (!flashWriteBlock(nChip, nOffset, nBytes, buffer))
+                return 0;
+        }
 
-		nSize -= nBytes;
-		nOffset += nBytes;
-	}
+        sprintf(strStatus, "Verifying %d bytes at %02X:%X:%04X", nBytes,
+                nBank, nChip, nOffset);
+        setStatus(strStatus);
+        if (!flashVerifyBlock(nChip, nOffset, nBytes, buffer))
+            return 0;
 
-	return 1;
+        nSize -= nBytes;
+        nOffset += nBytes;
+    }
+
+    return 1;
 }
 

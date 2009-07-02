@@ -101,7 +101,7 @@ void eraseFlash()
  *          CART_RV_OKAY    if everything was oky
  *          CART_RV_EOF     if everything has been read already
  */
-uint8_t readNextBankHeader(BankHeader* pBankHeader, uint8_t lfn)
+uint8_t __fastcall__ readNextBankHeader(BankHeader* pBankHeader, uint8_t lfn)
 {
     if (cbm_read(lfn, pBankHeader, sizeof(BankHeader)) !=
         sizeof(BankHeader))

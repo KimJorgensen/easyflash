@@ -32,6 +32,7 @@ void screenPrintFrame(void);
 void screenPrintBox(uint8_t x, uint8_t y, uint8_t w, uint8_t h);
 uint8_t __fastcall__ screenPrintDialog(const char* apStrLines[], uint8_t flags);
 void __fastcall__ screenPrintSimpleDialog(const char* apStrLines[]);
+uint8_t __fastcall__ screenPrintTwoLinesDialog(const char* p1, const char* p2);
 uint8_t __fastcall__ screenWaitKey(uint8_t flags);
 const char* __fastcall__ screenReadInput(const char* pStrTitle, const char* pStrPrompt);
 

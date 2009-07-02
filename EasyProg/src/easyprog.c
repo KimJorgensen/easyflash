@@ -60,7 +60,8 @@ static uint32_t nBytesFlashed;
 
 ScreenMenuEntry aMainMenuEntries[] =
 {
-        { EASYPROG_MENU_ENTRY_WRITE_CRT,  "Write cartridge image" },
+        { EASYPROG_MENU_ENTRY_WRITE_CRT,  "Write CRT to flash" },
+        { EASYPROG_MENU_ENTRY_VERIFY_CRT, "Verify CRT" },
         { EASYPROG_MENU_ENTRY_CHECK_TYPE, "Check flash type" },
         { EASYPROG_MENU_ENTRY_ERASE_ALL,  "Erase all" },
         { EASYPROG_MENU_ENTRY_HEX_VIEWER, "Hex viewer" },
@@ -94,7 +95,7 @@ static void showFlashTypeBox(uint8_t y, uint8_t nChip)
 
     gotoxy (17, y);
     cprintf("%04X (%s)", id,
-        id == FLASH_TYPE_AMD_AM29F040 ? "Am29F040(B)" : "unknown");
+        id == FLASH_TYPE_AMD_AM29F040 ? "Am29F040" : "unknown");
 }
 
 
@@ -102,7 +103,7 @@ static void showFlashTypeBox(uint8_t y, uint8_t nChip)
 /**
  * Show or update a box with the bytes flashed so far.
  */
-static void showBytesFlashedBox(void)
+static void showBytesCompletedBox(void)
 {
 	uint8_t  y;
 
@@ -111,8 +112,7 @@ static void showBytesFlashedBox(void)
     screenPrintBox(16, y, 23, 3);
     textcolor(COLOR_FOREGROUND);
 
-    gotoxy (2, ++y);
-    cprintf("Bytes flashed:");
+    cputsxy(2, ++y, "Completed:");
 
     gotoxy (17 + 8, y);
     cprintf("%4ld kByte", nBytesFlashed / 1024L);
@@ -151,7 +151,7 @@ static void refreshMainScreen(void)
     textcolor(COLOR_FOREGROUND);
     cputs("elp");
 
-	showBytesFlashedBox();
+	showBytesCompletedBox();
     showFlashTypeBox(15, 0);
     showFlashTypeBox(18, 1);
 
@@ -208,7 +208,7 @@ void __fastcall__ setStatus(const char* pStrStatus)
 void __fastcall__ addBytesFlashed(uint16_t nAdd)
 {
     nBytesFlashed += nAdd;
-    showBytesFlashedBox();
+    showBytesCompletedBox();
 }
 
 
@@ -217,9 +217,11 @@ void __fastcall__ addBytesFlashed(uint16_t nAdd)
  * Write a crt image from the given file to flash. Before doing this, the
  * flash will be erased.
  *
+ * If bWrite is 0, verify only.
+ *
  * return CART_RV_OK or CART_RV_ERR
  */
-static uint8_t writeCrtImage(uint8_t lfn)
+static uint8_t writeCrtImage(uint8_t lfn, uint8_t bWrite)
 {
     uint8_t rv;
     uint8_t  nBank;
@@ -234,11 +236,14 @@ static uint8_t writeCrtImage(uint8_t lfn)
         return CART_RV_ERR;
     }
 
-    setStatus("Erasing flash memory");
-    if (!eraseAll())
+    if (bWrite)
     {
-        screenPrintSimpleDialog(apStrEraseFailed);
-        return CART_RV_ERR;
+        setStatus("Erasing flash memory");
+        if (!eraseAll())
+        {
+            screenPrintSimpleDialog(apStrEraseFailed);
+            return CART_RV_ERR;
+        }
     }
 
     do
@@ -252,30 +257,31 @@ static uint8_t writeCrtImage(uint8_t lfn)
             nAddress = 256 * bankHeader.loadAddr[0] + bankHeader.loadAddr[1];
             nSize = 256 * bankHeader.romLen[0] + bankHeader.romLen[1];
 
-			if ((nAddress == (uint16_t) ROM0_BASE) && (nSize <= 0x4000))
-			{
-				if (nSize > 0x2000)
-				{
-	                flashWriteBlockFromFile(nBank, 0, 0x2000, lfn);
-	                flashWriteBlockFromFile(nBank, 1, nSize - 0x2000, lfn);
-				}
-				else
-				{
-	                flashWriteBlockFromFile(nBank, 0, nSize, lfn);
-				}
-			}
-			else if (((nAddress == (uint16_t) ROM1_BASE) ||
-                      (nAddress == (uint16_t) ROM1_BASE_ULTIMAX))
-                     && (nSize <= 0x2000))
-			{
-	                flashWriteBlockFromFile(nBank, 1, nSize, lfn);
-			}
-			else
-			{
-				// todo: error message
-				cputsxy(0, 0, "Illegal CHIP address or size");
-				for (;;);
-			}
+            if ((nAddress == (uint16_t) ROM0_BASE) && (nSize <= 0x4000))
+            {
+                if (nSize > 0x2000)
+                {
+                    flashWriteBlockFromFile(nBank, 0, 0x2000, bWrite, lfn);
+                    flashWriteBlockFromFile(nBank, 1, nSize - 0x2000, bWrite, lfn);
+                }
+                else
+                {
+                    flashWriteBlockFromFile(nBank, 0, nSize, bWrite, lfn);
+                }
+            }
+            else if (((nAddress == (uint16_t) ROM1_BASE) || (nAddress
+                    == (uint16_t) ROM1_BASE_ULTIMAX)) && (nSize <= 0x2000))
+            {
+                flashWriteBlockFromFile(nBank, 1, nSize, bWrite, lfn);
+            }
+            else
+            {
+                // todo: error message
+                gotoxy(0, 0);
+                cprintf("Illegal CHIP address or size (%p, %p)", nAddress, nSize);
+                for (;;)
+                    ;
+            }
         }
         else if (rv == CART_RV_ERR)
         {
@@ -291,18 +297,26 @@ static uint8_t writeCrtImage(uint8_t lfn)
 
 /******************************************************************************/
 /**
+ * Write and/or verify an CRT image file to the flash.
  *
+ * If bWrite is 0, verify only.
  */
-void checkWriteImage(void)
+void checkWriteImage(uint8_t bWrite)
 {
+    const char *pStrTitle;
     const char *pStrInput;
     char strFileName[FILENAME_MAX];
     uint8_t lfn, rv;
 
-	nBytesFlashed = 0;
-	showBytesFlashedBox();
+    nBytesFlashed = 0;
+    showBytesCompletedBox();
 
-    pStrInput = screenReadInput("Write cartridge image", "Enter file name");
+    if (bWrite)
+        pStrTitle = "Write CRT to flash";
+    else
+        pStrTitle = "Verify flash content";
+    pStrInput = screenReadInput(pStrTitle, "Enter file name");
+
     refreshMainScreen();
 
     if (!pStrInput)
@@ -322,7 +336,7 @@ void checkWriteImage(void)
         return;
     }
 
-    writeCrtImage(lfn);
+    writeCrtImage(lfn, bWrite);
     cbm_close(lfn);
 
     //printCartInfo();
@@ -344,7 +358,7 @@ void execMenuEntry(void)
     case EASYPROG_MENU_ENTRY_ERASE_ALL:
         if (checkFlashType())
         {
-            checkWriteImage();
+            eraseAll();
         }
         break;
     }
@@ -362,7 +376,11 @@ static void __fastcall__ execMenu(uint8_t x, uint8_t y,
     {
     case EASYPROG_MENU_ENTRY_WRITE_CRT:
         checkFlashType();
-        checkWriteImage();
+        checkWriteImage(1);
+        break;
+
+    case EASYPROG_MENU_ENTRY_VERIFY_CRT:
+        checkWriteImage(0);
         break;
 
     case EASYPROG_MENU_ENTRY_CHECK_TYPE:
@@ -405,6 +423,9 @@ int main(void)
 
     screenInit();
     refreshMainScreen();
+
+    // this also makes visible 16kByte of flash memory
+    checkFlashType();
 
     for (;;)
     {

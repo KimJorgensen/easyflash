@@ -40,10 +40,13 @@ uint8_t eraseAll(void);
 
 uint8_t flashWrite(uint8_t nChip, uint16_t nOffset, uint8_t nVal);
 
+uint8_t flashVerifyBlock(uint8_t nChip, uint16_t nOffset, uint16_t nSize,
+                         uint8_t* pBlock);
+
 uint8_t flashWriteBlock(uint8_t nChip, uint16_t nOffset, uint16_t nSize,
                         uint8_t* pBlock);
 
 uint8_t flashWriteBlockFromFile(uint8_t nBank, uint8_t nChip,
-                                uint16_t nSize, uint8_t lfn);
+                                uint16_t nSize, uint8_t bWrite, uint8_t lfn);
 
 #endif /* FLASH_H_ */
