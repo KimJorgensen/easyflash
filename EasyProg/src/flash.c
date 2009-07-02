@@ -27,6 +27,7 @@ static uint8_t* const apUltimaxRomBase[2] = { ROM0_BASE, ROM1_BASE_ULTIMAX };
 #define FLASH_WRITE_SIZE 1024
 static uint8_t buffer[FLASH_WRITE_SIZE];
 
+#if 0
 /******************************************************************************/
 /**
  * Check the program or erase progress of the flash chip at the given base
@@ -64,6 +65,7 @@ static uint8_t __fastcall__ checkFlashProgress(uint8_t* pNormalBase)
     }
     return 0;
 }
+#endif
 
 
 /******************************************************************************/
@@ -104,7 +106,7 @@ uint8_t eraseSector(uint8_t nBank, uint8_t nChip)
     sprintf(strStatus, "Erasing %02X:%X:%04X",  nBank, nChip, 0);
     setStatus(strStatus);
 
-    if (checkFlashProgress(pNormalBase))
+    if (flashCodeCheckProgress(pNormalBase))
     {
         setStatus("OK");
         return 1;
@@ -168,7 +170,7 @@ uint8_t flashWriteBlock(uint8_t nChip, uint16_t nOffset, uint16_t nSize,
         // send the write command
         flashCodeWrite(pDest++, *pBlock++);
 #ifndef EASYFLASH_FAKE
-        if (!checkFlashProgress(pNormalBase))
+        if (!flashCodeCheckProgress(pNormalBase))
         {
             // todo: Show a real error message
             sprintf(strStatus, "Write error %02X:%X:%04X",
