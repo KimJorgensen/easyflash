@@ -12,6 +12,7 @@ const char* apStrLowHigh[];
 const char* apStrAbout[];
 
 const char* apStrWrongFlash[];
+const char* apStrBadRAM[];
 const char* apStrEraseFailed[];
 const char* apStrFileOpenError[];
 const char* apStrHeaderReadError[];

@@ -188,6 +188,19 @@ static uint8_t checkFlashType(void)
     return 1;
 }
 
+/******************************************************************************/
+/**
+ * Check if the RAM at $DF00 is okay.
+ * If it is not okay, print an error message.
+ */
+static void checkRAM(void)
+{
+    if (!flashCodeCheckRAM())
+    {
+        screenPrintSimpleDialog(apStrBadRAM);
+        refreshMainScreen();
+    }
+}
 
 /******************************************************************************/
 /**
@@ -426,6 +439,7 @@ int main(void)
 
     // this also makes visible 16kByte of flash memory
     checkFlashType();
+    checkRAM();
 
     for (;;)
     {

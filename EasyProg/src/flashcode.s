@@ -371,8 +371,6 @@ _flashCodeWrite:
 
 ; =============================================================================
 ;
-; Write a byte to the given address.
-;
 ; Check the program or erase progress of the flash chip at the given base
 ; address (normal base).
 ;
@@ -424,7 +422,7 @@ la_different:
         bne ret_err
         ; wait longer if not
         beq la_1
-
+.endproc
 ret_err:
         ldx #0
         txa
@@ -433,8 +431,66 @@ ret_ok:
         ldx #0
         lda #1
         rts
-.endproc
 
+; =============================================================================
+;
+; Check if the 256 bytes of RAM at $DF00 are okay.
+;
+; Return 1 for success, 0 for error
+; uint8_t __fastcall__ flashCodeCheckRAM(void);
+;
+; parameters:
+;       base in AX (A = low), $8000 or $A000
+;
+; return:
+;       result in AX (A = low), 1 = okay, 0 = error
+;
+; =============================================================================
+.export _flashCodeCheckRAM
+.proc   _flashCodeCheckRAM
+_flashCodeCheckRAM:
+        ; write 0..255
+        ldx #0
+l1:
+        txa
+        sta $df00, x
+        dex
+        bne l1
+        ; check 0..255
+l2:
+        txa
+        cmp $df00, x
+        bne ret_err
+        dex
+        bne l2
+
+        ; write $55
+        lda #$55
+l3:
+        sta $df00, x
+        dex
+        bne l3
+        ; check $55
+l4:
+        cmp $df00, x
+        bne ret_err
+        dex
+        bne l4
+
+        ; write $AA
+        lda #$AA
+l5:
+        sta $df00, x
+        dex
+        bne l5
+        ; check $AA
+l6:
+        cmp $df00, x
+        bne ret_err
+        dex
+        bne l6
+        beq ret_ok
+.endproc
 
 ; =============================================================================
 ; Data in same segment, must be visible in Ultimax mode

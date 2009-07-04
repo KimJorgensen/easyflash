@@ -32,6 +32,13 @@ const char* apStrWrongFlash[] =
         NULL
 };
 
+const char* apStrBadRAM[] =
+{
+        "The cartridge RAM at $DF00",
+        "doesn't work correctly.",
+        NULL
+};
+
 const char* apStrEraseFailed[] =
 {
         "Flash erase failed,",
