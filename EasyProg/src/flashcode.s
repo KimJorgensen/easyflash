@@ -47,10 +47,7 @@ zp_flashcode_base   = ptr1
 zp_flashcode_addr   = ptr2
 
 ; temp pointer (2 bytes)
-zp_flashcode_555    = ptr3
-
-; temp pointer (2 bytes)
-zp_flashcode_2aa    = ptr4
+zp_flashcode_ram    = ptr3
 
 ; argument/return: value (1 byte)
 zp_flashcode_val    = tmp1
@@ -170,6 +167,24 @@ _flashCodeSetBank:
         sta EASYFLASH_IO_BANK
         rts
 
+; =============================================================================
+;
+; Get the selected bank.
+;
+; uint8_t __fastcall__ flashCodeGetBank(void);
+;
+; parameters:
+;       -
+;
+; return:
+;       bank in AX (A = low, 0..63)
+;
+; =============================================================================
+.export _flashCodeGetBank
+_flashCodeGetBank:
+        lda bank
+        ldx #0
+        rts
 
 ; =============================================================================
 ;
@@ -492,6 +507,62 @@ l6:
         dex
         bne l6
         beq ret_ok
+.endproc
+
+; =============================================================================
+;
+; Compare 256 bytes of flash contents and RAM contents. The bank must already
+; be set up. The whole block must be located in one bank and in one flash
+; chip.
+;
+; Return 0 for success, the bad flash memory address for error
+; uint8_t* __fastcall__ flashCodeVerifyFlash(uint8_t* pFlash, uint8_t* pRAM);
+;
+; !!! Do not call this from Ultimax mode, Use normal addresses (8000/a000) !!!
+;
+; parameters:
+;       RAM address in AX (A = low)
+;       flash address on cc65-stack
+;
+; return:
+;       result in AX (A = low), 0 = okay, address in flash = error
+;
+; =============================================================================
+.export _flashCodeVerifyFlash
+.proc   _flashCodeVerifyFlash
+_flashCodeVerifyFlash:
+
+        sta zp_flashcode_ram
+        stx zp_flashcode_ram + 1
+
+        ; get and save address
+        jsr popax
+        sta zp_flashcode_addr
+        stx zp_flashcode_addr + 1
+
+        ldy #0
+l1:
+        lda (zp_flashcode_addr), y
+        cmp (zp_flashcode_ram), y
+        bne bad
+        iny
+        bne l1
+
+        ; okay, return NULL
+        tya
+        tax
+        rts
+bad:
+        ; return bad flash address
+        ldx zp_flashcode_addr + 1   ; high byte
+        clc
+        tya
+        adc zp_flashcode_addr       ; low byte + bad offset
+        bcc nohigh
+        inx
+nohigh:
+        rts
+
 .endproc
 
 ; =============================================================================

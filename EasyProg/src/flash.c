@@ -8,7 +8,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <stdio.h>
-#include <conio.h> // kann wieder raus
+#include <cbm.h>
 #include <unistd.h>
 
 #include "flash.h"
@@ -24,49 +24,8 @@ static uint8_t* const apNormalRomBase[2] = { ROM0_BASE, ROM1_BASE };
 /// map chip index to Ultimax address
 static uint8_t* const apUltimaxRomBase[2] = { ROM0_BASE, ROM1_BASE_ULTIMAX };
 
-#define FLASH_WRITE_SIZE 1024
+#define FLASH_WRITE_SIZE 256
 static uint8_t buffer[FLASH_WRITE_SIZE];
-
-#if 0
-/******************************************************************************/
-/**
- * Check the program or erase progress of the flash chip at the given base
- * address (normal base).
- *
- * Return 1 for success, 0 for error
- */
-static uint8_t __fastcall__ checkFlashProgress(uint8_t* pNormalBase)
-{
-    uint8_t  nSame, st1, st2;
-
-    // wait as long as the toggle bit toggles
-    nSame = 0;
-    do
-    {
-        st1 = *((volatile uint8_t*) pNormalBase);
-        st2 = *((volatile uint8_t*) pNormalBase);
-
-        // must be same two consecutive times
-        if (st1 == st2)
-            ++nSame;
-        else
-            nSame = 0;
-
-    } while ((nSame < 2) && !(st2 & FLASH_ALG_ERROR_BIT));
-
-    // read once more to catch the case status => data
-    st1 = *((volatile uint8_t*) pNormalBase);
-    st2 = *((volatile uint8_t*) pNormalBase);
-
-    // not toggling anymore => success
-    if (st1 == st2)
-    {
-        return 1;
-    }
-    return 0;
-}
-#endif
-
 
 /******************************************************************************/
 /**
@@ -167,18 +126,21 @@ uint8_t flashWriteBlock(uint8_t nChip, uint16_t nOffset, uint16_t nSize,
 
     for (nRemaining = nSize; nRemaining; --nRemaining)
     {
-        // send the write command
-        flashCodeWrite(pDest++, *pBlock++);
-#ifndef EASYFLASH_FAKE
-        if (!flashCodeCheckProgress(pNormalBase))
+        if (nRemaining == 254)
         {
-            // todo: Show a real error message
-            sprintf(strStatus, "Write error %02X:%X:%04X",
-                    0 /*nBank*/, nChip, nOffset);
-            setStatus(strStatus);
-            for (;;);
+            // send the write command
+            flashCodeWrite(pDest++, 0x33);
+            pBlock++;
+            // we don't check the result, because we verify anyway
+            flashCodeCheckProgress(pNormalBase);
         }
-#endif
+        else
+        {
+            // send the write command
+            flashCodeWrite(pDest++, *pBlock++);
+            // we don't check the result, because we verify anyway
+            flashCodeCheckProgress(pNormalBase);
+        }
     }
 
 	addBytesFlashed(nSize);
@@ -188,43 +150,40 @@ uint8_t flashWriteBlock(uint8_t nChip, uint16_t nOffset, uint16_t nSize,
 
 /******************************************************************************/
 /**
- * Compare a block of bytes with the flash content. The bank must already be
- * set up. The whole block must be located in one bank and in one flash chip.
+ * Compare 256 bytes of flash contents and RAM contents. The bank must already
+ * be set up. The whole block must be located in one bank and in one flash
+ * chip.
+ *
+ * If there is an error, report it to the user
  *
  * return 1 for success (same), 0 for failure
  */
-uint8_t flashVerifyBlock(uint8_t nChip, uint16_t nOffset, uint16_t nSize,
-                        uint8_t* pBlock)
+static uint8_t __fastcall__ flashVerifyBlock(uint8_t nChip, uint16_t nOffset,
+                                             uint8_t* pBlock)
 {
-    uint16_t nRemaining;
-    uint8_t* pDest;
     uint8_t* pNormalBase;
-    uint8_t  nFileVal;
-    uint8_t  nFlashVal;
+    uint8_t* pFlash;
+
 #ifndef EASYFLASH_FAKE
     char strStatus[41];
 #endif
 
-    pNormalBase  = apNormalRomBase[nChip];
-    pDest = pNormalBase + nOffset;
+    pNormalBase = apNormalRomBase[nChip];
+    pFlash      = pNormalBase + nOffset;
 
-    for (nRemaining = nSize; nRemaining; --nRemaining)
-    {
-        nFlashVal = *pDest++;
-        nFileVal  = *pBlock++;
 #ifndef EASYFLASH_FAKE
-        if (nFlashVal != nFileVal)
-        {
-            sprintf(strStatus, "%02X:%X:%04X: file %02X != flash %02X",
-                    0 /*nBank*/, nChip, nOffset,
-                    nFileVal, nFlashVal);
-            if (screenPrintTwoLinesDialog("Verify error at", strStatus) ==
-                BUTTON_STOP)
-                return 0;
-        }
-#endif
-        ++nOffset;
+    pFlash = flashCodeVerifyFlash(pFlash, pBlock);
+    if (pFlash)
+    {
+        nOffset = pFlash - pNormalBase;
+        sprintf(strStatus, "%02X:%X:%04X: file %02X != flash %02X",
+                flashCodeGetBank(), nChip, nOffset,
+                pBlock[nOffset], *pFlash);
+
+        screenPrintTwoLinesDialog("Verify error at", strStatus);
+        return 0;
     }
+#endif
 
     return 1;
 }
@@ -279,7 +238,7 @@ uint8_t flashWriteBlockFromFile(uint8_t nBank, uint8_t nChip,
         sprintf(strStatus, "Verifying %d bytes at %02X:%X:%04X", nBytes,
                 nBank, nChip, nOffset);
         setStatus(strStatus);
-        if (!flashVerifyBlock(nChip, nOffset, nBytes, buffer))
+        if (!flashVerifyBlock(nChip, nOffset, buffer))
             return 0;
 
         nSize -= nBytes;
