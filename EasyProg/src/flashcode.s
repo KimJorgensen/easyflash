@@ -40,9 +40,6 @@
 
     .import         popax
 
-; Set this to if you have easyflash-draft3 hardware or later
-HW_DRAFT3 = 1
-
 ; base address of chip (2 bytes, LE)
 zp_flashcode_base   = ptr1
 
@@ -62,8 +59,6 @@ zp_flashcode_val    = tmp1
 ; I/O address used to select the bank
 EASYFLASH_IO_BANK    = $de00
 
-.ifdef HW_DRAFT3
-
 ; I/O address for enabling memory configuration, /GAME and /EXROM states
 EASYFLASH_IO_CONTROL = $de02
 
@@ -79,59 +74,9 @@ EASYFLASH_IO_BIT_MEMCTRL = $04
 ; Bit for status LED (1 = on)
 EASYFLASH_IO_BIT_LED     = $80
 
-.else
-
-EASYFLASH_IO_CONTROL = $de01
-
-; Bit for memory control (1 = enabled)
-EASYFLASH_IO_BIT_MEMCTRL = $20
-
-; Bit for Expansion Port /GAME line (0 = low)
-EASYFLASH_IO_BIT_GAME    = $40
-
-; Bit for Expansion Port /EXROM line (0 = low)
-EASYFLASH_IO_BIT_EXROM   = $80
-
-; Bit for status LED (dummy in this version)
-EASYFLASH_IO_BIT_LED     = $01
-
-.endif
-
 FLASH_ALG_ERROR_BIT      = $20
 
 .segment "LOWCODE"
-
-; =============================================================================
-;
-; Calculate the two magic addresses base + $0555 and base + $2AA
-;
-; read:
-;       zp_flashcode_base ist bast
-;
-; write:
-;       zp_flashcode_555 and zp_flashcode_2aa
-;
-; =============================================================================
-flashCodeCalcMagicAddresses:
-        ; prepare base + $555
-        clc
-        lda zp_flashcode_base
-        adc #$55
-        sta zp_flashcode_555
-        lda zp_flashcode_base + 1
-        adc #$05
-        sta zp_flashcode_555 + 1
-
-        ; prepare base + $2AA
-        ; c is still clear
-        lda zp_flashcode_base
-        adc #$aa
-        sta zp_flashcode_2aa
-        lda zp_flashcode_base + 1
-        adc #$02
-        sta zp_flashcode_2aa + 1
-        rts
-
 
 ; =============================================================================
 ;
@@ -141,14 +86,9 @@ flashCodeCalcMagicAddresses:
 flashCodeActivateUltimax:
         sei
         ; /GAME low, /EXROM high, LED on
-.ifdef HW_DRAFT3
         lda #EASYFLASH_IO_BIT_MEMCTRL | EASYFLASH_IO_BIT_GAME | EASYFLASH_IO_BIT_LED
-.else
-        lda #EASYFLASH_IO_BIT_MEMCTRL | EASYFLASH_IO_BIT_EXROM
-.endif
         sta EASYFLASH_IO_CONTROL
         rts
-
 
 ; =============================================================================
 ;
@@ -160,51 +100,55 @@ flashCodeActivateUltimax:
 ; =============================================================================
 flashCodeDeactivateUltimax:
         ; /GAME low, /EXROM low, LED off
-.ifdef HW_DRAFT3
         lda #EASYFLASH_IO_BIT_MEMCTRL | EASYFLASH_IO_BIT_GAME | EASYFLASH_IO_BIT_EXROM
-.else
-        lda #EASYFLASH_IO_BIT_MEMCTRL
-.endif
         sta EASYFLASH_IO_CONTROL
         lda bank
         sta EASYFLASH_IO_BANK
         cli
         rts
 
+; =============================================================================
+;
+; Calculate the magic addresses, go to Ultimax mode, bank 0 and send command
+; cycles 1 and 2. Do this for the low flash chip which is visible at $8000.
+;
+; =============================================================================
+flashCodePrepareWriteLow:
+        ; select bank 0
+        lda #0
+        sta EASYFLASH_IO_BANK
 
-; =============================================================================
-;
-; Write command cycles 1 and 2 to the flash chip.
-;
-; preconditions:
-;       - flashCodeCalcMagicAddresses must have been called
-;       - must be in Ultimax mode
-;
-; =============================================================================
-flashCodeCommandCycles12:
+        jsr flashCodeActivateUltimax
+
         ; cycle 1: write $AA to $555
         lda #$aa
-        ldy #0
-        ; select bank 0
-        sty EASYFLASH_IO_BANK
-        sta (zp_flashcode_555),y
+        sta $8555
         ; cycle 2: write $55 to $2AA
         lda #$55
-        sta (zp_flashcode_2aa),y
+        sta $82AA
         rts
-
 
 ; =============================================================================
 ;
 ; Calculate the magic addresses, go to Ultimax mode, bank 0 and send command
-; cycles 1 and 2.
+; cycles 1 and 2. Do this for the low flash chip which is visible at $E000
+; in Ultimax mode.
 ;
 ; =============================================================================
-flashCodePrepareWrite:
-        jsr flashCodeCalcMagicAddresses
-        jsr flashCodeActivateUltimax
-        jmp flashCodeCommandCycles12
+flashCodePrepareWriteHigh:
+        ; select bank 0
+        lda #0
+        sta EASYFLASH_IO_BANK
 
+        jsr flashCodeActivateUltimax
+
+        ; cycle 1: write $AA to $555
+        lda #$aa
+        sta $E555
+        ; cycle 2: write $55 to $2AA
+        lda #$55
+        sta $E2AA
+        rts
 
 ; =============================================================================
 ;
@@ -241,35 +185,62 @@ _flashCodeSetBank:
 ;
 ; =============================================================================
 .export _flashCodeReadIds
+.proc   _flashCodeReadIds
 _flashCodeReadIds:
-        sta zp_flashcode_base
-        stx zp_flashcode_base + 1
-        jsr flashCodePrepareWrite
+
+        ; address lower than $E000?
+        cpx #$e0
+        bcc low
+
+        jsr flashCodePrepareWriteHigh
 
         ; cycle 3: write $90 to $555
-        ldy #0
         lda #$90
-        sta (zp_flashcode_555),y
+        sta $e555
 
         ; offset 0: Manufacturer ID
-        lda (zp_flashcode_base),y
+        lda $e000
         tax
 
         ; offset 1: Device ID
-        iny
-        lda (zp_flashcode_base),y
-        pha
+        lda $e001
+        tay
 
         ; reset flash chip: write $F0 to any address
         lda #$f0
-        sta (zp_flashcode_base),y
+        sta $e000
 
         jsr flashCodeDeactivateUltimax
 
-        ; Manufacturer still on X, get Device from stack into A
-        pla
+        ; Manufacturer still in X, move Device into A
+        tya
         rts
 
+low:
+        jsr flashCodePrepareWriteLow
+
+        ; cycle 3: write $90 to $555
+        lda #$90
+        sta $8555
+
+        ; offset 0: Manufacturer ID
+        lda $8000
+        tax
+
+        ; offset 1: Device ID
+        lda $8001
+        tay
+
+        ; reset flash chip: write $F0 to any address
+        lda #$f0
+        sta $8000
+
+        jsr flashCodeDeactivateUltimax
+
+        ; Manufacturer still in X, move Device into A
+        tya
+        rts
+.endproc
 
 ; =============================================================================
 ;
@@ -288,23 +259,44 @@ _flashCodeReadIds:
 ;
 ; =============================================================================
 .export _flashCodeSectorErase
+.proc   _flashCodeSectorErase
 _flashCodeSectorErase:
         sta zp_flashcode_base
         stx zp_flashcode_base + 1
-        jsr flashCodePrepareWrite
+
+        ; address lower than $E000?
+        cpx #$e0
+        bcc low
+
+        jsr flashCodePrepareWriteHigh
 
         ; cycle 3: write $80 to $555
-        ldy #0
         lda #$80
-        sta (zp_flashcode_555),y
+        sta $e555
         ; cycle 4: write $AA to $555
         lda #$aa
-        sta (zp_flashcode_555),y
+        sta $e555
         ; cycle 5: write $55 to $2AA
         lda #$55
-        sta (zp_flashcode_2aa),y
+        sta $e2aa
 
-        ; now we have to activate the right bank and stay in Ultimax
+        jmp common
+
+low:
+        jsr flashCodePrepareWriteLow
+
+        ; cycle 3: write $80 to $555
+        lda #$80
+        sta $8555
+        ; cycle 4: write $AA to $555
+        lda #$aa
+        sta $8555
+        ; cycle 5: write $55 to $2AA
+        lda #$55
+        sta $82aa
+
+common:
+        ; activate the right bank
         lda bank
         sta EASYFLASH_IO_BANK
 
@@ -314,7 +306,7 @@ _flashCodeSectorErase:
 
         ; that's it
         jmp flashCodeDeactivateUltimax
-
+.endproc
 
 ; =============================================================================
 ;
@@ -334,6 +326,7 @@ _flashCodeSectorErase:
 ;
 ; =============================================================================
 .export _flashCodeWrite
+.proc   _flashCodeWrite
 _flashCodeWrite:
         ; remember value
         pha
@@ -343,36 +336,45 @@ _flashCodeWrite:
         sta zp_flashcode_addr
         stx zp_flashcode_addr + 1
 
-        ; calculate base address, i.e. $8000 or $E000
-        lda #0
-        sta zp_flashcode_base
-        txa
-        and #$e0
-        sta zp_flashcode_base + 1
+        ; address lower than $E000?
+        cpx #$e0
+        bcc writeLow
 
-        jsr flashCodePrepareWrite
+        jsr flashCodePrepareWriteHigh
 
         ; cycle 3: write $A0 to $555
-        ldy #0
         lda #$a0
-        sta (zp_flashcode_555),y
+        sta $e555
 
+        jmp write_common
+
+writeLow:
+        jsr flashCodePrepareWriteLow
+
+        ; cycle 3: write $A0 to $555
+        lda #$a0
+        sta $8555
+
+write_common:
         ; now we have to activate the right bank
         lda bank
         sta EASYFLASH_IO_BANK
 
         ; cycle 4: write data
         pla
+        ldy #0
         sta (zp_flashcode_addr),y
 
         ; that's it
         jmp flashCodeDeactivateUltimax
-
+.endproc
 
 ; =============================================================================
 ;
 ; Check the program or erase progress of the flash chip at the given base
 ; address (normal base).
+;
+; !!! Do not call this from Ultimax mode, Use normal addresses (8000/a000) !!!
 ;
 ; Return 1 for success, 0 for error;
 ; uint8_t __fastcall__ flashCodeCheckProgress(uint8_t* pAddr);
