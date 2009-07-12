@@ -3,4 +3,9 @@ obj/*
 *~
 *.map
 *.prg
+*.bak
+*.bck
+*.obj
+*.cache.lib
+*.cache.dcm
 EasyProg/easyprog
