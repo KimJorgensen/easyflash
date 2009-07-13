@@ -14,6 +14,7 @@
 #include "flash.h"
 #include "screen.h"
 #include "flashcode.h"
+#include "progress.h"
 #include "easyprog.h"
 
 /******************************************************************************/
@@ -87,15 +88,23 @@ uint8_t eraseSector(uint8_t nBank, uint8_t nChip)
 uint8_t eraseAll(void)
 {
     uint8_t nBank;
+    uint8_t nChip;
 
-    // erase 64 kByte = 8 banks at once (29F040)
-    for (nBank = 0; nBank < FLASH_NUM_BANKS; nBank += 8)
+    for (nChip = 0; nChip < 2; ++nChip)
     {
-        if (!eraseSector(nBank, 0))
-            return 0;
-
-        if (!eraseSector(nBank, 1))
-            return 0;
+        // erase 64 kByte = 8 banks at once (29F040)
+        for (nBank = 0; nBank < FLASH_NUM_BANKS; nBank
+                += FLASH_BANKS_ERASE_AT_ONCE)
+        {
+            progressSetMultipleBanksState(nBank, nChip,
+                                          FLASH_BANKS_ERASE_AT_ONCE,
+                                          PROGRESS_WORKING);
+            if (!eraseSector(nBank, nChip))
+                return 0;
+            progressSetMultipleBanksState(nBank, nChip,
+                                          FLASH_BANKS_ERASE_AT_ONCE,
+                                          PROGRESS_ERASED);
+        }
     }
 
     return 1;
@@ -104,12 +113,12 @@ uint8_t eraseAll(void)
 
 /******************************************************************************/
 /**
- * Write a block of bytes to the flash. The bank must already be set up.
+ * Write a block of 256 bytes to the flash. The bank must already be set up.
  * The whole block must be located in one bank and in one flash chip.
  *
  * return 1 for success, 0 for failure
  */
-uint8_t flashWriteBlock(uint8_t nChip, uint16_t nOffset, uint16_t nSize,
+uint8_t flashWriteBlock(uint8_t nChip, uint16_t nOffset,
                         uint8_t* pBlock)
 {
     uint16_t nRemaining;
@@ -124,26 +133,17 @@ uint8_t flashWriteBlock(uint8_t nChip, uint16_t nOffset, uint16_t nSize,
     // when we write, we have to use the Ultimax address space
     pDest        = apUltimaxRomBase[nChip] + nOffset;
 
-    for (nRemaining = nSize; nRemaining; --nRemaining)
+    progressSetBankState(flashCodeGetBank(), nChip, PROGRESS_WORKING);
+    for (nRemaining = 256; nRemaining; --nRemaining)
     {
-        if (nRemaining == 254)
-        {
-            // send the write command
-            flashCodeWrite(pDest++, 0x33);
-            pBlock++;
-            // we don't check the result, because we verify anyway
-            flashCodeCheckProgress(pNormalBase);
-        }
-        else
-        {
-            // send the write command
-            flashCodeWrite(pDest++, *pBlock++);
-            // we don't check the result, because we verify anyway
-            flashCodeCheckProgress(pNormalBase);
-        }
+         // send the write command
+         flashCodeWrite(pDest++, *pBlock++);
+
+         // we don't check the result, because we verify anyway
+         flashCodeCheckProgress(pNormalBase);
     }
 
-	addBytesFlashed(nSize);
+    progressSetBankState(flashCodeGetBank(), nChip, PROGRESS_PROGRAMMED);
     return 1;
 }
 
@@ -213,7 +213,7 @@ uint8_t flashWriteBlockFromFile(uint8_t nBank, uint8_t nChip,
     {
         nBytes = (nSize > FLASH_WRITE_SIZE) ? FLASH_WRITE_SIZE : nSize;
 
-        sprintf(strStatus, "Reading %d bytes from file", nBytes);
+        sprintf(strStatus, "Reading from file");
         setStatus(strStatus);
 
         if (cbm_read(lfn, buffer, nBytes) != nBytes)
@@ -227,16 +227,15 @@ uint8_t flashWriteBlockFromFile(uint8_t nBank, uint8_t nChip,
 
         if (bWrite)
         {
-            sprintf(strStatus, "Flashing %d bytes to %02X:%X:%04X", nBytes,
-                    nBank, nChip, nOffset);
+            sprintf(strStatus, "Writing to %02X:%X:%04X", nBank, nChip,
+                    nOffset);
             setStatus(strStatus);
 
-            if (!flashWriteBlock(nChip, nOffset, nBytes, buffer))
+            if (!flashWriteBlock(nChip, nOffset, buffer))
                 return 0;
         }
 
-        sprintf(strStatus, "Verifying %d bytes at %02X:%X:%04X", nBytes,
-                nBank, nChip, nOffset);
+        sprintf(strStatus, "Verifying %02X:%X:%04X", nBank, nChip, nOffset);
         setStatus(strStatus);
         if (!flashVerifyBlock(nChip, nOffset, buffer))
             return 0;

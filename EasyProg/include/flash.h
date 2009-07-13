@@ -19,6 +19,9 @@
 /// This bit is set when an algorithm times out (error)
 #define FLASH_ALG_ERROR_BIT     0x20
 
+/// Number of Banks erased at once
+#define FLASH_BANKS_ERASE_AT_ONCE (64 / 8)
+
 /// Number of Banks when using 2 * 512 kByte
 #define FLASH_NUM_BANKS     64
 
@@ -40,8 +43,7 @@ uint8_t eraseAll(void);
 
 uint8_t flashWrite(uint8_t nChip, uint16_t nOffset, uint8_t nVal);
 
-uint8_t flashWriteBlock(uint8_t nChip, uint16_t nOffset, uint16_t nSize,
-                        uint8_t* pBlock);
+uint8_t flashWriteBlock(uint8_t nChip, uint16_t nOffset, uint8_t* pBlock);
 
 uint8_t flashWriteBlockFromFile(uint8_t nBank, uint8_t nChip,
                                 uint16_t nSize, uint8_t bWrite, uint8_t lfn);

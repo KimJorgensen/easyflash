@@ -81,7 +81,7 @@ CartChip;
 #define CART_TYPE_NORMAL 0
 #define CART_TYPE_OCEAN1 5
 
-// These are detailed cartidge types, only used in the software
+// These are detailed cartridge types, only used in this software
 #define INTERNAL_CART_TYPE_UNKNOWN      0x00
 #define INTERNAL_CART_TYPE_NORMAL_8K    0x80
 #define INTERNAL_CART_TYPE_NORMAL_16K   0x81

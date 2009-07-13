@@ -38,6 +38,7 @@
 #include "filedlg.h"
 #include "buffer.h"
 #include "hex.h"
+#include "progress.h"
 
 /******************************************************************************/
 
@@ -52,9 +53,6 @@ static char strStatus[41];
 
 // Index to the currently chosen menu entry
 static uint8_t nMenuSelection;
-
-// Number of bytes flashed so far
-static uint32_t nBytesFlashed;
 
 /******************************************************************************/
 
@@ -101,26 +99,6 @@ static void showFlashTypeBox(uint8_t y, uint8_t nChip)
 
 /******************************************************************************/
 /**
- * Show or update a box with the bytes flashed so far.
- */
-static void showBytesCompletedBox(void)
-{
-	uint8_t  y;
-
-	y = 12;
-    textcolor(COLOR_LIGHTFRAME);
-    screenPrintBox(16, y, 23, 3);
-    textcolor(COLOR_FOREGROUND);
-
-    cputsxy(2, ++y, "Completed:");
-
-    gotoxy (17 + 8, y);
-    cprintf("%4ld kByte", nBytesFlashed / 1024L);
-}
-
-
-/******************************************************************************/
-/**
  * Show or update a box with the current action.
  */
 static void refreshStatusLine(void)
@@ -151,12 +129,11 @@ static void refreshMainScreen(void)
     textcolor(COLOR_FOREGROUND);
     cputs("elp");
 
-	showBytesCompletedBox();
-    showFlashTypeBox(15, 0);
-    showFlashTypeBox(18, 1);
+    showFlashTypeBox(10, 0);
+    showFlashTypeBox(13, 1);
+    progressShow();
 
     refreshStatusLine();
-
 }
 
 
@@ -211,17 +188,6 @@ void __fastcall__ setStatus(const char* pStrStatus)
     strncpy(strStatus, pStrStatus, sizeof(strStatus - 1));
     strStatus[sizeof(strStatus) - 1] = '\0';
     refreshStatusLine();
-}
-
-
-/******************************************************************************/
-/**
- * Increase the number of bytes written so far and update the display.
- */
-void __fastcall__ addBytesFlashed(uint16_t nAdd)
-{
-    nBytesFlashed += nAdd;
-    showBytesCompletedBox();
 }
 
 
@@ -320,9 +286,6 @@ void checkWriteImage(uint8_t bWrite)
     const char *pStrInput;
     char strFileName[FILENAME_MAX];
     uint8_t lfn, rv;
-
-    nBytesFlashed = 0;
-    showBytesCompletedBox();
 
     if (bWrite)
         pStrTitle = "Write CRT to flash";
@@ -435,6 +398,7 @@ int main(void)
     char key;
 
     screenInit();
+    progressInit();
     refreshMainScreen();
 
     // this also makes visible 16kByte of flash memory

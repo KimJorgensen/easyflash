@@ -23,6 +23,5 @@ typedef enum EasyFlashMenuId_e
 EasyFlashMenuId;
 
 void __fastcall__ setStatus(const char* pStrStatus);
-void __fastcall__ addBytesFlashed(uint16_t nAdd);
 
 #endif /* EASYPROG_H_ */
