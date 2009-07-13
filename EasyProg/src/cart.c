@@ -61,22 +61,22 @@ uint8_t readCartHeader(uint8_t lfn)
     internalCartType = INTERNAL_CART_TYPE_UNKNOWN;
     if (cartHeader.type[1] == CART_TYPE_NORMAL)
     {
-        if (!cartHeader.exromLine)
+        if (cartHeader.exromLine)
         {
-            if (cartHeader.gameLine)
+            if (!cartHeader.gameLine)
             {
-                internalCartType = INTERNAL_CART_TYPE_NORMAL_8K;
+                internalCartType = INTERNAL_CART_TYPE_ULTIMAX;
             }
         }
         else
         {
             if (cartHeader.gameLine)
             {
-                internalCartType = INTERNAL_CART_TYPE_NORMAL_16K;
+                internalCartType = INTERNAL_CART_TYPE_NORMAL_8K;
             }
             else
             {
-                internalCartType = INTERNAL_CART_TYPE_ULTIMAX;
+                internalCartType = INTERNAL_CART_TYPE_NORMAL_16K;
             }
         }
     }
@@ -116,34 +116,4 @@ uint8_t __fastcall__ readNextBankHeader(BankHeader* pBankHeader, uint8_t lfn)
     }
 
     return CART_RV_OK;
-}
-
-void printCartInfo()
-{
-    const char* pStr;
-
-    // fixme: name is not 0-terminated if it is 32 chars long
-    cprintf("Name: %s\n", cartHeader.name);
-
-    switch (internalCartType)
-    {
-    case INTERNAL_CART_TYPE_NORMAL_8K:
-        pStr = "Normal, up to 8 kByte";
-        break;
-
-    case INTERNAL_CART_TYPE_NORMAL_16K:
-        pStr = "Normal, up to 16 kByte";
-        break;
-
-    case INTERNAL_CART_TYPE_ULTIMAX:
-        pStr = "Ultimax, up to 16 kByte";
-        break;
-
-    default:
-        pStr = "Not supported";
-    }
-    cprintf("Type: %s\n", pStr);
-
-    cprintf("Number of chips/banks: %d\n", nChips);
-    cprintf("Size                 : %d kByte\n", nCartBytes / 1024);
 }
