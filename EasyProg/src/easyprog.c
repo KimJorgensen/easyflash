@@ -215,16 +215,6 @@ static uint8_t writeCrtImage(uint8_t lfn, uint8_t bWrite)
         return CART_RV_ERR;
     }
 
-    if (bWrite)
-    {
-        setStatus("Erasing flash memory");
-        if (!eraseAll())
-        {
-            screenPrintSimpleDialog(apStrEraseFailed);
-            return CART_RV_ERR;
-        }
-    }
-
     do
     {
         setStatus("Reading header from file");

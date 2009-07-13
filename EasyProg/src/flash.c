@@ -40,9 +40,18 @@ uint8_t eraseSector(uint8_t nBank, uint8_t nChip)
 {
     char strStatus[41];
 
+    progressSetMultipleBanksState(nBank, nChip,
+                                  FLASH_BANKS_ERASE_AT_ONCE,
+                                  PROGRESS_WORKING);
+
     sprintf(strStatus, "Erasing %02X:%X:%04X",  nBank, nChip, 0);
     setStatus(strStatus);
     sleep(1);
+
+    progressSetMultipleBanksState(nBank, nChip,
+                                  FLASH_BANKS_ERASE_AT_ONCE,
+                                  PROGRESS_ERASED);
+
     setStatus("OK");
     return 1;
 }
@@ -52,6 +61,10 @@ uint8_t eraseSector(uint8_t nBank, uint8_t nChip)
     uint8_t* pUltimaxBase;
     uint8_t* pNormalBase;
     char strStatus[41];
+
+    progressSetMultipleBanksState(nBank, nChip,
+                                  FLASH_BANKS_ERASE_AT_ONCE,
+                                  PROGRESS_WORKING);
 
     pNormalBase  = apNormalRomBase[nChip];
     pUltimaxBase = apUltimaxRomBase[nChip];
@@ -66,14 +79,19 @@ uint8_t eraseSector(uint8_t nBank, uint8_t nChip)
     sprintf(strStatus, "Erasing %02X:%X:%04X",  nBank, nChip, 0);
     setStatus(strStatus);
 
+    progressSetMultipleBanksState(nBank, nChip,
+                                  FLASH_BANKS_ERASE_AT_ONCE,
+                                  PROGRESS_ERASED);
+
     if (flashCodeCheckProgress(pNormalBase))
     {
         setStatus("OK");
         return 1;
     }
 
-    sprintf(strStatus, "Erase error %02X:%X:%04X", nBank, nChip, 0);
+    sprintf(strStatus, "Erase error at %02X:%X:%04X", nBank, nChip, 0);
     setStatus(strStatus);
+    screenPrintSimpleDialog(apStrEraseFailed);
     return 0;
 }
 #endif
@@ -96,14 +114,8 @@ uint8_t eraseAll(void)
         for (nBank = 0; nBank < FLASH_NUM_BANKS; nBank
                 += FLASH_BANKS_ERASE_AT_ONCE)
         {
-            progressSetMultipleBanksState(nBank, nChip,
-                                          FLASH_BANKS_ERASE_AT_ONCE,
-                                          PROGRESS_WORKING);
             if (!eraseSector(nBank, nChip))
                 return 0;
-            progressSetMultipleBanksState(nBank, nChip,
-                                          FLASH_BANKS_ERASE_AT_ONCE,
-                                          PROGRESS_ERASED);
         }
     }
 
@@ -113,21 +125,34 @@ uint8_t eraseAll(void)
 
 /******************************************************************************/
 /**
- * Write a block of 256 bytes to the flash. The bank must already be set up.
+ * Write a block of 256 bytes to the flash.
  * The whole block must be located in one bank and in one flash chip.
+ * If the flash block has an unknown state, erase it.
  *
  * return 1 for success, 0 for failure
  */
-uint8_t flashWriteBlock(uint8_t nChip, uint16_t nOffset,
-                        uint8_t* pBlock)
+uint8_t __fastcall__ flashWriteBlock(uint8_t nBank, uint8_t nChip,
+                                     uint16_t nOffset, uint8_t* pBlock)
 {
     uint16_t nRemaining;
     uint8_t* pDest;
     uint8_t* pNormalBase;
-#ifndef EASYFLASH_FAKE
     char strStatus[41];
-#endif
 
+    if (progressGetStateAt(nBank, nChip) == PROGRESS_UNTOUCHED)
+    {
+        if (!eraseSector(nBank, nChip))
+        {
+            // todo: Show a real error message
+            return 0;
+        }
+    }
+
+    sprintf(strStatus, "Writing to %02X:%X:%04X", nBank, nChip,
+            nOffset);
+    setStatus(strStatus);
+
+    flashCodeSetBank(nBank);
     pNormalBase  = apNormalRomBase[nChip];
 
     // when we write, we have to use the Ultimax address space
@@ -150,23 +175,23 @@ uint8_t flashWriteBlock(uint8_t nChip, uint16_t nOffset,
 
 /******************************************************************************/
 /**
- * Compare 256 bytes of flash contents and RAM contents. The bank must already
- * be set up. The whole block must be located in one bank and in one flash
+ * Compare 256 bytes of flash contents and RAM contents.
+ * The whole block must be located in one bank and in one flash
  * chip.
  *
  * If there is an error, report it to the user
  *
  * return 1 for success (same), 0 for failure
  */
-static uint8_t __fastcall__ flashVerifyBlock(uint8_t nChip, uint16_t nOffset,
-                                             uint8_t* pBlock)
+static uint8_t __fastcall__ flashVerifyBlock(uint8_t nBank, uint8_t nChip,
+                                             uint16_t nOffset, uint8_t* pBlock)
 {
     uint8_t* pNormalBase;
     uint8_t* pFlash;
-
-#ifndef EASYFLASH_FAKE
     char strStatus[41];
-#endif
+
+    sprintf(strStatus, "Verifying %02X:%X:%04X", nBank, nChip, nOffset);
+    setStatus(strStatus);
 
     pNormalBase = apNormalRomBase[nChip];
     pFlash      = pNormalBase + nOffset;
@@ -206,8 +231,6 @@ uint8_t flashWriteBlockFromFile(uint8_t nBank, uint8_t nChip,
     uint16_t nBytes;
     char strStatus[41];
 
-    flashCodeSetBank(nBank);
-
     nOffset = 0;
     while (nSize)
     {
@@ -227,17 +250,11 @@ uint8_t flashWriteBlockFromFile(uint8_t nBank, uint8_t nChip,
 
         if (bWrite)
         {
-            sprintf(strStatus, "Writing to %02X:%X:%04X", nBank, nChip,
-                    nOffset);
-            setStatus(strStatus);
-
-            if (!flashWriteBlock(nChip, nOffset, buffer))
+            if (!flashWriteBlock(nBank, nChip, nOffset, buffer))
                 return 0;
         }
 
-        sprintf(strStatus, "Verifying %02X:%X:%04X", nBank, nChip, nOffset);
-        setStatus(strStatus);
-        if (!flashVerifyBlock(nChip, nOffset, buffer))
+        if (!flashVerifyBlock(nBank, nChip, nOffset, buffer))
             return 0;
 
         nSize -= nBytes;
