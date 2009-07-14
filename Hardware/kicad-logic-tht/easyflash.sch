@@ -1,5 +1,5 @@
 EESchema Schematic File Version 2
-LIBS:power,./easyflash,device,conn,linear,regul,74xx,cmos4000,adc-dac,memory,xilinx,special,microcontrollers,dsp,microchip,analog_switches,motorola,texas,intel,audio,interface,digital-audio,philips,display,cypress,siliconi,contrib,valves
+LIBS:power,./easyflash,device,conn,linear,regul,74xx,cmos4000,adc-dac,memory,xilinx,special,microcontrollers,dsp,microchip,analog_switches,motorola,texas,intel,audio,interface,digital-audio,philips,display,cypress,siliconi,contrib,valves,./easyflash.cache
 EELAYER 24  0
 EELAYER END
 $Descr A4 11700 8267
@@ -942,10 +942,10 @@ F 1 "VCC" H 1600 5400 30  0000 C C
 	1    0    0    -1  
 $EndComp
 $Comp
-L R R6
+L R R1
 U 1 1 4A4E22ED
 P 5550 6250
-F 0 "R6" V 5630 6250 50  0000 C C
+F 0 "R1" V 5630 6250 50  0000 C C
 F 1 "10k" V 5550 6250 50  0000 C C
 	1    5550 6250
 	1    0    0    -1  
@@ -1766,7 +1766,7 @@ L 29F040 U3
 U 1 1 49FDE452
 P 1600 1700
 F 0 "U3" H 1870 2650 60  0000 C C
-F 1 "29F040" V 1600 1600 60  0000 C C
+F 1 "Am29F040" V 1600 1600 60  0000 C C
 	1    1600 1700
 	1    0    0    -1  
 $EndComp
@@ -1784,7 +1784,7 @@ L 29F040 U4
 U 1 1 49FDE408
 P 1600 3950
 F 0 "U4" H 1870 4900 60  0000 C C
-F 1 "29F040" V 1600 3900 60  0000 C C
+F 1 "Am29F040" V 1600 3900 60  0000 C C
 	1    1600 3950
 	1    0    0    -1  
 $EndComp
