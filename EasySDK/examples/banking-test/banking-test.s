@@ -130,23 +130,23 @@ startUpEnd:
 ; =============================================================================
 ; 01:0:0000 (LOROM, bank 1)
 bankStart_01_0:
-        ; fill the whole bank with value $02
-        !fill $2000, $02
+        ; fill the whole bank with value 1 = 'A'
+        !fill $2000, 1
 
 ; =============================================================================
 ; 01:1:0000 (HIROM, bank 1)
 bankStart_01_1:
-        ; fill the whole bank with value $03
-        !fill $2000, $03
+        ; fill the whole bank with value 2 = 'B'
+        !fill $2000, 2
 
 ; =============================================================================
 ; 02:0:0000 (LOROM, bank 2)
 bankStart_02_0:
-        ; fill the whole bank with value $04
-        !fill $2000, $04
+        ; fill the whole bank with value 3 = 'C'
+        !fill $2000, 3
 
 ; =============================================================================
 ; 02:1:0000 (HIROM, bank 2)
 bankStart_02_1:
-        ; fill the whole bank with value $05
-        !fill $2000, $05
+        ; fill the whole bank with value 4 = 'D'
+        !fill $2000, 4
