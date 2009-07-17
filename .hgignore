@@ -6,6 +6,8 @@ obj/*
 *.bak
 *.bck
 *.obj
+*.bin
+*.crt
 *.cache.lib
 *.cache.dcm
 EasyProg/easyprog

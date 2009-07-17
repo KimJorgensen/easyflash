@@ -16,7 +16,7 @@ OBJ += obj/progress.o
 #OBJ += obj/filedlg.o
 
 INCLUDE := include
-DEFINE  := -D EASYFLASH_FAKE
+#DEFINE  := -D EASYFLASH_FAKE
 
 .PHONY: all
 all: easyprog

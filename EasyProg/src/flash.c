@@ -16,6 +16,7 @@
 #include "flashcode.h"
 #include "progress.h"
 #include "easyprog.h"
+#include "texts.h"
 
 /******************************************************************************/
 
