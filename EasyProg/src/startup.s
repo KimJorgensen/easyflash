@@ -28,7 +28,6 @@ EASYFLASH_BANK    = $DE00
 EASYFLASH_CONTROL = $DE02
 EASYFLASH_LED     = $80
 EASYFLASH_8K      = $06
-EASYFLASH_16K     = $07
 EASYFLASH_KILL    = $04
 
 startConfig:
@@ -86,7 +85,7 @@ patchStartConfig = * + 1
             ; Check if one of the magic kill keys was pressed
             and #$e0    ; only leave "Run/Stop", "Q" and "C="
             cmp #$e0
-            bne kill    ; branch if coloums 7 is low => RUN/STOP key
+            bne kill    ; branch if one of these keys is pressed
 start:
             ; start the cartridge code on bank 1
             lda #1
