@@ -33,6 +33,7 @@
 #include "easyprog.h"
 #include "flash.h"
 #include "startupbin.h"
+#include "write.h"
 
 /******************************************************************************/
 /* Static variables */
@@ -42,6 +43,11 @@ static uint8_t  nBank;
 static uint16_t nAddress;
 static uint16_t nSize;
 static BankHeader bankHeader;
+
+// static because my heap doesn't work yet
+// The buffer must always be 256 bytes long
+static uint8_t startUpBuffer[256];
+
 
 /******************************************************************************/
 /**
@@ -79,6 +85,37 @@ static uint8_t writeCRTError(void)
 
 /******************************************************************************/
 /**
+ * Write the startup code to 00:1:xxxx. Patch it to use the given memory
+ * configuration.
+ *
+ * return CART_RV_OK or CART_RV_ERR
+ */
+static uint8_t __fastcall__ writeStartUpCode(uint8_t nConfig)
+{
+    uint8_t nCodeSize;
+    unsigned char* pBase;
+
+    // btw: the buffer must always be 256 bytes long
+    memset(startUpBuffer, 0xff, 0x100);
+
+    // copy the startup code to the end of the buffer
+    nCodeSize = startUpEnd - startUpStart;
+    pBase = startUpBuffer + 256 - nCodeSize;
+    memcpy(pBase, startUpStart, nCodeSize);
+
+    // the first byte of this code is the memory config to be used - patch it
+    *pBase = nConfig | EASYFLASH_IO_BIT_LED;
+
+    // write the startup code to bank 0, always write 256 bytes
+    if (!flashWriteBlock(0, 1, 0x1F00, startUpBuffer))
+        return writeCRTError();
+
+    return CART_RV_OK;
+}
+
+
+/******************************************************************************/
+/**
  * Write a Normal 8K image from the given file to flash.
  *
  * return CART_RV_OK or CART_RV_ERR
@@ -91,7 +128,6 @@ static uint8_t writeCrtImageNormal8k(uint8_t lfn)
 
     if (rv == CART_RV_OK)
     {
-
         if ((nSize > 0x2000) || (nAddress != (uint16_t) ROM0_BASE) ||
             (nBank != 0))
         {
@@ -99,17 +135,12 @@ static uint8_t writeCrtImageNormal8k(uint8_t lfn)
             return CART_RV_ERR;
         }
 
-        // write the startup code to bank 0, always write 256 bytes
-        if (!flashWriteBlock(0, 1, 0x1F00, startUpEnd - 0x100))
-        {
-            return writeCRTError();
-        }
+        if (writeStartUpCode(EASYFLASH_IO_8K) != CART_RV_OK)
+            return CART_RV_ERR;
 
         // real CRT to bank 1, because we wrote the startup code to bank 0
         if (!flashWriteBlockFromFile(1, 0, nSize, lfn))
-        {
             return writeCRTError();
-        }
     }
     else if (rv == CART_RV_ERR)
     {
