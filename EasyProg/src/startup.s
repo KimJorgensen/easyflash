@@ -1,5 +1,5 @@
 ;
-; EasyFlash - startup.s - Start-up code for 8k cartridges (acme)
+; EasyFlash - startup.s - Start-up code for stand-alone cartridges (acme)
 ;
 ; (c) 2009 Thomas 'skoe' Giesel
 ;
@@ -99,12 +99,14 @@ reset:
         }
 startUpEnd:
 
-reti:
-        rti
 
         ; fill it up to $FFFA to put the vectors there
         !align $ffff, $fffa, $ff
 
-        !word reti        ; IRQ
-        !word coldStart   ; RESET
         !word reti        ; NMI
+        !word coldStart   ; RESET
+
+        ; we don't need the IRQ vector an can put RTI here
+reti:
+        rti
+        !byte 0xff
