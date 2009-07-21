@@ -114,7 +114,7 @@ startUpCode:
 kill:
             lda #EASYFLASH_KILL
             sta EASYFLASH_CONTROL
-            jmp $fce2	; reset
+            jmp $(fffc)	; reset
         }
 startUpEnd:
 

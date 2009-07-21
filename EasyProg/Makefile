@@ -13,7 +13,11 @@ OBJ += obj/easyprog.o
 OBJ += obj/texts.o
 OBJ += obj/hex.o
 OBJ += obj/progress.o
+OBJ += obj/write.o
+OBJ += obj/startupbin.o
 #OBJ += obj/filedlg.o
+
+BIN_ACME += obj/startup.bin
 
 INCLUDE := include
 #DEFINE  := -D EASYFLASH_FAKE
@@ -30,8 +34,14 @@ obj/%.o: obj/%.s obj
 	ca65 -t c64 -o $@ $<
 
 
-obj/%.o: src/%.s obj
+# the binaries created with acme are included in ca65 source code
+# therefore we need a dependency here
+obj/%.o: src/%.s obj $(BIN_ACME)
 	ca65 -t c64 -o $@ $<
+
+
+obj/%.bin: src/%.s obj
+	acme -o $@ $<
 
 obj:
 	mkdir -p $@

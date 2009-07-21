@@ -11,6 +11,9 @@
 const char* apStrLowHigh[];
 const char* apStrAbout[];
 
+const char* apStrUnsupportedCRTType[];
+const char* apStrUnsupportedCRTData[];
+const char* apStrWriteCRTFailed[];
 const char* apStrWrongFlash[];
 const char* apStrBadRAM[];
 const char* apStrEraseFailed[];

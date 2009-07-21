@@ -24,6 +24,27 @@ const char* apStrAbout[] =
         NULL
 };
 
+const char* apStrUnsupportedCRTType[] =
+{
+        "Sorry, this CRT file type",
+        "is not supported.",
+        NULL
+};
+
+const char* apStrUnsupportedCRTData[] =
+{
+        "Sorry, this CRT file contains",
+        "unsupported chip data.",
+        NULL
+};
+
+const char* apStrWriteCRTFailed[] =
+{
+        "Failed to write the CRT image",
+        "to flash.",
+        NULL
+};
+
 const char* apStrWrongFlash[] =
 {
         "A flash chip does not work",

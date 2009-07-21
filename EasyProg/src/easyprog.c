@@ -39,6 +39,7 @@
 #include "buffer.h"
 #include "hex.h"
 #include "progress.h"
+#include "write.h"
 
 /******************************************************************************/
 
@@ -59,7 +60,6 @@ static uint8_t nMenuSelection;
 ScreenMenuEntry aMainMenuEntries[] =
 {
         { EASYPROG_MENU_ENTRY_WRITE_CRT,  "Write CRT to flash" },
-        { EASYPROG_MENU_ENTRY_VERIFY_CRT, "Verify CRT" },
         { EASYPROG_MENU_ENTRY_CHECK_TYPE, "Check flash type" },
         { EASYPROG_MENU_ENTRY_ERASE_ALL,  "Erase all" },
         { EASYPROG_MENU_ENTRY_HEX_VIEWER, "Hex viewer" },
@@ -111,9 +111,9 @@ static void refreshStatusLine(void)
 
 /******************************************************************************/
 /**
- * Show the Screen which reports the Flash IDs.
+ * Show or refresh the Screen which reports the Flash IDs.
  */
-static void refreshMainScreen(void)
+void refreshMainScreen(void)
 {
     screenPrintFrame();
 
@@ -193,124 +193,6 @@ void __fastcall__ setStatus(const char* pStrStatus)
 
 /******************************************************************************/
 /**
- * Write a crt image from the given file to flash. Before doing this, the
- * flash will be erased.
- *
- * If bWrite is 0, verify only.
- *
- * return CART_RV_OK or CART_RV_ERR
- */
-static uint8_t writeCrtImage(uint8_t lfn, uint8_t bWrite)
-{
-    uint8_t rv;
-    uint8_t  nBank;
-    uint16_t nAddress;
-    uint16_t nSize;
-    BankHeader bankHeader;
-
-    setStatus("Reading header");
-    if (!readCartHeader(lfn))
-    {
-        screenPrintSimpleDialog(apStrHeaderReadError);
-        return CART_RV_ERR;
-    }
-
-    do
-    {
-        setStatus("Reading header from file");
-        rv = readNextBankHeader(&bankHeader, lfn);
-
-        if (rv == CART_RV_OK)
-        {
-            nBank = bankHeader.bank[1];
-            nAddress = 256 * bankHeader.loadAddr[0] + bankHeader.loadAddr[1];
-            nSize = 256 * bankHeader.romLen[0] + bankHeader.romLen[1];
-
-            if ((nAddress == (uint16_t) ROM0_BASE) && (nSize <= 0x4000))
-            {
-                if (nSize > 0x2000)
-                {
-                    flashWriteBlockFromFile(nBank, 0, 0x2000, bWrite, lfn);
-                    flashWriteBlockFromFile(nBank, 1, nSize - 0x2000, bWrite, lfn);
-                }
-                else
-                {
-                    flashWriteBlockFromFile(nBank, 0, nSize, bWrite, lfn);
-                }
-            }
-            else if (((nAddress == (uint16_t) ROM1_BASE) || (nAddress
-                    == (uint16_t) ROM1_BASE_ULTIMAX)) && (nSize <= 0x2000))
-            {
-                flashWriteBlockFromFile(nBank, 1, nSize, bWrite, lfn);
-            }
-            else
-            {
-                // todo: error message
-                gotoxy(0, 0);
-                cprintf("Illegal CHIP address or size (%p, %p)", nAddress, nSize);
-                for (;;)
-                    ;
-            }
-        }
-        else if (rv == CART_RV_ERR)
-        {
-            screenPrintSimpleDialog(apStrChipReadError);
-            return CART_RV_ERR;
-        }
-    } while (rv == CART_RV_OK);
-
-    setStatus("OK");
-    return CART_RV_OK;
-}
-
-
-/******************************************************************************/
-/**
- * Write and/or verify an CRT image file to the flash.
- *
- * If bWrite is 0, verify only.
- */
-void checkWriteImage(uint8_t bWrite)
-{
-    const char *pStrTitle;
-    const char *pStrInput;
-    char strFileName[FILENAME_MAX];
-    uint8_t lfn, rv;
-
-    if (bWrite)
-        pStrTitle = "Write CRT to flash";
-    else
-        pStrTitle = "Verify flash content";
-    pStrInput = screenReadInput(pStrTitle, "Enter file name");
-
-    refreshMainScreen();
-
-    if (!pStrInput)
-        return;
-
-    strcpy(strFileName, pStrInput);
-
-    sprintf(strStatus, "Checking %s", strFileName);
-    refreshStatusLine();
-
-    lfn = 2;
-    rv = cbm_open(lfn, 8, CBM_READ, strFileName);
-
-    if (rv)
-    {
-        screenPrintSimpleDialog(apStrFileOpenError);
-        return;
-    }
-
-    writeCrtImage(lfn, bWrite);
-    cbm_close(lfn);
-
-    //printCartInfo();
-}
-
-
-/******************************************************************************/
-/**
  * Execute the currently selected menu entry.
  */
 void execMenuEntry(void)
@@ -342,11 +224,7 @@ static void __fastcall__ execMenu(uint8_t x, uint8_t y,
     {
     case EASYPROG_MENU_ENTRY_WRITE_CRT:
         checkFlashType();
-        checkWriteImage(1);
-        break;
-
-    case EASYPROG_MENU_ENTRY_VERIFY_CRT:
-        checkWriteImage(0);
+        checkWriteImage();
         break;
 
     case EASYPROG_MENU_ENTRY_CHECK_TYPE:

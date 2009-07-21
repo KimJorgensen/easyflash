@@ -31,37 +31,19 @@ static uint8_t buffer[FLASH_WRITE_SIZE];
 
 /******************************************************************************/
 /**
- * Erase a sector and print the progress.
- * For the details about reading the progress refer to the flash spec.
+ * Erase a sector that contains the given bank and print the progress.
  *
  * return 1 for success, 0 for failure
  */
-#ifdef EASYFLASH_FAKE
-uint8_t eraseSector(uint8_t nBank, uint8_t nChip)
-{
-    char strStatus[41];
-
-    progressSetMultipleBanksState(nBank, nChip,
-                                  FLASH_BANKS_ERASE_AT_ONCE,
-                                  PROGRESS_WORKING);
-
-    sprintf(strStatus, "Erasing %02X:%X:%04X",  nBank, nChip, 0);
-    setStatus(strStatus);
-    sleep(1);
-
-    progressSetMultipleBanksState(nBank, nChip,
-                                  FLASH_BANKS_ERASE_AT_ONCE,
-                                  PROGRESS_ERASED);
-
-    setStatus("OK");
-    return 1;
-}
-#else
 uint8_t eraseSector(uint8_t nBank, uint8_t nChip)
 {
     uint8_t* pUltimaxBase;
     uint8_t* pNormalBase;
     char strStatus[41];
+
+    // start erasing at the first bank of this flash sector
+    // we assume FLASH_BANKS_ERASE_AT_ONCE is a power of 2
+    nBank &= ~(FLASH_BANKS_ERASE_AT_ONCE - 1);
 
     progressSetMultipleBanksState(nBank, nChip,
                                   FLASH_BANKS_ERASE_AT_ONCE,
@@ -72,8 +54,10 @@ uint8_t eraseSector(uint8_t nBank, uint8_t nChip)
 
     flashCodeSetBank(nBank);
 
+#ifndef EASYFLASH_FAKE
     // send the erase command
     flashCodeSectorErase(pUltimaxBase);
+#endif
 
     // wait 50 us for the algorithm being started
     // this is done by printing the status
@@ -84,18 +68,21 @@ uint8_t eraseSector(uint8_t nBank, uint8_t nChip)
                                   FLASH_BANKS_ERASE_AT_ONCE,
                                   PROGRESS_ERASED);
 
+#ifndef EASYFLASH_FAKE
     if (flashCodeCheckProgress(pNormalBase))
     {
         setStatus("OK");
         return 1;
     }
+#else
+    sleep(1);
+#endif
 
     sprintf(strStatus, "Erase error at %02X:%X:%04X", nBank, nChip, 0);
     setStatus(strStatus);
     screenPrintSimpleDialog(apStrEraseFailed);
     return 0;
 }
-#endif
 
 
 /******************************************************************************/
@@ -221,12 +208,10 @@ static uint8_t __fastcall__ flashVerifyBlock(uint8_t nBank, uint8_t nChip,
  * The block will be written to offset 0 of this bank/chip.
  * The whole block must be located in one bank and in one flash chip.
  *
- * If bWrite is 0, verify only.
- *
  * return 1 for success, 0 for failure
  */
 uint8_t flashWriteBlockFromFile(uint8_t nBank, uint8_t nChip,
-                                uint16_t nSize, uint8_t bWrite, uint8_t lfn)
+                                uint16_t nSize, uint8_t lfn)
 {
     uint16_t nOffset;
     uint16_t nBytes;
@@ -249,11 +234,8 @@ uint8_t flashWriteBlockFromFile(uint8_t nBank, uint8_t nChip,
             return 0;
         }
 
-        if (bWrite)
-        {
-            if (!flashWriteBlock(nBank, nChip, nOffset, buffer))
-                return 0;
-        }
+        if (!flashWriteBlock(nBank, nChip, nOffset, buffer))
+            return 0;
 
         if (!flashVerifyBlock(nBank, nChip, nOffset, buffer))
             return 0;
