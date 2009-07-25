@@ -27,50 +27,38 @@
 EASYFLASH_BANK    = $DE00
 EASYFLASH_CONTROL = $DE02
 EASYFLASH_LED     = $80
-EASYFLASH_8K      = $06
 EASYFLASH_KILL    = $04
 
+startBank:
+        ; this must be the 1st byte in this code, so it's easy to patch it from outside
+        !byte 0
+
 startConfig:
-        ; this must be the first byte in this code, so it's easy to patch it from outside
-        !byte EASYFLASH_8K | EASYFLASH_LED
-
-coldStart:
-        ; === the reset vector points here ===
-        sei
-        ldx #$ff
-        txs
-        cld
-
-        ; copy the final start-up code to RAM (bottom of CPU stack)
-        ldx #(startUpEnd - startUpCode)
-l1:
-        lda startUpCode, x
-        sta $02, x
-        dex
-        bpl l1
-        lda startConfig
-        sta patchStartConfig
-        jmp $0002
+        ; this must be the 2nd byte in this code, so it's easy to patch it from outside
+        !byte 0
 
 startUpCode:
         !pseudopc $0002 {
             ; === this code is copied to the ZP, does some inits ===
             ; === scans the keyboard and kills the cartridge or  ===
             ; === starts the main cartridge                      ===
-patchStartConfig = * + 1
-            lda #00     ; start config will be put here
+
+            ; leave the Ultimax mode
+            ; otherwise the MAX detection would always find a MAX...
+            lda #EASYFLASH_KILL | EASYFLASH_LED
             sta EASYFLASH_CONTROL
 
             ; Check if we are on a real MAX / VC-10 by reading/writing RAM
             lda #$a5    ; quite unprobable to appear accidently on the bus
             sta $c000
             cmp $c000
-            bne start   ; different => MAX => skip keyboard check
+            bne startCart ; different => MAX => skip keyboard check
 
             ; Prepare the CIA to scan the keyboard
             lda #$7f
             sta $dc00   ; pull down row 7 (DPA)
 
+            ldx #$ff
             stx $dc02   ; DDRA $ff = output (X is still $ff from copy loop)
             inx
             stx $dc03   ; DDRB $00 = input
@@ -86,19 +74,49 @@ patchStartConfig = * + 1
             and #$e0    ; only leave "Run/Stop", "Q" and "C="
             cmp #$e0
             bne kill    ; branch if one of these keys is pressed
-start:
-            ; start the cartridge code on bank 1
-            lda #1
+startCart:
+            ; start the cartridge code on the right bank
+patchStartBank = * + 1
+            lda #0      ; start bank will be put here
             sta EASYFLASH_BANK
-            bne reset
+patchStartConfig = * + 1
+            lda #0      ; start config will be put here
+            !byte $2c   ; skip next instruction
 kill:
             lda #EASYFLASH_KILL
-            sta EASYFLASH_CONTROL
 reset:
+            sta EASYFLASH_CONTROL
             jmp ($fffc) ; reset
         }
 startUpEnd:
 
+coldStart:
+        ; === the reset vector points here ===
+        sei
+        ldx #$ff
+        txs
+        cld
+
+        ; Wait to make sure RESET is deasserted on all chips and write
+        ; to RAM to make sure it started up correctly (=> RAM datasheets)
+startWait:
+        sta $0100, x
+        dex
+        bne startWait
+
+        ; copy the final start-up code to RAM (zero page)
+        ldx #(startUpEnd - startUpCode)
+l1:
+        lda startUpCode, x
+        sta $02, x
+        dex
+        bpl l1
+        lda startConfig
+        sta patchStartConfig
+        lda startBank
+        sta patchStartBank
+
+        jmp $0002
 
         ; fill it up to $FFFA to put the vectors there
         !align $ffff, $fffa, $ff
@@ -106,7 +124,7 @@ startUpEnd:
         !word reti        ; NMI
         !word coldStart   ; RESET
 
-        ; we don't need the IRQ vector an can put RTI here
+        ; we don't need the IRQ vector an can put RTI here to save space :)
 reti:
         rti
         !byte 0xff
