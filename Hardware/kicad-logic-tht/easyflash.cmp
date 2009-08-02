@@ -1,0 +1,115 @@
+Cmp-Mod V01 Created by CVpcb (20080825c) date = 3/6/2009-18:08:10
+
+BeginCmp
+TimeStamp = /4A257DFF;
+Reference = C1;
+ValeurCmp = 100n;
+IdModule  = C2;
+EndCmp
+
+BeginCmp
+TimeStamp = /49FC870C;
+Reference = C2;
+ValeurCmp = 100n;
+IdModule  = C2;
+EndCmp
+
+BeginCmp
+TimeStamp = /49FC8714;
+Reference = C3;
+ValeurCmp = 100n;
+IdModule  = C2;
+EndCmp
+
+BeginCmp
+TimeStamp = /49FC8717;
+Reference = C4;
+ValeurCmp = 100n;
+IdModule  = C2;
+EndCmp
+
+BeginCmp
+TimeStamp = /4A257DE3;
+Reference = C5;
+ValeurCmp = 100n;
+IdModule  = C2;
+EndCmp
+
+BeginCmp
+TimeStamp = /49FB6860;
+Reference = J1;
+ValeurCmp = EXPANSION_PORT;
+IdModule  = expansion-port;
+EndCmp
+
+BeginCmp
+TimeStamp = /4A25792F;
+Reference = JP1;
+ValeurCmp = GAME;
+IdModule  = PIN_ARRAY_2X1;
+EndCmp
+
+BeginCmp
+TimeStamp = /4A257939;
+Reference = JP2;
+ValeurCmp = EXROM;
+IdModule  = PIN_ARRAY_2X1;
+EndCmp
+
+BeginCmp
+TimeStamp = /4A2579DA;
+Reference = R1;
+ValeurCmp = 10k;
+IdModule  = R3;
+EndCmp
+
+BeginCmp
+TimeStamp = /4A2579F1;
+Reference = R2;
+ValeurCmp = 10k;
+IdModule  = R3;
+EndCmp
+
+BeginCmp
+TimeStamp = /4A242C30;
+Reference = U1;
+ValeurCmp = 74ACT139;
+IdModule  = 16DIP-ELL300;
+EndCmp
+
+BeginCmp
+TimeStamp = /49FDE452;
+Reference = U2;
+ValeurCmp = 29F040;
+IdModule  = PLCC32MS;
+EndCmp
+
+BeginCmp
+TimeStamp = /49FDE408;
+Reference = U3;
+ValeurCmp = 29F040;
+IdModule  = PLCC32MS;
+EndCmp
+
+BeginCmp
+TimeStamp = /4A257657;
+Reference = U4;
+ValeurCmp = 74HCT174;
+IdModule  = 16DIP-ELL300;
+EndCmp
+
+BeginCmp
+TimeStamp = /4A24488B;
+Reference = U5;
+ValeurCmp = 74HCT157;
+IdModule  = 16DIP-ELL300;
+EndCmp
+
+BeginCmp
+TimeStamp = /4A25760B;
+Reference = U6;
+ValeurCmp = 74HCT174;
+IdModule  = 16DIP-ELL300;
+EndCmp
+
+EndListe
