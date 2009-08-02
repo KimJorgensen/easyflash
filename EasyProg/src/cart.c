@@ -58,31 +58,36 @@ uint8_t readCartHeader(uint8_t lfn)
     }
 
     // Evaluate the cartridge type
-    internalCartType = INTERNAL_CART_TYPE_UNKNOWN;
-    if (cartHeader.type[1] == CART_TYPE_NORMAL)
+    switch (cartHeader.type[1])
     {
+    case CART_TYPE_NORMAL:
         if (cartHeader.exromLine)
         {
             if (!cartHeader.gameLine)
-            {
                 internalCartType = INTERNAL_CART_TYPE_ULTIMAX;
-            }
+            else
+                internalCartType = INTERNAL_CART_TYPE_UNKNOWN;
         }
         else
         {
             if (cartHeader.gameLine)
-            {
                 internalCartType = INTERNAL_CART_TYPE_NORMAL_8K;
-            }
             else
-            {
                 internalCartType = INTERNAL_CART_TYPE_NORMAL_16K;
-            }
         }
-    }
-    else if (cartHeader.type[1] == CART_TYPE_OCEAN1)
-    {
+        break;
+
+    case CART_TYPE_OCEAN1:
         internalCartType = INTERNAL_CART_TYPE_OCEAN1;
+        break;
+
+    case CART_TYPE_EASYFLASH:
+    case CART_TYPE_EASYFLASH_TMP: // remove me!
+        internalCartType = INTERNAL_CART_TYPE_EASYFLASH;
+        break;
+
+    default:
+        internalCartType = INTERNAL_CART_TYPE_UNKNOWN;
     }
 
     return 1;

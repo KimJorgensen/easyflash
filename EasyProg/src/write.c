@@ -85,15 +85,51 @@ static uint8_t writeCRTError(void)
 
 /******************************************************************************/
 /**
- * Write the startup code to 00:1:xxxx. Patch it to use the given memory
- * configuration.
+ * Write the startup code to 00:1:xxxx. Patch it to use the right memory
+ * configuration for the present cartridge type.
+ *
+ * Put the bank offset to be used in *pBankOffset. This offset must be added
+ * to all banks of this cartridge. This is done to keep space on bank 00:1
+ * for the start up code.
  *
  * return CART_RV_OK or CART_RV_ERR
  */
-static uint8_t __fastcall__ writeStartUpCode(uint8_t nConfig)
+static uint8_t __fastcall__ writeStartUpCode(uint8_t* pBankOffset)
 {
+    uint8_t nConfig;
     uint8_t nCodeSize;
     unsigned char* pBase;
+
+    switch (internalCartType)
+    {
+    case INTERNAL_CART_TYPE_NORMAL_8K:
+        nConfig = EASYFLASH_IO_8K;
+        *pBankOffset = 1;
+        break;
+
+    case INTERNAL_CART_TYPE_NORMAL_16K:
+        nConfig = EASYFLASH_IO_16K;
+        *pBankOffset = 1;
+        break;
+
+    case INTERNAL_CART_TYPE_ULTIMAX:
+        nConfig = EASYFLASH_IO_ULTIMAX;
+        *pBankOffset = 1;
+        break;
+
+    case INTERNAL_CART_TYPE_OCEAN1:
+        nConfig = EASYFLASH_IO_16K;
+        *pBankOffset = 0;
+        break;
+
+    case INTERNAL_CART_TYPE_EASYFLASH:
+        // nothing to do
+        return CART_RV_OK;
+
+    default:
+        screenPrintSimpleDialog(apStrUnsupportedCRTType);
+        return CART_RV_ERR;
+    }
 
     // btw: the buffer must always be 256 bytes long
     memset(startUpBuffer, 0xff, 0x100);
@@ -103,8 +139,11 @@ static uint8_t __fastcall__ writeStartUpCode(uint8_t nConfig)
     pBase = startUpBuffer + 256 - nCodeSize;
     memcpy(pBase, startUpStart, nCodeSize);
 
-    // the first byte of this code is the memory config to be used - patch it
-    *pBase = nConfig | EASYFLASH_IO_BIT_LED;
+    // the 1st byte of this code is the start bank to be used - patch it
+    pBase[0] = *pBankOffset;
+
+    // the 2nd byte of this code is the memory config to be used - patch it
+    pBase[1] = nConfig | EASYFLASH_IO_BIT_LED;
 
     // write the startup code to bank 0, always write 256 bytes
     if (!flashWriteBlock(0, 1, 0x1F00, startUpBuffer))
@@ -116,50 +155,15 @@ static uint8_t __fastcall__ writeStartUpCode(uint8_t nConfig)
 
 /******************************************************************************/
 /**
- * Write a Normal 8K image from the given file to flash.
- *
- * return CART_RV_OK or CART_RV_ERR
- */
-static uint8_t writeCrtImageNormal8k(uint8_t lfn)
-{
-    uint8_t rv;
-
-    rv = readNextHeader(lfn);
-
-    if (rv == CART_RV_OK)
-    {
-        if ((nSize > 0x2000) || (nAddress != (uint16_t) ROM0_BASE) ||
-            (nBank != 0))
-        {
-            screenPrintSimpleDialog(apStrUnsupportedCRTData);
-            return CART_RV_ERR;
-        }
-
-        if (writeStartUpCode(EASYFLASH_IO_8K) != CART_RV_OK)
-            return CART_RV_ERR;
-
-        // real CRT to bank 1, because we wrote the startup code to bank 0
-        if (!flashWriteBlockFromFile(1, 0, nSize, lfn))
-            return writeCRTError();
-    }
-    else if (rv == CART_RV_ERR)
-    {
-        screenPrintSimpleDialog(apStrChipReadError);
-        return CART_RV_ERR;
-    }
-
-    return CART_RV_OK;
-}
-
-
-/******************************************************************************/
-/**
- * Write a crt image from the given file to flash.
+ * Write a cartridge image from the given file to flash.
  *
  * return CART_RV_OK or CART_RV_ERR
  */
 static uint8_t writeCrtImage(uint8_t lfn)
 {
+    uint8_t rv;
+    uint8_t nBankOffset;
+
     setStatus("Reading CRT header");
     if (!readCartHeader(lfn))
     {
@@ -167,31 +171,21 @@ static uint8_t writeCrtImage(uint8_t lfn)
         return CART_RV_ERR;
     }
 
-    switch (internalCartType)
-    {
-    case INTERNAL_CART_TYPE_NORMAL_8K:
-        return writeCrtImageNormal8k(lfn);
-        break;
+    if (writeStartUpCode(&nBankOffset) != CART_RV_OK)
+        return CART_RV_ERR;
 
-    default:
-        screenPrintSimpleDialog(apStrUnsupportedCRTType);
-        break;
-    }
-
-    return CART_RV_ERR;
-}
-
-#if 0
     do
     {
-        setStatus("Reading header from file");
-        rv = readNextBankHeader(&bankHeader, lfn);
+        rv = readNextHeader(lfn);
+        if (rv == CART_RV_ERR)
+        {
+            screenPrintSimpleDialog(apStrChipReadError);
+            return CART_RV_ERR;
+        }
 
         if (rv == CART_RV_OK)
         {
-            nBank = bankHeader.bank[1];
-            nAddress = 256 * bankHeader.loadAddr[0] + bankHeader.loadAddr[1];
-            nSize = 256 * bankHeader.romLen[0] + bankHeader.romLen[1];
+            nBank += nBankOffset;
 
             if ((nAddress == (uint16_t) ROM0_BASE) && (nSize <= 0x4000))
             {
@@ -205,31 +199,25 @@ static uint8_t writeCrtImage(uint8_t lfn)
                     flashWriteBlockFromFile(nBank, 0, nSize, lfn);
                 }
             }
-            else if (((nAddress == (uint16_t) ROM1_BASE) || (nAddress
-                    == (uint16_t) ROM1_BASE_ULTIMAX)) && (nSize <= 0x2000))
+            else if (((nAddress == (uint16_t) ROM1_BASE) ||
+                      (nAddress == (uint16_t) ROM1_BASE_ULTIMAX)) &&
+                     (nSize <= 0x2000))
             {
                 flashWriteBlockFromFile(nBank, 1, nSize, lfn);
             }
             else
             {
-                // todo: error message
-                gotoxy(0, 0);
-                cprintf("Illegal CHIP address or size (%p, %p)", nAddress, nSize);
-                for (;;)
-                    ;
+                screenPrintSimpleDialog(apStrUnsupportedCRTData);
+                return CART_RV_ERR;
             }
         }
-        else if (rv == CART_RV_ERR)
-        {
-            screenPrintSimpleDialog(apStrChipReadError);
-            return CART_RV_ERR;
-        }
-    } while (rv == CART_RV_OK);
 
-    setStatus("OK");
+        // rv == CART_RV_EOF is the normal way to leave this loop
+    }
+    while (rv == CART_RV_OK);
+
     return CART_RV_OK;
 }
-#endif
 
 
 /******************************************************************************/

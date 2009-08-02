@@ -77,10 +77,11 @@ CartChip;
 #define CART_SIGNATURE { 0x43, 0x36, 0x34, 0x20, 0x43, 0x41, 0x52, 0x54, 0x52, 0x49, 0x44, 0x47, 0x45, 0x20, 0x20, 0x20 }
 #define CHIP_SIGNATURE { 0x43, 0x48, 0x49, 0x50 }
 
-
 // These are the cartridge types from the file header
-#define CART_TYPE_NORMAL 0
-#define CART_TYPE_OCEAN1 5
+#define CART_TYPE_NORMAL     0
+#define CART_TYPE_OCEAN1     5
+#define CART_TYPE_EASYFLASH 32
+#define CART_TYPE_EASYFLASH_TMP 42 // <= remove me!
 
 // These are detailed cartridge types, only used in this software
 #define INTERNAL_CART_TYPE_UNKNOWN      0x00
@@ -88,6 +89,8 @@ CartChip;
 #define INTERNAL_CART_TYPE_NORMAL_16K   0x81
 #define INTERNAL_CART_TYPE_ULTIMAX      0x82
 #define INTERNAL_CART_TYPE_OCEAN1       0x90
+#define INTERNAL_CART_TYPE_EASYFLASH    0xa0
+
 
 // global variables to make the code more compact on cc65
 extern uint8_t      internalCartType;
