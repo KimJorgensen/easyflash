@@ -189,11 +189,8 @@ static uint8_t __fastcall__ flashVerifyBlock(uint8_t nBank, uint8_t nChip,
     if (pFlash)
     {
         nOffset = pFlash - pNormalBase;
-        sprintf(strStatus, "%02X:%X:%04X: file %02X != flash %02X",
-                flashCodeGetBank(), nChip, nOffset,
-                pBlock[nOffset], *pFlash);
-
-        screenPrintTwoLinesDialog("Verify error at", strStatus);
+        screenPrintVerifyError(flashCodeGetBank(), nChip, nOffset,
+                               pBlock[nOffset], *pFlash);
         return 0;
     }
 #endif
