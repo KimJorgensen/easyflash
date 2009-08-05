@@ -40,6 +40,7 @@
 #include "hex.h"
 #include "progress.h"
 #include "write.h"
+#include "torturetest.h"
 
 /******************************************************************************/
 
@@ -63,6 +64,7 @@ ScreenMenuEntry aMainMenuEntries[] =
         { EASYPROG_MENU_ENTRY_CHECK_TYPE, "Check flash type" },
         { EASYPROG_MENU_ENTRY_ERASE_ALL,  "Erase all" },
         { EASYPROG_MENU_ENTRY_HEX_VIEWER, "Hex viewer" },
+        { EASYPROG_MENU_ENTRY_TORTURE_TEST,  "Torture test" },
         { EASYPROG_MENU_ENTRY_QUIT,       "Quit" },
         { 0, NULL }
 };
@@ -238,6 +240,10 @@ static void __fastcall__ execMenu(uint8_t x, uint8_t y,
 
     case EASYPROG_MENU_ENTRY_HEX_VIEWER:
         hexViewer();
+        break;
+
+    case EASYPROG_MENU_ENTRY_TORTURE_TEST:
+        tortureTest();
         break;
 
     case EASYPROG_MENU_ENTRY_QUIT:

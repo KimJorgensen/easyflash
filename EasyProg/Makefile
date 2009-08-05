@@ -14,6 +14,8 @@ OBJ += obj/texts.o
 OBJ += obj/hex.o
 OBJ += obj/progress.o
 OBJ += obj/write.o
+OBJ += obj/torturetest.o
+OBJ += obj/torturetestasm.o
 OBJ += obj/startupbin.o
 #OBJ += obj/filedlg.o
 

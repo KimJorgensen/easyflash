@@ -436,6 +436,24 @@ uint8_t __fastcall__ screenPrintTwoLinesDialog(const char* p1, const char* p2)
 
 /******************************************************************************/
 /**
+ * Print a dialog with a verify error and wait for <Stop> or <Enter>.
+ */
+void __fastcall__ screenPrintVerifyError(uint8_t nBank, uint8_t nChip,
+                                         uint16_t nOffset,
+                                         uint8_t nData,
+                                         uint8_t nFlashVal)
+{
+    char strStatus[41];
+
+    sprintf(strStatus, "%02X:%X:%04X: data %02X != flash %02X",
+            nBank, nChip, nOffset,
+            nData, nFlashVal);
+
+    screenPrintTwoLinesDialog("Verify error at", strStatus);
+}
+
+/******************************************************************************/
+/**
  * Wait until one of the keys has been pressed.
  *
  * flags        contains the keys allowed: BUTTON_ENTER and/or BUTTON_STOP
