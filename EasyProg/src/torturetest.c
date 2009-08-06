@@ -128,7 +128,7 @@ void tortureTest(void)
 
     for (nLoop = 0; ; ++nLoop)
     {
-        sprintf(strStatus, "Test loop %d", nLoop);
+        sprintf(strStatus, "Test loop %u", nLoop);
         setStatus(strStatus);
 
         rv = tortureTestBanking();
