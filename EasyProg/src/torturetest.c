@@ -28,6 +28,7 @@
 #include "easyprog.h"
 #include "torturetest.h"
 #include "flash.h"
+#include "flashcode.h"
 
 /*
  * The cartridge test works like this:
@@ -75,43 +76,76 @@ static uint8_t tortureTestWriteData(void)
 
 /******************************************************************************/
 /**
- * Verify the test data on the cartridge.
+ * Verify the test data on the cartridge on the given bank.
  *
  * return 1 for success, 0 for failure
  */
-static uint8_t tortureTestVerify(void)
+static uint8_t tortureTestVerify(uint8_t nBank)
 {
-    char            strStatus[41];
     EasyFlashAddr   addr;
     uint16_t        rv;
     uint8_t         nData;
     uint8_t         nFlash;
 
-    for (addr.nBank = 0; addr.nBank < FLASH_NUM_BANKS; ++addr.nBank)
+    addr.nBank = nBank;
+
+    for (addr.nChip = 0; addr.nChip < 2; ++addr.nChip)
     {
-        for (addr.nChip = 0; addr.nChip < 2; ++addr.nChip)
+        for (addr.nOffset = 0; addr.nOffset < 0x2000; addr.nOffset += 256)
         {
-            for (addr.nOffset = 0; addr.nOffset < 0x2000; addr.nOffset += 256)
+            tortureTestFillBuffer(buffer, &addr);
+
+            rv = tortureTestCompare(buffer, &addr);
+
+            if (rv != 256)
             {
-                tortureTestFillBuffer(buffer, &addr);
+                nData = buffer[rv];
+                if (addr.nChip)
+                    nFlash = ROM1_BASE[addr.nOffset + rv];
+                else
+                    nFlash = ROM0_BASE[addr.nOffset + rv];
 
-                rv = tortureTestCompare(buffer, &addr);
-
-                if (rv != 256)
-                {
-                    nData = buffer[rv];
-                    if (addr.nChip)
-                        nFlash = ROM1_BASE[addr.nOffset + rv];
-                    else
-                        nFlash = ROM0_BASE[addr.nOffset + rv];
-
-                    screenPrintVerifyError(addr.nBank, addr.nChip, addr.nOffset + rv,
-                                           nData, nFlash);
-                    return 0;
-                }
+                screenPrintVerifyError(addr.nBank, addr.nChip, addr.nOffset
+                        + rv, nData, nFlash);
+                return 0;
             }
         }
     }
+
+    return 1;
+}
+
+
+/******************************************************************************/
+/**
+ * Read the chip IDs 256 times (which includes writing to flash).
+ *
+ * return 1 for success, 0 for failure
+ */
+static uint8_t tortureTestFlashIds(void)
+{
+    char strStatus[41];
+    uint16_t rv0;
+    uint16_t rv1;
+    uint8_t nLoop;
+
+    nLoop = 0;
+    do
+    {
+        rv0 = flashCodeReadIds(ROM0_BASE);
+        rv1 = flashCodeReadIds(ROM1_BASE_ULTIMAX);
+
+        if (rv0 != FLASH_TYPE_AMD_AM29F040 ||
+            rv1 != FLASH_TYPE_AMD_AM29F040)
+        {
+            sprintf(strStatus, "Flash ID error: %04X, %04X",
+                    rv0, rv1);
+
+            screenPrintTwoLinesDialog("Test failed", strStatus);
+            return 0;
+        }
+    }
+    while(++nLoop);
 
     return 1;
 }
@@ -141,7 +175,16 @@ void tortureTest(void)
             return;
         }
 
-        if (!tortureTestVerify())
+        if (!flashCodeCheckRAM())
+        {
+            screenPrintTwoLinesDialog("Test failed", "RAM not okay");
+            return;
+        }
+
+        if (!tortureTestFlashIds())
+            return;
+
+        if (!tortureTestVerify(nLoop % FLASH_NUM_BANKS))
             return;
     }
 }
