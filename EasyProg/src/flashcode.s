@@ -190,7 +190,7 @@ _flashCodeGetBank:
 ;
 ; Read Manufacturer ID and Device ID from the chip at the given address.
 ;
-; unsigned __fastcall__ flashCodeReadIds(uint8_t* pBase);
+; uint16_t __fastcall__ flashCodeReadIds(uint8_t* pBase);
 ;
 ; parameters:
 ;       base in AX (A = low), $8000 or $E000
