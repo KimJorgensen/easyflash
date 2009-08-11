@@ -99,3 +99,5 @@ const char* apStrChipReadError[] =
         "be damaged.",
         NULL
 };
+
+const char* pStrTestFailed = "Test failed";

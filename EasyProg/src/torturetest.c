@@ -26,6 +26,7 @@
 #include <stdio.h>
 
 #include "screen.h"
+#include "texts.h"
 #include "easyprog.h"
 #include "torturetest.h"
 #include "flash.h"
@@ -142,7 +143,7 @@ static uint8_t tortureTestFlashIds(void)
             sprintf(strStatus, "Flash ID error: %04X, %04X",
                     rv0, rv1);
 
-            screenPrintTwoLinesDialog("Test failed", strStatus);
+            screenPrintTwoLinesDialog(pStrTestFailed, strStatus);
             return 0;
         }
     }
@@ -172,13 +173,13 @@ void tortureTest(void)
             sprintf(strStatus, "Bank test error: set %02X != read %02X",
                     rv >> 8, rv & 0xff);
 
-            screenPrintTwoLinesDialog("Test failed", strStatus);
+            screenPrintTwoLinesDialog(pStrTestFailed, strStatus);
             return;
         }
 
         if (!flashCodeCheckRAM())
         {
-            screenPrintTwoLinesDialog("Test failed", "RAM not okay");
+            screenPrintSimpleDialog(apStrBadRAM);
             return;
         }
 

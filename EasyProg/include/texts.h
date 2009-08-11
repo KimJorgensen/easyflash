@@ -8,18 +8,20 @@
 #ifndef TEXTS_H_
 #define TEXTS_H_
 
-const char* apStrLowHigh[];
-const char* apStrAbout[];
+extern const char* apStrLowHigh[];
+extern const char* apStrAbout[];
 
-const char* apStrUnsupportedCRTType[];
-const char* apStrUnsupportedCRTData[];
-const char* apStrWriteCRTFailed[];
-const char* apStrWrongFlash[];
-const char* apStrBadRAM[];
-const char* apStrAskErase[];
-const char* apStrEraseFailed[];
-const char* apStrFileOpenError[];
-const char* apStrHeaderReadError[];
-const char* apStrChipReadError[];
+extern const char* apStrUnsupportedCRTType[];
+extern const char* apStrUnsupportedCRTData[];
+extern const char* apStrWriteCRTFailed[];
+extern const char* apStrWrongFlash[];
+extern const char* apStrBadRAM[];
+extern const char* apStrAskErase[];
+extern const char* apStrEraseFailed[];
+extern const char* apStrFileOpenError[];
+extern const char* apStrHeaderReadError[];
+extern const char* apStrChipReadError[];
+
+extern const char* pStrTestFailed;
 
 #endif /* TEXTS_H_ */
