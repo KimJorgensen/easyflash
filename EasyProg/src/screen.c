@@ -29,6 +29,7 @@
 #include <stdio.h>
 
 #include "screen.h"
+#include "texts.h"
 
 static const char* pStrHexDigits = "0123456789ABCDEF";
 
@@ -333,7 +334,10 @@ uint8_t __fastcall__ screenDoMenu(uint8_t x, uint8_t y,
         default:
             for (nEntry = 0; nEntry != nEntries; ++nEntry)
                 if (key == tolower(pMenuEntries[nEntry].pStrLabel[0]))
+                {
+                    screenPrintMenu(x, y, pMenuEntries, nEntry, 0);
                     return pMenuEntries[nEntry].nId;
+                }
         }
     } while (key != CH_STOP);
 
@@ -397,6 +401,7 @@ uint8_t __fastcall__ screenPrintDialog(const char* apStrLines[], uint8_t flags)
         cputsxy(xStart, yStart++, apStrLines[y]);
     }
 
+    y = yEnd - 3;
     if (flags & BUTTON_ENTER)
         screenPrintButton(xEnd - 7, yEnd - 3, "Enter");
 
@@ -431,6 +436,19 @@ uint8_t __fastcall__ screenPrintTwoLinesDialog(const char* p1, const char* p2)
     apStrLines[1] = p2;
     apStrLines[2] = NULL;
     return screenPrintDialog(apStrLines, BUTTON_ENTER | BUTTON_STOP);
+}
+
+
+/******************************************************************************/
+/**
+ * Print a dialog to ask whether it is okay to erase the flash.
+ * Wait for <Stop> or <Enter>.
+ *
+ * return           the button which has been pressed
+ */
+uint8_t __fastcall__ screenAskEraseDialog(void)
+{
+    return screenPrintDialog(apStrAskErase, BUTTON_ENTER | BUTTON_STOP);
 }
 
 

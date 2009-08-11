@@ -156,7 +156,7 @@ static uint8_t checkFlashType(void)
 #endif
 
     if ((anFlashId[0] != FLASH_TYPE_AMD_AM29F040) ||
-            (anFlashId[1] != FLASH_TYPE_AMD_AM29F040))
+        (anFlashId[1] != FLASH_TYPE_AMD_AM29F040))
     {
         screenPrintSimpleDialog(apStrWrongFlash);
         refreshMainScreen();
@@ -225,8 +225,11 @@ static void __fastcall__ execMenu(uint8_t x, uint8_t y,
     switch (screenDoMenu(x, y, pMenuEntries))
     {
     case EASYPROG_MENU_ENTRY_WRITE_CRT:
-        checkFlashType();
-        checkWriteImage();
+        if (screenAskEraseDialog() == BUTTON_ENTER)
+        {
+            checkFlashType();
+            checkWriteImage();
+        }
         break;
 
     case EASYPROG_MENU_ENTRY_CHECK_TYPE:
@@ -234,8 +237,11 @@ static void __fastcall__ execMenu(uint8_t x, uint8_t y,
         break;
 
     case EASYPROG_MENU_ENTRY_ERASE_ALL:
-        checkFlashType();
-        eraseAll();
+        if (screenAskEraseDialog() == BUTTON_ENTER)
+        {
+            checkFlashType();
+            eraseAll();
+        }
         break;
 
     case EASYPROG_MENU_ENTRY_HEX_VIEWER:
@@ -243,7 +249,10 @@ static void __fastcall__ execMenu(uint8_t x, uint8_t y,
         break;
 
     case EASYPROG_MENU_ENTRY_TORTURE_TEST:
-        tortureTest();
+        if (screenAskEraseDialog() == BUTTON_ENTER)
+        {
+            tortureTest();
+        }
         break;
 
     case EASYPROG_MENU_ENTRY_QUIT:

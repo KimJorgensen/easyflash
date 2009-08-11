@@ -60,6 +60,15 @@ const char* apStrBadRAM[] =
         NULL
 };
 
+const char* apStrAskErase[] =
+{
+        "This will erase the current",
+        "flash content! Are you sure?",
+        "Press <Stop> to cancel,",
+        "<Enter> to continue.",
+        NULL
+};
+
 const char* apStrEraseFailed[] =
 {
         "Flash erase failed,",

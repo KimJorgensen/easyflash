@@ -22,6 +22,7 @@
  * Thomas Giesel skoe@directbox.com
  */
 
+#include <conio.h>
 #include <stdio.h>
 
 #include "screen.h"
@@ -185,6 +186,9 @@ void tortureTest(void)
             return;
 
         if (!tortureTestVerify(nLoop % FLASH_NUM_BANKS))
+            return;
+
+        if (kbhit() && cgetc() == CH_STOP)
             return;
     }
 }

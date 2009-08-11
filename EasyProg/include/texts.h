@@ -16,6 +16,7 @@ const char* apStrUnsupportedCRTData[];
 const char* apStrWriteCRTFailed[];
 const char* apStrWrongFlash[];
 const char* apStrBadRAM[];
+const char* apStrAskErase[];
 const char* apStrEraseFailed[];
 const char* apStrFileOpenError[];
 const char* apStrHeaderReadError[];
