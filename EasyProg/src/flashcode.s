@@ -419,9 +419,9 @@ l8_1:
 l8_different:
         ; check if the error bit is set
         and #FLASH_ALG_ERROR_BIT
-        bne ret_err
         ; wait longer if not
         beq l8_1        ; always
+        bne flashCodeResetFlash
 
 l_a000:
         ; same code for $e000
@@ -436,9 +436,9 @@ la_1:
 la_different:
         ; check if the error bit is set
         and #FLASH_ALG_ERROR_BIT
-        bne ret_err
         ; wait longer if not
         beq la_1
+        bne flashCodeResetFlash
 .endproc
 ret_err:
         ldx #0
@@ -448,6 +448,21 @@ ret_ok:
         ldx #0
         lda #1
         rts
+
+; =============================================================================
+;
+; Go to Ultimax mode, send the reset command to both flashs and go back
+; to normal mode. Return 0
+;
+; =============================================================================
+flashCodeResetFlash:
+        jsr flashCodeActivateUltimax
+        ; cancel the error mode
+        lda #$f0
+        sta $8000
+        sta $e000
+        jsr flashCodeDeactivateUltimax
+        jmp ret_err
 
 ; =============================================================================
 ;
