@@ -76,6 +76,13 @@ const char* apStrEraseFailed[] =
         NULL
 };
 
+const char* apStrFlashWriteFailed[] =
+{
+        "Flash write failed,",
+        "check your hardware.",
+        NULL
+};
+
 const char* apStrFileOpenError[] =
 {
         "Cannot open cartridge image file.",
