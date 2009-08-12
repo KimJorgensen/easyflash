@@ -131,7 +131,7 @@ uint8_t __fastcall__ flashWriteBlock(uint8_t nBank, uint8_t nChip,
     {
         if (!eraseSector(nBank, nChip))
         {
-            // todo: Show a real error message
+            screenPrintSimpleDialog(apStrEraseFailed);
             return 0;
         }
     }
@@ -153,7 +153,11 @@ uint8_t __fastcall__ flashWriteBlock(uint8_t nBank, uint8_t nChip,
          flashCodeWrite(pDest++, *pBlock++);
 
          // we don't check the result, because we verify anyway
-         flashCodeCheckProgress(pNormalBase);
+         if (!flashCodeCheckProgress(pNormalBase))
+         {
+             screenPrintSimpleDialog(apStrFlashWriteFailed);
+             return 0;
+         }
     }
 
     progressSetBankState(flashCodeGetBank(), nChip, PROGRESS_PROGRAMMED);
