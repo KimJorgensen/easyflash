@@ -34,6 +34,7 @@
 #include "flash.h"
 #include "startupbin.h"
 #include "write.h"
+#include "filedlg.h"
 
 /******************************************************************************/
 /* Static variables */
@@ -232,18 +233,14 @@ static uint8_t writeCrtImage(uint8_t lfn)
  */
 void checkWriteImage(void)
 {
-    const char *pStrInput;
     char strFileName[FILENAME_MAX];
     uint8_t lfn, rv;
 
-    pStrInput = screenReadInput("Write CRT to flash", "Enter file name");
-
-    refreshMainScreen();
-
-    if (!pStrInput)
+    //pStrInput = screenReadInput("Write CRT to flash", "Enter file name");
+    if (!fileDlg(strFileName))
         return;
 
-    strcpy(strFileName, pStrInput);
+    refreshMainScreen();
 
     setStatus("Checking file");
 

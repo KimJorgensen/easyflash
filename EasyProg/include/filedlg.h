@@ -1,4 +1,3 @@
 
 
-void fileDlg(void);
-
+uint8_t fileDlg(char* pStrName);
