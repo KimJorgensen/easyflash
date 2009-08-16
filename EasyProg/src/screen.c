@@ -493,7 +493,7 @@ uint8_t __fastcall__ screenWaitKey(uint8_t flags)
     }
 }
 
-
+#if 0 // unused
 /******************************************************************************/
 /**
  *
@@ -559,3 +559,4 @@ const char* __fastcall__ screenReadInput(const char* pStrTitle, const char* pStr
     else
         return strInput;
 }
+#endif

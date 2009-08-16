@@ -17,7 +17,7 @@ OBJ += obj/write.o
 OBJ += obj/torturetest.o
 OBJ += obj/torturetestasm.o
 OBJ += obj/startupbin.o
-#OBJ += obj/filedlg.o
+OBJ += obj/filedlg.o
 
 BIN_ACME += obj/startup.bin
 

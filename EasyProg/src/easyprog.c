@@ -35,7 +35,6 @@
 #include "flashcode.h"
 #include "flash.h"
 #include "texts.h"
-#include "filedlg.h"
 #include "buffer.h"
 #include "hex.h"
 #include "progress.h"
@@ -302,11 +301,6 @@ int main(void)
         case 'h':
             execMenu(7, 2, aHelpMenuEntries);
             break;
-
-		// for testing
-		case 'f':
-		  //  fileDlg();
-			break;
 
         default:
             break;

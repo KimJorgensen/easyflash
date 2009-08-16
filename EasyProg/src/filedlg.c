@@ -1,5 +1,5 @@
 /*
- * EasyProg - easyprog.c - The main module
+ * EasyProg - filedlg.c - File open dialog
  *
  * (c) 2009 Thomas Giesel
  *
@@ -22,14 +22,23 @@
  * Thomas Giesel skoe@directbox.com
  */
 
+#include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <conio.h>
 #include <string.h>
 #include <cbm.h>
 
-#define FILEDLG_ENTRIES 256
+#include "screen.h"
+
+#define FILEDLG_ENTRIES 128
 #define FILEDLG_LFN     72
+
+#define FILEDLG_X 6
+#define FILEDLG_Y 4
+#define FILEDLG_W 29
+#define FILEDLG_H 18
+
 
 /******************************************************************************/
 
@@ -43,11 +52,13 @@ static const char* apStrEntryType[] =
 /** Local data: Put here to reduce code size */
 
 // buffer for directory entries
-static struct cbm_dirent* pDirEntries;
+//static struct cbm_dirent* aDirEntries;
+static struct cbm_dirent aDirEntries[FILEDLG_ENTRIES];
 
 // number of directory entries in the buffer
 static uint16_t nDirEntries;
 
+static uint8_t  nSelection;
 
 /******************************************************************************/
 /**
@@ -73,7 +84,7 @@ static void fileDlgReadDir(void)
 		for (;;);
 	}
 
-	pEntry = pDirEntries;
+	pEntry = aDirEntries;
 	nDirEntries = 0;
 	while ((!cbm_readdir(FILEDLG_LFN, pEntry)) &&
            (nDirEntries < FILEDLG_ENTRIES))
@@ -84,40 +95,166 @@ static void fileDlgReadDir(void)
 			++pEntry;
 		}
 	}
-	nDirEntries = pEntry - pDirEntries;
+	nDirEntries = pEntry - aDirEntries;
 
   	cbm_closedir(FILEDLG_LFN);
 
-	qsort(pDirEntries, nDirEntries, sizeof(pDirEntries[0]),
+	qsort(aDirEntries, nDirEntries, sizeof(aDirEntries[0]),
           fileDlgCompareEntries);
 }
 
+
 /******************************************************************************/
 /**
- * Initialize the screen. Set up colors and clear it.
  */
-void fileDlg(void)
+static void fileDlgPrintEntry(uint8_t nLine, uint8_t nEntry)
 {
-    uint16_t i;
-	struct cbm_dirent* pEntry;
+    struct cbm_dirent* pEntry;
 
-	pDirEntries = malloc(FILEDLG_ENTRIES * sizeof(struct cbm_dirent));
-	if (!pDirEntries)
-	{
-		cputsxy(0, 0, "Out of memory");
-		for (;;);
-	}
+    pEntry = aDirEntries + nEntry;
 
-	fileDlgReadDir();
+    gotoxy(FILEDLG_X + 1, FILEDLG_Y + 1 + nLine);
 
-	gotoxy(0, 0);
-	pEntry = pDirEntries;
-	for (i = nDirEntries - 1; i; --i)
+    if (nEntry == nSelection)
+        revers(1);
+
+    cprintf("%5d %-16s %s", pEntry->size, pEntry->name,
+        apStrEntryType[pEntry->type]);
+
+    revers(0);
+}
+
+
+/******************************************************************************/
+/**
+ * Enter the relative directory given.
+ *
+ * return 1 for success, 0 for failure.
+ */
+uint8_t fileDlgChangeDir(const char* pStrDir)
+{
+    uint8_t rv;
+    char strCmd[3 + FILENAME_MAX];
+
+    strcpy(strCmd, "cd:");
+    strcpy(strCmd + 3, pStrDir);
+
+    rv = cbm_open (15, 8, 15, strCmd);
+
+    if (rv == 0)
     {
-		cprintf("%4d %-16s %s\r\n", pEntry->size, pEntry->name, apStrEntryType[pEntry->type]);
-		++pEntry;
+        cbm_close(15);
+        return 1;
     }
 
-	free(pDirEntries);
-	for (;;);
+    // error
+    return 0;
+}
+
+
+/******************************************************************************/
+/**
+ * Show a file open dialog. If the user selects a file, copy the name to
+ * pStrSelected.
+ *
+ * return 1 if the user selected a file, 0 if he canceled the dialog.
+ */
+uint8_t fileDlg(char* pStrName)
+{
+    unsigned char nTopLine;
+    unsigned char n, nEntry, nOldSelection;
+    unsigned char bRefresh, bReload;
+    char key;
+    struct cbm_dirent* pEntry;
+
+    screenPrintBox(FILEDLG_X, FILEDLG_Y, FILEDLG_W, FILEDLG_H);
+
+    bReload = 1;
+    for (;;)
+    {
+        if (bReload)
+        {
+            bReload = 0;
+            bRefresh = 1;
+            nSelection = 0;
+            nTopLine = 0;
+            fileDlgReadDir();
+        }
+
+        if (bRefresh)
+        {
+            bRefresh = 0;
+            for (n = 0; n < FILEDLG_H - 2; ++n)
+            {
+                // is there an entry for this display line?
+                if (n + nTopLine < nDirEntries)
+                {
+                    // yes, print it
+                    nEntry = n + nTopLine;
+                    fileDlgPrintEntry(n, nEntry);
+                }
+                else
+                {
+                    gotoxy(FILEDLG_X + 1, FILEDLG_Y + 1 + n);
+                    cclear(FILEDLG_W - 2);
+                }
+            }
+        }
+        else
+        {
+            // only refresh the two lines which have changed
+            fileDlgPrintEntry(nOldSelection - nTopLine, nOldSelection);
+            fileDlgPrintEntry(nSelection - nTopLine, nSelection);
+        }
+
+        nOldSelection = nSelection;
+        key = cgetc();
+        switch (key)
+        {
+        case CH_CURS_UP:
+            if (nSelection)
+            {
+                --nSelection;
+                if (nSelection < nTopLine)
+                {
+                    if (nTopLine > FILEDLG_H - 2)
+                        nTopLine -= FILEDLG_H - 2;
+                    else
+                        nTopLine = 0;
+                    bRefresh = 1;
+                }
+            }
+            break;
+
+        case CH_CURS_DOWN:
+            if (nSelection < nDirEntries - 1)
+            {
+                ++nSelection;
+                if (nSelection > nTopLine + FILEDLG_H - 3)
+                {
+                    nTopLine += FILEDLG_H - 2;
+                    bRefresh = 1;
+                }
+            }
+            break;
+
+        case CH_ENTER:
+            pEntry = aDirEntries + nSelection;
+            switch (pEntry->type)
+            {
+            case CBM_T_DIR:
+                if (fileDlgChangeDir(pEntry->name))
+                    bReload = 1;
+                break;
+
+            case CBM_T_PRG:
+                strcpy(pStrName, pEntry->name);
+                return 1;
+            }
+            break;
+
+            case CH_STOP:
+                return 0;
+        }
+    }
 }
