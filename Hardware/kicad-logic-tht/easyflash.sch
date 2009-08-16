@@ -4,10 +4,10 @@ EELAYER 24  0
 EELAYER END
 $Descr A4 11700 8267
 Sheet 1 1
-Title ""
-Date "3 jul 2009"
-Rev ""
-Comp ""
+Title "EasyFlash"
+Date "16 aug 2009"
+Rev "1.4.1"
+Comp "Skoe, HofMar"
 Comment1 ""
 Comment2 ""
 Comment3 ""
@@ -872,10 +872,6 @@ F 1 "SRAM-6264" V 1600 6250 60  0000 C C
 	1    1600 6250
 	1    0    0    -1  
 $EndComp
-Text Notes 7500 7535 0    60   ~
-EasyFlash
-Text Notes 10670 7660 0    60   ~
-1.4.0
 Entry Wire Line
 	8850 3500 8950 3600
 Entry Wire Line
