@@ -30,6 +30,7 @@ void __fastcall__ screenPrintHex4(uint16_t n);
 void __fastcall__ screenPrintAddr(uint8_t nBank, uint8_t nChip, uint16_t nOffset);
 void screenPrintFrame(void);
 void screenPrintBox(uint8_t x, uint8_t y, uint8_t w, uint8_t h);
+void screenPrintSepLine(uint8_t xStart, uint8_t xEnd, uint8_t y);
 uint8_t __fastcall__ screenPrintDialog(const char* apStrLines[], uint8_t flags);
 void __fastcall__ screenPrintSimpleDialog(const char* apStrLines[]);
 uint8_t __fastcall__ screenPrintTwoLinesDialog(const char* p1, const char* p2);

@@ -34,10 +34,13 @@
 #define FILEDLG_ENTRIES 128
 #define FILEDLG_LFN     72
 
-#define FILEDLG_X 6
+#define FILEDLG_X 5
 #define FILEDLG_Y 4
 #define FILEDLG_W 29
 #define FILEDLG_H 18
+
+#define FILEDLG_Y_ENTRIES (FILEDLG_Y + 3)
+#define FILEDLG_N_ENTRIES (FILEDLG_H - 4)
 
 
 /******************************************************************************/
@@ -48,6 +51,13 @@ static const char* apStrEntryType[] =
 	"DEL", "SEQ", "PRG", "USR", "REL", "-5-", "DIR", "-7-", "VRP"
 };
 
+// change directory up one level
+static const char strUp[] = { 95, 0 }; // arrow left
+
+// current drive
+static uint8_t deviceNumber = 8;
+
+
 /******************************************************************************/
 /** Local data: Put here to reduce code size */
 
@@ -56,9 +66,9 @@ static const char* apStrEntryType[] =
 static struct cbm_dirent aDirEntries[FILEDLG_ENTRIES];
 
 // number of directory entries in the buffer
-static uint16_t nDirEntries;
+static uint8_t nDirEntries;
 
-static uint8_t  nSelection;
+static uint8_t nSelection;
 
 /******************************************************************************/
 /**
@@ -66,6 +76,12 @@ static uint8_t  nSelection;
  */
 static int fileDlgCompareEntries(const void* a, const void* b)
 {
+    // arrow left must be the first entry
+    if (((struct cbm_dirent*)a)->name[0] == 95)
+        return -1;
+    if (((struct cbm_dirent*)b)->name[0] == 95)
+        return 1;
+
 	return strcmp(((struct cbm_dirent*)a)->name,
                   ((struct cbm_dirent*)b)->name);
 }
@@ -76,31 +92,61 @@ static int fileDlgCompareEntries(const void* a, const void* b)
  */
 static void fileDlgReadDir(void)
 {
-	struct cbm_dirent* pEntry;
+    struct cbm_dirent* pEntry;
+    uint8_t bHaveParent;
 
-	if (cbm_opendir(FILEDLG_LFN, 8))
-	{
-		cputsxy(0, 0, "opendir failed");
-		for (;;);
-	}
+    nDirEntries = 0;
+    bHaveParent = 0;
+    pEntry = aDirEntries;
 
-	pEntry = aDirEntries;
-	nDirEntries = 0;
-	while ((!cbm_readdir(FILEDLG_LFN, pEntry)) &&
-           (nDirEntries < FILEDLG_ENTRIES))
-	{
-		// only accept known file types (I do not know VRP...)
-		if (pEntry->type < CBM_T_VRP)
-		{
-			++pEntry;
-		}
-	}
-	nDirEntries = pEntry - aDirEntries;
+    if (cbm_opendir(FILEDLG_LFN, deviceNumber))
+    {
+        cbm_closedir(FILEDLG_LFN);
+        return;
+    }
 
-  	cbm_closedir(FILEDLG_LFN);
+    // read entries, but leave one slot free for "<-", see below
+    while ((!cbm_readdir(FILEDLG_LFN, pEntry)) && (nDirEntries
+            < FILEDLG_ENTRIES - 1))
+    {
+        // only accept supported file types but not directory ".."
+        if ((pEntry->type == CBM_T_DIR) ||
+            (pEntry->type == CBM_T_PRG))
+        {
+            ++pEntry;
+            ++nDirEntries;
+        }
 
-	qsort(aDirEntries, nDirEntries, sizeof(aDirEntries[0]),
+        // On vice we have "..", don't add "<-"
+        if (pEntry->type == CBM_T_DIR && !strcmp(pEntry->name, ".."))
+            bHaveParent = 1;
+    }
+
+    cbm_closedir(FILEDLG_LFN);
+
+    if (!bHaveParent)
+    {
+        // add "<-" (arrow left) for parent directory
+        strcpy(pEntry->name, strUp);
+        pEntry->size = 0;
+        pEntry->type = CBM_T_DIR;
+        ++pEntry;
+        ++nDirEntries;
+    }
+
+    qsort(aDirEntries, nDirEntries, sizeof(aDirEntries[0]),
           fileDlgCompareEntries);
+}
+
+
+/******************************************************************************/
+/**
+ * Print/Update the file dialog of the headline
+ */
+static void fileDlgHeadline(void)
+{
+    gotoxy(FILEDLG_X + 1, FILEDLG_Y + 1);
+    cprintf("Select CRT file        %d ", deviceNumber);
 }
 
 
@@ -113,7 +159,7 @@ static void fileDlgPrintEntry(uint8_t nLine, uint8_t nEntry)
 
     pEntry = aDirEntries + nEntry;
 
-    gotoxy(FILEDLG_X + 1, FILEDLG_Y + 1 + nLine);
+    gotoxy(FILEDLG_X + 1, FILEDLG_Y_ENTRIES + nLine);
 
     if (nEntry == nSelection)
         revers(1);
@@ -140,10 +186,10 @@ uint8_t fileDlgChangeDir(const char* pStrDir)
     strcpy(strCmd + 3, pStrDir);
 
     rv = cbm_open (15, 8, 15, strCmd);
+    cbm_close(15);
 
     if (rv == 0)
     {
-        cbm_close(15);
         return 1;
     }
 
@@ -168,6 +214,7 @@ uint8_t fileDlg(char* pStrName)
     struct cbm_dirent* pEntry;
 
     screenPrintBox(FILEDLG_X, FILEDLG_Y, FILEDLG_W, FILEDLG_H);
+    screenPrintSepLine(FILEDLG_X, FILEDLG_X + FILEDLG_W - 1, FILEDLG_Y + 2);
 
     bReload = 1;
     for (;;)
@@ -184,7 +231,8 @@ uint8_t fileDlg(char* pStrName)
         if (bRefresh)
         {
             bRefresh = 0;
-            for (n = 0; n < FILEDLG_H - 2; ++n)
+            fileDlgHeadline();
+            for (n = 0; n < FILEDLG_N_ENTRIES; ++n)
             {
                 // is there an entry for this display line?
                 if (n + nTopLine < nDirEntries)
@@ -195,12 +243,12 @@ uint8_t fileDlg(char* pStrName)
                 }
                 else
                 {
-                    gotoxy(FILEDLG_X + 1, FILEDLG_Y + 1 + n);
+                    gotoxy(FILEDLG_X + 1, FILEDLG_Y_ENTRIES + n);
                     cclear(FILEDLG_W - 2);
                 }
             }
         }
-        else
+        else if (nDirEntries)
         {
             // only refresh the two lines which have changed
             fileDlgPrintEntry(nOldSelection - nTopLine, nOldSelection);
@@ -227,12 +275,13 @@ uint8_t fileDlg(char* pStrName)
             break;
 
         case CH_CURS_DOWN:
-            if (nSelection < nDirEntries - 1)
+            if (nSelection + 1 < nDirEntries)
             {
                 ++nSelection;
-                if (nSelection > nTopLine + FILEDLG_H - 3)
+                if (nSelection > nTopLine + FILEDLG_N_ENTRIES - 1)
                 {
-                    nTopLine += FILEDLG_H - 2;
+                    fileDlgPrintEntry(nOldSelection - nTopLine, nOldSelection);
+                    nTopLine += FILEDLG_H - 4;
                     bRefresh = 1;
                 }
             }
@@ -253,8 +302,22 @@ uint8_t fileDlg(char* pStrName)
             }
             break;
 
-            case CH_STOP:
-                return 0;
+        case CH_STOP:
+            return 0;
+
+        default:
+            if (key >= '0' && key <= '9')
+            {
+                if (key >= '8')
+                {
+                    deviceNumber = key - '0';
+                }
+                else
+                    deviceNumber = 10 + key - '0';
+
+                fileDlgHeadline();
+                bReload = 1;
+            }
         }
     }
 }
