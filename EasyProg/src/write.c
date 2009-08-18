@@ -240,12 +240,15 @@ void checkWriteImage(void)
     if (!fileDlg(strFileName))
         return;
 
+    if (screenAskEraseDialog() != BUTTON_ENTER)
+        return;
+
     refreshMainScreen();
 
     setStatus("Checking file");
 
     lfn = 2;
-    rv = cbm_open(lfn, 8, CBM_READ, strFileName);
+    rv = cbm_open(lfn, fileDlgGetDriveNumber(), CBM_READ, strFileName);
 
     if (rv)
     {
