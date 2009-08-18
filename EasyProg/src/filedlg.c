@@ -35,12 +35,12 @@
 #define FILEDLG_LFN     72
 
 #define FILEDLG_X 5
-#define FILEDLG_Y 4
+#define FILEDLG_Y 3
 #define FILEDLG_W 29
-#define FILEDLG_H 18
+#define FILEDLG_H 19
 
 #define FILEDLG_Y_ENTRIES (FILEDLG_Y + 3)
-#define FILEDLG_N_ENTRIES (FILEDLG_H - 4)
+#define FILEDLG_N_ENTRIES (FILEDLG_H - 6)
 
 
 /******************************************************************************/
@@ -55,7 +55,7 @@ static const char* apStrEntryType[] =
 static const char strUp[] = { 95, 0 }; // arrow left
 
 // current drive
-static uint8_t deviceNumber = 8;
+static uint8_t nDriveNumber;
 
 
 /******************************************************************************/
@@ -93,13 +93,12 @@ static int fileDlgCompareEntries(const void* a, const void* b)
 static void fileDlgReadDir(void)
 {
     struct cbm_dirent* pEntry;
-    uint8_t bHaveParent;
+    uint8_t c;
 
     nDirEntries = 0;
-    bHaveParent = 0;
     pEntry = aDirEntries;
 
-    if (cbm_opendir(FILEDLG_LFN, deviceNumber))
+    if (cbm_opendir(FILEDLG_LFN, nDriveNumber))
     {
         cbm_closedir(FILEDLG_LFN);
         return;
@@ -109,7 +108,7 @@ static void fileDlgReadDir(void)
     while ((!cbm_readdir(FILEDLG_LFN, pEntry)) && (nDirEntries
             < FILEDLG_ENTRIES - 1))
     {
-        // only accept supported file types but not directory ".."
+        // only accept supported file types
         if ((pEntry->type == CBM_T_DIR) ||
             (pEntry->type == CBM_T_PRG))
         {
@@ -117,25 +116,22 @@ static void fileDlgReadDir(void)
             ++nDirEntries;
         }
 
-        // On vice we have "..", don't add "<-"
-        if (pEntry->type == CBM_T_DIR && !strcmp(pEntry->name, ".."))
-            bHaveParent = 1;
+        if (c == '+') c = '*'; else c = '+';
+        cputcxy(FILEDLG_X + FILEDLG_W - 2, FILEDLG_Y + 1, c);
     }
+    cputcxy(FILEDLG_X + FILEDLG_W - 2, FILEDLG_Y + 1, ' ');
 
-    cbm_closedir(FILEDLG_LFN);
-
-    if (!bHaveParent)
-    {
-        // add "<-" (arrow left) for parent directory
-        strcpy(pEntry->name, strUp);
-        pEntry->size = 0;
-        pEntry->type = CBM_T_DIR;
-        ++pEntry;
-        ++nDirEntries;
-    }
+    // add "<-" (arrow left) for parent directory
+    strcpy(pEntry->name, strUp);
+    pEntry->size = 0;
+    pEntry->type = CBM_T_DIR;
+    ++pEntry;
+    ++nDirEntries;
 
     qsort(aDirEntries, nDirEntries, sizeof(aDirEntries[0]),
           fileDlgCompareEntries);
+
+    cbm_closedir(FILEDLG_LFN);
 }
 
 
@@ -146,7 +142,7 @@ static void fileDlgReadDir(void)
 static void fileDlgHeadline(void)
 {
     gotoxy(FILEDLG_X + 1, FILEDLG_Y + 1);
-    cprintf("Select CRT file        %d ", deviceNumber);
+    cprintf("Select CRT file - drive %d ", nDriveNumber);
 }
 
 
@@ -185,7 +181,7 @@ uint8_t fileDlgChangeDir(const char* pStrDir)
     strcpy(strCmd, "cd:");
     strcpy(strCmd + 3, pStrDir);
 
-    rv = cbm_open (15, 8, 15, strCmd);
+    rv = cbm_open (15, nDriveNumber, 15, strCmd);
     cbm_close(15);
 
     if (rv == 0)
@@ -200,14 +196,35 @@ uint8_t fileDlgChangeDir(const char* pStrDir)
 
 /******************************************************************************/
 /**
+ * Set the drive number to be used for the file browser.
+ */
+void fileDlgSetDriveNumber(uint8_t n)
+{
+    nDriveNumber = n;
+}
+
+
+/******************************************************************************/
+/**
+ * Set the drive number to be used for the file browser.
+ */
+uint8_t fileDlgGetDriveNumber(void)
+{
+    return nDriveNumber;
+}
+
+
+/******************************************************************************/
+/**
  * Show a file open dialog. If the user selects a file, copy the name to
  * pStrSelected.
  *
- * return 1 if the user selected a file, 0 if he canceled the dialog.
+ * return 1 if the user has selected a file, 0 if he canceled
+ * the dialog.
  */
 uint8_t fileDlg(char* pStrName)
 {
-    unsigned char nTopLine;
+    uint8_t nTopLine;
     unsigned char n, nEntry, nOldSelection;
     unsigned char bRefresh, bReload;
     char key;
@@ -215,6 +232,8 @@ uint8_t fileDlg(char* pStrName)
 
     screenPrintBox(FILEDLG_X, FILEDLG_Y, FILEDLG_W, FILEDLG_H);
     screenPrintSepLine(FILEDLG_X, FILEDLG_X + FILEDLG_W - 1, FILEDLG_Y + 2);
+    screenPrintSepLine(FILEDLG_X, FILEDLG_X + FILEDLG_W - 1, FILEDLG_Y + FILEDLG_H - 3);
+    cputsxy(FILEDLG_X + 2, FILEDLG_Y + FILEDLG_H - 2, "Up/Down/0..9/Stop/Enter");
 
     bReload = 1;
     for (;;)
@@ -265,8 +284,8 @@ uint8_t fileDlg(char* pStrName)
                 --nSelection;
                 if (nSelection < nTopLine)
                 {
-                    if (nTopLine > FILEDLG_H - 2)
-                        nTopLine -= FILEDLG_H - 2;
+                    if (nTopLine > FILEDLG_N_ENTRIES)
+                        nTopLine -= FILEDLG_N_ENTRIES;
                     else
                         nTopLine = 0;
                     bRefresh = 1;
@@ -281,7 +300,7 @@ uint8_t fileDlg(char* pStrName)
                 if (nSelection > nTopLine + FILEDLG_N_ENTRIES - 1)
                 {
                     fileDlgPrintEntry(nOldSelection - nTopLine, nOldSelection);
-                    nTopLine += FILEDLG_H - 4;
+                    nTopLine += FILEDLG_N_ENTRIES;
                     bRefresh = 1;
                 }
             }
@@ -309,11 +328,9 @@ uint8_t fileDlg(char* pStrName)
             if (key >= '0' && key <= '9')
             {
                 if (key >= '8')
-                {
-                    deviceNumber = key - '0';
-                }
+                    nDriveNumber = key - '0';
                 else
-                    deviceNumber = 10 + key - '0';
+                    nDriveNumber = 10 + key - '0';
 
                 fileDlgHeadline();
                 bReload = 1;

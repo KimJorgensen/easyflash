@@ -40,6 +40,7 @@
 #include "progress.h"
 #include "write.h"
 #include "torturetest.h"
+#include "filedlg.h"
 
 /******************************************************************************/
 
@@ -224,11 +225,8 @@ static void __fastcall__ execMenu(uint8_t x, uint8_t y,
     switch (screenDoMenu(x, y, pMenuEntries))
     {
     case EASYPROG_MENU_ENTRY_WRITE_CRT:
-        if (screenAskEraseDialog() == BUTTON_ENTER)
-        {
-            checkFlashType();
-            checkWriteImage();
-        }
+        checkFlashType();
+        checkWriteImage();
         break;
 
     case EASYPROG_MENU_ENTRY_CHECK_TYPE:
@@ -282,6 +280,7 @@ int main(void)
     screenInit();
     progressInit();
     refreshMainScreen();
+    fileDlgSetDriveNumber(8);
 
     // this also makes visible 16kByte of flash memory
     checkFlashType();
@@ -295,7 +294,7 @@ int main(void)
         switch (key)
         {
         case 'm':
-            execMenu(3, 2, aMainMenuEntries);
+            execMenu(1, 2, aMainMenuEntries);
             break;
 
         case 'h':
