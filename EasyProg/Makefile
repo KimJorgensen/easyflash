@@ -25,7 +25,7 @@ INCLUDE := include
 #DEFINE  := -D EASYFLASH_FAKE
 
 .PHONY: all
-all: easyprog
+all: easyprog.prg
 
 
 obj/%.s: src/%.c obj
@@ -41,17 +41,16 @@ obj/%.o: obj/%.s obj
 obj/%.o: src/%.s obj $(BIN_ACME)
 	ca65 -t c64 -o $@ $<
 
-
 obj/%.bin: src/%.s obj
 	acme -o $@ $<
 
 obj:
 	mkdir -p $@
 
-easyprog.prg: $(OBJ) src/ld.cfg
+easyprog: $(OBJ) src/ld.cfg
 	ld65 -o $@ -m $@.map -C src/ld.cfg $(OBJ) --lib c64.lib
 
-easyprog: easyprog.prg
+easyprog.prg: easyprog
 	exomizer sfx 0x080d -o $@ -q $^
 
 .PHONY: clean
