@@ -24,6 +24,7 @@
 
 #include <stdint.h>
 #include <conio.h>
+#include <ctype.h>
 #include <string.h>
 #include <cbm.h>
 
@@ -37,6 +38,19 @@ CartHeader   cartHeader;
 uint8_t      nChips;
 uint32_t     nCartBytes;
 
+// Names for internal CRT types, keep in sync with INTERNAL_CART_TYPE_*!
+const char* aStrInternalCartTypeName[] =
+{
+    "",
+    "Unknown",
+    "Normal up to 8k",
+    "Normal up to 16k",
+    "MAX",
+    "Ocean Type 1",
+    "EasyFlash"
+};
+
+
 static const char strCartSignature[16] = CART_SIGNATURE;
 static const char strChipSignature[4] = CHIP_SIGNATURE;
 
@@ -44,6 +58,7 @@ static const char strChipSignature[4] = CHIP_SIGNATURE;
 uint8_t readCartHeader(uint8_t lfn)
 {
     int rv;
+    uint8_t i;
 
     rv = cbm_read(lfn, &cartHeader, sizeof(cartHeader));
     if (rv != sizeof(cartHeader))

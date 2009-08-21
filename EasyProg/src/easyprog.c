@@ -47,6 +47,9 @@
 // Low/High flash chip manufacturer/device ID
 uint16_t anFlashId[2];
 
+// File name of last CRT image
+char strFileName[FILENAME_MAX];
+
 /******************************************************************************/
 /* Static variables */
 
@@ -131,8 +134,23 @@ void refreshMainScreen(void)
     textcolor(COLOR_FOREGROUND);
     cputs("elp");
 
-    showFlashTypeBox(10, 0);
-    showFlashTypeBox(13, 1);
+    textcolor(COLOR_LIGHTFRAME);
+    screenPrintBox(16, 3, 23, 3);
+    screenPrintBox(16, 6, 23, 3);
+    textcolor(COLOR_FOREGROUND);
+
+    gotoxy(6, 4);
+    cputs("File name:");
+    gotox(17);
+    cprintf("%-16s", strFileName);
+
+    gotoxy(7, 7);
+    cputs("CRT Type:");
+    gotox(17);
+    cputs(aStrInternalCartTypeName[internalCartType]);
+
+    showFlashTypeBox(9, 0);
+    showFlashTypeBox(12, 1);
     progressShow();
 
     refreshStatusLine();
@@ -222,47 +240,54 @@ void execMenuEntry(void)
 static void __fastcall__ execMenu(uint8_t x, uint8_t y,
                                   const ScreenMenuEntry* pMenuEntries)
 {
-    switch (screenDoMenu(x, y, pMenuEntries))
+    uint8_t cmd;
+    cmd = screenDoMenu(x, y, pMenuEntries);
+
+    if (cmd)
     {
-    case EASYPROG_MENU_ENTRY_WRITE_CRT:
-        checkFlashType();
-        checkWriteImage();
-        break;
+        strFileName[0] = '\0';
+        internalCartType = INTERNAL_CART_TYPE_NONE;
 
-    case EASYPROG_MENU_ENTRY_CHECK_TYPE:
-        checkFlashType();
-        break;
-
-    case EASYPROG_MENU_ENTRY_ERASE_ALL:
-        if (screenAskEraseDialog() == BUTTON_ENTER)
+        switch (cmd)
         {
+        case EASYPROG_MENU_ENTRY_WRITE_CRT:
             checkFlashType();
-            eraseAll();
+            checkWriteImage();
+            break;
+
+        case EASYPROG_MENU_ENTRY_CHECK_TYPE:
+            checkFlashType();
+            break;
+
+        case EASYPROG_MENU_ENTRY_ERASE_ALL:
+            if (screenAskEraseDialog() == BUTTON_ENTER)
+            {
+                checkFlashType();
+                eraseAll();
+            }
+            break;
+
+        case EASYPROG_MENU_ENTRY_HEX_VIEWER:
+            hexViewer();
+            break;
+
+        case EASYPROG_MENU_ENTRY_TORTURE_TEST:
+            if (screenAskEraseDialog() == BUTTON_ENTER)
+                tortureTest();
+            break;
+
+        case EASYPROG_MENU_ENTRY_QUIT:
+            clrscr();
+            __asm__ ("jmp ($fffc)");
+            break;
+
+        case EASYPROG_MENU_ENTRY_ABOUT:
+            screenPrintSimpleDialog(apStrAbout);
+            break;
+
+        default:
+            break;
         }
-        break;
-
-    case EASYPROG_MENU_ENTRY_HEX_VIEWER:
-        hexViewer();
-        break;
-
-    case EASYPROG_MENU_ENTRY_TORTURE_TEST:
-        if (screenAskEraseDialog() == BUTTON_ENTER)
-        {
-            tortureTest();
-        }
-        break;
-
-    case EASYPROG_MENU_ENTRY_QUIT:
-        clrscr();
-        exit(0);
-        break;
-
-    case EASYPROG_MENU_ENTRY_ABOUT:
-        screenPrintSimpleDialog(apStrAbout);
-        break;
-
-    default:
-        break;
     }
 
     refreshMainScreen();
@@ -279,6 +304,10 @@ int main(void)
 
     screenInit();
     progressInit();
+
+    strFileName[0] = '\0';
+    internalCartType = INTERNAL_CART_TYPE_NONE;
+
     refreshMainScreen();
     fileDlgSetDriveNumber(8);
 

@@ -84,19 +84,21 @@ CartChip;
 #define CART_TYPE_EASYFLASH_TMP 42 // <= remove me!
 
 // These are detailed cartridge types, only used in this software
-#define INTERNAL_CART_TYPE_UNKNOWN      0x00
-#define INTERNAL_CART_TYPE_NORMAL_8K    0x80
-#define INTERNAL_CART_TYPE_NORMAL_16K   0x81
-#define INTERNAL_CART_TYPE_ULTIMAX      0x82
-#define INTERNAL_CART_TYPE_OCEAN1       0x90
-#define INTERNAL_CART_TYPE_EASYFLASH    0xa0
-
+// Keep in sync with aStrInternalCartTypeName!
+#define INTERNAL_CART_TYPE_NONE         0
+#define INTERNAL_CART_TYPE_UNKNOWN      1
+#define INTERNAL_CART_TYPE_NORMAL_8K    2
+#define INTERNAL_CART_TYPE_NORMAL_16K   3
+#define INTERNAL_CART_TYPE_ULTIMAX      4
+#define INTERNAL_CART_TYPE_OCEAN1       5
+#define INTERNAL_CART_TYPE_EASYFLASH    6
 
 // global variables to make the code more compact on cc65
 extern uint8_t      internalCartType;
 extern CartHeader   cartHeader;
 extern uint8_t      nChips;
 extern uint32_t     nCartBytes;
+extern const char* aStrInternalCartTypeName[];
 
 uint8_t readCartHeader(uint8_t lfn);
 void eraseFlash(void);

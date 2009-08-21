@@ -172,6 +172,9 @@ static uint8_t writeCrtImage(uint8_t lfn)
         return CART_RV_ERR;
     }
 
+    // this will show the cartridge type from the header
+    refreshMainScreen();
+
     if (writeStartUpCode(&nBankOffset) != CART_RV_OK)
         return CART_RV_ERR;
 
@@ -233,7 +236,6 @@ static uint8_t writeCrtImage(uint8_t lfn)
  */
 void checkWriteImage(void)
 {
-    char strFileName[FILENAME_MAX];
     uint8_t lfn, rv;
 
     //pStrInput = screenReadInput("Write CRT to flash", "Enter file name");
