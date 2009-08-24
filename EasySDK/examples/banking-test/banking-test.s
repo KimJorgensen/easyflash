@@ -17,8 +17,9 @@ bankStart_00_0:
     !pseudopc $8000 {
 
         ; === the main application entry point ===
-        ; copy the main code to $C000 (or whereever)
-        ; normally you can put some exomizer compressed stuff here
+        ; copy the main code to $C000 (or whereever) - we don't run it here
+        ; since the banking would make it invisible
+        ; it may be a good idea to let exomizer do this in real life
         ldx #0
 lp1:
         lda main,x
@@ -83,9 +84,33 @@ startUpCode:
         !pseudopc $0100 {
             ; === this code is copied to the stack area, does some inits ===
             ; === scans the keyboard and kills the cartridge or          ===
-            ; === starts the main app                                    ===
+            ; === starts the main application                            ===
             lda #EASYFLASH_16K + EASYFLASH_LED
             sta EASYFLASH_CONTROL
+
+            ; Check if one of the magic kill keys is pressed
+            ; This should be done in the same way on any EasyFlash cartridge!
+
+            ; Prepare the CIA to scan the keyboard
+            lda #$7f
+            sta $dc00   ; pull down row 7 (DPA)
+
+            ldx #$ff
+            stx $dc02   ; DDRA $ff = output (X is still $ff from copy loop)
+            inx
+            stx $dc03   ; DDRB $00 = input
+
+            ; Read the keys pressed on this row
+            lda $dc01   ; read coloumns (DPB)
+
+            ; Restore CIA registers to the state after (hard) reset
+            stx $dc02   ; DDRA input again
+            stx $dc00   ; Now row pulled down
+
+            ; Check if one of the magic kill keys was pressed
+            and #$e0    ; only leave "Run/Stop", "Q" and "C="
+            cmp #$e0
+            bne kill    ; branch if one of these keys is pressed
 
             ; same init stuff the kernel calls after reset
             ldx #0
@@ -97,34 +122,26 @@ startUpCode:
             jsr $ff8a   ; Restore Kernal Vectors
             jsr $ff81   ; Initialize screen editor
 
-            ; Check if one of the magic kill keys is pressed
-            ; This should be done in the same way on any EasyFlash cartridge!
-            ; we rely on the init functions above to set up the directions
-            lda $7f
-            sta $dc00   ; pull down row 7
-            lda $dc01   ; read coloumns
-            ora #$1f    ; only leave "Run/Stop", "Q" and "C="
-            tax
-            inx         ; $ff => $00 = none of these keys pressed
-            bne kill    ; branch if coloums 7 is low => RUN/STOP key
-
             ; start the application code
             jmp $8000
 
 kill:
             lda #EASYFLASH_KILL
             sta EASYFLASH_CONTROL
-            jmp $(fffc)	; reset
+            jmp ($fffc) ; reset
         }
 startUpEnd:
 
+        ; fill it up to $FFFA to put the vectors there
+        !align $ffff, $fffa, $ff
 
-        ; fill it up to $FFFC to put the reset vector there
-        !align $ffff, $fffc, $ff
+        !word reti        ; NMI
+        !word coldStart   ; RESET
 
-        ; RESET vector
-        !16 coldStart
-        !16 $ffff
+        ; we don't need the IRQ vector and can put RTI here to save space :)
+reti:
+        rti
+        !byte 0xff
     }
 
 ; =============================================================================

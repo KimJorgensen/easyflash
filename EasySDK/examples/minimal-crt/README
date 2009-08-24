@@ -1,5 +1,5 @@
 
-This directory contains files to create a minimal CRT image.
+This directory contains files to create a minimal 8k CRT image.
 
 You'll need the acme assembler and the vice emulator installed.
 

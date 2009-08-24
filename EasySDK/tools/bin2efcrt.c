@@ -27,8 +27,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-// Cartridge type of EasyFlash - not "officially" assigned yet
-#define CARTRIDGE_EASYFLASH          42
+// Cartridge type of EasyFlash
+#define CARTRIDGE_EASYFLASH          32
 
 // max supported cartridge size (2 * 512 KiB)
 #define EF_MAX_CART_SIZE (2 * 512 * 1024)
