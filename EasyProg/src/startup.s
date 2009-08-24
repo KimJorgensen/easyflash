@@ -124,7 +124,7 @@ l1:
         !word reti        ; NMI
         !word coldStart   ; RESET
 
-        ; we don't need the IRQ vector an can put RTI here to save space :)
+        ; we don't need the IRQ vector and can put RTI here to save space :)
 reti:
         rti
         !byte 0xff
