@@ -48,5 +48,6 @@ void __fastcall__ screenPrintMenu(uint8_t x, uint8_t y,
 
 uint8_t __fastcall__ screenDoMenu(uint8_t x, uint8_t y,
                                   const ScreenMenuEntry* pMenuEntries);
+void screenShowSprites(void);
 
 #endif /* SCREEN_H_ */

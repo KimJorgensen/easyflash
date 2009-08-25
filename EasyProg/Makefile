@@ -18,8 +18,11 @@ OBJ += obj/torturetest.o
 OBJ += obj/torturetestasm.o
 OBJ += obj/startupbin.o
 OBJ += obj/filedlg.o
+OBJ += obj/spritesasm.o
 
+BIN_ACME :=
 BIN_ACME += obj/startup.bin
+BIN_ACME += obj/sprites.bin
 
 INCLUDE := include
 #DEFINE  := -D EASYFLASH_FAKE
