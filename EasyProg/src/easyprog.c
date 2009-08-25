@@ -41,6 +41,7 @@
 #include "write.h"
 #include "torturetest.h"
 #include "filedlg.h"
+#include "sprites.h"
 
 /******************************************************************************/
 
@@ -121,6 +122,7 @@ static void refreshStatusLine(void)
 void refreshMainScreen(void)
 {
     screenPrintFrame();
+    spritesShow();
 
 	// menu entries
     gotoxy (1, 1);
@@ -135,22 +137,22 @@ void refreshMainScreen(void)
     cputs("elp");
 
     textcolor(COLOR_LIGHTFRAME);
-    screenPrintBox(16, 3, 23, 3);
-    screenPrintBox(16, 6, 23, 3);
+    screenPrintBox(16, 4, 23, 3);
+    screenPrintBox(16, 7, 23, 3);
     textcolor(COLOR_FOREGROUND);
 
-    gotoxy(6, 4);
+    gotoxy(6, 5);
     cputs("File name:");
     gotox(17);
     cprintf("%-16s", strFileName);
 
-    gotoxy(7, 7);
+    gotoxy(7, 8);
     cputs("CRT Type:");
     gotox(17);
     cputs(aStrInternalCartTypeName[internalCartType]);
 
-    showFlashTypeBox(9, 0);
-    showFlashTypeBox(12, 1);
+    showFlashTypeBox(10, 0);
+    showFlashTypeBox(13, 1);
     progressShow();
 
     refreshStatusLine();

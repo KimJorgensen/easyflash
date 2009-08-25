@@ -30,6 +30,7 @@
 
 #include "screen.h"
 #include "texts.h"
+#include "sprites.h"
 
 static const char* pStrHexDigits = "0123456789ABCDEF";
 
@@ -175,10 +176,16 @@ void screenPrintFrame(void)
     screenPrintTopLine(0, 39, 0);
     // 1 text line
     screenPrintFreeLine(0, 39, 1);
-    // separation line
-    screenPrintSepLine(0, 39, 2);
+    // separation line with "step"
+    screenPrintSepLine(0, 28, 2);
+    screenPrintFreeLine(28, 39, 2);
+    screenPrintFreeLine(0, 28, 3);
+    screenPrintSepLine(28, 39, 3);
+    cputcxy(28, 2, 0xae);
+    cputcxy(28, 3, 0xad);
+
     // some free lines
-    for (y = 3; y < 22; ++y)
+    for (y = 4; y < 22; ++y)
         screenPrintFreeLine(0, 39, y);
     // separation line
     screenPrintSepLine(0, 39, 22);
@@ -492,6 +499,7 @@ uint8_t __fastcall__ screenWaitKey(uint8_t flags)
             return BUTTON_STOP;
     }
 }
+
 
 #if 0 // unused
 /******************************************************************************/
