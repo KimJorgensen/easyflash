@@ -259,9 +259,7 @@ void checkWriteImage(void)
     }
 
     if (writeCrtImage(lfn) == CART_RV_OK)
-        setStatus("OK");
-    else
-        setStatus("Error");
+        screenPrintSimpleDialog(apStrWriteComplete);
 
     cbm_close(lfn);
 }
