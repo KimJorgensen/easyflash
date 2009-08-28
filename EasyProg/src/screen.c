@@ -272,7 +272,7 @@ void __fastcall__ screenPrintMenu(uint8_t x, uint8_t y,
 
     if (bPrintFrame)
     {
-        screenPrintBox(x, y, len + 2, nEntries + 3);
+        screenPrintBox(x, y, len + 2, nEntries + 2);
     }
 
     for (nEntry = 0; nEntry != nEntries; ++nEntry)
