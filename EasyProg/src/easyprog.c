@@ -67,12 +67,16 @@ ScreenMenuEntry aMainMenuEntries[] =
         { EASYPROG_MENU_ENTRY_WRITE_CRT,  "Write CRT to flash" },
         { EASYPROG_MENU_ENTRY_CHECK_TYPE, "Check flash type" },
         { EASYPROG_MENU_ENTRY_ERASE_ALL,  "Erase all" },
-        { EASYPROG_MENU_ENTRY_HEX_VIEWER, "Hex viewer" },
-        { EASYPROG_MENU_ENTRY_TORTURE_TEST,  "Torture test" },
         { EASYPROG_MENU_ENTRY_QUIT,       "Quit" },
         { 0, NULL }
 };
 
+ScreenMenuEntry aExpertMenuEntries[] =
+{
+        { EASYPROG_MENU_ENTRY_TORTURE_TEST,  "Torture test" },
+        { EASYPROG_MENU_ENTRY_HEX_VIEWER, "Hex viewer" },
+        { 0, NULL }
+};
 
 ScreenMenuEntry aHelpMenuEntries[] =
 {
@@ -130,6 +134,11 @@ void refreshMainScreen(void)
     cputc('M');
     textcolor(COLOR_FOREGROUND);
     cputs("enu  ");
+
+    textcolor(COLOR_EXTRA);
+    cputc('E');
+    textcolor(COLOR_FOREGROUND);
+    cputs("xpert  ");
 
     textcolor(COLOR_EXTRA);
     cputc('H');
@@ -328,8 +337,12 @@ int main(void)
             execMenu(1, 2, aMainMenuEntries);
             break;
 
+        case 'e':
+            execMenu(7, 2, aExpertMenuEntries);
+            break;
+
         case 'h':
-            execMenu(7, 2, aHelpMenuEntries);
+            execMenu(15, 2, aHelpMenuEntries);
             break;
 
         default:
