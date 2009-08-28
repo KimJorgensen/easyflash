@@ -78,7 +78,7 @@ const char* apStrEraseFailed[] =
 
 const char* apStrFlashWriteFailed[] =
 {
-        "Flash write failed,",
+        "Write to flash failed,",
         "check your hardware.",
         NULL
 };
@@ -104,6 +104,13 @@ const char* apStrChipReadError[] =
         "data. The file seems to",
         "have a wrong type or may",
         "be damaged.",
+        NULL
+};
+
+const char* apStrWriteComplete[] =
+{
+        "Congratulations!",
+        "Writing to flash completed.",
         NULL
 };
 

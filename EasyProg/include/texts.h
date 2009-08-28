@@ -22,6 +22,7 @@ extern const char* apStrFlashWriteFailed[];
 extern const char* apStrFileOpenError[];
 extern const char* apStrHeaderReadError[];
 extern const char* apStrChipReadError[];
+extern const char* apStrWriteComplete[];
 
 extern const char* pStrTestFailed;
 
