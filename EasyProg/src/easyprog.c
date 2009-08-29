@@ -288,7 +288,6 @@ static void __fastcall__ execMenu(uint8_t x, uint8_t y,
             break;
 
         case EASYPROG_MENU_ENTRY_QUIT:
-            clrscr();
             __asm__ ("jmp ($fffc)");
             break;
 
