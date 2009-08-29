@@ -62,9 +62,9 @@ sh2:
 
         ; sprite pointers are calc'd at runtime, because of the linker...
         ; we need spriteBitmapsStart / 64
-        lda spriteBitmapsStart
+        lda _pSprites
         sta zp_tmp
-        lda spriteBitmapsStart + 1
+        lda _pSprites + 1
         sta zp_tmp + 1
         ; shift right 6 times
         ldx #6
@@ -74,15 +74,19 @@ sh3:
         dex
         bne sh3
 
-        ldx #$29
-        ldy #0
-sh4:
-        txa
-        sta $07f8, y       ; sprite pointers
+        ldx zp_tmp
+        ; sprite pointers
+        stx $07f8       ; "EA"
         inx
-        iny
-        cpy #NUM_LOGO_SPRITES
-        bne sh4
+        stx $07f9       ; "SY"
+        inx
+        inx
+        inx
+        stx $07fc       ; (flash symbol)
+        inx
+        stx $07fa       ; "PR"
+        inx
+        stx $07fb       ; "OG"
 
         ldy #$ff
         sty $d010               ; sprite X MSB on
