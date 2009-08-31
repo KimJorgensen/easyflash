@@ -44,6 +44,12 @@
 #include "sprites.h"
 
 /******************************************************************************/
+static void systemReset(void);
+static void showAbout(void);
+static void checkEraseAll(void);
+
+/******************************************************************************/
+
 
 // Low/High flash chip manufacturer/device ID
 uint16_t anFlashId[2];
@@ -64,23 +70,51 @@ static uint8_t nMenuSelection;
 
 ScreenMenuEntry aMainMenuEntries[] =
 {
-        { EASYPROG_MENU_ENTRY_WRITE_CRT,  "Write CRT to flash" },
-        { EASYPROG_MENU_ENTRY_CHECK_TYPE, "Check flash type" },
-        { EASYPROG_MENU_ENTRY_ERASE_ALL,  "Erase all" },
-        { EASYPROG_MENU_ENTRY_QUIT,       "Quit" },
+        {
+            EASYPROG_MENU_ENTRY_WRITE_CRT,
+            "Write CRT to flash",
+            checkWriteImage
+        },
+        {
+            EASYPROG_MENU_ENTRY_CHECK_TYPE,
+            "Check flash type",
+            (void (*)(void)) checkFlashType
+        },
+        {
+            EASYPROG_MENU_ENTRY_ERASE_ALL,
+            "Erase all",
+            checkEraseAll
+        },
+        {
+            EASYPROG_MENU_ENTRY_QUIT,
+            "Quit",
+            systemReset
+        },
         { 0, NULL }
 };
 
 ScreenMenuEntry aExpertMenuEntries[] =
 {
-        { EASYPROG_MENU_ENTRY_TORTURE_TEST,  "Torture test" },
-        { EASYPROG_MENU_ENTRY_HEX_VIEWER, "Hex viewer" },
-        { 0, NULL }
+        {
+            EASYPROG_MENU_ENTRY_TORTURE_TEST,
+            "Torture test",
+            tortureTest
+        },
+        {
+            EASYPROG_MENU_ENTRY_HEX_VIEWER,
+            "Hex viewer",
+            hexViewer
+        },
+        { 0, NULL, NULL }
 };
 
 ScreenMenuEntry aHelpMenuEntries[] =
 {
-        { EASYPROG_MENU_ENTRY_ABOUT,      "About" },
+        {
+            EASYPROG_MENU_ENTRY_ABOUT,
+            "About",
+            showAbout
+        },
         { 0, NULL }
 };
 
@@ -128,7 +162,7 @@ void refreshMainScreen(void)
     screenPrintFrame();
     spritesShow();
 
-	// menu entries
+    // menu entries
     gotoxy (1, 1);
     textcolor(COLOR_EXTRA);
     cputc('M');
@@ -174,7 +208,7 @@ void refreshMainScreen(void)
  * If they are not okay, print an error message and return 0.
  * If everything is okay, return 1.
  */
-static uint8_t checkFlashType(void)
+uint8_t checkFlashType(void)
 {
 #ifdef EASYFLASH_FAKE
     anFlashId[0] = FLASH_TYPE_AMD_AM29F040;
@@ -210,6 +244,41 @@ static void checkRAM(void)
     }
 }
 
+
+/******************************************************************************/
+/**
+ * Reset the box.
+ */
+static void systemReset(void)
+{
+    __asm__ ("jmp ($fffc)");
+}
+
+
+/******************************************************************************/
+/**
+ * Show the about dialog.
+ */
+static void showAbout(void)
+{
+    screenPrintSimpleDialog(apStrAbout);
+}
+
+
+/******************************************************************************/
+/**
+ * Ask the user if it is okay to erase all and do so if yes.
+ */
+static void checkEraseAll(void)
+{
+    if (screenAskEraseDialog() == BUTTON_ENTER)
+    {
+        checkFlashType();
+        eraseAll();
+    }
+}
+
+
 /******************************************************************************/
 /**
  * Set the status text and update the display.
@@ -224,81 +293,16 @@ void __fastcall__ setStatus(const char* pStrStatus)
 
 /******************************************************************************/
 /**
- * Execute the currently selected menu entry.
- */
-void execMenuEntry(void)
-{
-    switch (nMenuSelection)
-    {
-    case EASYPROG_MENU_ENTRY_CHECK_TYPE:
-        checkFlashType();
-        break;
-
-    case EASYPROG_MENU_ENTRY_ERASE_ALL:
-        if (checkFlashType())
-        {
-            eraseAll();
-        }
-        break;
-    }
-}
-
-
-/******************************************************************************/
-/**
  * Execute an action according to the given menu ID.
  */
 static void __fastcall__ execMenu(uint8_t x, uint8_t y,
                                   const ScreenMenuEntry* pMenuEntries)
 {
-    uint8_t cmd;
-    cmd = screenDoMenu(x, y, pMenuEntries);
+    screenDoMenu(x, y, pMenuEntries);
 
-    if (cmd)
-    {
-        strFileName[0] = '\0';
-        internalCartType = INTERNAL_CART_TYPE_NONE;
-
-        switch (cmd)
-        {
-        case EASYPROG_MENU_ENTRY_WRITE_CRT:
-            checkFlashType();
-            checkWriteImage();
-            break;
-
-        case EASYPROG_MENU_ENTRY_CHECK_TYPE:
-            checkFlashType();
-            break;
-
-        case EASYPROG_MENU_ENTRY_ERASE_ALL:
-            if (screenAskEraseDialog() == BUTTON_ENTER)
-            {
-                checkFlashType();
-                eraseAll();
-            }
-            break;
-
-        case EASYPROG_MENU_ENTRY_HEX_VIEWER:
-            hexViewer();
-            break;
-
-        case EASYPROG_MENU_ENTRY_TORTURE_TEST:
-            if (screenAskEraseDialog() == BUTTON_ENTER)
-                tortureTest();
-            break;
-
-        case EASYPROG_MENU_ENTRY_QUIT:
-            __asm__ ("jmp ($fffc)");
-            break;
-
-        case EASYPROG_MENU_ENTRY_ABOUT:
-            screenPrintSimpleDialog(apStrAbout);
-            break;
-
-        default:
-            break;
-        }
-    }
+    // ??
+//        strFileName[0] = '\0';
+//        internalCartType = INTERNAL_CART_TYPE_NONE;
 
     refreshMainScreen();
 }
