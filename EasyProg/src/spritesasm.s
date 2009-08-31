@@ -74,19 +74,18 @@ sh3:
         dex
         bne sh3
 
-        ldx zp_tmp
-        ; sprite pointers
-        stx $07f8       ; "EA"
-        inx
-        stx $07f9       ; "SY"
-        inx
-        inx
-        inx
-        stx $07fc       ; (flash symbol)
-        inx
-        stx $07fa       ; "PR"
-        inx
-        stx $07fb       ; "OG"
+        lda zp_tmp
+        clc
+        ; sprite pointers, must be in sync with sprite order in sprites.s
+        sta $07f8       ; "EA"
+        adc #1
+        sta $07f9       ; "SY"
+        adc #3
+        sta $07fc       ; (flash symbol)
+        adc #3
+        sta $07fa       ; "PR"
+        adc #1
+        sta $07fb       ; "OG"
 
         ldy #$ff
         sty $d010               ; sprite X MSB on
