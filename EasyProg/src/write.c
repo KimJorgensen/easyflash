@@ -97,8 +97,8 @@ static uint8_t writeCRTError(void)
  */
 static uint8_t __fastcall__ writeStartUpCode(uint8_t* pBankOffset)
 {
-    uint8_t nConfig;
-    uint8_t nCodeSize;
+    uint8_t  nConfig;
+    uint16_t nCodeSize;
     unsigned char* pBase;
 
     switch (internalCartType)
