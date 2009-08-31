@@ -90,7 +90,7 @@ ScreenMenuEntry aMainMenuEntries[] =
             "Quit",
             systemReset
         },
-        { 0, NULL }
+        { 0, NULL, NULL }
 };
 
 ScreenMenuEntry aExpertMenuEntries[] =
@@ -115,7 +115,7 @@ ScreenMenuEntry aHelpMenuEntries[] =
             "About",
             showAbout
         },
-        { 0, NULL }
+        { 0, NULL, NULL }
 };
 
 /******************************************************************************/
@@ -275,6 +275,10 @@ static void checkEraseAll(void)
     {
         checkFlashType();
         eraseAll();
+
+        // remove the name, it's not valid anymore
+        strFileName[0] = '\0';
+        internalCartType = INTERNAL_CART_TYPE_NONE;
     }
 }
 
@@ -299,11 +303,6 @@ static void __fastcall__ execMenu(uint8_t x, uint8_t y,
                                   const ScreenMenuEntry* pMenuEntries)
 {
     screenDoMenu(x, y, pMenuEntries);
-
-    // ??
-//        strFileName[0] = '\0';
-//        internalCartType = INTERNAL_CART_TYPE_NONE;
-
     refreshMainScreen();
 }
 
@@ -346,9 +345,6 @@ int main(void)
 
         case 'h':
             execMenu(15, 2, aHelpMenuEntries);
-            break;
-
-        default:
             break;
         }
     }

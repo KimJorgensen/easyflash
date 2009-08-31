@@ -301,7 +301,7 @@ void __fastcall__ screenPrintMenu(uint8_t x, uint8_t y,
  * Show and handle the menu and execute the menu item is one was selected.
  */
 void __fastcall__ screenDoMenu(uint8_t x, uint8_t y,
-                                  const ScreenMenuEntry* pMenuEntries)
+                               const ScreenMenuEntry* pMenuEntries)
 {
     uint8_t nEntry, nEntries;
     uint8_t nSelected;
@@ -335,7 +335,7 @@ void __fastcall__ screenDoMenu(uint8_t x, uint8_t y,
             break;
 
         case CH_ENTER:
-            pMenuEntries[nEntry].pFunction();
+            pMenuEntries[nSelected].pFunction();
             return;
 
         default:
