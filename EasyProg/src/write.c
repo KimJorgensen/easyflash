@@ -238,6 +238,8 @@ void checkWriteImage(void)
 {
     uint8_t lfn, rv;
 
+    checkFlashType();
+
     //pStrInput = screenReadInput("Write CRT to flash", "Enter file name");
     if (!fileDlg(strFileName))
         return;

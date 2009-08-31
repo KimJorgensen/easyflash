@@ -298,9 +298,9 @@ void __fastcall__ screenPrintMenu(uint8_t x, uint8_t y,
 
 /******************************************************************************/
 /**
- * Show and handle the menu and return the item Id selected or 0.
+ * Show and handle the menu and execute the menu item is one was selected.
  */
-uint8_t __fastcall__ screenDoMenu(uint8_t x, uint8_t y,
+void __fastcall__ screenDoMenu(uint8_t x, uint8_t y,
                                   const ScreenMenuEntry* pMenuEntries)
 {
     uint8_t nEntry, nEntries;
@@ -335,20 +335,19 @@ uint8_t __fastcall__ screenDoMenu(uint8_t x, uint8_t y,
             break;
 
         case CH_ENTER:
-            return pMenuEntries[nSelected].nId;
-            break;
+            pMenuEntries[nEntry].pFunction();
+            return;
 
         default:
             for (nEntry = 0; nEntry != nEntries; ++nEntry)
                 if (key == tolower(pMenuEntries[nEntry].pStrLabel[0]))
                 {
                     screenPrintMenu(x, y, pMenuEntries, nEntry, 0);
-                    return pMenuEntries[nEntry].nId;
+                    pMenuEntries[nEntry].pFunction();
+                    return;
                 }
         }
     } while (key != CH_STOP);
-
-    return 0;
 }
 
 /******************************************************************************/

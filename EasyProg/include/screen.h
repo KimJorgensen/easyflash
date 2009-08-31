@@ -21,6 +21,7 @@ typedef struct ScreenMenuEntry_s
 {
     uint8_t nId;
     const char* pStrLabel;
+    void (*pFunction)(void);
 }
 ScreenMenuEntry;
 
@@ -46,8 +47,8 @@ void __fastcall__ screenPrintMenu(uint8_t x, uint8_t y,
                                   const ScreenMenuEntry* pMenuEntries,
                                   uint8_t nSelected, uint8_t bPrintFrame);
 
-uint8_t __fastcall__ screenDoMenu(uint8_t x, uint8_t y,
-                                  const ScreenMenuEntry* pMenuEntries);
+void __fastcall__ screenDoMenu(uint8_t x, uint8_t y,
+                               const ScreenMenuEntry* pMenuEntries);
 void screenShowSprites(void);
 
 #endif /* SCREEN_H_ */

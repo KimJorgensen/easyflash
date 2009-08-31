@@ -49,6 +49,7 @@ typedef struct EasyFlashAddr_s
 }
 EasyFlashAddr;
 
+uint8_t checkFlashType(void);
 void __fastcall__ setStatus(const char* pStrStatus);
 void refreshMainScreen(void);
 

@@ -158,6 +158,9 @@ void tortureTest(void)
     uint16_t rv;
     uint16_t nLoop;
 
+    if (screenAskEraseDialog() != BUTTON_ENTER)
+        return;
+
     refreshMainScreen();
 
     tortureTestWriteData();
