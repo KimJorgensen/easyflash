@@ -35,6 +35,7 @@
 #include "startupbin.h"
 #include "write.h"
 #include "filedlg.h"
+#include "sprites.h"
 
 /******************************************************************************/
 /* Static variables */
@@ -98,7 +99,7 @@ static uint8_t writeCRTError(void)
 static uint8_t __fastcall__ writeStartUpCode(uint8_t* pBankOffset)
 {
     uint8_t  nConfig;
-    uint16_t nCodeSize;
+    uint16_t n;
     unsigned char* pBase;
 
     switch (internalCartType)
@@ -136,9 +137,9 @@ static uint8_t __fastcall__ writeStartUpCode(uint8_t* pBankOffset)
     memset(startUpBuffer, 0xff, 0x100);
 
     // copy the startup code to the end of the buffer
-    nCodeSize = startUpEnd - startUpStart;
-    pBase = startUpBuffer + 256 - nCodeSize;
-    memcpy(pBase, startUpStart, nCodeSize);
+    n = startUpEnd - startUpStart;
+    pBase = startUpBuffer + 256 - n;
+    memcpy(pBase, startUpStart, n);
 
     // the 1st byte of this code is the start bank to be used - patch it
     pBase[0] = *pBankOffset;
@@ -148,6 +149,14 @@ static uint8_t __fastcall__ writeStartUpCode(uint8_t* pBankOffset)
 
     // write the startup code to bank 0, always write 256 bytes
     if (!flashWriteBlock(0, 1, 0x1F00, startUpBuffer))
+        return writeCRTError();
+
+    // write the sprites to 00:1:1800
+#   if (STARTUP_SPRITES_SIZE != (7 * 64))
+#   error hardcoded memory size
+#   endif
+    if (!flashWriteBlock(0, 1, 0x1800, pSprites) ||
+        !flashWriteBlock(0, 1, 0x1900, pSprites + 0x100))
         return writeCRTError();
 
     return CART_RV_OK;

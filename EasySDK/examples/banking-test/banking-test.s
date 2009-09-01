@@ -71,6 +71,17 @@ coldStart:
         txs
         cld
 
+        ; enable VIC (e.g. RAM refresh)
+        lda #8
+        sta $d016
+
+        ; Wait to make sure RESET is deasserted on all chips and write
+        ; to RAM to make sure it started up correctly (=> RAM datasheets)
+startWait:
+        sta $0100, x
+        dex
+        bne startWait
+
         ; copy the final start-up code to RAM (bottom of CPU stack)
         ldx #(startUpEnd - startUpCode)
 l1:
