@@ -130,23 +130,23 @@ static uint8_t __fastcall__ writeStartUpCode(uint8_t* pBankOffset)
         return CART_RV_ERR;
     }
 
-    // btw: the buffer must always be 256 bytes long
-    pBuffer = bufferAlloc();
-    memset(pBuffer, 0xff, 0x100);
 
-    // copy the startup code to the end of the buffer
-    n = startUpEnd - startUpStart;
-    pBase = pBuffer + 256 - n;
-    memcpy(pBase, startUpStart, n);
+    pBuffer = bufferAlloc();
+
+    // btw: the buffer must always be 256 bytes long
+    // !!! keep this crap in sync with startup.s - especially the code size !!!
+    // copy the startup code to the buffer and patch the start bank and config
+    memcpy(pBuffer, startUpStart, 0x100);
 
     // the 1st byte of this code is the start bank to be used - patch it
-    pBase[0] = *pBankOffset;
+    pBuffer[0] = *pBankOffset;
 
     // the 2nd byte of this code is the memory config to be used - patch it
-    pBase[1] = nConfig | EASYFLASH_IO_BIT_LED;
+    pBuffer[1] = nConfig | EASYFLASH_IO_BIT_LED;
 
-    // write the startup code to bank 0, always write 256 bytes
-    if (!flashWriteBlock(0, 1, 0x1F00, pBuffer))
+    // write the startup code to bank 0, always write 2 * 256 bytes
+    if (!flashWriteBlock(0, 1, 0x1e00, pBuffer) ||
+        !flashWriteBlock(0, 1, 0x1f00, startUpStart + 0x100))
     {
         bufferFree(pBuffer);
         return writeCRTError();

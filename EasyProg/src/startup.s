@@ -20,9 +20,12 @@
 ; 3. This notice may not be removed or altered from any source distribution.
 
 ; This code runs in Ultimax mode after reset, so this memory becomes
-; visible at $E000..$FFFF first and must contain a reset vector
+; visible at $e000..$ffff first and must contain a reset vector
 
-* = $ff00
+
+; this start PC leads to 512 bytes of code: $fe00..$ffff
+; keep in sync with writeStartUpCode in write.c
+* = $fe00
 
 EASYFLASH_BANK    = $DE00
 EASYFLASH_CONTROL = $DE02
@@ -48,6 +51,7 @@ startConfig:
         ; this must be the 2nd byte in this code, so it's easy to patch it from outside
         !byte 0
 
+; ============================================================================
 startUpCode:
         !pseudopc START_MEM {
             ; === this is copied to the START_MEM, does some inits ===
@@ -56,6 +60,7 @@ startUpCode:
             lda #EASYFLASH_16K | EASYFLASH_LED
             sta EASYFLASH_CONTROL
 
+; ============ prepare screen and sprites ============
             ; set color ram to black
             lda #0
             ldx #251
@@ -75,35 +80,49 @@ vicInit:
             dex
             bpl vicInit
 
-            ; set sprite pointers
-            ldx #SPRITE_RAM / 64
-            stx SCREEN_MEM + 1016 + 0
-            inx
-            stx SCREEN_MEM + 1016 + 1
-            inx
-            stx SCREEN_MEM + 1016 + 2
-            inx
-            stx SCREEN_MEM + 1016 + 3
-            inx
-            stx SCREEN_MEM + 1016 + 4
-            inx
-            stx SCREEN_MEM + 1016 + 5
-            inx
-            stx SCREEN_MEM + 1016 + 6
-            inx
-            stx SCREEN_MEM + 1016 + 7
+            ; set 7 sprite pointers
+            ldx #SPRITE_RAM / 64 + 6
+            ldy #6
+spritePtrs:
+            txa
+            sta SCREEN_MEM + 1016, y
+            dex
+            dey
+            bpl spritePtrs
 
             ; Prepare the CIA to scan the keyboard
             lda #$7f
-            sta $dc00   ; pull down row 7 (DPA)
+            sta $dc00       ; pull down row 7 (DPA)
 
             ldx #$ff
-            stx $dc02   ; DDRA $ff = output (X is still $ff from copy loop)
+            stx $dc02       ; DDRA $ff = output (X is still $ff from copy loop)
             inx
-            stx $dc03   ; DDRB $00 = input
+            stx $dc03       ; DDRB $00 = input
 
-            ; x is 0 here
+; ============ fade in sprites ============
+            ldx #0          ; x counts the color index 0..7
+fadeIn:
+            jsr waitFrame
+
+            lda fadeWhite, x
+            ldy #3
+in1:
+            sta $d027, y    ; first 4 sprites are fade to white
+            dey
+            bpl in1
+
+            lda fadeOrange, x
+            sta $d027 + 4   ; sprite with "flash2" fades to orange
+
+            inx             ; next color
+            cpx #8
+            bne fadeIn
+
+; ============ wait and scan keyboard ============
+            ldx #100
 checkAgain:
+            jsr waitFrame
+
             ; Read the keys pressed on this row
             lda $dc01   ; read coloumns (DPB)
 
@@ -112,18 +131,36 @@ checkAgain:
             cmp #$e0
             bne kill    ; branch if one of these keys is pressed
 
-            dec EASYFLASH_16K
-            bne checkAgain
             dex
             bne checkAgain
+
+; ============ fade out sprites ============
+            ldx #7          ; x counts the color index 0..7
+fadeOut:
+            jsr waitFrame
+
+            lda fadeWhite, x
+            ldy #3
+out1:
+            sta $d027, y    ; first 4 sprites are fade to white
+            dey
+            bpl out1
+
+            lda fadeOrange, x
+            sta $d027 + 4   ; sprite with "flash2" fades to orange
+
+            dex             ; next color
+            bpl fadeOut
+
+; ============ start or kill the cartridge  ============
 startCart:
             ; start the cartridge code on the right bank
 patchStartBank = * + 1
-            lda #0      ; start bank will be put here
+            lda #0          ; start bank will be put here
             sta EASYFLASH_BANK
 patchStartConfig = * + 1
-            lda #0      ; start config will be put here
-            !byte $2c   ; skip next instruction
+            lda #0          ; start config will be put here
+            !byte $2c       ; skip next instruction
 kill:
             lda #EASYFLASH_KILL
 reset:
@@ -131,20 +168,38 @@ reset:
 
             ; Restore CIA registers to the state after (hard) reset
             lda #0
-            sta $dc02   ; DDRA input again
-            sta $dc00   ; Now row pulled down
+            sta $dc02       ; DDRA input again
+            sta $dc00       ; No row pulled down
 
-            jmp ($fffc) ; reset
+            sta $d015       ; disable sprites
+
+            jmp ($fffc)     ; reset
+
+; ============ wait for the next frame (up to 1/50 s) ============
+waitFrame:
+            lda $d012
+            bne waitFrame   ; wait for raster line 0
+wf1:
+            lda $d012
+            beq waitFrame   ; wait for raster line != 0
+            rts
+
+fadeWhite:
+            !byte  0, 9, 11, 4
+            !byte 12, 5, 15, 1
+fadeOrange:
+            !byte  0, 9, 11, 4
+            !byte 12, 5,  8, 8
 
 vicData:
             !byte 0, 50, 24, 50, 48, 50, 72, 50  ; D000..D00F Sprite X/Y
-            !byte 37, 50, 20, 231, 44, 231, 0, 0
+            !byte 36, 50, 20, 231, 44, 231, 0, 0
             !byte $1f, $9B, $37, 0, 0            ; D010 Sprite X MSBs..D014
             !byte $7f                            ; D015 Sprite Enable
             !byte 8, 0                           ; D017
             !byte $14, $0F, 0, 0, 0, 0, 0, 0     ; D018..D01F
             !byte 0, 0, 0, 0, 0, 0, 0            ; D020..D026
-            !byte 1, 1, 1, 1, 8, 12, 5, 0        ; D027..D02E Sprite Colors
+            !byte 0, 0, 0, 0, 0, 12, 5, 0        ; D027..D02E Sprite Colors
         }
 startUpEnd:
 
@@ -167,12 +222,14 @@ startWait:
         bne startWait
 
         ; copy the final start-up code to RAM
-        ; we simply copy 256 bytes, that's fast enough and simple
+        ; we simply copy 512 bytes, that's fast enough and simple
         ; and we copy 512 bytes from SPRITE_ROM to SRPITE_RAM
         ldx #0
 copyLoop:
         lda startUpCode, x
         sta START_MEM, x
+        lda startUpCode + 0x100, x
+        sta START_MEM + 0x100, x
         lda SPRITE_ROM, x
         sta SPRITE_RAM, x
         lda SPRITE_ROM + 0x100, x
