@@ -31,9 +31,11 @@ zp_tmp   = ptr1
 
 ; =============================================================================
 ;
-; Show the sprites in the upper right corner.
+; Show the sprites in the upper right corner, activate them, deactivate them.
 ;
 ; void spritesShow(void);
+; void spritesOn(void);
+; void spritesOff(void);
 ;
 ; parameters:
 ;       -
@@ -94,9 +96,17 @@ sh3:
         sty $d01d               ; sprite expand X off
         sty $d01c               ; sprite MCM off
 
+.export _spritesOn
+_spritesOn:
         lda #%00011111
+sprSwitch:
         sta $d015               ; sprite display enable
         rts
+
+.export _spritesOff
+_spritesOff:
+        lda #0
+        beq sprSwitch           ; always
 
 spritePos:
     .byte 0 * 24, 56
