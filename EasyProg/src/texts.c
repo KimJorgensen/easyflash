@@ -45,6 +45,13 @@ const char* apStrWriteCRTFailed[] =
         NULL
 };
 
+const char* apStrFileTooShort[] =
+{
+        "This file seems to be",
+        "too short.",
+        NULL
+};
+
 const char* apStrWrongFlash[] =
 {
         "A flash chip does not work",

@@ -29,9 +29,10 @@
 #include <string.h>
 #include <cbm.h>
 
+#include "buffer.h"
 #include "screen.h"
 
-#define FILEDLG_ENTRIES 128
+#define FILEDLG_ENTRIES (BUFFER_ALLOC_SIZE / sizeof(struct cbm_dirent))
 #define FILEDLG_LFN     72
 
 #define FILEDLG_X 5
@@ -48,7 +49,7 @@
 // A table with strings for all directory entry types
 static const char* apStrEntryType[] =
 {
-	"DEL", "SEQ", "PRG", "USR", "REL", "-5-", "DIR", "-7-", "VRP"
+    "DEL", "SEQ", "PRG", "USR", "REL", "-5-", "DIR", "-7-", "VRP"
 };
 
 // change directory up one level
@@ -62,8 +63,7 @@ static uint8_t nDriveNumber;
 /** Local data: Put here to reduce code size */
 
 // buffer for directory entries
-//static struct cbm_dirent* aDirEntries;
-static struct cbm_dirent aDirEntries[FILEDLG_ENTRIES];
+static struct cbm_dirent* aDirEntries;
 
 // number of directory entries in the buffer
 static uint8_t nDirEntries;
@@ -82,7 +82,7 @@ static int fileDlgCompareEntries(const void* a, const void* b)
     if (((struct cbm_dirent*)b)->name[0] == 95)
         return 1;
 
-	return strcmp(((struct cbm_dirent*)a)->name,
+    return strcmp(((struct cbm_dirent*)a)->name,
                   ((struct cbm_dirent*)b)->name);
 }
 
@@ -139,17 +139,17 @@ static void fileDlgReadDir(void)
 /**
  * Print/Update the file dialog of the headline
  */
-static void fileDlgHeadline(void)
+static void __fastcall__ fileDlgHeadline(const char* pStrType)
 {
     gotoxy(FILEDLG_X + 1, FILEDLG_Y + 1);
-    cprintf("Select CRT file - drive %d ", nDriveNumber);
+    cprintf("Select %s file - drive %d ", pStrType, nDriveNumber);
 }
 
 
 /******************************************************************************/
 /**
  */
-static void fileDlgPrintEntry(uint8_t nLine, uint8_t nEntry)
+static void __fastcall__ fileDlgPrintEntry(uint8_t nLine, uint8_t nEntry)
 {
     struct cbm_dirent* pEntry;
 
@@ -173,7 +173,7 @@ static void fileDlgPrintEntry(uint8_t nLine, uint8_t nEntry)
  *
  * return 1 for success, 0 for failure.
  */
-uint8_t fileDlgChangeDir(const char* pStrDir)
+uint8_t __fastcall__ fileDlgChangeDir(const char* pStrDir)
 {
     uint8_t rv;
     char strCmd[3 + FILENAME_MAX];
@@ -217,23 +217,28 @@ uint8_t fileDlgGetDriveNumber(void)
 /******************************************************************************/
 /**
  * Show a file open dialog. If the user selects a file, copy the name to
- * pStrSelected.
+ * pStrName. The three letter file type in pStrType is shown in the
+ * headline.
  *
  * return 1 if the user has selected a file, 0 if he canceled
  * the dialog.
  */
-uint8_t fileDlg(char* pStrName)
+uint8_t __fastcall__ fileDlg(char* pStrName, const char* pStrType)
 {
     uint8_t nTopLine;
     unsigned char n, nEntry, nOldSelection;
     unsigned char bRefresh, bReload;
     char key;
+    uint8_t rv;
     struct cbm_dirent* pEntry;
 
     screenPrintBox(FILEDLG_X, FILEDLG_Y, FILEDLG_W, FILEDLG_H);
     screenPrintSepLine(FILEDLG_X, FILEDLG_X + FILEDLG_W - 1, FILEDLG_Y + 2);
     screenPrintSepLine(FILEDLG_X, FILEDLG_X + FILEDLG_W - 1, FILEDLG_Y + FILEDLG_H - 3);
     cputsxy(FILEDLG_X + 2, FILEDLG_Y + FILEDLG_H - 2, "Up/Down/0..9/Stop/Enter");
+
+    aDirEntries = bufferAlloc();
+    rv = 0;
 
     bReload = 1;
     for (;;)
@@ -250,7 +255,7 @@ uint8_t fileDlg(char* pStrName)
         if (bRefresh)
         {
             bRefresh = 0;
-            fileDlgHeadline();
+            fileDlgHeadline(pStrType);
             for (n = 0; n < FILEDLG_N_ENTRIES; ++n)
             {
                 // is there an entry for this display line?
@@ -317,12 +322,13 @@ uint8_t fileDlg(char* pStrName)
 
             case CBM_T_PRG:
                 strcpy(pStrName, pEntry->name);
-                return 1;
+                rv = 1;
+                goto end; // yeah!
             }
             break;
 
         case CH_STOP:
-            return 0;
+            goto end; // yeah!
 
         default:
             if (key >= '0' && key <= '9')
@@ -332,9 +338,12 @@ uint8_t fileDlg(char* pStrName)
                 else
                     nDriveNumber = 10 + key - '0';
 
-                fileDlgHeadline();
+                fileDlgHeadline(pStrType);
                 bReload = 1;
             }
         }
     }
+end:
+    bufferFree(aDirEntries);
+    return rv;
 }

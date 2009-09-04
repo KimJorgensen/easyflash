@@ -52,7 +52,12 @@
 #define EASYFLASH_IO_ULTIMAX (EASYFLASH_IO_BIT_MEMCTRL | EASYFLASH_IO_BIT_GAME)
 
 
-void checkWriteImage(void);
+#define IMAGE_TYPE_CRT   0
+#define IMAGE_TYPE_LOROM 1
+#define IMAGE_TYPE_HIROM 2
 
+void checkWriteCRTImage(void);
+void checkWriteLOROMImage(void);
+void checkWriteHIROMImage(void);
 
 #endif /* WRITE_H_ */

@@ -175,8 +175,8 @@ uint8_t __fastcall__ flashWriteBlock(uint8_t nBank, uint8_t nChip,
  *
  * return 1 for success (same), 0 for failure
  */
-static uint8_t __fastcall__ flashVerifyBlock(uint8_t nBank, uint8_t nChip,
-                                             uint16_t nOffset, uint8_t* pBlock)
+uint8_t __fastcall__ flashVerifyBlock(uint8_t nBank, uint8_t nChip,
+                                      uint16_t nOffset, uint8_t* pBlock)
 {
     uint8_t* pNormalBase;
     uint8_t* pFlash;
@@ -228,10 +228,7 @@ uint8_t flashWriteBlockFromFile(uint8_t nBank, uint8_t nChip,
 
         if (cbm_read(lfn, buffer, nBytes) != nBytes)
         {
-            // todo: Show a real error message
-            setStatus("File too short");
-            for (;;)
-                ;
+            screenPrintSimpleDialog(apStrFileTooShort);
             return 0;
         }
 

@@ -5,6 +5,7 @@
 
 obj :=
 obj += obj/crt0.o
+obj += obj/buffer.o
 obj += obj/flashcode.o
 obj += obj/flash.o
 obj += obj/cart.o
