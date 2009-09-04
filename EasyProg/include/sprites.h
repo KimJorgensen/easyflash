@@ -7,6 +7,8 @@
 #define STARTUP_SPRITES_SIZE (7 * 64)
 
 extern uint8_t* pSprites;
-void spritesShow();
+void spritesShow(void);
+void spritesOn(void);
+void spritesOff(void);
 
 #endif /* SPRITES_H_ */

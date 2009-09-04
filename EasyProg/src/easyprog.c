@@ -160,7 +160,6 @@ static void refreshStatusLine(void)
 void refreshMainScreen(void)
 {
     screenPrintFrame();
-    spritesShow();
 
     // menu entries
     gotoxy (1, 1);
@@ -317,6 +316,7 @@ int main(void)
 
     screenInit();
     progressInit();
+    spritesShow();
 
     strFileName[0] = '\0';
     internalCartType = INTERNAL_CART_TYPE_NONE;

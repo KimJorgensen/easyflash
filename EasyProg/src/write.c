@@ -249,8 +249,10 @@ void checkWriteImage(void)
 
     checkFlashType();
 
-    //pStrInput = screenReadInput("Write CRT to flash", "Enter file name");
-    if (!fileDlg(strFileName))
+    spritesOff();
+    rv = fileDlg(strFileName);
+    spritesOn();
+    if (!rv)
         return;
 
     if (screenAskEraseDialog() != BUTTON_ENTER)
@@ -260,12 +262,14 @@ void checkWriteImage(void)
 
     setStatus("Checking file");
 
+    spritesOff();
     lfn = 2;
     rv = cbm_open(lfn, fileDlgGetDriveNumber(), CBM_READ, strFileName);
 
     if (rv)
     {
         screenPrintSimpleDialog(apStrFileOpenError);
+        spritesOn();
         return;
     }
 
@@ -273,4 +277,5 @@ void checkWriteImage(void)
         screenPrintSimpleDialog(apStrWriteComplete);
 
     cbm_close(lfn);
+    spritesOn();
 }
