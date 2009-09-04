@@ -25,6 +25,8 @@
 #ifndef BUFFER_H_
 #define BUFFER_H_
 
+#define BUFFER_ALLOC_SIZE (8 * 1024)
+
 void* bufferAlloc();
 void __fastcall__ bufferFree(void* p);
 

@@ -25,7 +25,7 @@
 #include <stdint.h>
 #include "buffer.h"
 
-static uint8_t aBuffer[16 * 1024];
+static uint8_t aBuffer[BUFFER_ALLOC_SIZE];
 
 static uint8_t bBufferAllocated;
 

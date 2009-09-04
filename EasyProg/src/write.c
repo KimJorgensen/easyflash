@@ -26,6 +26,7 @@
 #include <string.h>
 #include <cbm.h>
 
+#include "buffer.h"
 #include "cart.h"
 #include "screen.h"
 #include "texts.h"
@@ -45,11 +46,6 @@ static uint8_t  nBank;
 static uint16_t nAddress;
 static uint16_t nSize;
 static BankHeader bankHeader;
-
-// static because my heap doesn't work yet
-// The buffer must always be 256 bytes long
-static uint8_t startUpBuffer[256];
-
 
 /******************************************************************************/
 /**
@@ -100,7 +96,8 @@ static uint8_t __fastcall__ writeStartUpCode(uint8_t* pBankOffset)
 {
     uint8_t  nConfig;
     uint16_t n;
-    unsigned char* pBase;
+    uint8_t* pBase;
+    uint8_t* pBuffer;
 
     switch (internalCartType)
     {
@@ -134,11 +131,12 @@ static uint8_t __fastcall__ writeStartUpCode(uint8_t* pBankOffset)
     }
 
     // btw: the buffer must always be 256 bytes long
-    memset(startUpBuffer, 0xff, 0x100);
+    pBuffer = bufferAlloc();
+    memset(pBuffer, 0xff, 0x100);
 
     // copy the startup code to the end of the buffer
     n = startUpEnd - startUpStart;
-    pBase = startUpBuffer + 256 - n;
+    pBase = pBuffer + 256 - n;
     memcpy(pBase, startUpStart, n);
 
     // the 1st byte of this code is the start bank to be used - patch it
@@ -148,8 +146,13 @@ static uint8_t __fastcall__ writeStartUpCode(uint8_t* pBankOffset)
     pBase[1] = nConfig | EASYFLASH_IO_BIT_LED;
 
     // write the startup code to bank 0, always write 256 bytes
-    if (!flashWriteBlock(0, 1, 0x1F00, startUpBuffer))
+    if (!flashWriteBlock(0, 1, 0x1F00, pBuffer))
+    {
+        bufferFree(pBuffer);
         return writeCRTError();
+    }
+
+    bufferFree(pBuffer);
 
     // write the sprites to 00:1:1800
 #   if (STARTUP_SPRITES_SIZE != (7 * 64))
@@ -240,17 +243,80 @@ static uint8_t writeCrtImage(uint8_t lfn)
 
 /******************************************************************************/
 /**
- * Write and/or verify an CRT image file to the flash.
+ * Write a BIN image from the given file to flash, either LOROM or HIROM.
  *
+ * return CART_RV_OK or CART_RV_ERR
  */
-void checkWriteImage(void)
+static uint8_t writeBinImage(uint8_t lfn, uint8_t nChip)
+{
+    uint8_t  rv;
+    uint8_t  nBank;
+    uint16_t nOffset;
+    uint16_t nBytes;
+    uint8_t* pBuffer;
+    char strStatus[41];
+
+    // this will show the cartridge type from the header
+    refreshMainScreen();
+
+    pBuffer = bufferAlloc();
+    nOffset = 0;
+    nBank = 0;
+    do
+    {
+        sprintf(strStatus, "Reading from file");
+        setStatus(strStatus);
+
+        nBytes = cbm_read(lfn, pBuffer, 0x100);
+
+        if (nBytes)
+        {
+            // the last block may be smaller than 265 bytes, then we write padding
+            if (!flashWriteBlock(nBank, nChip, nOffset, pBuffer))
+            {
+                bufferFree(pBuffer);
+                return 0;
+            }
+
+            if (!flashVerifyBlock(nBank, nChip, nOffset, pBuffer))
+            {
+                bufferFree(pBuffer);
+                return 0;
+            }
+
+            nOffset += 0x100;
+            if (nOffset == 0x2000)
+            {
+                nOffset = 0;
+                ++nBank;
+            }
+        }
+    }
+    while (nBytes);
+
+    bufferFree(pBuffer);
+
+    if (nOffset || nBank)
+        return CART_RV_OK;
+    else
+        return CART_RV_ERR;
+}
+
+
+/******************************************************************************/
+/**
+ * Write an image file to the flash.
+ *
+ * imageType must be one of IMAGE_TYPE_CRT, IMAGE_TYPE_LOROM, IMAGE_TYPE_HIROM.
+ */
+static void checkWriteImage(uint8_t imageType)
 {
     uint8_t lfn, rv;
 
     checkFlashType();
 
     spritesOff();
-    rv = fileDlg(strFileName);
+    rv = fileDlg(strFileName, imageType == IMAGE_TYPE_CRT ? "CRT" : "BIN");
     spritesOn();
     if (!rv)
         return;
@@ -273,9 +339,50 @@ void checkWriteImage(void)
         return;
     }
 
-    if (writeCrtImage(lfn) == CART_RV_OK)
-        screenPrintSimpleDialog(apStrWriteComplete);
+    if (imageType == IMAGE_TYPE_CRT)
+    {
+        if (writeCrtImage(lfn) == CART_RV_OK)
+            screenPrintSimpleDialog(apStrWriteComplete);
+    }
+    else
+    {
+        if (writeBinImage(lfn, imageType == IMAGE_TYPE_CRT ? 0 : 1) ==
+               CART_RV_OK)
+        {
+            screenPrintSimpleDialog(apStrWriteComplete);
+        }
+    }
 
     cbm_close(lfn);
     spritesOn();
+}
+
+
+/******************************************************************************/
+/**
+ * Write a CRT image file to the flash.
+ */
+void checkWriteCRTImage(void)
+{
+    checkWriteImage(IMAGE_TYPE_CRT);
+}
+
+
+/******************************************************************************/
+/**
+ * Write a BIN image file to the LOROM flash.
+ */
+void checkWriteLOROMImage(void)
+{
+    checkWriteImage(IMAGE_TYPE_LOROM);
+}
+
+
+/******************************************************************************/
+/**
+ * Write a BIN image file to the HIROM flash.
+ */
+void checkWriteHIROMImage(void)
+{
+    checkWriteImage(IMAGE_TYPE_HIROM);
 }

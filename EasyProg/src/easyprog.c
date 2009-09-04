@@ -73,7 +73,7 @@ ScreenMenuEntry aMainMenuEntries[] =
         {
             EASYPROG_MENU_ENTRY_WRITE_CRT,
             "Write CRT to flash",
-            checkWriteImage
+            checkWriteCRTImage
         },
         {
             EASYPROG_MENU_ENTRY_CHECK_TYPE,
@@ -95,6 +95,16 @@ ScreenMenuEntry aMainMenuEntries[] =
 
 ScreenMenuEntry aExpertMenuEntries[] =
 {
+        {
+            EASYPROG_MENU_ENTRY_WRITE_LOW,
+            "Write BIN to LOROM",
+            checkWriteLOROMImage
+        },
+        {
+            EASYPROG_MENU_ENTRY_WRITE_HIGH,
+            "Write BIN to HIROM",
+            checkWriteHIROMImage
+        },
         {
             EASYPROG_MENU_ENTRY_TORTURE_TEST,
             "Torture test",
