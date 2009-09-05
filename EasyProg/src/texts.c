@@ -18,7 +18,7 @@ const char* apStrLowHigh[] =
 
 const char* apStrAbout[] =
 {
-        "EasyProg Version 0.1",
+        "EasyProg Version 1.2",
         "",
         "(C) 2009 Thomas 'skoe' Giesel",
         NULL
