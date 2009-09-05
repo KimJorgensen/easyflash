@@ -37,6 +37,7 @@
 #include "write.h"
 #include "filedlg.h"
 #include "sprites.h"
+#include "progress.h"
 
 /******************************************************************************/
 /* Static variables */
@@ -95,8 +96,6 @@ static uint8_t writeCRTError(void)
 static uint8_t __fastcall__ writeStartUpCode(uint8_t* pBankOffset)
 {
     uint8_t  nConfig;
-    uint16_t n;
-    uint8_t* pBase;
     uint8_t* pBuffer;
 
     switch (internalCartType)
@@ -155,9 +154,7 @@ static uint8_t __fastcall__ writeStartUpCode(uint8_t* pBankOffset)
     bufferFree(pBuffer);
 
     // write the sprites to 00:1:1800
-#   if (STARTUP_SPRITES_SIZE != (7 * 64))
-#   error hardcoded memory size
-#   endif
+    // keep this in sync with sprites.s
     if (!flashWriteBlock(0, 1, 0x1800, pSprites) ||
         !flashWriteBlock(0, 1, 0x1900, pSprites + 0x100))
         return writeCRTError();
@@ -249,10 +246,9 @@ static uint8_t writeCrtImage(uint8_t lfn)
  */
 static uint8_t writeBinImage(uint8_t lfn, uint8_t nChip)
 {
-    uint8_t  rv;
     uint8_t  nBank;
     uint16_t nOffset;
-    uint16_t nBytes;
+    int      nBytes;
     uint8_t* pBuffer;
     char strStatus[41];
 
@@ -269,7 +265,7 @@ static uint8_t writeBinImage(uint8_t lfn, uint8_t nChip)
 
         nBytes = cbm_read(lfn, pBuffer, 0x100);
 
-        if (nBytes)
+        if (nBytes >= 0)
         {
             // the last block may be smaller than 265 bytes, then we write padding
             if (!flashWriteBlock(nBank, nChip, nOffset, pBuffer))
@@ -291,8 +287,10 @@ static uint8_t writeBinImage(uint8_t lfn, uint8_t nChip)
                 ++nBank;
             }
         }
+        else
+            break;  // shorter code...
     }
-    while (nBytes);
+    while (nBytes == 0x100);
 
     bufferFree(pBuffer);
 
@@ -339,6 +337,9 @@ static void checkWriteImage(uint8_t imageType)
         return;
     }
 
+    // make sure the right areas of the chip are erased
+    progressInit();
+
     if (imageType == IMAGE_TYPE_CRT)
     {
         if (writeCrtImage(lfn) == CART_RV_OK)
@@ -346,7 +347,7 @@ static void checkWriteImage(uint8_t imageType)
     }
     else
     {
-        if (writeBinImage(lfn, imageType == IMAGE_TYPE_CRT ? 0 : 1) ==
+        if (writeBinImage(lfn, imageType == IMAGE_TYPE_HIROM) ==
                CART_RV_OK)
         {
             screenPrintSimpleDialog(apStrWriteComplete);
