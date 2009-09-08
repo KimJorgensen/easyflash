@@ -1,9 +1,24 @@
+
+# KickAss must be version 2.25 !!
+
+# definitions in your file, read tools/example.EasyLoader.rc
+# or use "make VARIABLE=VALUE"
+
 DEPDIR = .deps
 df = $(DEPDIR)/$(*F)
-PHP = /usr/local/php5/bin/php
-# KickAss must be version 2.25 !!
-KICKASS = java -jar ~/Develop/6502-asm/fibr/tools_all/KickAssembler/KickAss.jar
-VICE = ~/Applications/x64.app/Contents/MacOS/x64
+RCFILES = 
+
+ifneq ($(strip $(wildcard ~/.EasyLoader.rc)),) 
+include ~/.EasyLoader.rc
+RCFILES += ~/.EasyLoader.rc
+endif
+
+PHP5 ?= php
+JAVA ?= java
+KICKASS ?= KickAss.jar
+VICE ?= x64
+
+RCFILES += $(PACKAGE)
 
 SRCS = easyloader_nrm.asm easyloader_ocm.asm
 
@@ -21,13 +36,13 @@ svn:
 
 build/%.prg: %.asm
 	@echo "$(B)Assembling $<$(N)"
-	$(PHP) tools/mkdep.php $< > $(df).P
-	$(KICKASS) -showmem -vicesymbols -o $@ $<
+	$(PHP5) tools/mkdep.php $< > $(df).P
+	$(JAVA) -jar $(KICKASS) -showmem -vicesymbols -o $@ $<
 	@mv $(<:.asm=.vs) $(@:.prg=.vs)
 
-%.crt: %.prg tools/mk_easyflash_module.php
+%.crt: %.prg tools/mk_easyflash_module.php $(RCFILES)
 	@echo "$(B)Packing a module $<$(N)"
-	$(PHP) tools/mk_easyflash_module.php > $@ < $< $<
+	$(PHP5) tools/mk_easyflash_module.php > $@ < $< $< $(PACKAGE)
 
 # prereq
 
@@ -37,7 +52,7 @@ build/screen.asm: build/screen.bin
 
 build/screen.bin: screen/screen.php graphics/sprites.png
 	@echo "$(B)Generating $<$(N)"
-	$(PHP) screen/screen.php > $@
+	$(PHP5) screen/screen.php > $@
 
 
 # debug version!

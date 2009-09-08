@@ -1,129 +1,7 @@
 <?php
 
-$BASE_PATH = '/Users/alx/Develop/6502-asm/EasyFlash/PROGS/';
-
-/*
-** CARTRIDGES / FILES TO LOAD
-*/
-
-$more_crt8 = array(
-	'pitfall-1984-activision-.crt',
-	'c64-diagnostic-rev-586220-19xx-commodore-max-machine-.crt',
-	'fraction-fever-1983-spinnaker-software-a-.crt',
-	'juke-box-1984-spinnaker-software-a-.crt',
-/*
-	'save-new-york-1983-creative-software-a-.crt',
-	'sea-speller-1984-fisher-price-.crt',
-	'space-action-1983-handic-software-.crt',
-	'space-action-1983-handic-software-a-.crt',
-	'space-ric-o-shay-1983-m.-computer-a-.crt',
-	'space-ric-o-shay-1983-m.-computer-a2-.crt',
-	'speeddos-copy-rom-19xx-.crt',
-	'spitball-1983-creative-software-.crt',
-	'star-post-1983-commodore-.crt',
-	'stix-19xx-.crt',
-	'super-hardcopy-modul-19xx-.crt',
-	'super-sketch-1984-personal-peripherals-.crt',
-	'super-smash-1983-commodore-.crt',
-*/
-);
-
-$more_crt8u = array(
-	'wizard-of-wor-max-1983-commodore-jp-.crt',
-/*
-	'sea-wolf-1982-commodore-.crt',
-	'speed-math-v.01-1982-commodore-.crt',
-	'super-alien-max-1982-commodore-a-.crt',
-	'super-alien-v.01-1982-commodore-.crt',
-*/
-);
-
-
-$more_crt16 = array(
-	'buck-rogers-planet-of-zoom-1983-sega-.crt',
-	'choplifter-1982-broderbund-.crt',
-	'halftime-battlin-bands-1984-cbs-software-.crt',
-	'pole-position-1983-atari-a-.crt',
-	'minnesota-fat-s-pool-challenger-1983-hesware-.crt',
-	'frogger-ii-threeedeep-1984-parker-brothers-a2-.crt',
-	'bridge-64-1983-handic-software-.crt',
-	'defender-1983-atari-.crt',
-	'rack-em-up-1983-roklan-corp.-.crt',
-	'frogger-1983-parker-brothers-a-.crt',
-	'gyruss-1984-parker-brothers-.crt',
-	'blue-print-1983-commodore-.crt',
-	'big-bird-s-special-delivery-1984-children-s-computer-workshop-.crt',
-	'toy-bizarre-1984-activision-a-.crt',
-	'tank-wars-1983-mr.-computer-.crt',
-	'wizard-s-of-id-1983-sierra-online-.crt',
-	'movie-musical-madness-1984-cbs-software-.crt',
-	'congo-bongo-1983-sega-.crt',
-	'ducks-ahoy-1984-cbs-software-.crt',
-	'big-bird-s-funhouse-1984-cbs-software-a-.crt',
-	'castle-hassle-1983-roklan-.crt',
-	'maze-master-1983-hesware-.crt',
-	'beamrider-1984-activision-.crt',
-/*
-	'sammy-lightfoot-1983-sierra-online-.crt',
-	'save-new-york-1983-creative-software-.crt',
-	'seafox-1982-broderbund-.crt',
-	'seafox-1982-broderbund-a-.crt',
-	'seahorses-1984-joyce-hakansson-associates-.crt',
-	'serpentine-1982-broderbund-.crt',
-	'serpentine-1982-broderbund-b-.crt',
-	'sesame-street-letter-go-round-1984-children-s-computer-workshop-.crt',
-	'sesame-street-letter-go-round-1984-children-s-computer-workshop-a-.crt',
-	'solar-fox-1983-commodore-.crt',
-	'space-ric-o-shay-1983-m.-computer-.crt',
-	'space-shuttle-a-journey-into-space-1983-activision-.crt',
-	'space-shuttle-a-journey-into-space-1983-activision-a-.crt',
-	'spy-hunter-1983-u.s.-gold-.crt',
-	'star-ranger-1983-commodore-.crt',
-	'star-trek-1983-sega-.crt',
-	'star-wars-the-arcade-game-19xx-parker-brothers-.crt',
-*/
-);
-
-$more_crt16u = array(
-);
-
-$more_files = array(
-	'p1x3l-pushr.prg',
-	'giana_sisters.prg',
-	'Flimmer_2000.prg',
-//	'vindicators-1990-domark-.crt',
-);
-
-$more_m2i = array(
-//	'test',
-//	'CHECK/$', // $ = one randomly of them
-//	'=work/*', // * = all in that dir
-//	'=work-buggy-or-unknown/*',
-//	'=work-but-kills-330/*',
-);
-
-//$mod256k = array('Shadow o.t.Beast', 'shadow-of-the-beast-1990-ocean-software-.crt');
-//$mod256k = array('Chase H.Q. 2', 'chase-h.q.-2-1990-ocean-software-.crt');
-//$mod256k = array('RoboCop 2', 'robocop-2-1990-ocean-software-.crt');
-$mod256k = array('Toki', 'toki-1991-ocean-software-.crt');
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-if($argc != 2){
-	die("useage: ".$argv[0]." <file>\n");
+if($argc != 3){
+	fail("usage: ".$argv[0]." <file> <package>\n");
 }
 $MODE = $argv[1];
 
@@ -132,7 +10,7 @@ if($MODE == 'build/easyloader_nrm.prg'){
 }else if($MODE == 'build/easyloader_ocm.prg'){
 	$MODE = array(1, 0, true, true);
 }else{
-	fail("unknown argument for <mode>: \"".$MODE."\"\n");
+	fail("unknown argument for <file>: \"".$MODE."\"\n");
 }
 
 // $MODE = array(bank loader, bank fs, loader is high, is shadow mode)
@@ -146,6 +24,79 @@ if(ord($f[0]) != 0x00 || ord($f[1]) != ($MODE[2] ? 0xa0 : 0x80)){
 $f = substr($f, 2);
 
 $size = strlen($f);
+
+
+/* collect files! */
+$BASE_PATH = dirname($argv[2]).'/';
+$config = array(
+	'strip_extension' => 0,
+);
+
+$more_crt8 = array();
+$more_crt8u = array();
+$more_crt16 = array();
+$more_crt16u = array();
+$more_files = array();
+$more_m2i = array();
+$mod256k = array();
+
+foreach(split("[\r\n]+", file_get_contents($argv[2])) AS $ln){
+	if(trim($ln) == '' || substr(trim($ln), 0, 1) == '#'){
+		// empty line or comment -> skip line
+		continue;
+	}
+	if(!preg_match('!^(.*):(.*?)(=(.*))?$!', $ln, $match)){
+		fail('bad package syntax: '.$ln);
+	}
+	$mode = $match[1];
+	$file = $match[2];
+	$name = isset($match[4]) ? $match[4] : '';
+
+	if($mode == 'cfg'){
+		$config[$file] = trim($name);
+	}else{
+		if($name == ''){
+			$name = basename($file);
+			if($config['strip_extension']){
+				$name = substr($name, 0, -4);
+			}else{
+				$name = $name;
+			}
+		}
+		if($file[0] != '/'){
+			// file is relative -> prepend base path
+			$file = $BASE_PATH.$file;
+		}
+		switch($mode){
+		case 'p':
+		case 'prg':
+			$more_files[$file] = $name;
+			break;
+		case '8':
+		case '8k':
+			$more_crt8[$file] = $name;
+			break;
+		case '16':
+		case '16k':
+			$more_crt16[$file] = $name;
+			break;
+		case 'm8':
+		case 'm8k':
+			$more_crt8u[$file] = $name;
+			break;
+		case 'm16':
+		case 'm16k':
+			$more_crt16u[$file] = $name;
+			break;
+		case 'ocean':
+			$mod256k = array($name, $file);
+			break;
+//		case 'm2i':
+//			$more_m2i[$name] = $file;
+//			break;
+		}
+	}
+}
 
 /*
   CartridgeHeader
@@ -188,12 +139,12 @@ $CHIPS = array(0 => array(), 1 => array());
 
 $CHIPS[$MODE[2] ? 1 : 0][$MODE[0]] = $f;
 
-foreach($more_crt8 AS $file){
-	$CHIPS[0][$bank] = substr(file_get_contents($BASE_PATH.'crt/'.$file), -8*1024);
+foreach($more_crt8 AS $file => $name){
+	$CHIPS[0][$bank] = substr(file_get_contents($file), -8*1024);
 //	$CHIPS[1][$bank] = str_repeat(chr(0), 8*1024);
 	
 	$DIR[] = array(
-		$file,
+		$name,
 		$bank,
 		0x10,
 		8*1024,
@@ -202,13 +153,13 @@ foreach($more_crt8 AS $file){
 	$bank++;
 }
 
-foreach($more_crt8u AS $file){
+foreach($more_crt8u AS $file => $name){
 //	$CHIPS[0][$bank] = str_repeat(chr(0xf1), 8*1024);
-	$CHIPS[1][$bank] = substr(file_get_contents($BASE_PATH.'crt/'.$file), -8*1024);
+	$CHIPS[1][$bank] = substr(file_get_contents($file), -8*1024);
 	
 	
 	$DIR[] = array(
-		$file,
+		$name,
 		$bank,
 		0x13,
 		8*1024,
@@ -217,12 +168,12 @@ foreach($more_crt8u AS $file){
 	$bank++;
 }
 
-foreach($more_crt16 AS $file){
-	$CHIPS[0][$bank] = substr(file_get_contents($BASE_PATH.'crt/'.$file), -16*1024, 8*1024);
-	$CHIPS[1][$bank] = substr(file_get_contents($BASE_PATH.'crt/'.$file), -8*1024);
+foreach($more_crt16 AS $file => $name){
+	$CHIPS[0][$bank] = substr(file_get_contents($file), -16*1024, 8*1024);
+	$CHIPS[1][$bank] = substr(file_get_contents($file), -8*1024);
 
 	$DIR[] = array(
-		$file,
+		$name,
 		$bank,
 		0x11,
 		16*1024,
@@ -231,12 +182,12 @@ foreach($more_crt16 AS $file){
 	$bank++;
 }
 
-foreach($more_crt16u AS $file){
-	$CHIPS[0][$bank] = substr(file_get_contents($BASE_PATH.'crt/'.$file), -16*1024, 8*1024);
-	$CHIPS[1][$bank] = substr(file_get_contents($BASE_PATH.'crt/'.$file), -8*1024);
+foreach($more_crt16u AS $file => $name){
+	$CHIPS[0][$bank] = substr(file_get_contents($file), -16*1024, 8*1024);
+	$CHIPS[1][$bank] = substr(file_get_contents($file), -8*1024);
 
 	$DIR[] = array(
-		$file,
+		$name,
 		$bank,
 		0x12,
 		16*1024,
@@ -249,10 +200,14 @@ foreach($more_crt16u AS $file){
 // add some files
 $start = $bank << 14;
 $data = '';
-foreach($more_files AS $file){
-	$d = file_get_contents($BASE_PATH.'prg/'.$file);
+foreach($more_files AS $file => $name){
+	$d = file_get_contents($file);
+	if(substr($d, 0, 8) == 'C64File'.chr(0)){
+		// found a P00 file -> chop header
+		$d = substr($d, 26);
+	}
 	$DIR[] = array(
-		$file,
+		$name,
 		$start >> 14,
 		0x01,
 		strlen($d),
@@ -266,7 +221,7 @@ foreach($more_files AS $file){
 foreach($more_m2i AS $k => $file){
 	if(substr($file, -1) == '*'){
 		unset($more_m2i[$k]);
-$dh = opendir($BASE_PATH.'m2i/'.substr($file, 0, -1));
+$dh = opendir(substr($file, 0, -1));
 while($e = readdir($dh)){
 	if($e[0] != '.') // no dot-files
 		$more_m2i[] = substr($file, 0, -1).$e;
@@ -279,7 +234,7 @@ foreach($more_m2i AS $file){
 
 	if(substr($file, -1) == '$'){
 $all_m2i = array();
-$dh = opendir($BASE_PATH.'m2i/'.substr($file, 0, -1));
+$dh = opendir(substr($file, 0, -1));
 while($e = readdir($dh)){
 	if($e[0] != '.') // no dot-files
 		$all_m2i[] = substr($file, 0, -1).$e;
@@ -291,7 +246,7 @@ closedir($dh);
 			$file = $all_m2i[0];
 			$m2i = read_m2i($file);
 			for($i=0; ($l=$m2i[$i]) && (strtolower($l[1]) != 'p'); $i++);
-			if(filesize($BASE_PATH.'m2i/'.$file.'/'.trim($l[2])) < 21*1024)
+			if(filesize($file.'/'.trim($l[2])) < 21*1024)
 				break;
 		}
 	}
@@ -306,7 +261,7 @@ closedir($dh);
 //fail(var_export($r, 1));
 		if(strtolower($r[1]) == 'p' || strtolower($r[1]) == 's'){
 			// program
-			$d = file_get_contents($BASE_PATH.'m2i/'.$file.'/'.trim($r[2]));
+			$d = file_get_contents($file.'/'.trim($r[2]));
 			$D = array(
 				$r[3],
 				$start >> 14,
@@ -366,7 +321,7 @@ if($MODE[3]){
 		0x11,
 		256*1024, // wird aber als 16k ausgegeben (s. typ)
 	);
-	$f = fopen($BASE_PATH.'crt-bad/'.$mod256k[1], 'r');
+	$f = fopen($mod256k[1], 'r');
 	fread($f, 64); // skip crt header
 	for($i=0; $i<32; $i++){
 		fread($f, 16); // skip chip header
@@ -422,6 +377,9 @@ foreach($CHIPS[1] AS $i => $dummy){
 	echo str_pad(substr($CHIPS[1][$i], 0, 8*1024), 8*1024);
 }
 
+file_put_contents('php://stderr', (64-$bank)." blocks free\n");
+
+
 function repair_case($t){
 	for($i=0; $i<strlen($t); $i++){
 		$o = ord($t[$i]);
@@ -440,8 +398,8 @@ function repair_case($t){
 }
 
 function ultimax_loader($bank, $hiaddr){
-	return chr($bank).chr(0x07).substr(file_get_contents('tools/skoe_startup.bin'), 2);
-/*
+//	return chr($bank).chr(0x07).substr(file_get_contents('tools/skoe_startup.bin'), 2);
+
 	return 
 		chr($bank).						// constant $01
 		chr(0x8d).chr(0x00).chr(0xde).	// STA $DE00
@@ -459,7 +417,7 @@ function ultimax_loader($bank, $hiaddr){
 		chr(0x0c).			 			// NOOP $XXXX
 			// JUMPS OVER $00,$01
 		'';
-*/
+
 }
 
 function fail($text){
@@ -468,7 +426,7 @@ function fail($text){
 }
 
 function read_m2i($file){
-	$dh = opendir($BASE_PATH.'m2i/'.$file.'/');
+	$dh = opendir($file.'/');
 	while(($m = readdir($dh)) !== false){
 		if(strlen($m) > 4 && substr(strtolower($m), -4) == '.m2i')
 			break;
@@ -478,7 +436,7 @@ function read_m2i($file){
 		fail('unable to find a m2i: '.$file);
 	}
 
-	$m2i = split("[\r\n]+", file_get_contents($BASE_PATH.'m2i/'.$file.'/'.$m));
+	$m2i = split("[\r\n]+", file_get_contents($file.'/'.$m));
 	array_shift($m2i); // drop first line
 	foreach($m2i AS $k => $v){
 		if(trim($v) == ''){
