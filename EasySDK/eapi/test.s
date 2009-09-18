@@ -9,6 +9,7 @@ EAPIWriteFlash      = $dfe0 + 0
 EAPIEraseSector     = $dfe0 + 3
 EAPISetBank         = $dfe0 + 6
 EAPIGetBank         = $dfe0 + 9
+EAPINumBanks        = $dfd8         ; 2 bytes
 
 EAPI_ZP_REAL_CODE_BASE = $14
 
@@ -68,9 +69,12 @@ testCheckEasyFlash:
 
         jsr EAPIInit
         bcs cefNotCompatible
-        sta $0400
-        stx $0401
-        sty $0402
+        stx $0400
+        sty $0401
+        lda EAPINumBanks
+        sta $0402
+        lda EAPINumBanks + 1
+        sta $0403
 
         jmp testErase
 

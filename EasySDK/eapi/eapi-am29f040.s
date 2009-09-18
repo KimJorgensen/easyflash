@@ -53,7 +53,8 @@ EAPI_RAM_CODE           = $df80 ; 80 bytes
 EAPI_TMP_VAL1           = $dfd0
 EAPI_TMP_VAL2           = $dfd1
 EAPI_TMP_VAL3           = $dfd2
-EAPI_SHADOW_BANK        = $dfd6 ; copy of bank number set by the user
+EAPI_SHADOW_BANK        = $dfd6 ; copy of bank number set by the user, 2 bytes
+EAPI_NUM_BANKS          = $dfd8 ; total number of banks, 2 bytes
 
 ; space for 4 * JMP xxxx = 12 bytes
 EAPI_NUM_FNS            = 4
@@ -70,9 +71,9 @@ EAPICodeBase:
 
 ; =============================================================================
 ;
-; Read Manufacturer ID and Device ID from the chip at the given address
-; and check if this chip is supported by this driver.
-; Prepare our private RAM for the other functions of the driver.
+; Read Manufacturer ID and Device ID from the flash chip(s) and check if this
+; chip is supported by this driver. Prepare our private RAM for the other
+; functions of the driver.
 ; When this function returns, EasyFlash will be configured to bank in the ROM
 ; area at $8000..$bfff.
 ;
@@ -86,7 +87,7 @@ EAPICodeBase:
 ;       If C ist clear:
 ;       A   Device ID
 ;       X   Manufacturer ID
-;       Y   Number of banks (currently 64)
+;       EAPI_NUM_BANKS = Number of banks (currently 64)
 ;
 ; =============================================================================
 EAPICheckIds:
@@ -220,9 +221,15 @@ resetAndReturn:
         jsr ultimaxWrite
 
         cli
+
+        lda #AM29F040_NUM_BANKS
+        sta EAPI_NUM_BANKS
+        lda #0
+        sta EAPI_NUM_BANKS + 1
+
         lda EAPI_TMP_VAL2       ; device in A
         ldx EAPI_TMP_VAL1       ; manufacturer in X
-        ldy #AM29F040_NUM_BANKS
+
         rts
 
 
