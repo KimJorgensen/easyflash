@@ -67,9 +67,6 @@ big_loop:
 	:if A ; EQ ; #O_EFST_16KCRT ; rom16
 	:if A ; EQ ; #O_EFST_8KULTCRT ; romu8
 	:if A ; EQ ; #O_EFST_16KULTCRT ; romu16
-	.if(KERNEL_API){
-		:if A ; EQ ; #O_EFST_SUB ; subdir
-	}
 	jmp big_loop // 0 or unknown entry -> try next
 
 maybe_hidden:
@@ -95,15 +92,6 @@ romu16:
 !skip:
 	lda #MODE_ULT // set game/exrom correctly + $20 for overwrite jumper
 	jmp romicon
-
-.if(KERNEL_API){
-
-subdir:
-	:mov #$00 ; ZP_SCAN_SIZETEXT+1 // clear upper -> calc size
-	ldx #$1f
-	jmp copyit
-
-}
 
 file:
 	// get offset whithin first bank

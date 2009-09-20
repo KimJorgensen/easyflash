@@ -1,4 +1,3 @@
-.const KERNEL_API = false
 .const DUMMY_COMPAT = true
 
 .const MODE_RAM = $04
@@ -72,10 +71,6 @@
 .import source "ui/input.asm"
 .import source "ui/last_config.asm"
 .import source "ui/menu.asm"
-
-.if(KERNEL_API){
-	// .import source "kernal_api_old/kernel_api_ram.asm"
-}
 
 .pc = * "Start"
 F_START:
@@ -194,7 +189,7 @@ ini_d000:
 	.const top_pos = $40
 	
 	.byte left_pos+0*24, top_pos, left_pos+1*24, top_pos, left_pos+2*24, top_pos, left_pos+3*24, top_pos
-	.byte left_pos+5*8, top_pos, left_pos+5*8, top_pos, left_pos+5*8, top_pos+20*8, left_pos+5*8, top_pos+20*8
+	.byte left_pos+5*8, top_pos, left_pos+5*8, top_pos, left_pos+5*8-4, top_pos+20*8, left_pos+5*8-4, top_pos+20*8
 
 	.byte $fe, $8b, $37, $00, $00, $00, $08, $00
 	.byte $19, $71, $f0, $00, $00, $00, $00, $00
