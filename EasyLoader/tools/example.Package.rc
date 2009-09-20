@@ -1,0 +1,38 @@
+#
+# this file is a list of all files which should be included in the cartridge
+# copy it near your programs and change ~/EasyLoader.rc to point to this file
+#
+
+#
+# configuration (optional)
+#
+
+# cfg:strip_extension=1
+
+#
+# file area
+#
+# all empty lines ans those starting whith a # are irgnored
+# all paths are relative to this file
+# basic usage: "mode:file.prg" (whithout quotes)
+# extended: "mode:file.prg=newname"
+#
+# mode can be:
+# "p" or "prg" for programs (including p00 files)
+# "8" or "8k" for regular 8k crt's
+# "16" or "16k" for regular 16k crt's
+# "m8" or "m8k" for ultimax 8k crt's
+# "m16" or "m16k" for ultimax 16k crt's
+
+prg:game.prg
+16k:example.crt
+
+#
+# ocean mode
+#
+# using the ocean mode one ocean type1 module can be incuded
+# use: "ocean:file.crt" or "ocean:file.crt=name"
+# whithin the regular mode this lineis just ignored
+#
+
+ocean:shadow.crt=Shadow o t Beast
