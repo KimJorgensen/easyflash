@@ -299,6 +299,7 @@ show_x_x:
 	lsr
 	clc
 	adc ZP_SCAN_SIZETEXT
+	lsr
 	jsr F_BCDIFY_LOWER_BUF
 	
 	// display unit
