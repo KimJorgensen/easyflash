@@ -131,7 +131,8 @@ echo pack('C', 0);
 echo pack('c*', 0, 0, 0, 0, 0, 0);
 echo substr(str_pad('ALeX\'s <DOT>CRT Loader', 32, chr(0)), 0, 32);
 
-$bank = $MODE[0] == 32 ? 33 : ($MODE[3] ? 32 : 1);
+$o_banks = ceil((filesize($mod256k[1])-64) / (0x2000 + 16));
+$bank = $MODE[3] ? $o_banks : 1;
 
 $DIR = array();
 
@@ -319,11 +320,11 @@ if($MODE[3]){
 		$mod256k[0],
 		0,
 		0x11,
-		256*1024, // wird aber als 16k ausgegeben (s. typ)
+		$o_banks*0x2000,
 	);
 	$f = fopen($mod256k[1], 'r');
 	fread($f, 64); // skip crt header
-	for($i=0; $i<32; $i++){
+	for($i=0; $i<$o_banks; $i++){
 		fread($f, 16); // skip chip header
 		$CHIPS[$i >> 4][$i] = fread($f, 8*1024);
 	}
@@ -398,26 +399,13 @@ function repair_case($t){
 }
 
 function ultimax_loader($bank, $hiaddr){
-//	return chr($bank).chr(0x07).substr(file_get_contents('tools/skoe_startup.bin'), 2);
-
-	return 
-		chr($bank).						// constant $01
-		chr(0x8d).chr(0x00).chr(0xde).	// STA $DE00
-		chr(0xa9).chr(0x07). 			// LDA #$07 // MODE_16k
-		chr(0x8d).chr(0x02).chr(0xde).	// STA $DE02
-		chr(0x6c).chr(0x00).chr($hiaddr ? 0xa0 : 0x80). // JMP ($addr)
-		chr(0xa2).chr(0x0b). 			// LDX #$0b
-		chr(0x95).chr(0x02). 			// STA $02,X
-		chr(0xbd).chr(0xe5).chr(0xff).	// LDA $FFE5,X
-		chr(0xca). 						// DEX
-		chr(0x10).chr(0xf8). 			// BPL $FFF3
-		chr(0x0c).chr(0xf1).chr(0xff).	// NOOP $FFF1
-			// FFF1 = RESET ADDRESS
-		chr(0xea).			 			// NOP
-		chr(0x0c).			 			// NOOP $XXXX
-			// JUMPS OVER $00,$01
-		'';
-
+	if($bank == 0 && !$hiaddr){
+		return file_get_contents('tools/easyloader_launcher_nrm.bin');
+	}else if($bank == 1 && $hiaddr){
+		return file_get_contents('tools/easyloader_launcher_ocm.bin');
+	}else{
+		fail('unallowed bank/offset combination');
+	}
 }
 
 function fail($text){
