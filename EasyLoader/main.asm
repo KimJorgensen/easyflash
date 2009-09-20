@@ -210,4 +210,4 @@ ini_dc00_dd00_end:
 
 .pc = [EASYLOADER_STARTADDRESS + $1800] "FONT"
 CHARSET:
-	:CharSet("graphics/petscii_lower_minimal.png")
+	:CharSet("graphics/easyloader_font.png")

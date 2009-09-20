@@ -11,3 +11,5 @@ obj/*
 *.cache.lib
 *.cache.dcm
 EasyProg/easyprog
+EasyLoader/build/*
+EasyLoader/.deps/*
