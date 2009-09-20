@@ -68,6 +68,9 @@ LCOPY_START:
 	// switch bank ($8000-$ffff is now undefined!!)
 	pla
 	sta $de00
+	sta $df00
+	lda #$00
+	sta $df01
 	pla
 	sta IO_MODE
 

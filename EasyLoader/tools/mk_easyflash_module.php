@@ -39,6 +39,7 @@ $more_crt16u = array();
 $more_files = array();
 $more_m2i = array();
 $mod256k = array();
+$more_mmc16 = array();
 
 foreach(split("[\r\n]+", file_get_contents($argv[2])) AS $ln){
 	if(trim($ln) == '' || substr(trim($ln), 0, 1) == '#'){
@@ -90,6 +91,10 @@ foreach(split("[\r\n]+", file_get_contents($argv[2])) AS $ln){
 			break;
 		case 'ocean':
 			$mod256k = array($name, $file);
+			break;
+		case 'mmc16':
+		case 'mmc16k':
+			$more_mmc16[$file] = $name;
 			break;
 //		case 'm2i':
 //			$more_m2i[$name] = $file;
@@ -181,6 +186,24 @@ foreach($more_crt16 AS $file => $name){
 	);
 
 	$bank++;
+}
+
+foreach($more_mmc16 AS $file => $name){
+	$mmc = file_get_contents($file);
+	$mmc_banks = ceil(strlen($mmc) / 0x4000);
+	for($i=0; $i<$mmc_banks; $i++){
+		$CHIPS[0][$bank+$i] = substr($mmc, $i*0x4000,          0x2000);
+		$CHIPS[1][$bank+$i] = substr($mmc, $i*0x4000 + 0x2000, 0x2000);
+	}
+
+	$DIR[] = array(
+		$name,
+		$bank,
+		0x11,
+		$mmc_banks * 0x4000,
+	);
+
+	$bank+=$mmc_banks;
 }
 
 foreach($more_crt16u AS $file => $name){
