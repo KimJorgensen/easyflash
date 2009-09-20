@@ -5,42 +5,17 @@ F_SCAN_DIR:{
 	.var FILESYSTEM_START_ADDR = $a000
 
 	.if(EASYLOADER_BANK != EASYFILESYSTEM_BANK){
-		.eval FILESYSTEM_START_ADDR = $6000
+		.eval FILESYSTEM_START_ADDR = $6800
 
 		// copy read-addr routine to $0200
-		ldy #[COPY_FILESYSTEM_END - COPY_FILESYSTEM_START]-1
-	!loop:
-		lda COPY_FILESYSTEM_START, y
-		sta $0200, y
-		dey
-		bpl !loop-
+		:copy_to_df00 COPY_FILESYSTEM_START ; COPY_FILESYSTEM_END - COPY_FILESYSTEM_START
 
 		// copy the directory
 		jsr F_COPY_FILESYSTEM
 	}
 
-
-	// calc used space
-	.const P_CURRENT_USE = P_GEN_BUFFER+0
-	.const P_CHECK_USE = P_GEN_BUFFER+4
-	.const always_used = [EASYLOADER_BANK+1] << 14
-	.const use_4byte_used = false
-
-	:mov #always_used >> 0 ; P_CURRENT_USE + 0
-	:mov #always_used >> 8 ; P_CURRENT_USE + 1
-	:mov #always_used >> 16 ; P_CURRENT_USE + 2
-	.if(use_4byte_used){
-		:mov #always_used >> 24 ; P_CURRENT_USE + 3
-	}
-
-
 	// copy read-addr routine to $0200
-	ldy #[READ_LOADADDR_END - READ_LOADADDR_START]-1
-!loop:
-	lda READ_LOADADDR_START, y
-	sta $0200, y
-	dey
-	bpl !loop-
+	:copy_to_df00 READ_LOADADDR_START ; READ_LOADADDR_END - READ_LOADADDR_START
 
 	:mov16 #[FILESYSTEM_START_ADDR - V_EFS_SIZE] ; ZP_EFS_ENTRY
 	:mov16 #P_DIR ; ZP_ENTRY
@@ -75,21 +50,15 @@ maybe_hidden:
 	jmp big_loop // is a hidden file	
 
 rom8:
-	:mov16 #text_rom8 ; ZP_SCAN_SIZETEXT
 	lda #MODE_8k // set game/exrom correctly + $20 for overwrite jumper
 	jmp romicon
 
 rom16:
-	:mov16 #text_rom16 ; ZP_SCAN_SIZETEXT
 	lda #MODE_16k // set game/exrom correctly + $20 for overwrite jumper
 	jmp romicon
 
 romu8:
-	:mov16 #text_romu8 ; ZP_SCAN_SIZETEXT
-	jmp !skip+
 romu16:
-	:mov16 #text_romu16 ; ZP_SCAN_SIZETEXT
-!skip:
 	lda #MODE_ULT // set game/exrom correctly + $20 for overwrite jumper
 	jmp romicon
 
@@ -114,12 +83,10 @@ file:
 	:add16 ZP_SCAN_SIZETEXT ; P_DIR_BUFFER + O_DIR_SIZE
 	bcs not_loadable // laodaddr+size(minus 2 for laodaddr) > $ffff
 
-	:mov #$00 ; ZP_SCAN_SIZETEXT+1 // clear upper -> calc size
 	ldx #$7d
 	jmp copyit
 
 not_loadable:
-	:mov #$00 ; ZP_SCAN_SIZETEXT+1 // clear upper -> calc size
 	sta P_DIR_BUFFER+O_DIR_TYPE // 0 => type => not loadable
 	ldx #$1f
 	jmp copyit
@@ -170,32 +137,17 @@ copyit:
 	sta P_DIR_BUFFER, x
 	inx
 	// size
-	:if ZP_SCAN_SIZETEXT+1 ; NE ; #$00 ; show_premade
+	lda P_DIR_BUFFER + O_DIR_TYPE
+	and #$10
+	bne !at_least_xxxk+
 	:if P_DIR_BUFFER + O_DIR_SIZE+2 ; NE ; #$00 ; !at_least_64k+
 	:if16 P_DIR_BUFFER + O_DIR_SIZE ; LE ; #999 ; JMP ; show_bytes
 	:if16 P_DIR_BUFFER + O_DIR_SIZE ; LE ; #[9.9*1024] ; JMP ; show_x_x_kbytes
+!at_least_xxxk:
 !at_least_64k:
 	:if16 P_DIR_BUFFER + O_DIR_SIZE+1 ; LE ; #[[999*1024]>>8] ; JMP ; show_xxx_kbytes
 	jmp show_x_x_mbytes
 	
-show_premade:
-	ldy #0
-	lda (ZP_SCAN_SIZETEXT), y
-	sta P_DIR_BUFFER, x
-	inx
-	iny
-	lda (ZP_SCAN_SIZETEXT), y
-	sta P_DIR_BUFFER, x
-	inx
-	iny
-	lda (ZP_SCAN_SIZETEXT), y
-	sta P_DIR_BUFFER, x
-	inx
-	iny
-	lda (ZP_SCAN_SIZETEXT), y
-	sta P_DIR_BUFFER, x
-	inx
-
 next_after_size:
 	// end of line
 	lda #$7f
@@ -329,18 +281,8 @@ show_xxx:
 	
 	jmp next_after_size
 
-
-text_rom8:
-	.byte $20, $20, $38, $4b
-text_rom16:
-	.byte $20, $31, $36, $4b
-text_romu8:
-	.byte $75, $20, $38, $4b
-text_romu16:
-	.byte $75, $31, $36, $4b
-
 READ_LOADADDR_START:
-.pseudopc $0200 {
+.pseudopc $df00 {
 F_READ_LOADADDR:
 	sta $de00
 	ldy #$00
@@ -357,7 +299,7 @@ READ_LOADADDR_END:
 
 .if(EASYLOADER_BANK != EASYFILESYSTEM_BANK){
 COPY_FILESYSTEM_START:
-.pseudopc $0200 {
+.pseudopc $df00 {
 F_COPY_FILESYSTEM:
 	lda #EASYFILESYSTEM_BANK
 	sta $de00
@@ -367,7 +309,7 @@ F_COPY_FILESYSTEM:
 smc_src:
 	lda $a000, x
 smc_dst:
-	sta $6000, x
+	sta $6800, x
 	inx
 	bne !loop-
 	inc smc_src+2

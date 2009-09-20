@@ -112,3 +112,25 @@ F_BCDIFY_BUF:{
         hexa: lda #$20 // " "
         hexb: rts
 }
+
+F_COPY_TO_DF00:{
+	.var PTR = P_BINBCD_IN
+	sta PTR+0
+	stx PTR+1
+!loop:
+	lda (PTR), y
+	sta $deff, y
+	dey
+	bne !loop-
+	rts
+}
+
+.pseudocommand copy_to_df00 start ; len {
+	.assert "copy_to_df00: len too big", len.getValue() <= 251, true
+	.var PTR = P_BINBCD_IN
+	lda #[start.getValue()-1] & $ff
+	ldx #[start.getValue()-1] >> 8
+	ldy #len.getValue()
+	jsr F_COPY_TO_DF00
+}
+

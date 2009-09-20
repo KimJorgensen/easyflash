@@ -1,4 +1,3 @@
-.const DUMMY_COMPAT = true
 
 .const MODE_RAM = $04
 .const MODE_16k = $07
@@ -30,20 +29,8 @@
 **
 */
 
-.pc = EASYLOADER_STARTADDRESS "Modul Starter"
+.pc = EASYLOADER_STARTADDRESS "Jump Address"
 	.word F_START
-.if(EASYLOADER_STARTADDRESS == $8000){
-	.word F_START
-	.byte $c3, $c2, $cd, $38, $30 // CBM80
-	.if(DUMMY_COMPAT){
-		.word F_DUMMY_FIX1+1
-		.word F_DUMMY_FIX2
-	}
-}else .if(DUMMY_COMPAT){
-	.fill 7, 0
-	.word F_DUMMY_FIX1+1
-	.word F_DUMMY_FIX2
-}
 
 /*
 **
@@ -81,7 +68,6 @@ F_START:
 	txs
 	cld
 	stx $8004 // no CBM80
-F_DUMMY_FIX1:
 	:mov #$e7 ; $01
 	:mov #$2f ; $00
 
@@ -102,22 +88,11 @@ F_DUMMY_FIX1:
 	dex
 	bpl !loop-
 
-
-/*
-	easy vic-init
-	:mov #$9b ; $d011
-	:mov #$08 ; $d016
-	:mov #$13 ; $d018
-	:mov #$17 ; $dd00
-*/
-
 	jsr F_INIT_SCREEN
 
 	ldx #0
 !loop:
 	.for(var i=0; i<8; i++){
-//		lda $0800 + i*$0100, x
-//		sta $1000 + i*$0100, x
 		lda CHARSET + i*$0100, x
 		sta $2000 + i*$0100, x
 	}
@@ -144,37 +119,9 @@ F_DUMMY_FIX1:
 	
 	jsr F_CLEAR_COLORS
 
-.if(DUMMY_COMPAT){
-	lda #0
-	sta P_DRAW_START
-	sta P_DRAW_OFFSET
-}
-
-F_DUMMY_FIX2:
 	jsr F_LAST_CONFIG_READ
 
 	jsr F_DRAW
-
-/*
-	:mov #$07 ; $02
-loop:
-	lda $02
-	eor #$80
-	sta $02
-	sta $de02
-
-	ldy #128
-!yloop:
-	ldx #0
-!xloop:
-	dex
-	bne !xloop-
-	// 5 cy per loop = 1280 cyls
-	dey
-	bne !yloop-
-	
-	jmp loop
-*/
 
 	jmp F_MENU
 
