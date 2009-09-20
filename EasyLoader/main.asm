@@ -71,6 +71,9 @@ F_START:
 	:mov #$e7 ; $01
 	:mov #$2f ; $00
 
+	// check for /^boot(.crt)?$/
+	jsr F_LAST_CONFIG_READ
+
 	// init VIC2
 	ldx #[ini_d000_end-ini_d000]-1
 !loop:
@@ -104,13 +107,6 @@ F_START:
 	:mov #$9b ; $d011
 	:mov #$ff ; $d015
 
-.if(EASYLOADER_BANK == 0){	
-	// make us a 16k cart
-	:mov #MODE_16k ; IO_MODE
-	
-	// on bank other than 0 this definitly happend already
-}
-	
 	:mov #MODE_16k ; P_LED_STATE
 	
 	jsr F_SCAN_DIR
@@ -118,8 +114,6 @@ F_START:
 	jsr F_SEARCH_INIT
 	
 	jsr F_CLEAR_COLORS
-
-	jsr F_LAST_CONFIG_READ
 
 	jsr F_DRAW
 

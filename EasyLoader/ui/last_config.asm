@@ -1,23 +1,17 @@
 .print ">last_config.asm"
 
-.const P_LAST_CONFIG_ADDRESS = $fff0
+.const P_LAST_CONFIG_ADDRESS = $dffc
 
 F_LAST_CONFIG_READ:{
 
-	ldx #[copy_end - copy_start]-1
-!loop:
-	lda copy_start, x
-	sta copy, x
-	dex
-	bpl !loop-
-
-	jsr copy
+	:mov P_LAST_CONFIG_ADDRESS+0 ; P_DRAW_START
+	:mov P_LAST_CONFIG_ADDRESS+1 ; P_DRAW_OFFSET
 
 	lda P_DRAW_START
 	clc
 	adc P_DRAW_OFFSET
 	clc
-	adc P_BINBCD_IN
+	adc P_LAST_CONFIG_ADDRESS+2
 	cmp #$65
 	bne fresh_start
 
@@ -28,19 +22,101 @@ fresh_start:
 	lda #0
 	sta P_DRAW_START // show first line
 	sta P_DRAW_OFFSET // first line is active
-	rts
 	
-copy_start:
-.pseudopc $200 {
-copy:
-	:mov #$30 ; $01
-	:mov P_LAST_CONFIG_ADDRESS+0 ; P_DRAW_START
-	:mov P_LAST_CONFIG_ADDRESS+1 ; P_DRAW_OFFSET
-	:mov P_LAST_CONFIG_ADDRESS+2 ; P_BINBCD_IN
-	:mov #$37 ; $01
+	jsr F_LAST_CONFIG_WRITE
+	
+	:copy_to_df00 copy_scan_boot_start ; [copy_scan_boot_end - copy_scan_boot_start]
+	jmp scan_boot // does a rts it not found
+
+copy_scan_boot_start:
+	.pseudopc $df00 {
+		.const TEMP = $02
+		end_scan:
+			:mov #EASYLOADER_BANK ; $de00
 	rts	
-}
-copy_end:
+		scan_boot:
+			:mov #EASYFILESYSTEM_BANK ; $de00
+			:mov16 #$a000-V_EFS_SIZE ; TEMP
+		big_loop:
+			:add16_8 TEMP ; #V_EFS_SIZE
+		
+			ldy #O_EFS_TYPE
+			lda (TEMP), y
+			and #O_EFST_MASK
+			cmp #O_EFST_END
+			beq end_scan // type = end of fs
+			and #$10
+			beq big_loop // not of type crt
+		
+			ldy #$ff
+			// check B
+			jsr get_char
+			cmp #$42
+			bne big_loop
+			// check O
+			jsr get_char
+			cmp #$4f
+			bne big_loop
+			// check O
+			jsr get_char
+			cmp #$4f
+			bne big_loop
+			// check T
+			jsr get_char
+			cmp #$54
+			bne big_loop
+			// check . or \0
+			jsr get_char
+			cmp #$00
+			beq found_boot
+			cmp #$2e
+			bne big_loop
+			// check C
+			jsr get_char
+			cmp #$43
+			bne big_loop
+			// check R
+			jsr get_char
+			cmp #$52
+			bne big_loop
+			// check T
+			jsr get_char
+			cmp #$54
+			bne big_loop
+			// check \0
+			iny
+			lda (TEMP), y
+			bne big_loop
+	
+		found_boot:
+			ldy #O_EFS_TYPE
+			lda (TEMP), y
+			and #$03
+			tax
+			lda type2mode_table, x
+			tax
+			iny
+			lda (TEMP), y
+			sta $de00
+			stx $de02
+			jmp ($fffc)
+			
+		get_char:
+			iny
+			lda (TEMP), y
+			:if A ; GE ; #$61 ; ENDIF ; !endif+
+				eor #$20
+			!endif:
+			rts
+		
+		type2mode_table:
+			.byte MODE_8k
+			.byte MODE_16k
+			.byte MODE_ULT
+			.byte MODE_ULT
+
+	}
+copy_scan_boot_end:
 	
 }
 
