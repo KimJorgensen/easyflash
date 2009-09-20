@@ -15,9 +15,6 @@ F_LAUNCH:
 	beq return // 0 => not loadable
 	// if it's a file:
 	:if A ; EQ ; #O_EFST_FILE ; JMP ; F_LAUNCH_FILE
-.if(KERNEL_API){
-	:if A ; EQ ; #$02 ; JMP ; F_LAUNCH_SUB
-}
 	// otherwise it must be a crt, because others are not supported
 	jmp F_LAUNCH_CRT
 

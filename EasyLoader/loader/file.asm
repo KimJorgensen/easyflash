@@ -1,16 +1,6 @@
 .print ">file.asm"
 
 F_LAUNCH_FILE:{
-	.if(KERNEL_API){
-		lda #$00
-	}
-}
-F_LAUNCH_FILE_PART2:{
-	.if(KERNEL_API){
-		beq !skip+
-		jmp F_LAUNCH_FILE_REAL_PART2
-	!skip:
-	}
 
 	jsr F_LAST_CONFIG_WRITE
 
@@ -260,14 +250,6 @@ FILE_COPIER:
 	
 	!endif:
 
-
-	// setup back-jump
-.if(KERNEL_API){
-	:mov16 #kernel_lander ; $100
-}
-
-F_LAUNCH_FILE_REAL_PART2:
-
 	// copy laucher to $100
 	ldx #[FCOPY2_END-FCOPY2_START]-1
 !loop:
@@ -294,8 +276,6 @@ F_LAUNCH_FILE_REAL_PART2:
 	** CART IS FILE (AND NO LONGER EASYLOADER)
 	** COPY THE REQUIRED PROG
 	*/
-
-	.const kernel_jumper = $100
 
 	FCOPY2_START:
 	.pseudopc $102 {
@@ -336,13 +316,6 @@ F_LAUNCH_FILE_REAL_PART2:
 		bne !loop-
 
 	!skip:
-
-		// maybe an early exit
-.if(KERNEL_API){
-		jmp (kernel_jumper)
-}
-	kernel_lander:
-
 
 		// setup end of program
 		:mov16 #$0801 ; $2b

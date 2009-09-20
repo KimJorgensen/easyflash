@@ -29,7 +29,7 @@ $t = <<<HERE
 ╵                        │             │
 ╵                        │             │
 ╵                        │             │
-╵                        │ xxxxxxxxxxx │
+╵                        │ xxxxxxxxxx  │
 ╵                        │ xxxxxxxx    │
 └────────────────────────┘─────────────┘
 HERE;
@@ -45,9 +45,9 @@ left/right
 or ■F■6/■F■8.
 
 Start Prog
-■F■1 ■R■E■T ■F■I■R■E
+■F■1<■R■E■T>■F■I■R■E
 
-Quit ■F■2
+Quit<■F■2>
 HERE;
 #---------┃---------┃---------┃---------
 $msg = <<<HERE
@@ -167,6 +167,9 @@ $chars = array(
 
   '╭' => 159,
   '╮' => 137,
+  
+  '<' => 158,
+  '>' => 30,
 );
 
 foreach($chars AS $k => $v){
@@ -199,7 +202,7 @@ foreach(array(
 	 2*40+27 => array_merge(range(0x14, 0x18),array(0x20),range(0x19,0x1d)),
 	 3*40+27 => array_merge(range(0x94, 0x98),array(0x20),range(0x99,0x9d)),
 	 5*40+27 => range(0x85, 0x8f),
-	22*40+27 => array_merge(range(0x90, 0x93),array(0x20),range(0x06,0x0b)),
+	22*40+27 => array_merge(range(0x90, 0x93),range(0x06,0x0b)),
 	23*40+27 => range(0x0c, 0x13),
 ) AS $o1 => $data){
 	foreach($data AS $o2 => $val){
