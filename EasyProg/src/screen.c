@@ -257,6 +257,7 @@ void __fastcall__ screenPrintMenu(uint8_t x, uint8_t y,
     uint8_t nEntry, nEntries;
     uint8_t tmp;
     uint8_t len;
+    const ScreenMenuEntry* pEntry;
     const char* pStr;
 
     // calculate length of longest entry
@@ -275,24 +276,35 @@ void __fastcall__ screenPrintMenu(uint8_t x, uint8_t y,
         screenPrintBox(x, y, len + 2, nEntries + 2);
     }
 
+    pEntry = pMenuEntries;
     for (nEntry = 0; nEntry != nEntries; ++nEntry)
     {
         gotoxy(x + 1, ++y);
 
-        pStr = pMenuEntries[nEntry].pStrLabel;
+        pStr = pEntry->pStrLabel;
 
         if (nEntry == nSelected)
             revers(1);
 
         cputc(' ');
-        textcolor(COLOR_EXTRA);
-        cputc(*pStr);
-        textcolor(COLOR_FOREGROUND);
-        cputs(pStr + 1);
+        if (pEntry->pCheckFunction())
+        {
+            textcolor(COLOR_EXTRA);
+            cputc(*pStr);
+            textcolor(COLOR_FOREGROUND);
+            cputs(pStr + 1);
+        }
+        else
+        {
+            textcolor(COLOR_GRAY1);
+            cputs(pStr);
+        }
         cclear(len + x - wherex() + 1);
 
         revers(0);
+        ++pEntry;
     }
+    textcolor(COLOR_FOREGROUND);
 }
 
 
@@ -320,6 +332,7 @@ void __fastcall__ screenDoMenu(uint8_t x, uint8_t y,
     {
         screenPrintMenu(x, y, pMenuEntries, nSelected, 0);
         key = cgetc();
+
         switch (key)
         {
         case CH_CURS_UP:
@@ -335,17 +348,24 @@ void __fastcall__ screenDoMenu(uint8_t x, uint8_t y,
             break;
 
         case CH_ENTER:
-            pMenuEntries[nSelected].pFunction();
-            return;
+            if (pMenuEntries[nSelected].pCheckFunction())
+            {
+                pMenuEntries[nSelected].pFunction();
+                return;
+            }
+            break;
 
         default:
             for (nEntry = 0; nEntry != nEntries; ++nEntry)
-                if (key == tolower(pMenuEntries[nEntry].pStrLabel[0]))
+            {
+                if (key == tolower(pMenuEntries[nEntry].pStrLabel[0]) &&
+                        pMenuEntries[nEntry].pCheckFunction())
                 {
                     screenPrintMenu(x, y, pMenuEntries, nEntry, 0);
                     pMenuEntries[nEntry].pFunction();
                     return;
                 }
+            }
         }
     } while (key != CH_STOP);
 }

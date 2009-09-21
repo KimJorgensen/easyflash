@@ -6,7 +6,8 @@
 obj :=
 obj += obj/crt0.o
 obj += obj/buffer.o
-obj += obj/flashcode.o
+obj += obj/eapiglue.o
+obj += obj/eapiglueasm.o
 obj += obj/flash.o
 obj += obj/cart.o
 obj += obj/screen.o

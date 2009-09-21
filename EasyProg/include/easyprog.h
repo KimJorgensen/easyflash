@@ -42,6 +42,10 @@ typedef enum EasyFlashMenuId_e
 }
 EasyFlashMenuId;
 
+// If this flag is set in a menu entry, it needs a known flash type
+#define EASYPROG_MENU_FLAG_NEEDS_FLASH 1
+
+
 /// This structure contains an EasyFlash address 00:0:0000
 typedef struct EasyFlashAddr_s
 {
