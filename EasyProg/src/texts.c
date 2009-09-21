@@ -55,8 +55,8 @@ const char* apStrFileTooShort[] =
 const char* apStrWrongFlash[] =
 {
         "A flash chip does not work",
-        "or has a wrong type. Check",
-        "your hardware, then try again.",
+        "or is not supported by the",
+        "EasyAPI flash driver.",
         NULL
 };
 
@@ -118,6 +118,15 @@ const char* apStrWriteComplete[] =
 {
         "Congratulations!",
         "Writing to flash completed.",
+        NULL
+};
+
+const char* apStrEAPINotFound[] =
+{
+        "Failed to load EasyAPI driver.",
+        "It must be named like",
+        "\"eapi-????????-??\". Put it",
+        "into the current directory.",
         NULL
 };
 

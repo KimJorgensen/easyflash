@@ -9,7 +9,7 @@
 #include <stdint.h>
 
 #include "flash.h"
-#include "flashcode.h"
+#include "eapiglue.h"
 #include "screen.h"
 
 /******************************************************************************/
@@ -37,7 +37,7 @@ static void hexShowBlock(void)
         p = ROM0_BASE;
 
     p += nOffset;
-    flashCodeSetBank(nBank);
+    eapiSetBank(nBank);
 
     gotoxy(1, 23);
     screenPrintAddr(nBank, nChip, nOffset);
