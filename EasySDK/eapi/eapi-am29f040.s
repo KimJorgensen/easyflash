@@ -41,7 +41,7 @@ EASYFLASH_IO_BIT_LED     = $80
 FLASH_ALG_ERROR_BIT      = $20
 
 ; There's a pointer to our code base
-EAPI_ZP_REAL_CODE_BASE  = $14
+EAPI_ZP_REAL_CODE_BASE  = $4b
 
 ; hardware dependend values
 AM29F040_NUM_BANKS      = 64
@@ -102,7 +102,7 @@ cidCopyCode:
         lda (EAPI_ZP_REAL_CODE_BASE),y
         sta EAPI_RAM_CODE,x
         cmp EAPI_RAM_CODE,x
-        bne ciNotSupported      ; check if there's really RAM at this address
+        bne ciNotSupportedNoReset   ; check if there's really RAM at this address
         dey
         dex
         bpl cidCopyCode
@@ -156,6 +156,9 @@ cidFillJMP:
         ;clc
         bcc ciSkip
 
+ciNotSupportedNoReset:
+        sec
+        bcs returnOnly
 ciNotSupported:
         sec
         bcs resetAndReturn
@@ -219,7 +222,7 @@ resetAndReturn:
         ldy #>$8000
         lda #$f0
         jsr ultimaxWrite
-
+returnOnly:
         cli
 
         lda #AM29F040_NUM_BANKS

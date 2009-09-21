@@ -11,7 +11,7 @@ EAPISetBank         = $dfe0 + 6
 EAPIGetBank         = $dfe0 + 9
 EAPINumBanks        = $dfd8         ; 2 bytes
 
-EAPI_ZP_REAL_CODE_BASE = $14
+EAPI_ZP_REAL_CODE_BASE = $4b
 
 ; =============================================================================
 ;
