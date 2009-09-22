@@ -36,11 +36,11 @@ EAPINumBanks        = $dfd8         ; 2 bytes lo/hi
 ; =============================================================================
 .export _eapiInit
 _eapiInit:
-;        sta ptr2
- ;       stx ptr2 + 1    ; pDeviceId
-  ;      jsr popax
-   ;     sta ptr1
-    ;    stx ptr1 + 1    ; pManufacturerId
+        sta ptr2
+        stx ptr2 + 1    ; pDeviceId
+        jsr popax
+        sta ptr1
+        stx ptr1 + 1    ; pManufacturerId
 
         jsr EAPIInit
 
