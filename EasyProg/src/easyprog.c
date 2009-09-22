@@ -341,9 +341,12 @@ static void loadEAPI(void)
     if (!nDrive)
         nDrive = 8;
 
+    setStatus("Loading EasyAPI driver...");
+    spritesOff();
     rv = cbm_open(2, nDrive, CBM_READ, "eapi-????????-??");
     if (rv)
     {
+        spritesOn();
         screenPrintSimpleDialog(apStrEAPINotFound);
         return;
     }
@@ -356,6 +359,7 @@ static void loadEAPI(void)
         nBytes = cbm_read(2, EAPI_LOAD_TO, 1024);
     }
     cbm_close(2);
+    spritesOn();
 
     if (nBytes <= 0)
     {
@@ -375,15 +379,15 @@ int main(void)
 {
     char key;
 
-;    screenInit();
- ;   progressInit();
-  ;  spritesShow();
+    screenInit();
+    progressInit();
+    spritesShow();
 
-   ; strFileName[0] = '\0';
- ;   internalCartType = INTERNAL_CART_TYPE_NONE;
+    strFileName[0] = '\0';
+    internalCartType = INTERNAL_CART_TYPE_NONE;
 
-  ;  refreshMainScreen();
-   ; fileDlgSetDriveNumber(8);
+    refreshMainScreen();
+    fileDlgSetDriveNumber(8);
     loadEAPI();
 
     // this also makes visible 16kByte of flash memory
