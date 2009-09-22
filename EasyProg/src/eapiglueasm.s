@@ -125,9 +125,9 @@ _eapiSectorErase:
         jsr EAPIEraseSector
         lda #0
         tax
-        bcc eseNoError
+        bcs eseError
         lda #1
-eseNoError:
+eseError:
         rts
 
 
@@ -166,8 +166,8 @@ _eapiWriteFlash:
         jsr EAPIWriteFlash
         lda #0
         tax
-        bcc ewfNoError
+        bcs ewfError
         lda #1
-ewfNoError:
+ewfError:
         rts
 
