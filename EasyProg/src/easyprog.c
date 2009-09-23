@@ -42,6 +42,7 @@
 #include "torturetest.h"
 #include "filedlg.h"
 #include "sprites.h"
+#include "util.h"
 
 /******************************************************************************/
 static void systemReset(void);
@@ -86,8 +87,13 @@ ScreenMenuEntry aMainMenuEntries[] =
             ifHaveValidFlash
         },
         {
-            "Quit",
-            systemReset,
+            "Start cartridge",
+            utilResetStartCartridge,
+            returnTrue
+        },
+        {
+            "Reset, cartridge off",
+            utilResetKillCartridge,
             returnTrue
         },
         { NULL, NULL, 0 }
