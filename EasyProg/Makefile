@@ -21,13 +21,13 @@ obj += obj/torturetestasm.o
 obj += obj/startupbin.o
 obj += obj/filedlg.o
 obj += obj/spritesasm.o
+obj += obj/util.o
 
 bin_acme :=
 bin_acme += obj/startup.bin
 bin_acme += obj/sprites.bin
 
 INCLUDE := include
-#DEFINE  := -D EASYFLASH_FAKE
 
 .PHONY: all
 all: easyprog.prg
@@ -61,7 +61,7 @@ obj:
 	mkdir -p $@
 
 easyprog: $(obj) src/ld.cfg
-	ld65 -o $@ -m $@.map -C src/ld.cfg $(obj) --lib c64.lib
+	ld65 -o $@ -m $@.map -C src/ld.cfg $(obj) -L /usr/local/lib/cc65/lib --lib c64.lib
 
 easyprog.prg: easyprog
 	exomizer sfx 0x080d -o $@ -q $^

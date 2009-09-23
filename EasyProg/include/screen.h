@@ -19,7 +19,6 @@
  */
 typedef struct ScreenMenuEntry_s
 {
-    uint8_t nId;
     const char* pStrLabel;
     void (*pFunction)(void);
     uint8_t (*pCheckFunction)(void);
