@@ -71,70 +71,61 @@ static char strStatus[41];
 ScreenMenuEntry aMainMenuEntries[] =
 {
         {
-            EASYPROG_MENU_ENTRY_WRITE_CRT,
             "Write CRT to flash",
             checkWriteCRTImage,
             ifHaveValidFlash
         },
         {
-            EASYPROG_MENU_ENTRY_CHECK_TYPE,
             "Check flash type",
             (void (*)(void)) checkFlashType,
             returnTrue
         },
         {
-            EASYPROG_MENU_ENTRY_ERASE_ALL,
             "Erase all",
             checkEraseAll,
             ifHaveValidFlash
         },
         {
-            EASYPROG_MENU_ENTRY_QUIT,
             "Quit",
             systemReset,
             returnTrue
         },
-        { 0, NULL, NULL, 0 }
+        { NULL, NULL, 0 }
 };
 
 ScreenMenuEntry aExpertMenuEntries[] =
 {
         {
-            EASYPROG_MENU_ENTRY_WRITE_LOW,
             "Write BIN to LOROM",
             checkWriteLOROMImage,
             ifHaveValidFlash
         },
         {
-            EASYPROG_MENU_ENTRY_WRITE_HIGH,
             "Write BIN to HIROM",
             checkWriteHIROMImage,
             ifHaveValidFlash
         },
         {
-            EASYPROG_MENU_ENTRY_TORTURE_TEST,
             "Torture test",
             tortureTest,
             ifHaveValidFlash
         },
         {
-            EASYPROG_MENU_ENTRY_HEX_VIEWER,
             "Hex viewer",
             hexViewer,
             ifHaveValidFlash
         },
-        { 0, NULL, NULL, 0 }
+        { NULL, NULL, 0 }
 };
 
 ScreenMenuEntry aHelpMenuEntries[] =
 {
         {
-            EASYPROG_MENU_ENTRY_ABOUT,
             "About",
             showAbout,
             returnTrue
         },
-        { 0, NULL, NULL, 0 }
+        { NULL, NULL, 0 }
 };
 
 

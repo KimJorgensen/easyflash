@@ -26,22 +26,6 @@
 
 #include <stdint.h>
 
-/// These are the menu entry IDs, they are also index into apStrMenuEntries
-typedef enum EasyFlashMenuId_e
-{
-    // 0 is invalid
-    EASYPROG_MENU_ENTRY_WRITE_CRT = 1,
-    EASYPROG_MENU_ENTRY_WRITE_LOW,
-    EASYPROG_MENU_ENTRY_WRITE_HIGH,
-    EASYPROG_MENU_ENTRY_CHECK_TYPE,
-    EASYPROG_MENU_ENTRY_ERASE_ALL,
-    EASYPROG_MENU_ENTRY_HEX_VIEWER,
-    EASYPROG_MENU_ENTRY_TORTURE_TEST,
-    EASYPROG_MENU_ENTRY_QUIT,
-    EASYPROG_MENU_ENTRY_ABOUT
-}
-EasyFlashMenuId;
-
 // If this flag is set in a menu entry, it needs a known flash type
 #define EASYPROG_MENU_FLAG_NEEDS_FLASH 1
 
