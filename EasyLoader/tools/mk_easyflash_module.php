@@ -388,7 +388,7 @@ foreach($CHIPS[0] AS $i => $dummy){
 	echo pack('n', $i);
 	echo pack('n', 0x8000);
 	echo pack('n', 8*1024);
-	echo str_pad(substr($CHIPS[0][$i], 0, 8*1024), 8*1024);
+	echo str_pad(substr($CHIPS[0][$i], 0, 8*1024), 8*1024, chr(0xff));
 }
 ksort($CHIPS[1]);
 foreach($CHIPS[1] AS $i => $dummy){
@@ -398,7 +398,7 @@ foreach($CHIPS[1] AS $i => $dummy){
 	echo pack('n', $i);
 	echo pack('n', 0xa000);
 	echo pack('n', 8*1024);
-	echo str_pad(substr($CHIPS[1][$i], 0, 8*1024), 8*1024);
+	echo str_pad(substr($CHIPS[1][$i], 0, 8*1024), 8*1024, chr(0xff));
 }
 
 file_put_contents('php://stderr', (64-$bank)." blocks free\n");
