@@ -1,19 +1,7 @@
 .print ">input.asm"
 
 F_GETIN:{
-	:mov #$bf ; $dc00
-!loop:
-	lda $dc01
-	cmp $dc01
-	bne !loop-
-	and #$10
-	beq is_shift
-	:mov #$fd ; $dc00
-!loop:
-	lda $dc01
-	cmp $dc01
-	bne !loop-
-	and #$80
+	jsr get_shift
 	beq is_shift
 
 	// no shift
@@ -60,6 +48,17 @@ no_char:
 
 a_char:
 	sta ZP_BUFFER
+		// check weather shift is still the same
+		jsr get_shift
+		beq !skip1+
+		lda #<tab1 // no shift
+		bne !skip2+
+	!skip1:
+		lda #<tab2 // shift
+	!skip2:
+		cmp ZP_INPUT_KEYTABLE
+		bne F_GETIN // if shift state is different: just restart
+	
 	lda (ZP_INPUT_KEYTABLE), y
 	beq doch_nicht_a_char_l
 	rts
@@ -67,6 +66,23 @@ a_char:
 doch_nicht_a_char_l:
 	lda ZP_BUFFER
 	bne doch_nicht_a_char
+
+get_shift:
+	:mov #$bf ; $dc00
+!loop:
+	lda $dc01
+	cmp $dc01
+	bne !loop-
+	and #$10
+	beq !is_shift+
+	:mov #$fd ; $dc00
+!loop:
+	lda $dc01
+	cmp $dc01
+	bne !loop-
+	and #$80
+!is_shift:
+	rts
 }
 
 /*
