@@ -10,7 +10,7 @@ obj += obj/eapiglue.o
 obj += obj/eapiglueasm.o
 obj += obj/flash.o
 obj += obj/cart.o
-obj += obj/screen.o
+obj += obj/screen.opt.o
 obj += obj/easyprog.o
 obj += obj/texts.o
 obj += obj/hex.o
@@ -44,6 +44,12 @@ obj/%.s: src/%.c obj $(headers)
 ###############################################################################
 obj/%.o: obj/%.s obj
 	ca65 -t c64 -o $@ $<
+
+###############################################################################
+obj/%.opt.s: obj/%.s obj
+	#glopt65 -o $@ $<
+	cp $< $@
+	#echo bla
 
 ###############################################################################
 # the binaries created with acme are included in ca65 source code
