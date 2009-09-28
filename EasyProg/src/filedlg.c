@@ -50,7 +50,7 @@
 // A table with strings for all directory entry types
 static const char* apStrEntryType[] =
 {
-    "DEL", "SEQ", "PRG", "USR", "REL", "-5-", "DIR", "-7-", "VRP"
+    "DEL", "SEQ", "PRG", "USR", "REL", "CBM", "DIR", "-7-", "VRP"
 };
 
 // change directory up one level
@@ -114,7 +114,8 @@ static void fileDlgReadDir(void)
     {
         // only accept supported file types
         if ((pEntry->type == CBM_T_DIR) ||
-            (pEntry->type == CBM_T_PRG))
+            (pEntry->type == CBM_T_PRG) ||
+            (pEntry->type == CBM_T_USR))
         {
             ++pEntry;
             ++nDirEntries;
