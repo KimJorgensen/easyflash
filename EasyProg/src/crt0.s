@@ -5,7 +5,6 @@
 ; This must be the *first* file on the linker command line
 ;
 
-    .export        _exit
     .import        initlib, donelib, callirq
     .import        zerobss
     .import        callmain
@@ -82,39 +81,8 @@ NoIRQ1:
         ; Call module constructors
         jsr initlib
 
-        ; Push arguments and call main
-        jsr callmain
-
-_exit:
-        ; Back from main (This is also the _exit entry). Run module destructors
-        jsr donelib
-
-        ; Reset the IRQ vector if we chained it.
-        lda #<__INTERRUPTOR_COUNT__
-        beq NoIRQ2
-        lda IRQInd+1
-        ldx IRQInd+2
-        sei
-        sta IRQVec
-        stx IRQVec+1
-        cli
-
-        ; Copy back the zero page stuff
-NoIRQ2:
-        ldx #zpspace-1
-L2:
-        lda zpsave,x
-        sta sp,x
-        dex
-        bpl L2
-
-; Restore system stuff
-
-        ldx spsave
-        txs             ; Restore stack pointer
-
-; Reset changed vectors, back to basic
-        jmp RESTOR
+        ; Call main - will never return
+        jmp callmain
 
 ; ------------------------------------------------------------------------
 ; The IRQ vector jumps here, if condes routines are defined with type 2.
