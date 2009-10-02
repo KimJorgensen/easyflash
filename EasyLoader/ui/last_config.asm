@@ -4,6 +4,22 @@
 
 F_LAST_CONFIG_READ:{
 
+	// scan stack-area for $00 or $ff -> less than 5 others do a fresh_start
+	ldx #$00
+	ldy #-5
+!loop:
+	lda $100, x
+	beq !skip+
+	cmp #$ff
+	beq !skip+
+	iny
+	beq next_step
+!skip:
+	inx
+	bne !loop-
+	beq fresh_start
+
+next_step:
 	:mov P_LAST_CONFIG_ADDRESS+0 ; P_DRAW_START
 	:mov P_LAST_CONFIG_ADDRESS+1 ; P_DRAW_OFFSET
 

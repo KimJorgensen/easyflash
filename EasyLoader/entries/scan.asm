@@ -7,14 +7,14 @@ F_SCAN_DIR:{
 	.if(EASYLOADER_BANK != EASYFILESYSTEM_BANK){
 		.eval FILESYSTEM_START_ADDR = $6800
 
-		// copy read-addr routine to $0200
+		// copy read-addr routine to $df00
 		:copy_to_df00 COPY_FILESYSTEM_START ; COPY_FILESYSTEM_END - COPY_FILESYSTEM_START
 
 		// copy the directory
 		jsr F_COPY_FILESYSTEM
 	}
 
-	// copy read-addr routine to $0200
+	// copy read-addr routine to $df00
 	:copy_to_df00 READ_LOADADDR_START ; READ_LOADADDR_END - READ_LOADADDR_START
 
 	:mov16 #[FILESYSTEM_START_ADDR - V_EFS_SIZE] ; ZP_EFS_ENTRY
@@ -78,10 +78,11 @@ file:
 
 	// check for a valid file
 	:if P_DIR_BUFFER + O_DIR_SIZE+2 ; NE ; #$00 ; not_loadable // size >64k
-	:if16 P_DIR_BUFFER + O_DIR_LOADADDR ; LT ; #$0200 ; not_loadable // loadaddr < $200
+	:if16 P_DIR_BUFFER + O_DIR_LOADADDR+1 ; LT ; #$01 ; not_loadable // loadaddr < $0100
 	:sub16 P_DIR_BUFFER + O_DIR_LOADADDR ; #2 ; ZP_SCAN_SIZETEXT
 	:add16 ZP_SCAN_SIZETEXT ; P_DIR_BUFFER + O_DIR_SIZE
-	bcs not_loadable // laodaddr+size(minus 2 for laodaddr) > $ffff
+	bcs not_loadable // laodaddr+size(minus 2 for laodaddr) > $ffff (future limit)
+	:if ZP_SCAN_SIZETEXT+1 ; GE ; #$d0 ; not_loadable // >= $d000 (current limit)
 
 	ldx #$7d
 	jmp copyit

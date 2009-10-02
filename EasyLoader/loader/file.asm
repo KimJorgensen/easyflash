@@ -118,8 +118,6 @@ FILE_COPIER:
 	cpy #[loading_2_end - loading_2]
 	bne !loop-
 
-
-
 	.const ZP_BANK = $ba
 	.const ZP_SIZE = $07 // $08 - Temporary Integer during OR/AND
 	.const ZP_SRC = $b7 // $b8
@@ -337,6 +335,9 @@ loading_2_end:
 
 		// disable cart
 		:mov #MODE_RAM ; IO_MODE
+		
+		// write $08 in $ba (last used drive)
+		:mov #$08 ; $ba
 		
 		// restore A,X,Y
 		pla
