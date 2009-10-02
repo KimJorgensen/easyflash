@@ -40,18 +40,20 @@ $more_files = array();
 $more_m2i = array();
 $mod256k = array();
 $more_mmc16 = array();
+$is_hidden = array();
 
 foreach(split("[\r\n]+", file_get_contents($argv[2])) AS $ln){
 	if(trim($ln) == '' || substr(trim($ln), 0, 1) == '#'){
 		// empty line or comment -> skip line
 		continue;
 	}
-	if(!preg_match('!^(.*):(.*?)(=(.*))?$!', $ln, $match)){
+	if(!preg_match('!^(\.)?(.*):(.*?)(=(.*))?$!', $ln, $match)){
 		fail('bad package syntax: '.$ln);
 	}
-	$mode = $match[1];
-	$file = $match[2];
-	$name = isset($match[4]) ? $match[4] : '';
+	$hidden = isset($match[1]) && $match[1] == '.';
+	$mode = $match[2];
+	$file = $match[3];
+	$name = isset($match[5]) ? $match[5] : '';
 
 	if($mode == 'cfg'){
 		$config[$file] = trim($name);
@@ -68,6 +70,7 @@ foreach(split("[\r\n]+", file_get_contents($argv[2])) AS $ln){
 			// file is relative -> prepend base path
 			$file = $BASE_PATH.$file;
 		}
+		$is_hidden[$file] = $hidden ? 0x80 : 0x00;
 		switch($mode){
 		case 'p':
 		case 'prg':
@@ -136,7 +139,11 @@ echo pack('C', 0);
 echo pack('c*', 0, 0, 0, 0, 0, 0);
 echo substr(str_pad('ALeX\'s <DOT>CRT Loader', 32, chr(0)), 0, 32);
 
-$o_banks = ceil((filesize($mod256k[1])-64) / (0x2000 + 16));
+if($MODE[3] && count($mod256k) == 0){
+	fail("ocean mode requires an ocean crt\n");
+}
+
+$o_banks = $MODE[3] ? ceil((filesize($mod256k[1])-64) / (0x2000 + 16)) : 0;
 $bank = $MODE[3] ? $o_banks : 1;
 
 $DIR = array();
@@ -152,8 +159,9 @@ foreach($more_crt8 AS $file => $name){
 	$DIR[] = array(
 		$name,
 		$bank,
-		0x10,
+		0x10 | $is_hidden[$file],
 		8*1024,
+		0,
 	);
 	
 	$bank++;
@@ -167,8 +175,9 @@ foreach($more_crt8u AS $file => $name){
 	$DIR[] = array(
 		$name,
 		$bank,
-		0x13,
+		0x13 | $is_hidden[$file],
 		8*1024,
+		0,
 	);
 	
 	$bank++;
@@ -181,8 +190,9 @@ foreach($more_crt16 AS $file => $name){
 	$DIR[] = array(
 		$name,
 		$bank,
-		0x11,
+		0x11 | $is_hidden[$file],
 		16*1024,
+		0,
 	);
 
 	$bank++;
@@ -199,8 +209,9 @@ foreach($more_mmc16 AS $file => $name){
 	$DIR[] = array(
 		$name,
 		$bank,
-		0x11,
+		0x11 | $is_hidden[$file],
 		$mmc_banks * 0x4000,
+		0,
 	);
 
 	$bank+=$mmc_banks;
@@ -213,8 +224,9 @@ foreach($more_crt16u AS $file => $name){
 	$DIR[] = array(
 		$name,
 		$bank,
-		0x12,
+		0x12 | $is_hidden[$file],
 		16*1024,
+		0,
 	);
 
 	$bank++;
@@ -233,7 +245,7 @@ foreach($more_files AS $file => $name){
 	$DIR[] = array(
 		$name,
 		$start >> 14,
-		0x01,
+		0x01 | $is_hidden[$file],
 		strlen($d),
 		$start & 0x3fff,
 	);
@@ -321,7 +333,7 @@ closedir($dh);
 	$DIR[] = array(
 		basename($file),
 		$m2i_dir_address >> 14,
-		0x02,
+		0x02 | $is_hidden[$file],
 		strlen($m2i_dir),
 		$m2i_dir_address & 0x3fff,
 	);
@@ -342,8 +354,9 @@ if($MODE[3]){
 	$DIR[] = array(
 		$mod256k[0],
 		0,
-		0x11,
+		0x11 | $is_hidden[$file],
 		$o_banks*0x2000,
+		0,
 	);
 	$f = fopen($mod256k[1], 'r');
 	fread($f, 64); // skip crt header
