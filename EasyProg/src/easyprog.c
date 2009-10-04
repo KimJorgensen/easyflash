@@ -61,6 +61,15 @@ uint8_t nDeviceId;
 // File name of last CRT image
 char strFileName[FILENAME_MAX];
 
+// Driver name
+char strDriverName[18 + 1] = "Internal Fallback";
+
+// EAPI signature
+static const unsigned char pStrEAPISignature[] =
+{
+        0x65, 0x61, 0x70, 0x69 /* "EAPI" */
+};
+
 /******************************************************************************/
 /* Static variables */
 
@@ -189,18 +198,27 @@ void refreshMainScreen(void)
     gotox(17);
     cputs(aStrInternalCartTypeName[internalCartType]);
 
-
     textcolor(COLOR_LIGHTFRAME);
     screenPrintBox(16, 10, 23, 3);
     textcolor(COLOR_FOREGROUND);
 
     id = (nManufacturerId << 8) | nDeviceId;
 
-    gotoxy(2, 11);
+    gotoxy(7, 11);
     cputs("Flash ID:");
     gotox(17);
     cprintf("%04X (%s)", id,
         id == FLASH_TYPE_AMD_AM29F040 ? "Am29F040" : "unknown");
+
+    textcolor(COLOR_LIGHTFRAME);
+    screenPrintBox(16, 13, 23, 3);
+    textcolor(COLOR_FOREGROUND);
+
+    gotoxy(3, 14);
+    cputs("Flash Driver:");
+    gotox(17);
+    cputs(strDriverName);
+
     progressShow();
 
     refreshStatusLine();
@@ -330,40 +348,53 @@ static void __fastcall__ execMenu(uint8_t x, uint8_t y,
  */
 static void loadEAPI(void)
 {
-    uint8_t nDrive;
     uint8_t rv;
+    uint8_t useInternal;
     int nBytes;
 
-    nDrive = *(uint8_t*)0xba;
-    if (!nDrive)
-        nDrive = 8;
+    useInternal = 1;
 
     setStatus("Loading EasyAPI driver...");
     spritesOff();
-    rv = cbm_open(2, nDrive, CBM_READ, "eapi-????????-??");
+    rv = cbm_open(2, fileDlgGetDriveNumber(), CBM_READ, "eapi-????????-??");
     if (rv)
     {
         spritesOn();
         screenPrintSimpleDialog(apStrEAPINotFound);
-        return;
     }
-
-    // skip start address
-    nBytes = cbm_read(2, EAPI_LOAD_TO, 2);
-    if (nBytes > 0)
+    else
     {
-        // load up to 1024 bytes to $c000
-        nBytes = cbm_read(2, EAPI_LOAD_TO, 1024);
-    }
-    cbm_close(2);
-    spritesOn();
+        // skip start address
+        nBytes = cbm_read(2, EAPI_LOAD_TO, 2);
+        if (nBytes > 0)
+        {
+            // load up to 1024 bytes to $c000
+            nBytes = cbm_read(2, EAPI_LOAD_TO, 1024);
+        }
+        cbm_close(2);
+        spritesOn();
 
-    if (nBytes <= 0)
+        if (nBytes <= 0)
+        {
+            screenPrintSimpleDialog(apStrEAPINotFound);
+        }
+        else if (memcmp(EAPI_LOAD_TO, pStrEAPISignature, 4))
+        {
+            screenPrintSimpleDialog(apStrEAPIInvalid);
+        }
+        else
+        {
+            // correctly loaded
+            strcpy(strDriverName, EAPI_LOAD_TO + 4);
+            useInternal = 0;
+        }
+    }
+
+    if (useInternal)
     {
-        screenPrintSimpleDialog(apStrEAPINotFound);
-        return;
+        memcpy(EAPI_LOAD_TO, pFallbackDriverStart,
+               pFallbackDriverEnd - pFallbackDriverStart);
     }
-
     EAPI_ZP_REAL_CODE_BASE = EAPI_LOAD_TO;
 }
 
@@ -375,6 +406,7 @@ static void loadEAPI(void)
 int main(void)
 {
     char key;
+    uint8_t nDrive;
 
     screenInit();
     progressInit();
@@ -384,8 +416,14 @@ int main(void)
     internalCartType = INTERNAL_CART_TYPE_NONE;
 
     refreshMainScreen();
-    fileDlgSetDriveNumber(8);
+
+    nDrive = *(uint8_t*)0xba;
+    if (nDrive < 8)
+        nDrive = 8;
+    fileDlgSetDriveNumber(nDrive);
+
     loadEAPI();
+    screenBing();
 
     // this also makes visible 16kByte of flash memory
     checkFlashType();

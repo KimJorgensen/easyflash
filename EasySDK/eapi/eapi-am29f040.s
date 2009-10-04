@@ -66,8 +66,10 @@ EAPI_JUMP_TABLE         = $dfe0
         !byte $00, $c0
 EAPICodeBase:
 
-        ; “EAPI”
-        !byte $65, $61, $70, $69
+        !byte $65, $61, $70, $69        ; signature "EAPI"
+
+        !pet "Am29F040 V0.2"
+        !byte 0, 0, 0                   ; 16 bytes, must be 0-terminated
 
 ; =============================================================================
 ;
@@ -443,6 +445,12 @@ secommon:
         ldy EAPI_TMP_VAL3
         lda #$30
         jsr ultimaxWrite
+
+        ; wait > 50 us before checking progress (=> datasheet)
+        ldx #10
+sewait:
+        dex
+        bne sewait
 
         ; (Y is unchanged after ldy)
         cli
