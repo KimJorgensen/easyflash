@@ -18,7 +18,7 @@ const char* apStrLowHigh[] =
 
 const char* apStrAbout[] =
 {
-        "EasyProg Version 1.2",
+        "EasyProg Version 1.2++",
         "",
         "(C) 2009 Thomas 'skoe' Giesel",
         NULL
@@ -123,10 +123,16 @@ const char* apStrWriteComplete[] =
 
 const char* apStrEAPINotFound[] =
 {
-        "Failed to load EasyAPI driver.",
-        "It must be named like",
-        "\"eapi-????????-??\". Put it",
-        "into the current directory.",
+        "Failed to load EasyAPI driver",
+        "(\"eapi-????????-??\").",
+        "Using internal flash driver.",
+        NULL
+};
+
+const char* apStrEAPIInvalid[] =
+{
+        "The EasyAPI driver on",
+        "disk is invalid.",
         NULL
 };
 

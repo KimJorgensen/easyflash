@@ -25,6 +25,7 @@ extern const char* apStrHeaderReadError[];
 extern const char* apStrChipReadError[];
 extern const char* apStrWriteComplete[];
 extern const char* apStrEAPINotFound[];
+extern const char* apStrEAPIInvalid[];
 
 extern const char* pStrTestFailed;
 

@@ -1,5 +1,5 @@
 
-EAPI := eapi-am29f040-01
+EAPI := eapi-am29f040-02
 
 .PHONY: all
 all: test.prg $(EAPI)
