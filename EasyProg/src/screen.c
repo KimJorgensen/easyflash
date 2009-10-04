@@ -22,6 +22,7 @@
  * Thomas Giesel skoe@directbox.com
  */
 
+#include <c64.h>
 #include <stdint.h>
 #include <conio.h>
 #include <string.h>
@@ -68,6 +69,30 @@ void __fastcall__ screenPrintHex4(uint16_t n)
     tmp = n >> 8;
     screenPrintHex2(tmp);
     screenPrintHex2((uint8_t) n);
+}
+
+/******************************************************************************/
+/**
+ */
+void screenBing(void)
+{
+    unsigned f;
+
+    SID.amp = 0x0f;
+
+    // switch of prev. tone, init some values
+    memset(&(SID.v1), 0, 3 * sizeof(SID.v1));
+
+    SID.v1.ad =
+    SID.v2.ad = 0x08;
+
+    SID.v2.freq = 0x3900;
+
+    SID.v1.ctrl =
+    SID.v2.ctrl = 0x11;
+
+    for (f = 0x3800; f != 0x4400; ++f)
+        SID.v1.freq = f;
 }
 
 /******************************************************************************/
@@ -384,6 +409,8 @@ uint8_t __fastcall__ screenPrintDialog(const char* apStrLines[], uint8_t flags)
     uint8_t nLines;
     uint8_t nLongestLength = 1;
     uint8_t xStart, xEnd, yStart, yEnd;
+
+    screenBing();
 
     for (y = 0; apStrLines[y]; ++y)
     {
