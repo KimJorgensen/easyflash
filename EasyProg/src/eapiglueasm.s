@@ -7,7 +7,7 @@
 
 ; Entry points for EasyFlash driver (EAPI)
 EAPIBase            = $c000         ; <= Use any address here
-EAPIInit            = EAPIBase + 4
+EAPIInit            = EAPIBase + 20
 EAPIWriteFlash      = $dfe0 + 0
 EAPIEraseSector     = $dfe0 + 3
 EAPISetBank         = $dfe0 + 6
@@ -74,7 +74,7 @@ eiOK:
 ; =============================================================================
 .export _eapiGetBank
 _eapiGetBank:
-        jmp EAPIGetBank ; XY registers are 16 bit bank
+        jsr EAPIGetBank ; XY registers are 16 bit bank
         txa
         pha
         tya
