@@ -63,21 +63,6 @@ L1:     lda sp,x
         lda #>(__HIRAM_START__ + __HIRAM_SIZE__)
         sta sp+1
 
-; If we have IRQ functions, chain our stub into the IRQ vector
-        lda #<__INTERRUPTOR_COUNT__
-        beq NoIRQ1
-        lda IRQVec
-        ldx IRQVec+1
-        sta IRQInd+1
-        stx IRQInd+2
-        lda #<IRQStub
-        ldx #>IRQStub
-        sei
-        sta IRQVec
-        stx IRQVec+1
-        cli
-
-NoIRQ1:
         ; Call module constructors
         jsr initlib
 
