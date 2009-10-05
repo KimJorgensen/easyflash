@@ -50,7 +50,7 @@
 // A table with strings for all directory entry types
 static const char* apStrEntryType[] =
 {
-    "DEL", "SEQ", "PRG", "USR", "REL", "CBM", "DIR", "-7-", "VRP"
+    "DEL", "SEQ", "PRG", "USR", "REL", "CBM", "DIR", "-7-", "VRP", "-?-"
 };
 
 // change directory up one level
@@ -108,14 +108,15 @@ static void fileDlgReadDir(void)
         return;
     }
 
-    // read entries, but leave one slot free for "<-", see below
+    // read entries, but leave two slots free for "<-/..", see below
     while ((!cbm_readdir(FILEDLG_LFN, pEntry)) && (nDirEntries
-            < FILEDLG_ENTRIES - 1))
+            < FILEDLG_ENTRIES - 2))
     {
         // only accept supported file types
-        if ((pEntry->type == CBM_T_DIR) ||
-            (pEntry->type == CBM_T_PRG) ||
-            (pEntry->type == CBM_T_USR))
+        if ((pEntry->type != CBM_T_HEADER) &&
+            strcmp(pEntry->name, "..") &&
+            strcmp(pEntry->name, ".") &&
+            strcmp(pEntry->name, strUp))
         {
             ++pEntry;
             ++nDirEntries;
@@ -131,7 +132,12 @@ static void fileDlgReadDir(void)
     pEntry->size = 0;
     pEntry->type = CBM_T_DIR;
     ++pEntry;
-    ++nDirEntries;
+    // and ".."
+    strcpy(pEntry->name, "..");
+    pEntry->size = 0;
+    pEntry->type = CBM_T_DIR;
+    ++pEntry;
+    nDirEntries += 2;
 
     qsort(aDirEntries, nDirEntries, sizeof(aDirEntries[0]),
           fileDlgCompareEntries);
@@ -179,28 +185,18 @@ static void __fastcall__ fileDlgPrintEntry(uint8_t nLine, uint8_t nEntry)
  *
  * return 1 for success, 0 for failure.
  */
-uint8_t __fastcall__ fileDlgChangeDir(const char* pStrDir)
+void __fastcall__ fileDlgChangeDir(const char* pStrDir)
 {
-    uint8_t rv;
+    unsigned char rv;
     char strCmd[3 + FILENAME_MAX];
 
     strcpy(strCmd, "cd:");
     strcpy(strCmd + 3, pStrDir);
 
     spritesOff();
-
-    rv = cbm_open (15, nDriveNumber, 15, strCmd);
+    cbm_open(15, nDriveNumber, 15, strCmd);
     cbm_close(15);
-
     spritesOn();
-
-    if (rv == 0)
-    {
-        return 1;
-    }
-
-    // error
-    return 0;
 }
 
 
@@ -326,8 +322,8 @@ uint8_t __fastcall__ fileDlg(char* pStrName, const char* pStrType)
             switch (pEntry->type)
             {
             case CBM_T_DIR:
-                if (fileDlgChangeDir(pEntry->name))
-                    bReload = 1;
+                fileDlgChangeDir(pEntry->name);
+                bReload = 1;
                 break;
 
             case CBM_T_PRG:
