@@ -1,5 +1,7 @@
 
 
+VERSION := 1.2.90
+
 # do not remove intermediate targets
 .SECONDARY:
 
@@ -27,6 +29,8 @@ bin_acme += obj/startup.bin
 bin_acme += obj/sprites.bin
 
 INCLUDE := include
+
+DEFINE  := -DEFVERSION=\"${VERSION}\"
 
 .PHONY: all
 all: easyprog.prg
