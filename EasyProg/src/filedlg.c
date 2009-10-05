@@ -83,6 +83,13 @@ static int fileDlgCompareEntries(const void* a, const void* b)
     if (((struct cbm_dirent*)b)->name[0] == 95)
         return 1;
 
+    if (((struct cbm_dirent*)a)->type == CBM_T_DIR &&
+        ((struct cbm_dirent*)b)->type != CBM_T_DIR)
+        return -1;
+    if (((struct cbm_dirent*)b)->type == CBM_T_DIR &&
+        ((struct cbm_dirent*)a)->type != CBM_T_DIR)
+        return 1;
+
     return strcmp(((struct cbm_dirent*)a)->name,
                   ((struct cbm_dirent*)b)->name);
 }
@@ -100,7 +107,6 @@ static void fileDlgReadDir(void)
     pEntry = aDirEntries;
 
     spritesOff();
-
     if (cbm_opendir(FILEDLG_LFN, nDriveNumber))
     {
         cbm_closedir(FILEDLG_LFN);
