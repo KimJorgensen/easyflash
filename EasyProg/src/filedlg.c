@@ -32,8 +32,9 @@
 
 #include "buffer.h"
 #include "screen.h"
+#include "dir.h"
 
-#define FILEDLG_ENTRIES (BUFFER_ALLOC_SIZE / sizeof(struct cbm_dirent))
+#define FILEDLG_ENTRIES (BUFFER_ALLOC_SIZE / sizeof(DirEntry))
 #define FILEDLG_LFN     72
 
 #define FILEDLG_X 5
@@ -47,12 +48,6 @@
 
 /******************************************************************************/
 
-// A table with strings for all directory entry types
-static const char* apStrEntryType[] =
-{
-    "DEL", "SEQ", "PRG", "USR", "REL", "CBM", "DIR", "-7-", "VRP", "-?-"
-};
-
 // change directory up one level
 static const char strUp[] = { 95, 0 }; // arrow left
 
@@ -64,7 +59,7 @@ static uint8_t nDriveNumber;
 /** Local data: Put here to reduce code size */
 
 // buffer for directory entries
-static struct cbm_dirent* aDirEntries;
+static DirEntry* aDirEntries;
 
 // number of directory entries in the buffer
 static uint8_t nDirEntries;
@@ -73,25 +68,32 @@ static uint8_t nSelection;
 
 /******************************************************************************/
 /**
+ * Return != 0 if the entry is a directory.
+ */
+static uint8_t __fastcall__ fileDlgEntryIsDir(DirEntry* pEntry)
+{
+    return !strcmp(pEntry->type, "dir");
+}
+
+/******************************************************************************/
+/**
  * Compare function for qsort
  */
 static int fileDlgCompareEntries(const void* a, const void* b)
 {
     // arrow left must be the first entry
-    if (((struct cbm_dirent*)a)->name[0] == 95)
+    if (((DirEntry*)a)->name[0] == 95)
         return -1;
-    if (((struct cbm_dirent*)b)->name[0] == 95)
+    if (((DirEntry*)b)->name[0] == 95)
         return 1;
 
-    if (((struct cbm_dirent*)a)->type == CBM_T_DIR &&
-        ((struct cbm_dirent*)b)->type != CBM_T_DIR)
+    if (fileDlgEntryIsDir((DirEntry*)a) && !fileDlgEntryIsDir((DirEntry*)b))
         return -1;
-    if (((struct cbm_dirent*)b)->type == CBM_T_DIR &&
-        ((struct cbm_dirent*)a)->type != CBM_T_DIR)
+    if (fileDlgEntryIsDir((DirEntry*)b) && !fileDlgEntryIsDir((DirEntry*)a))
         return 1;
 
-    return strcmp(((struct cbm_dirent*)a)->name,
-                  ((struct cbm_dirent*)b)->name);
+    return strcmp(((DirEntry*)a)->name,
+                  ((DirEntry*)b)->name);
 }
 
 /******************************************************************************/
@@ -100,29 +102,29 @@ static int fileDlgCompareEntries(const void* a, const void* b)
  */
 static void fileDlgReadDir(void)
 {
-    struct cbm_dirent* pEntry;
+    DirEntry* pEntry;
     uint8_t c;
 
     nDirEntries = 0;
     pEntry = aDirEntries;
 
     spritesOff();
-    if (cbm_opendir(FILEDLG_LFN, nDriveNumber))
+    if (dirOpen(FILEDLG_LFN, nDriveNumber))
     {
-        cbm_closedir(FILEDLG_LFN);
+        cbm_close(FILEDLG_LFN);
         spritesOn();
         return;
     }
 
     // read entries, but leave two slots free for "<-/..", see below
-    while ((!cbm_readdir(FILEDLG_LFN, pEntry)) && (nDirEntries
+    while ((!dirReadEntry(FILEDLG_LFN, pEntry)) && (nDirEntries
             < FILEDLG_ENTRIES - 2))
     {
         // only accept supported file types
-        if ((pEntry->type != CBM_T_HEADER) &&
-            strcmp(pEntry->name, "..") &&
+        if (strcmp(pEntry->name, "..") &&
             strcmp(pEntry->name, ".") &&
-            strcmp(pEntry->name, strUp))
+            strcmp(pEntry->name, strUp) &&
+            strcmp(pEntry->type, "***"))
         {
             ++pEntry;
             ++nDirEntries;
@@ -132,23 +134,21 @@ static void fileDlgReadDir(void)
         cputcxy(FILEDLG_X + FILEDLG_W - 2, FILEDLG_Y + 1, c);
     }
     cputcxy(FILEDLG_X + FILEDLG_W - 2, FILEDLG_Y + 1, ' ');
-
     // add "<-" (arrow left) for parent directory
     strcpy(pEntry->name, strUp);
     pEntry->size = 0;
-    pEntry->type = CBM_T_DIR;
+    strcpy(pEntry->type, "dir");
     ++pEntry;
     // and ".."
     strcpy(pEntry->name, "..");
     pEntry->size = 0;
-    pEntry->type = CBM_T_DIR;
+    strcpy(pEntry->type, "dir");
     ++pEntry;
     nDirEntries += 2;
-
     qsort(aDirEntries, nDirEntries, sizeof(aDirEntries[0]),
           fileDlgCompareEntries);
 
-    cbm_closedir(FILEDLG_LFN);
+    cbm_close(FILEDLG_LFN);
     spritesOn();
 }
 
@@ -169,7 +169,7 @@ static void __fastcall__ fileDlgHeadline(const char* pStrType)
  */
 static void __fastcall__ fileDlgPrintEntry(uint8_t nLine, uint8_t nEntry)
 {
-    struct cbm_dirent* pEntry;
+    DirEntry* pEntry;
 
     pEntry = aDirEntries + nEntry;
 
@@ -178,8 +178,7 @@ static void __fastcall__ fileDlgPrintEntry(uint8_t nLine, uint8_t nEntry)
     if (nEntry == nSelection)
         revers(1);
 
-    cprintf("%5d %-16s %s", pEntry->size, pEntry->name,
-        apStrEntryType[pEntry->type]);
+    cprintf("%5d %-16s %3s ", pEntry->size, pEntry->name, pEntry->type);
 
     revers(0);
 }
@@ -193,7 +192,6 @@ static void __fastcall__ fileDlgPrintEntry(uint8_t nLine, uint8_t nEntry)
  */
 void __fastcall__ fileDlgChangeDir(const char* pStrDir)
 {
-    unsigned char rv;
     char strCmd[3 + FILENAME_MAX];
 
     strcpy(strCmd, "cd:");
@@ -242,7 +240,7 @@ uint8_t __fastcall__ fileDlg(char* pStrName, const char* pStrType)
     unsigned char bRefresh, bReload;
     char key;
     uint8_t rv;
-    struct cbm_dirent* pEntry;
+    DirEntry* pEntry;
 
     screenPrintBox(FILEDLG_X, FILEDLG_Y, FILEDLG_W, FILEDLG_H);
     screenPrintSepLine(FILEDLG_X, FILEDLG_X + FILEDLG_W - 1, FILEDLG_Y + 2);
@@ -325,14 +323,13 @@ uint8_t __fastcall__ fileDlg(char* pStrName, const char* pStrType)
 
         case CH_ENTER:
             pEntry = aDirEntries + nSelection;
-            switch (pEntry->type)
+            if (fileDlgEntryIsDir(pEntry))
             {
-            case CBM_T_DIR:
                 fileDlgChangeDir(pEntry->name);
                 bReload = 1;
-                break;
-
-            case CBM_T_PRG:
+            }
+            else
+            {
                 strcpy(pStrName, pEntry->name);
                 rv = 1;
                 goto end; // yeah!

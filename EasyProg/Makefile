@@ -23,6 +23,7 @@ obj += obj/startupbin.o
 obj += obj/filedlg.o
 obj += obj/spritesasm.o
 obj += obj/util.o
+obj += obj/dir.o
 
 bin_acme :=
 bin_acme += obj/startup.bin
@@ -74,6 +75,7 @@ easyprog: $(obj) src/ld.cfg
 
 easyprog.prg: easyprog
 	exomizer sfx 0x080d -o $@ -q $^
+	cp $@ easyprog-$(VERSION).prg
 
 .PHONY: clean
 clean:
