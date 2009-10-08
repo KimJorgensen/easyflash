@@ -4,10 +4,18 @@
 #
 
 #
-# configuration (optional)
+# configuration (optional, defaults as listed)
 #
 
-# cfg:strip_extension=1
+# remove the extenseion (last four chars) from every file
+# cfg:strip_extension=0
+
+# show free banks
+# cfg:show_free=1
+
+# show memory map + options
+# cfg:show_memmap=0
+# cfg:memmap_colwidth=40
 
 #
 # file area
