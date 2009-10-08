@@ -30,6 +30,9 @@ $size = strlen($f);
 $BASE_PATH = dirname($argv[2]).'/';
 $config = array(
 	'strip_extension' => 0,
+	'show_free' => 1,
+	'show_memmap' => 0,
+	'memmap_colwidth' => 40,
 );
 
 $more_crt8 = array();
@@ -40,6 +43,7 @@ $more_files = array();
 $more_m2i = array();
 $mod256k = array();
 $more_mmc16 = array();
+$more_mmc8u = array();
 $is_hidden = array();
 
 foreach(split("[\r\n]+", file_get_contents($argv[2])) AS $ln){
@@ -99,12 +103,107 @@ foreach(split("[\r\n]+", file_get_contents($argv[2])) AS $ln){
 		case 'mmc16k':
 			$more_mmc16[$file] = $name;
 			break;
+		case 'mmcm8':
+		case 'mmcm8k':
+			$more_mmc8u[$file] = $name;
+			break;
 //		case 'm2i':
 //			$more_m2i[$name] = $file;
 //			break;
 		}
 	}
 }
+
+/*
+	read all prg's and 8k/m8k crt's
+*/
+
+$dir_crt8 = array();
+$dir_crt8u = array();
+$dir_prg8 = array();
+$dir_prg = array();
+
+foreach($more_crt8 AS $file => $name){
+	$dir_crt8[] = array(
+		'dir' => array(
+			$name,
+			-1,
+			0x10 | $is_hidden[$file],
+			8*1024,
+			0,
+		),
+		'data' => array(substr(file_get_contents($file), -8*1024)),
+	);
+}
+
+foreach($more_crt8u AS $file => $name){
+	$dir_crt8u[] = array(
+		'dir' => array(
+			$name,
+			-1,
+			0x13 | $is_hidden[$file],
+			8*1024,
+			0,
+		),
+		'data' => array(substr(file_get_contents($file), -8*1024)),
+	);
+}
+
+foreach($more_files AS $file => $name){
+	$d = file_get_contents($file);
+	if(substr($d, 0, 8) == 'C64File'.chr(0)){
+		// found a P00 file -> chop header
+		$d = substr($d, 26);
+	}
+	if(strlen($d) <= 8*1024){
+		$dir_prg8[] = array(
+			'dir' => array(
+				$name,
+				-1,
+				0x01 | $is_hidden[$file],
+				strlen($d),
+				0,
+			),
+			'data' => $d,
+		);
+	}else{
+		$dir_prg[] = array(
+			'dir' => array(
+				$name,
+				-1,
+				0x01 | $is_hidden[$file],
+				strlen($d),
+				0,
+			),
+			'data' => $d,
+		);
+	}
+}
+
+foreach($more_mmc8u AS $file => $name){
+	$mmc = file_get_contents($file);
+	$mmc_banks = ceil(strlen($mmc) / 0x2000);
+
+	$data = array();
+	for($i=0; $i<$mmc_banks; $i++){
+		$data[] = substr($mmc, $i*0x2000, 0x2000);
+	}
+	
+	$dir_crt8u[] = array(
+		'dir' => array(
+			$name,
+			-1,
+			0x13 | $is_hidden[$file],
+			$mmc_banks * 0x2000,
+			0
+		),
+		'data' => $data,
+	);
+}
+
+
+usort($dir_prg8, 'sort_dirs_prg');
+
 
 /*
   CartridgeHeader
@@ -146,41 +245,122 @@ if($MODE[3] && count($mod256k) == 0){
 $o_banks = $MODE[3] ? ceil((filesize($mod256k[1])-64) / (0x2000 + 16)) : 0;
 $bank = $MODE[3] ? $o_banks : 1;
 
+// initialize directory structure
 $DIR = array();
 
+// initialize all baks as empty
 $CHIPS = array(0 => array(), 1 => array());
 
+// add EasyLoader (stdin) to a bank
 $CHIPS[$MODE[2] ? 1 : 0][$MODE[0]] = $f;
 
-foreach($more_crt8 AS $file => $name){
-	$CHIPS[0][$bank] = substr(file_get_contents($file), -8*1024);
-//	$CHIPS[1][$bank] = str_repeat(chr(0), 8*1024);
-	
-	$DIR[] = array(
-		$name,
-		$bank,
-		0x10 | $is_hidden[$file],
-		8*1024,
-		0,
-	);
-	
-	$bank++;
+for($b = 2; $b < $o_banks; ){
+	if($b < 16){
+		// ultimax 8k is free
+		$FREE_SORT_BANKS = min($o_banks, 16) - $b;
+		usort($dir_crt8u, 'sort_dirs_crt');
+		if(count($dir_crt8u) > 0 && count($dir_crt8u[0]['data']) <= $FREE_SORT_BANKS){
+			$E = array_shift($dir_crt8u);
+			$E['dir'][1] = $b;
+			$DIR[] = $E['dir'];
+			foreach($E['data'] AS $d){
+				$CHIPS[1][$b++] = $d;
+			}
+		}else if(count($dir_prg8) > 0){
+			$E = array_shift($dir_prg8);
+			$E['dir'][1] = $b;
+			$E['dir'][4] = 0x2000; // upper half of a bank
+			$DIR[] = $E['dir'];
+			$CHIPS[1][$b++] = $E['data'];
+		}else{
+			if($config['show_free']){
+				show('on bank '.$b.' is a ultimax 8k crt free (ocean mode)');
+			}
+			$b++;
+		}
+	}else{
+		// norm 8k is free
+		$FREE_SORT_BANKS = $o_banks - $b;
+		usort($dir_crt8, 'sort_dirs_crt');
+		if(count($dir_crt8) > 0 && count($dir_crt8[0]['data']) <= $FREE_SORT_BANKS){
+			$E = array_shift($dir_crt8);
+			$E['dir'][1] = $b;
+			$DIR[] = $E['dir'];
+			foreach($E['data'] AS $d){
+				$CHIPS[0][$b++] = $d;
+			}
+		}else if(count($dir_prg8) > 0){
+			$E = array_shift($dir_prg8);
+			$E['dir'][1] = $b;
+			$E['dir'][4] = 0x0000; // lower half of a bank
+			$DIR[] = $E['dir'];
+			$CHIPS[0][$b++] = $E['data'];
+		}else{
+			if($config['show_free']){
+				show('on bank '.$b.' is a normal 8k crt free (ocean mode)');
+			}
+			$b++;
+		}
+	}
 }
 
-foreach($more_crt8u AS $file => $name){
-//	$CHIPS[0][$bank] = str_repeat(chr(0xf1), 8*1024);
-	$CHIPS[1][$bank] = substr(file_get_contents($file), -8*1024);
-	
-	
-	$DIR[] = array(
-		$name,
-		$bank,
-		0x13 | $is_hidden[$file],
-		8*1024,
-		0,
-	);
-	
-	$bank++;
+while(count($dir_crt8) > 0 || count($dir_crt8u) > 0){
+	if(count($dir_crt8) > 0 && count($dir_crt8u) > 0){
+		// we have normal and ultimax 8k crt's: just put them together
+		$N = array_shift($dir_crt8);
+		$M = array_shift($dir_crt8u);
+		$N['dir'][1] = $bank;
+		$DIR[] = $N['dir'];
+		$M['dir'][1] = $bank;
+		$DIR[] = $M['dir'];
+		for($b=0; $b<max(count($N['data']), count($M['data'])); $b++){
+			if($b < count($N['data'])){
+				$CHIPS[0][$bank] = $N['data'][$b];
+			}
+			if($b < count($N['data'])){
+				$CHIPS[1][$bank] = $M['data'][$b];
+			}
+			$bank++;
+		}
+	}else if(count($dir_crt8) > 0){
+		// we have normal crt's: try to fill with prgs (<=8k)
+		$M = array_shift($dir_crt8);
+		$P = array_shift($dir_prg8);
+		$M['dir'][1] = $bank;
+		$DIR[] = $M['dir'];
+		if($P != null){
+			$P['dir'][1] = $bank;
+			$P['dir'][4] = 0x2000; // upper half of a bank
+			$DIR[] = $P['dir'];
+			$CHIPS[1][$bank] = $P['data'];
+		}else{
+			if($config['show_free']){
+				show('on bank '.$b.' is a ultimax 8k crt free');
+			}
+		}
+		foreach($M['data'] AS $d){
+			$CHIPS[0][$bank++] = $d;
+		}
+	}else{
+		// we have ultimax crt's: try to fill with prgs (<=8k)
+		$M = array_shift($dir_crt8u);
+		$P = array_shift($dir_prg8);
+		$M['dir'][1] = $bank;
+		$DIR[] = $M['dir'];
+		if($P != null){
+			$P['dir'][1] = $bank;
+			$P['dir'][4] = 0x0000; // lower half of a bank
+			$DIR[] = $P['dir'];
+			$CHIPS[0][$bank] = $P['data'];
+		}else{
+			if($config['show_free']){
+				show('on bank '.$b.' is a ultimax 8k crt free');
+			}
+		}
+		foreach($M['data'] AS $d){
+			$CHIPS[1][$bank++] = $d;
+		}
+	}
 }
 
 foreach($more_crt16 AS $file => $name){
@@ -236,21 +416,12 @@ foreach($more_crt16u AS $file => $name){
 // add some files
 $start = $bank << 14;
 $data = '';
-foreach($more_files AS $file => $name){
-	$d = file_get_contents($file);
-	if(substr($d, 0, 8) == 'C64File'.chr(0)){
-		// found a P00 file -> chop header
-		$d = substr($d, 26);
-	}
-	$DIR[] = array(
-		$name,
-		$start >> 14,
-		0x01 | $is_hidden[$file],
-		strlen($d),
-		$start & 0x3fff,
-	);
-	$data .= $d;
-	$start += strlen($d);
+foreach(array_merge($dir_prg8, $dir_prg) AS $E){
+	$E['dir'][1] = $start >> 14;
+	$E['dir'][4] = $start & 0x3fff;
+	$DIR[] = $E['dir'];
+	$data .= $E['data'];
+	$start += strlen($E['data']);
 }
 
 // find *'s
@@ -328,7 +499,7 @@ closedir($dh);
 	$m2i_dir .= str_repeat(chr(0xff), 24); // end of dir marker
 	$m2i_dir .= $m2i_data; // attach files
 	
-	file_put_contents('php://stderr', sprintf('m2i file %s at bank $%02x addr $%04x', $file, $m2i_dir_address >> 14, 0x8000+($m2i_dir_address & 0x3fff))."\n");
+	show(sprintf('m2i file %s at bank $%02x addr $%04x', $file, $m2i_dir_address >> 14, 0x8000+($m2i_dir_address & 0x3fff)));
 
 	$DIR[] = array(
 		basename($file),
@@ -357,6 +528,7 @@ if($MODE[3]){
 		0x11 | $is_hidden[$file],
 		$o_banks*0x2000,
 		0,
+		true,
 	);
 	$f = fopen($mod256k[1], 'r');
 	fread($f, 64); // skip crt header
@@ -414,8 +586,133 @@ foreach($CHIPS[1] AS $i => $dummy){
 	echo str_pad(substr($CHIPS[1][$i], 0, 8*1024), 8*1024, chr(0xff));
 }
 
-file_put_contents('php://stderr', (64-$bank)." blocks free\n");
+if($config['show_free']){
+	show((64-$bank)." banks free");
+}
 
+if($config['show_memmap']){
+	$DIR[] = array(
+		'EasyFS + Startup',
+		0,
+		0x13 | 0x80,
+		0x2000,
+		0
+	);
+	$DIR[] = array(
+		'EasyLoader',
+		$MODE[2] ? 1 : 0,
+		($MODE[2] ? 0x13 : 0x10) | 0x80,
+		0x2000,
+		0
+	);
+
+	$d = array();
+	foreach($DIR AS $E){
+		switch($E[2] & 0x1f){
+			case 0x10:
+				$crt = true;
+				$bs = 8*1024;
+				$lo = true;
+				$hi = false;
+				break;
+			case 0x11:
+				$crt = true;
+				$bs = 16*1024;
+				$lo = true;
+				$hi = true;
+				break;
+			case 0x12:
+				$crt = true;
+				$bs = 16*1024;
+				$lo = true;
+				$hi = true;
+				break;
+			case 0x13:
+				$crt = true;
+				$bs = 8*1024;
+				$lo = false;
+				$hi = true;
+				break;
+			case 0x01:
+				$crt = false;
+				break;
+			default:
+				fail('unknown dir-type: '.($E[2] & 0x1f));
+		}
+		if($crt){
+			// crt mode
+			$banks = $E[3] / $bs;
+			if(isset($E[5])){
+				// ocean mode
+				for($b=0; $b<$banks*2; $b++){
+					$d[$E[1] + $b][($b < 16) ? 0 : 1][0] = array($E[0].' (Ocean Cart)', 0x2000);
+				}
+			}else{
+				for($b=0; $b<$banks; $b++){
+					if($lo){
+						$d[$E[1] + $b][0][0] = array($E[0].' ('.($banks*$bs/0x400).'k Cart)', 0x2000);
+					}
+					if($hi){
+						$d[$E[1] + $b][1][0] = array($E[0].' ('.($banks*$bs/0x400).'k Cart)', 0x2000);
+					}
+				}
+			}
+		}else{
+			// program mode
+			$start = ($E[1] << 14) | $E[4];
+			$len = $E[3];
+			while($len > 0){
+				$l = min($len, 0x2000 - ($start & 0x1fff));
+				$d[$start >> 14][($start >> 13) & 1][$start & 0x1fff] = array($E[0], $l);
+				$start += $l;
+				$len -= $l;
+			}
+		}
+	}
+	ksort($d);
+	while(count($d) < 64){
+		$d[] = array();
+	}
+	$WIDTH = $config['memmap_colwidth'];
+	$MINW = 1;
+	$report = '';
+	foreach($d AS $ba_nr => $ba_da){
+		$report .= 'Bank '.sprintf('%2d', $ba_nr).' | ';
+		for($lh_id = 0; $lh_id < 2; $lh_id++){
+			$lh_data = isset($ba_da[$lh_id]) ? $ba_da[$lh_id] : array();
+			$size = 0;
+			foreach($lh_data AS $d){
+				$size += $d[1];
+			}
+			if($size != 0x2000){
+				$lh_data[] = array(str_repeat('*', 40), 0x2000 - $size);
+			}
+			$freesize = $WIDTH-2*(count($lh_data) - 1);
+			$freelen = 0x2000;
+			foreach($lh_data AS $k => $d){
+				$s = round($WIDTH * $d[1] / 0x2000);
+				$mw = min($MINW, strlen($d[0])+1);
+				if($s < $mw){
+					$lh_data[$k][2] = $mw;
+					$freesize -= $mw;
+					$freelen -= $d[1];
+				}
+			}
+			foreach($lh_data AS $k => $d){
+				if($k > 0){
+					$report .= ', ';
+				}
+				if(!isset($d[2])){
+					$d[2] = round($freesize * $d[1] / $freelen);
+				}
+				$report .= substr($d[0].str_repeat('_', $WIDTH), 0, $d[2]);
+			}
+			$report .= " | ";
+		}
+		$report .= "\n";
+	}
+	show($report);
+}
 
 function repair_case($t){
 	for($i=0; $i<strlen($t); $i++){
@@ -444,8 +741,12 @@ function ultimax_loader($bank, $hiaddr){
 	}
 }
 
-function fail($text){
+function show($text){
 	file_put_contents('php://stderr', $text."\n");
+}
+
+function fail($text){
+	show($text);
 	exit(1);
 }
 
@@ -475,6 +776,23 @@ function read_m2i($file){
 		$RET[] = $r;
 	}
 	return $RET;
+}
+
+function sort_dirs_crt($a, $b){
+	global $FREE_SORT_BANKS;
+	$la = count($a['data']) <= $FREE_SORT_BANKS;
+	$lb = count($b['data']) <= $FREE_SORT_BANKS;
+	if($la == $lb){
+		return count($b['data']) - count($a['data']);
+	}else if($la){
+		return -1;
+	}else{
+		return 1;
+	}
+}
+
+function sort_dirs_prg($a, $b){
+	return strlen($b['data']) - strlen($a['data']);
 }
 
 ?>
