@@ -30,8 +30,10 @@
 #include <cbm.h>
 #include <sprites.h>
 
+#include "easyprog.h"
 #include "buffer.h"
 #include "screen.h"
+#include "texts.h"
 #include "dir.h"
 
 #define FILEDLG_ENTRIES (BUFFER_ALLOC_SIZE / sizeof(DirEntry))
@@ -44,6 +46,9 @@
 
 #define FILEDLG_Y_ENTRIES (FILEDLG_Y + 3)
 #define FILEDLG_N_ENTRIES (FILEDLG_H - 6)
+
+
+static void fileDlgPrintFrame(void);
 
 
 /******************************************************************************/
@@ -134,6 +139,7 @@ static void fileDlgReadDir(void)
         cputcxy(FILEDLG_X + FILEDLG_W - 2, FILEDLG_Y + 1, c);
     }
     cputcxy(FILEDLG_X + FILEDLG_W - 2, FILEDLG_Y + 1, ' ');
+
     // add "<-" (arrow left) for parent directory
     strcpy(pEntry->name, strUp);
     pEntry->size = 0;
@@ -148,6 +154,13 @@ static void fileDlgReadDir(void)
     qsort(aDirEntries, nDirEntries, sizeof(aDirEntries[0]),
           fileDlgCompareEntries);
 
+    if (nDirEntries == FILEDLG_ENTRIES)
+    {
+        screenPrintSimpleDialog(apStrDirFull);
+        refreshMainScreen();
+        fileDlgPrintFrame();
+    }
+
     cbm_close(FILEDLG_LFN);
     spritesOn();
 }
@@ -161,6 +174,19 @@ static void __fastcall__ fileDlgHeadline(const char* pStrType)
 {
     gotoxy(FILEDLG_X + 1, FILEDLG_Y + 1);
     cprintf("Select %s file - drive %d ", pStrType, nDriveNumber);
+}
+
+
+/******************************************************************************/
+/**
+ * Print/Update the file dialog of the headline
+ */
+static void fileDlgPrintFrame(void)
+{
+    screenPrintBox(FILEDLG_X, FILEDLG_Y, FILEDLG_W, FILEDLG_H);
+    screenPrintSepLine(FILEDLG_X, FILEDLG_X + FILEDLG_W - 1, FILEDLG_Y + 2);
+    screenPrintSepLine(FILEDLG_X, FILEDLG_X + FILEDLG_W - 1, FILEDLG_Y + FILEDLG_H - 3);
+    cputsxy(FILEDLG_X + 2, FILEDLG_Y + FILEDLG_H - 2, "Up/Down/0..9/Stop/Enter");
 }
 
 
@@ -242,10 +268,7 @@ uint8_t __fastcall__ fileDlg(char* pStrName, const char* pStrType)
     uint8_t rv;
     DirEntry* pEntry;
 
-    screenPrintBox(FILEDLG_X, FILEDLG_Y, FILEDLG_W, FILEDLG_H);
-    screenPrintSepLine(FILEDLG_X, FILEDLG_X + FILEDLG_W - 1, FILEDLG_Y + 2);
-    screenPrintSepLine(FILEDLG_X, FILEDLG_X + FILEDLG_W - 1, FILEDLG_Y + FILEDLG_H - 3);
-    cputsxy(FILEDLG_X + 2, FILEDLG_Y + FILEDLG_H - 2, "Up/Down/0..9/Stop/Enter");
+    fileDlgPrintFrame();
 
     aDirEntries = bufferAlloc();
     rv = 0;

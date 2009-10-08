@@ -1,6 +1,6 @@
 
 
-VERSION := 1.2.90
+VERSION := 1.3.0
 
 # do not remove intermediate targets
 .SECONDARY:
