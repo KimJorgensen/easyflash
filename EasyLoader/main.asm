@@ -74,6 +74,14 @@ F_START:
 	// check for /^boot(.crt)?$/
 	jsr F_LAST_CONFIG_READ
 
+	// init SID
+	ldx #$19-1
+	lda #$00
+!loop:
+	sta $d400, x
+	dex
+	bpl !loop-
+
 	// init VIC2
 	ldx #[ini_d000_end-ini_d000]-1
 !loop:
