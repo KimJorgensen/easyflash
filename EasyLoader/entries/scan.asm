@@ -107,11 +107,13 @@ copyit:
 	ldy #O_EFS_TYPE-1
 !loop:
 	lda (ZP_EFS_ENTRY), y
-	:if A ; EQ ; #$00 ; !endif+ // keep $00
-		:if A ; LT ; #$20 ; ENDIF ; !endif+ // $01-$1f => bad
-			:if A ; GT ; #$7a ; ENDIF ; !endif+ // $7b-$ff => bad
-				lda #$60
-	!endif:
+	:if A ; EQ ; #$00 ; !ok+ // keep $00
+	:if A ; LT ; #$20 ; !bad+ // $01-$1f => bad
+	:if A ; EQ ; #$60 ; !bad+ // $60 => bad
+	:if NOT ; A ; GT ; #$7a ; !ok+ // $7b-$ff => bad
+!bad:
+	lda #$2a // *
+!ok:
 	sta P_DIR_BUFFER+O_DIR_UNAME, y
 	cmp #$00
 	bne !skip+
