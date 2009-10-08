@@ -157,3 +157,11 @@ const char* apStrEAPIInvalid[] =
 };
 
 const char* pStrTestFailed = "Test failed";
+
+const char* apStrDirFull[] =
+{
+        "There are too many entries",
+        "in this directory. Some",
+        "may be missing.",
+        NULL
+};

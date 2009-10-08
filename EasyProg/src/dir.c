@@ -30,7 +30,7 @@
 
 uint8_t __fastcall__ dirOpen(uint8_t lfn, uint8_t device)
 {
-    if (!cbm_open(lfn, device, CBM_READ, "$" /*"dir.prg"*/))
+    if (!cbm_open(lfn, device, CBM_READ, "$"))
     {
         if (cbm_k_chkin(lfn) == 0)
         {
