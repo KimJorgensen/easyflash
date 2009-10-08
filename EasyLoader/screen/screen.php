@@ -35,19 +35,19 @@ $t = <<<HERE
 HERE;
 #---------┃---------┃---------┃---------
 $help = <<<HERE
-To navigate
-use key/joy
-up or down 
-or ■F■5/■F■7.
+ To navigate
+ use key/joy
+ up or down 
+ or<■F■5=■F■7>
 
-Scroll page
-left/right
-or ■F■6/■F■8.
+ Scroll page
+ left/right
+ or<■F■6=■F■8>
 
-Start Prog
-■F■1<■R■E■T>■F■I■R■E
+ Start Prog:
+<■F■1=■R■E■T=■F■I■R■E>
 
-Quit<■F■2>
+ Quit:<■F■2>
 HERE;
 #---------┃---------┃---------┃---------
 $msg = <<<HERE
@@ -145,7 +145,6 @@ foreach($ofs AS $na => $pos){
 }
 fwrite($f, '.const color_slider_off = '.$col_main_border."\n");
 fwrite($f, '.const color_slider_on = '.$col_slider."\n");
-fclose($f);
 
 /*
 ** ENCODE SCREEN
@@ -170,6 +169,7 @@ $chars = array(
   
   '<' => 158,
   '>' => 30,
+  '=' => 0xe0,
 );
 
 foreach($chars AS $k => $v){
@@ -190,7 +190,7 @@ $msg = explode("\n", $msg);
 
 foreach($help AS $k=>$v){
 	$kk = $k + 7;
-	$t[$kk] = substr($t[$kk], 0, 27).str_pad($v, 11, ' ').substr($t[$kk], -2);
+	$t[$kk] = substr($t[$kk], 0, 26).str_pad($v, 13, ' ').substr($t[$kk], -1);
 }
 
 foreach($msg AS $k=>$v){
@@ -284,6 +284,14 @@ $all = $cols.$screen.$sprites.chr(0);
 $p1 = pack1($all);
 
 echo $p1;
+
+$s = array();
+for($i=0; $i<strlen($screen); $i++)
+	$s[] = ord($screen[$i]);
+fwrite($f, '.const the_complete_start_screen = List().add('.implode(', ', $s).')'."\n");
+
+fclose($f);
+
 
 /*
 var_dump(strlen($all),strlen($p1));

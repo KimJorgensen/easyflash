@@ -55,7 +55,7 @@
 //	V_KEY_F8 = 13,
 	V_KEY_CUP = 14,
 	V_KEY_CDOWN = 15,
-	V_KEY_HOME = 16,
+//	V_KEY_HOME = 16,
 	V_KEY_CLR = 17,
 	V_KEY_CTRL = 18,
 	V_KEY_SCTRL = 19,
@@ -76,3 +76,4 @@
 .const V_KEY_F6 = V_KEY_CLEFT
 .const V_KEY_F7 = V_KEY_CDOWN
 .const V_KEY_F8 = V_KEY_CRIGHT
+.const V_KEY_HOME = V_KEY_CLR

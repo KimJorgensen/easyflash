@@ -85,7 +85,7 @@ P_LED_STATE:
     search.asm
 */
 
-.const V_SEARCH_MAX_CHAR = 16
+.const V_SEARCH_MAX_CHAR = 9
 
 P_SEARCH_POS:
 	.fill 1, 0
@@ -93,15 +93,18 @@ P_SEARCH_START:
 	.fill 1+V_SEARCH_MAX_CHAR, 0
 P_SEARCH_COUNT:
 	.fill 1+V_SEARCH_MAX_CHAR, 0
+P_SEARCH_ACTIVE:
+	.fill 1, 0
 
 
 /**/
 /*   OTHER VARS  */
 /**/
 
+// free space $2800 til P_DIR
 
 /*
 	scan.asm
 */
 
-.const P_DIR = $2800 // til $7fff
+.const P_DIR = $4e00 // til $7fff (256 * V_DIR_SIZE)

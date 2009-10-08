@@ -21,11 +21,36 @@ main_loop:
 	:if A ; EQ ; #V_KEY_CLEFT ; JMP ; page_up
 	:if A ; EQ ; #V_KEY_CRIGHT ; page_down
 	:if A ; EQ ; #V_KEY_RETURN ; JSR ; F_LAUNCH // may returns
-	:if A ; GE ; #$41 ; ENDIF ; !endif+
-		:if A ; LE ; #$5a ; JSR ; F_SEARCH_KEY
-	!endif:
 	:if A ; EQ ; #V_KEY_DEL ; JSR ; F_SEARCH_DEL
 	:if A ; EQ ; #$5f ; JSR ; F_SEARCH_RESET
+	:if A ; EQ ; #V_KEY_CLR ; JSR ; F_SEARCH_RESET
+	
+	ldx P_SEARCH_ACTIVE
+	bne !else2+
+		// search box is active.
+		// get almost all keys into search
+	
+		// every printable char (except uppercse and control chars)
+		:if A ; GE ; #$20 ; ENDIF ; !endif+
+			:if A ; LE ; #$5a ; JSR ; F_SEARCH_KEY
+		!endif:
+		jmp !endif2+
+	!else2:
+		// seauch box is inactive.
+		// only 0..9 and a..z and / (prints no char) will trigger search
+
+		// key 0..9
+		:if A ; GE ; #$30 ; ENDIF ; !endif+
+			:if A ; LE ; #$39 ; JSR ; F_SEARCH_KEY
+		!endif:
+		// key a..z
+		:if A ; GE ; #$41 ; ENDIF ; !endif+
+			:if A ; LE ; #$5a ; JSR ; F_SEARCH_KEY
+		!endif:
+		:if A ; EQ ; #$2f ; JSR ; F_SEARCH_START
+			
+	!endif2:
+	
 	jmp main_loop
 
 move_up:
@@ -45,6 +70,10 @@ page_down:
 //	jmp draw_screen
 
 draw_screen:
+	lda P_SEARCH_POS
+	beq !skip+
+	jsr F_SEARCH_RESET
+!skip:
 	jsr F_DRAW
 	jmp main_loop
 
