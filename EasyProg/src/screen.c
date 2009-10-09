@@ -399,10 +399,10 @@ void __fastcall__ screenDoMenu(uint8_t x, uint8_t y,
 
 /******************************************************************************/
 /**
- * Print a dialog with some text lines and wait for a key.
+ * Print a dialog with some text lines and wait for a key if a flag is set.
  * The array of lines apStrLines must be terminated with a NULL pointer.
  *
- * flags            can contain BUTTON_ENTER and/or BUTTON_STOP.
+ * flags            may contain BUTTON_ENTER and/or BUTTON_STOP.
  * return           the button which has been pressed
  */
 uint8_t __fastcall__ screenPrintDialog(const char* apStrLines[], uint8_t flags)
@@ -463,7 +463,10 @@ uint8_t __fastcall__ screenPrintDialog(const char* apStrLines[], uint8_t flags)
     if (flags & BUTTON_STOP)
         screenPrintButton(xStart, yEnd - 3, "Stop");
 
-    return screenWaitKey(flags);
+    if (flags)
+        return screenWaitKey(flags);
+
+    return 0;
 }
 
 

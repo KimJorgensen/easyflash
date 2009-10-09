@@ -152,6 +152,7 @@ void tortureTest(void)
 
     if (screenAskEraseDialog() != BUTTON_ENTER)
         return;
+    screenPrintSimpleDialog(apStrTestEndless);
 
     refreshMainScreen();
 
@@ -189,5 +190,8 @@ void tortureTest(void)
 
         if (kbhit() && cgetc() == CH_STOP)
             return;
+
+        if (nLoop == FLASH_NUM_BANKS)
+            screenPrintDialog(apStrTestComplete, 0);
     }
 }
