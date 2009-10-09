@@ -103,6 +103,7 @@ spritePtrs:
             ldx #0          ; x counts the color index 0..7
 fadeIn:
             jsr waitFrame
+            jsr waitFrame
 
             lda fadeWhite, x
             ldy #3
@@ -137,6 +138,7 @@ checkAgain:
 ; ============ fade out sprites ============
             ldx #7          ; x counts the color index 0..7
 fadeOut:
+            jsr waitFrame
             jsr waitFrame
 
             lda fadeWhite, x
@@ -177,11 +179,13 @@ reset:
 
 ; ============ wait for the next frame (up to 1/50 s) ============
 waitFrame:
-            lda $d012
-            bne waitFrame   ; wait for raster line 0
+            lda #$ff
+wf0:
+            cmp $d012
+            bne wf0         ; wait for raster line 0xff
 wf1:
-            lda $d012
-            beq waitFrame   ; wait for raster line != 0
+            cmp $d012
+            beq wf1         ; wait for raster line != 0xff
             rts
 
 fadeWhite:
