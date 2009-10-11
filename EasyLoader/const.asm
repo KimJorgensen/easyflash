@@ -61,8 +61,8 @@
 	V_KEY_SCTRL = 19,
 	V_KEY_COMD = 20,
 	V_KEY_SCOMD = 21,
-	V_KEY_RUN = 22,
-	V_KEY_STOP = 23,
+//	V_KEY_RUN = 22,
+//	V_KEY_STOP = 23,
 
 	V_JOYPRESS_FIRE_UP = $01,
 	V_JOYPRESS_FIRE_DOWN = $02,
@@ -77,3 +77,5 @@
 .const V_KEY_F7 = V_KEY_CDOWN
 .const V_KEY_F8 = V_KEY_CRIGHT
 .const V_KEY_HOME = V_KEY_CLR
+.const V_KEY_RUN = V_KEY_CLR
+.const V_KEY_STOP = V_KEY_CLR

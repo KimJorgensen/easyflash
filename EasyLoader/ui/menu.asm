@@ -27,7 +27,6 @@ main_loop2:
 	:if A ; EQ ; #V_KEY_CRIGHT ; page_down
 	:if A ; EQ ; #V_KEY_RETURN ; JSR ; F_LAUNCH // may returns
 	:if A ; EQ ; #V_KEY_DEL ; JSR ; F_SEARCH_DEL
-	:if A ; EQ ; #$5f ; JSR ; F_SEARCH_RESET
 	:if A ; EQ ; #V_KEY_CLR ; JSR ; F_SEARCH_RESET
 	
 	ldx P_SEARCH_ACTIVE
