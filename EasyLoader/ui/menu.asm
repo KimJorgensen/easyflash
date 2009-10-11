@@ -48,6 +48,7 @@ main_loop:
 			:if A ; LE ; #$5a ; JSR ; F_SEARCH_KEY
 		!endif:
 		:if A ; EQ ; #$2f ; JSR ; F_SEARCH_START
+		:if A ; EQ ; #$3f ; JMP ; show_version
 			
 	!endif2:
 	
@@ -77,5 +78,29 @@ draw_screen:
 	jsr F_DRAW
 	jmp main_loop
 
+show_version:
+	ldx #12
+!loop:
+	lda ts, x
+	sta $0400 + 24*40 + 26, x
+	dex
+	bpl !loop-
+	
+!loop:
+	jsr F_GETIN
+	cmp #$3f
+	beq !loop-
+	
+	ldx #12
+	lda #$82
+!loop:
+	sta $0400 + 24*40 + 26, x
+	dex
+	bpl !loop-
+	
+	jmp main_loop
+	
+ts:
+	.import binary "build/ts.txt"
 
 }
