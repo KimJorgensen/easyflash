@@ -8,6 +8,7 @@
 #JAVA = /path/to/java
 #KICKASS = /path/to/KickAss.jar
 #VICE = /path/to/x64
+#LOGUSER = the user which should be showed in the about dialog in EasyLoader, defaults to $USER
 
 #
 # uncomment one line and point it to a Package.rc (see tools/example.Package.rc)
