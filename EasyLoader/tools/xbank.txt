@@ -1,0 +1,20 @@
+﻿
+the xbank file countans a multi banking cart for easyflash
+
+the file has to be in IFF format with type 'Xbnk'
+IFF doku: http://de.wikipedia.org/wiki/Interchange_File_Format
+
+there are four cunks which are allowed:
+'CRT0', 'CRT1', 'CRT2' and 'CRT3'
+
+you have to specify at least one of these chunks, but may be all of them.
+
+each of the chunks has to contain a multi banking cart as plain bin of the same
+program but for different crt use.
+
+CRT0: regular 8k crt's
+CRT1: regular 16k crt's
+CRT2: ultimax 16k crt's
+CRT3: ultimax 8k crt's
+
+the user may specify which type he wants or the program chooses the best matching or just the first
