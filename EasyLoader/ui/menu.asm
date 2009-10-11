@@ -1,14 +1,19 @@
 .print ">menu.asm"
 
 F_MENU:{
-
-	.const KEEP_CLEAR = 3
-
-
 	jsr F_INPUT_INIT
+	
 main_loop:
+	// reset screensaver (after a keystroke)
+	lda #$00
+	sta P_SCREENSAVER_COUNTER+0
+	sta P_SCREENSAVER_COUNTER+1
+main_loop2:
+	// inc screensaver
+	:inc16 P_SCREENSAVER_COUNTER
+	:if P_SCREENSAVER_COUNTER+1 ; GE ; #180 ; JMP ; start_saver
 	jsr F_INPUT_GETKEY
-	beq main_loop
+	beq main_loop2
 
 	:if A ; EQ ; #V_KEY_F2 ; JMP ; F_BASIC
 
@@ -78,6 +83,10 @@ draw_screen:
 	jsr F_DRAW
 	jmp main_loop
 
+/*
+	version info	
+*/
+
 show_version:
 	ldx #12
 !loop:
@@ -102,5 +111,31 @@ show_version:
 	
 ts:
 	.import binary "build/ts.txt"
+
+/*
+	screen saver
+*/
+
+start_saver:
+	:copy_to_df00 COPY_STARTSAVER_START ; COPY_STARTSAVER_END - COPY_STARTSAVER_START
+	jmp $df00
+
+COPY_STARTSAVER_START:
+.pseudopc $df00 {
+	lda P_SCREENSAVER_BANK
+	beq !no_saver+
+
+	sta $de00
+	lda P_SCREENSAVER_OFS
+	sta smc_jsr+2
+smc_jsr:
+	jsr $0000 // upper byte will be filled with P_SCREENSAVER_OFS
+	
+	lda #EASYLOADER_BANK
+	sta $de00
+!no_saver:
+	jmp main_loop
+}
+COPY_STARTSAVER_END:
 
 }

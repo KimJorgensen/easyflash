@@ -69,6 +69,17 @@ ZP_INPUT_MATRIX:
 	.fill 1, 0
 
 /*
+	menu.asm
+*/
+
+P_SCREENSAVER_COUNTER:
+	.fill 2, 0
+P_SCREENSAVER_BANK:
+	.fill 1, 0
+P_SCREENSAVER_OFS:
+	.fill 1, 0
+
+/*
     tools.asm
 */
 
