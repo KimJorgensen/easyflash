@@ -40,16 +40,21 @@ build/%.prg: %.asm
 	$(PHP5) tools/mkdep.php $< > $(df).P
 	@$(PHP5) -r ' \
 		$$f = `hg log .`; \
-		$$s = str_pad(strtoupper(substr("$(LOGUSER)", 0, 4)), 4, chr(0x82), STR_PAD_LEFT)."-"; \
-		if(preg_match("/changeset:([ 0-9]+):/s", $$f, $$r)){$$s .= ((int) $$r[1])."-";}else{$$s .= "unk-";} \
+		if(preg_match("/changeset:([ 0-9]+):/s", $$f, $$r)){$$v = (int) $$r[1];}else{$$v = "unk";} \
 		if(preg_match("/date:(.*? [+-][0-9]{4})/s", $$f, $$r)){$$t = time() - strtotime($$r[1]);}else{$$t = 0;} \
-		if(`hg status -q .` == ""){$$t = 0;} \
-		if($$t >= 356*86400){ \
-			$$t = number_format($$t / (356*96400), 4, "Y", ""); \
+		if(`hg status -q .` == ""){ \
+			$$s = "-".$$v; \
+			echo str_pad(substr(strtoupper("$(LOGUSER)"), 0, 13-strlen($$s)).$$s, 13, chr(0x82), STR_PAD_LEFT); \
 		}else{ \
-			$$t = sprintf("%06d", pow(log($$t/600+1, 1.654286), 3) * 100); \
+			$$s = str_pad(strtoupper(substr("$(LOGUSER)", 0, 4)), 4, chr(0x82), STR_PAD_LEFT)."-"; \
+			$$s .= $$v."."; \
+			if($$t >= 356*86400){ \
+				$$t = number_format($$t / (356*96400), 4, "Y", ""); \
+			}else{ \
+				$$t = sprintf("%06d", pow(log($$t/600+1, 1.654286), 3) * 100); \
+			} \
+			echo $$s.substr($$t, 0, 13-strlen($$s)); \
 		} \
-		echo $$s.substr($$t, 0, 13-strlen($$s)); \
 	' > build/ts.txt
 	$(JAVA) -jar $(KICKASS) -showmem -vicesymbols -o $@ $<
 	@mv $(<:.asm=.vs) $(@:.prg=.vs)

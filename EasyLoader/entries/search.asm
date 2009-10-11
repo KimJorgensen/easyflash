@@ -1,5 +1,8 @@
 .print ">search.asm"
 
+.const debug_search = false
+.const debug_search_counts = false
+
 F_SEARCH_INIT:{
 	:mov #0 ; P_SEARCH_POS
 	:mov #0 ; P_SEARCH_START
@@ -69,7 +72,6 @@ F_SEARCH_KEY:{
 	tay
 	
 	// correct count
-	:mov #0 ; count
 	dec start
 	
 search_start:
@@ -81,7 +83,7 @@ search_start:
 	lda (ZP_ENTRY), y
 	cmp char
 	bcc next_line // match too low
-	beq search_end // found a char
+	beq search_end_init // found a char
 	bne not_found // didn't found the char
 	
 next_line:
@@ -103,6 +105,8 @@ error_last_file:
 	:mov #1 ; count
 	jmp done
 
+search_end_init:
+	:mov #0 ; count
 search_end:
 	// go to next entry
 	:add16_8 ZP_ENTRY ; #V_DIR_SIZE
@@ -166,8 +170,10 @@ F_SEARCH_DRAW:{
 	
 	// draw screen
 	:mov #0 ; P_DRAW_START
+.if(debug_search){
+	jsr deb_sea
+}
 	jmp F_DRAW // includes rts
-//	jmp deb_sea
 
 line1:
 	.byte $00, $f3, $c5, $c1, $d2, $c3, $c8, $a0, $01, $01, $01, $01, $02
@@ -186,8 +192,10 @@ F_SEARCH_DEL:{
 	sta P_SEARCH_SCREEN_OUT+1, x
 	:mov P_SEARCH_START, x ; P_DRAW_OFFSET
 	:mov #0 ; P_DRAW_START
+.if(debug_search){
+	jsr deb_sea
+}
 	jmp F_DRAW // includes rts
-//	jmp deb_sea
 }
 
 F_SEARCH_RESET:{
@@ -220,21 +228,59 @@ line3:
 	.fill 13, the_complete_start_screen.get(7*40 + 26 + i)
 }
 
-/*deb_sea:{
+.if(debug_search){
+	.const count = P_BINBCD_OUT+2
+	.const max_count = P_BINBCD_IN+0
+
+deb_sea:{
 	ldx #0
-	ldy P_SEARCH_POS
-	lda P_SEARCH_START, y
+.if(debug_search_counts){
+	lda max_count
+	pha
+	lda count
 	sta P_BINBCD_IN
 	jsr F_BINBCD_8BIT
 	lda P_BINBCD_OUT+1
 	jsr F_BCDIFY_BUF
 	lda P_BINBCD_OUT+0
 	jsr F_BCDIFY_BUF
+
 	lda #$82
 	sta P_DIR_BUFFER, x
 	inx
+
+	pla
+
+	sta P_BINBCD_IN
+	jsr F_BINBCD_8BIT
+	lda P_BINBCD_OUT+1
+	jsr F_BCDIFY_BUF
+	lda P_BINBCD_OUT+0
+	jsr F_BCDIFY_BUF
+
+	lda #$82
+	sta P_DIR_BUFFER, x
+	inx
+
+}
+
+	ldy P_SEARCH_POS
+	lda P_SEARCH_START, y
+
+	sta P_BINBCD_IN
+	jsr F_BINBCD_8BIT
+	lda P_BINBCD_OUT+1
+	jsr F_BCDIFY_BUF
+	lda P_BINBCD_OUT+0
+	jsr F_BCDIFY_BUF
+
+	lda #$82
+	sta P_DIR_BUFFER, x
+	inx
+
 	ldy P_SEARCH_POS
 	lda P_SEARCH_COUNT, y
+
 	sta P_BINBCD_IN
 	jsr F_BINBCD_8BIT
 	lda P_BINBCD_OUT+1
@@ -245,9 +291,13 @@ line3:
 	dex
 !loop:
 	lda P_DIR_BUFFER, x
-	sta $0400+24*40+30, x
+	.if(debug_search_counts){
+		sta $0400+24*40+16, x
+	}else{
+		sta $0400+24*40+30, x
+	}
 	dex
 	bpl !loop-
 	rts
-}*/
-
+}
+}

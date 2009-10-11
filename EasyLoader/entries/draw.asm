@@ -2,6 +2,8 @@
 
 F_DRAW:{
 
+	.const debug = false
+
 	.const KEEP_CLEAR = 5
 	.const PAGE_SCROLL = 15
 	
@@ -12,7 +14,7 @@ F_DRAW:{
 	:if P_NUM_DIR_ENTRIES ; LT ; #23 ; ELSE ; multi_page
 		// ONE PAGE!
 		
-		// we're always on pahe 0 (single page mode)
+		// we're always on page 0 (single page mode)
 		:mov #0 ; P_DRAW_START
 		
 		lda P_DRAW_OFFSET
@@ -31,7 +33,7 @@ F_DRAW:{
 		
 		jmp end_check
 	multi_page:
-	
+
 	!while:
 		// while P_DRAW_OFFSET < 0
 		lda P_DRAW_OFFSET
@@ -51,6 +53,26 @@ F_DRAW:{
 		sta P_DRAW_START
 		sta P_DRAW_OFFSET
 	!end_while:
+
+.if(debug){
+	ldx #0*6
+	lda P_DRAW_OFFSET
+	sta P_BINBCD_IN
+	jsr F_BINBCD_8BIT
+	lda P_BINBCD_OUT
+	jsr F_BCDIFY_BUF
+	lda #$40
+	sta P_DIR_BUFFER,x
+	inx
+	lda P_DRAW_START
+	sta P_BINBCD_IN
+	jsr F_BINBCD_8BIT
+	lda P_BINBCD_OUT
+	jsr F_BCDIFY_BUF
+	lda #$20
+	sta P_DIR_BUFFER,x
+	inx
+}
 	
 	!while:
 		// while P_DRAW_OFFSET >= 23
@@ -58,7 +80,7 @@ F_DRAW:{
 		:if A ; LT ; #23 ; !end_while+
 		// P_DRAW_OFFSET-=23
 		sec
-		sbc #23
+		sbc #PAGE_SCROLL
 		sta P_DRAW_OFFSET
 		// P_DRAW_START+=23
 		lda P_DRAW_START
@@ -71,11 +93,56 @@ F_DRAW:{
 		:mov #22 ; P_DRAW_OFFSET
 	!end_while:
 
+.if(debug){
+	ldx #1*6
+	lda P_DRAW_OFFSET
+	sta P_BINBCD_IN
+	jsr F_BINBCD_8BIT
+	lda P_BINBCD_OUT
+	jsr F_BCDIFY_BUF
+	lda #$40
+	sta P_DIR_BUFFER,x
+	inx
+	lda P_DRAW_START
+	sta P_BINBCD_IN
+	jsr F_BINBCD_8BIT
+	lda P_BINBCD_OUT
+	jsr F_BCDIFY_BUF
+	lda #$20
+	sta P_DIR_BUFFER,x
+	inx
+}
+
 		// if P_DRAW_START > last start
 		:if P_DRAW_START ; GT ; P_DRAW_LAST_START ; ENDIF ; !endif+
+			:sub P_DRAW_LAST_START ; P_DRAW_START ; P_DRAW_START
+			:sub P_DRAW_OFFSET ; P_DRAW_START ; A
+			:if A ; GE ; #23 ; ENDIF ; !endif2+
+				lda #22
+			!endif2:
+			sta P_DRAW_OFFSET
 			:mov P_DRAW_LAST_START ; P_DRAW_START
-			:mov #22 ; P_DRAW_OFFSET
 		!endif:
+
+.if(debug){
+	ldx #2*6
+	lda P_DRAW_OFFSET
+	sta P_BINBCD_IN
+	jsr F_BINBCD_8BIT
+	lda P_BINBCD_OUT
+	jsr F_BCDIFY_BUF
+	lda #$40
+	sta P_DIR_BUFFER,x
+	inx
+	lda P_DRAW_START
+	sta P_BINBCD_IN
+	jsr F_BINBCD_8BIT
+	lda P_BINBCD_OUT
+	jsr F_BCDIFY_BUF
+	lda #$20
+	sta P_DIR_BUFFER,x
+	inx
+}
 		
 	!while:
 		:if P_DRAW_OFFSET ; GE ; #KEEP_CLEAR ; !end_while+
@@ -84,6 +151,26 @@ F_DRAW:{
 		dec P_DRAW_START
 		jmp !while-
 	!end_while:
+
+.if(debug){
+	ldx #3*6
+	lda P_DRAW_OFFSET
+	sta P_BINBCD_IN
+	jsr F_BINBCD_8BIT
+	lda P_BINBCD_OUT
+	jsr F_BCDIFY_BUF
+	lda #$40
+	sta P_DIR_BUFFER,x
+	inx
+	lda P_DRAW_START
+	sta P_BINBCD_IN
+	jsr F_BINBCD_8BIT
+	lda P_BINBCD_OUT
+	jsr F_BCDIFY_BUF
+	lda #$20
+	sta P_DIR_BUFFER,x
+	inx
+}
 		
 	!while:
 		:if P_DRAW_OFFSET ; LT ; #23-KEEP_CLEAR ; !end_while+
@@ -93,6 +180,31 @@ F_DRAW:{
 		jmp !while-
 	!end_while:
 	
+.if(debug){
+	ldx #4*6
+	lda P_DRAW_OFFSET
+	sta P_BINBCD_IN
+	jsr F_BINBCD_8BIT
+	lda P_BINBCD_OUT
+	jsr F_BCDIFY_BUF
+	lda #$40
+	sta P_DIR_BUFFER,x
+	inx
+	lda P_DRAW_START
+	sta P_BINBCD_IN
+	jsr F_BINBCD_8BIT
+	lda P_BINBCD_OUT
+	jsr F_BCDIFY_BUF
+	lda #$20
+	sta P_DIR_BUFFER,x
+
+!loop:
+	lda P_DIR_BUFFER,x
+	sta $0400 + 24*40 + 1, x
+	dex
+	bpl !loop-
+	
+}
 	
 	
 	end_check:

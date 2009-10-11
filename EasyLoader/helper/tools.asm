@@ -113,6 +113,32 @@ F_BCDIFY_BUF:{
         hexb: rts
 }
 
+.if(false){
+F_HEXIFY_BUF:{
+                tay
+                lsr
+                lsr
+                lsr
+                lsr
+                jsr hexc        //; convert upper nybble
+                jsr output
+                tya
+                and #$f         //; convert lower nybble
+                jsr hexc
+        output: sta P_DIR_BUFFER,x    //; output a byte using a zp-ptr and Y-index
+                inx             //; increment the output address
+                rts
+        hexc: cmp #$a           //; subroutine converts 0-F to a character
+                bcs hexa
+                clc             //; digit 0-9
+                adc #$30
+                bne hexb        //; unconditional jump coz Z=FALSE always
+        hexa: clc
+        		adc #$41-10
+        hexb: rts
+}
+}
+
 F_COPY_TO_DF00:{
 	.var PTR = P_BINBCD_IN
 	sta PTR+0
