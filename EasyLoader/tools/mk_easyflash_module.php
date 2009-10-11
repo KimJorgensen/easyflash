@@ -29,6 +29,7 @@ $size = strlen($f);
 /* collect files! */
 $BASE_PATH = dirname($argv[2]).'/';
 $config = array(
+	'sort_dir' => 1,
 	'strip_extension' => 0,
 	'show_free' => 1,
 	'show_memmap' => 0,
@@ -42,8 +43,7 @@ $more_crt16u = array();
 $more_files = array();
 $more_m2i = array();
 $mod256k = array();
-$more_mmc16 = array();
-$more_mmc8u = array();
+$more_xbank = array();
 $is_hidden = array();
 
 foreach(split("[\r\n]+", file_get_contents($argv[2])) AS $ln){
@@ -99,13 +99,24 @@ foreach(split("[\r\n]+", file_get_contents($argv[2])) AS $ln){
 		case 'ocean':
 			$mod256k = array($name, $file);
 			break;
-		case 'mmc16':
-		case 'mmc16k':
-			$more_mmc16[$file] = $name;
+		case 'xbank':
+			$more_xbank[$file] = array(false, $name);
 			break;
-		case 'mmcm8':
-		case 'mmcm8k':
-			$more_mmc8u[$file] = $name;
+		case 'xbank-8':
+		case 'xbank-8k':
+			$more_xbank[$file] = array('CRT0', $name);
+			break;
+		case 'xbank-16':
+		case 'xbank-16k':
+			$more_xbank[$file] = array('CRT1', $name);
+			break;
+		case 'xbank-m16':
+		case 'xbank-m16k':
+			$more_xbank[$file] = array('CRT2', $name);
+			break;
+		case 'xbank-m8':
+		case 'xbank-m8k':
+			$more_xbank[$file] = array('CRT3', $name);
 			break;
 //		case 'm2i':
 //			$more_m2i[$name] = $file;
@@ -120,6 +131,8 @@ foreach(split("[\r\n]+", file_get_contents($argv[2])) AS $ln){
 
 $dir_crt8 = array();
 $dir_crt8u = array();
+$dir_crt16 = array();
+$dir_crt16u = array();
 $dir_prg8 = array();
 $dir_prg = array();
 
@@ -180,26 +193,53 @@ foreach($more_files AS $file => $name){
 	}
 }
 
-foreach($more_mmc8u AS $file => $name){
-	$mmc = file_get_contents($file);
-	$mmc_banks = ceil(strlen($mmc) / 0x2000);
+/*
+	read all xbank's
+*/
+
+foreach($more_xbank AS $file => $dummy){
+	list($mode, $name) = $dummy;
+	$xb = read_xbank_file($file);
+	if(!$mode){
+		$mode = array_keys($xb);
+		$mode = $mode[0];
+	}
+
+	$bin = $xb[$mode]; // bin-data
+	$num_banks = ceil(strlen($bin) / 0x2000);
 
 	$data = array();
-	for($i=0; $i<$mmc_banks; $i++){
-		$data[] = substr($mmc, $i*0x2000, 0x2000);
+	for($i=0; $i<$num_banks; $i++){
+		$data[] = substr($bin, $i*0x2000, 0x2000);
 	}
-	
-	$dir_crt8u[] = array(
+
+	$var = array(
 		'dir' => array(
 			$name,
 			-1,
-			0x13 | $is_hidden[$file],
-			$mmc_banks * 0x2000,
+			0x10 | ((int) substr($mode, -1)) | $is_hidden[$file],
+			$num_banks * 0x2000,
 			0
 		),
 		'data' => $data,
 	);
+
+	switch($mode){
+	case 'CRT0':
+		$dir_crt8[] = $var;
+		break;
+	case 'CRT1':
+		$dir_crt16[] = $var;
+		break;
+	case 'CRT2':
+		$dir_crt16u[] = $var;
+		break;
+	case 'CRT3':
+		$dir_crt8u[] = $var;
+		break;
+	}
 }
+
 
 
 usort($dir_prg8, 'sort_dirs_prg');
@@ -363,6 +403,28 @@ while(count($dir_crt8) > 0 || count($dir_crt8u) > 0){
 	}
 }
 
+while(count($dir_crt16) > 0){
+	$M = array_shift($dir_crt16);
+	$M['dir'][1] = $bank;
+	$DIR[] = $M['dir'];
+	for($b=0; $b<count($M['data']) / 2; $b++){
+		$CHIPS[0][$bank] = $M['data'][$b*2+0];
+		$CHIPS[1][$bank] = $M['data'][$b*2+1];
+		$bank++;
+	}
+}
+
+while(count($dir_crt16u) > 0){
+	$M = array_shift($dir_crt16u);
+	$M['dir'][1] = $bank;
+	$DIR[] = $M['dir'];
+	for($b=0; $b<count($M['data']) / 2; $b++){
+		$CHIPS[0][$bank] = $M['data'][$b*2+0];
+		$CHIPS[1][$bank] = $M['data'][$b*2+1];
+		$bank++;
+	}
+}
+
 foreach($more_crt16 AS $file => $name){
 	$CHIPS[0][$bank] = substr(file_get_contents($file), -16*1024, 8*1024);
 	$CHIPS[1][$bank] = substr(file_get_contents($file), -8*1024);
@@ -376,25 +438,6 @@ foreach($more_crt16 AS $file => $name){
 	);
 
 	$bank++;
-}
-
-foreach($more_mmc16 AS $file => $name){
-	$mmc = file_get_contents($file);
-	$mmc_banks = ceil(strlen($mmc) / 0x4000);
-	for($i=0; $i<$mmc_banks; $i++){
-		$CHIPS[0][$bank+$i] = substr($mmc, $i*0x4000,          0x2000);
-		$CHIPS[1][$bank+$i] = substr($mmc, $i*0x4000 + 0x2000, 0x2000);
-	}
-
-	$DIR[] = array(
-		$name,
-		$bank,
-		0x11 | $is_hidden[$file],
-		$mmc_banks * 0x4000,
-		0,
-	);
-
-	$bank+=$mmc_banks;
 }
 
 foreach($more_crt16u AS $file => $name){
@@ -539,6 +582,10 @@ if($MODE[3]){
 }
 
 // CREATE DIR
+
+if($config['sort_dir']){
+	usort($DIR, 'sort_dir');
+}
 
 $dir = '';
 foreach($DIR AS $D){
@@ -793,6 +840,39 @@ function sort_dirs_crt($a, $b){
 
 function sort_dirs_prg($a, $b){
 	return strlen($b['data']) - strlen($a['data']);
+}
+
+function sort_dir($a, $b){
+	return strcasecmp($a[0], $b[0]);
+}
+
+function read_xbank_file($file){
+	$f = fopen($file, 'r');
+	if(fread($f, 4) != 'FORM')
+		fail('no IFF file: '.$file);
+	fread($f, 4); // skip total size
+	if(fread($f, 4) != 'Xbnk')
+		fail('no xbank file: '.$file);
+	$r = array();
+	while(!feof($f)){
+		$n = fread($f, 4); // read id
+		if($n == ''){
+			break;
+		}
+		$dummy = unpack('Nsize', fread($f, 4));
+		$size = $dummy['size'];
+		if(substr($n, 0, 3) == 'CRT' && ord($n[3]) >= 0x30 && ord($n[3]) <= 0x33){
+			$r[$n] = fread($f, $size);
+		}else{
+			fread($f, $size); // just ignore this chunk!
+		}
+		if(($size & 1) == 1){
+			// odd size: pad
+			fread($f, 1); // read pad-byte
+		}
+	}
+	fclose($f);
+	return $r;
 }
 
 ?>
