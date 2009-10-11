@@ -64,45 +64,16 @@ copy_scan_boot_start:
 			and #$10
 			beq big_loop // not of type crt
 		
-			ldy #$ff
-			// check B
-			jsr get_char
-			cmp #$42
-			bne big_loop
-			// check O
-			jsr get_char
-			cmp #$4f
-			bne big_loop
-			// check O
-			jsr get_char
-			cmp #$4f
-			bne big_loop
-			// check T
-			jsr get_char
-			cmp #$54
-			bne big_loop
-			// check . or \0
-			jsr get_char
-			cmp #$00
-			beq found_boot
-			cmp #$2e
-			bne big_loop
-			// check C
-			jsr get_char
-			cmp #$43
-			bne big_loop
-			// check R
-			jsr get_char
-			cmp #$52
-			bne big_loop
-			// check T
-			jsr get_char
-			cmp #$54
-			bne big_loop
-			// check \0
-			iny
+			ldy #$00
+		!loop:
+			// check a char
 			lda (TEMP), y
+			cmp boot_once, y
 			bne big_loop
+			
+			iny
+			cpy #[boot_once_end - boot_once]
+			bne !loop-			
 	
 		found_boot:
 			ldy #O_EFS_TYPE
@@ -117,19 +88,15 @@ copy_scan_boot_start:
 			stx $de02
 			jmp ($fffc)
 			
-		get_char:
-			iny
-			lda (TEMP), y
-			:if A ; GE ; #$61 ; ENDIF ; !endif+
-				eor #$20
-			!endif:
-			rts
-		
 		type2mode_table:
 			.byte MODE_8k
 			.byte MODE_16k
 			.byte MODE_ULT
 			.byte MODE_ULT
+		
+		boot_once: // "!el_boot-once"
+			.byte $21, $45, $4c, $5f, $42, $4f, $4f, $54, $2d, $4f, $4e, $43, $45, $00
+		boot_once_end:
 
 	}
 copy_scan_boot_end:

@@ -32,7 +32,36 @@ big_loop:
 	sta P_DIR_BUFFER + O_DIR_TYPE - O_EFS_TYPE, y
 	dey
 	bpl !loop-
+
+	// check for screen saver
+			ldy #$00
+		!loop:
+			// check a char
+			lda (ZP_EFS_ENTRY), y
+			cmp screen_saver, y
+			bne !no_saver+
+			
+			iny
+			cpy #[screen_saver_end - screen_saver]
+			bne !loop-			
+
+		// found screen saver!
+		ldy #$80
+		lda P_DIR_BUFFER + O_DIR_TYPE
+		and #O_EFST_MASK
+		cmp #O_EFST_8KULTCRT
+		bne !skip+
+		ldy #$a0
+	!skip:
+		and #$10 // check for crt
+		beq !no_saver+
+		sty P_SCREENSAVER_OFS
+		lda P_DIR_BUFFER + O_DIR_BANK
+		sta P_SCREENSAVER_BANK
+
+!no_saver:
 	
+	// switch by type
 	lda P_DIR_BUFFER + O_DIR_TYPE
 	bmi maybe_hidden // negative number -> bit 7 set -> hidden file
 	and #O_EFST_MASK
@@ -79,7 +108,7 @@ file:
 	// check for a valid file
 	:if P_DIR_BUFFER + O_DIR_SIZE+2 ; NE ; #$00 ; not_loadable // size >64k
 	:if16 P_DIR_BUFFER + O_DIR_LOADADDR+1 ; LT ; #$01 ; not_loadable // loadaddr < $0100
-	:sub16 P_DIR_BUFFER + O_DIR_LOADADDR ; #2 ; ZP_SCAN_SIZETEXT
+	:sub16 P_DIR_BUFFER + O_DIR_LOADADDR ; #3 ; ZP_SCAN_SIZETEXT
 	:add16 ZP_SCAN_SIZETEXT ; P_DIR_BUFFER + O_DIR_SIZE
 	bcs not_loadable // laodaddr+size(minus 2 for laodaddr) > $ffff (future limit)
 	:if ZP_SCAN_SIZETEXT+1 ; GE ; #$d0 ; not_loadable // >= $d000 (current limit)
@@ -283,6 +312,10 @@ show_xxx:
 	inx
 	
 	jmp next_after_size
+
+screen_saver:
+	.byte $21, $45, $4c, $5f, $53, $43, $52, $45, $45, $4e, $2d, $53, $41, $56, $45, $52
+screen_saver_end:
 
 READ_LOADADDR_START:
 .pseudopc $df00 {
