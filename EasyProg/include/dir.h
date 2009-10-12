@@ -10,7 +10,8 @@ typedef struct DirEntry_s {
     unsigned int  size;         /* Size in 254 byte blocks */
 } DirEntry;
 
-unsigned char __fastcall__ dirOpen(unsigned char lfn, unsigned char device);
-unsigned char __fastcall__ dirReadEntry (unsigned char lfn, DirEntry* l_dirent);
+unsigned char __fastcall__ dirOpen(uint8_t lfn, uint8_t device);
+unsigned char __fastcall__ dirReadEntry (DirEntry* pEntry);
+void __fastcall__ dirClose(uint8_t lfn);
 
 #endif

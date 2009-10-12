@@ -116,13 +116,13 @@ static void fileDlgReadDir(void)
     spritesOff();
     if (dirOpen(FILEDLG_LFN, nDriveNumber))
     {
-        cbm_close(FILEDLG_LFN);
+        dirClose(FILEDLG_LFN);
         spritesOn();
         return;
     }
 
     // read entries, but leave two slots free for "<-/..", see below
-    while ((!dirReadEntry(FILEDLG_LFN, pEntry)) && (nDirEntries
+    while ((!dirReadEntry(pEntry)) && (nDirEntries
             < FILEDLG_ENTRIES - 2))
     {
         // only accept supported file types
@@ -139,6 +139,8 @@ static void fileDlgReadDir(void)
         cputcxy(FILEDLG_X + FILEDLG_W - 2, FILEDLG_Y + 1, c);
     }
     cputcxy(FILEDLG_X + FILEDLG_W - 2, FILEDLG_Y + 1, ' ');
+
+    dirClose(FILEDLG_LFN);
 
     // add "<-" (arrow left) for parent directory
     strcpy(pEntry->name, strUp);
@@ -161,7 +163,6 @@ static void fileDlgReadDir(void)
         fileDlgPrintFrame();
     }
 
-    cbm_close(FILEDLG_LFN);
     spritesOn();
 }
 
