@@ -28,6 +28,12 @@
 #include <stdint.h>
 #include "dir.h"
 
+/******************************************************************************/
+/**
+ * Open the directory file and redirect input to this file if there was no
+ * error.
+ *
+ */
 uint8_t __fastcall__ dirOpen(uint8_t lfn, uint8_t device)
 {
     if (!cbm_open(lfn, device, CBM_READ, "$"))
@@ -44,7 +50,6 @@ uint8_t __fastcall__ dirOpen(uint8_t lfn, uint8_t device)
                 return 1;
             }
 
-            cbm_k_clrch();
             return 0;
         }
     }
@@ -114,25 +119,27 @@ static uint8_t __fastcall__ dirReadEntryInternal(DirEntry* pEntry, uint8_t bIsHe
 /******************************************************************************/
 /**
  * Read an entry from the directory. The first entry may be the disk title,
- * its type will be set to "***".
+ * its type will be set to "***". The input must be redirected to the open
+ * file already.
  *
  * Return 0 if it has been read. 1 for errors, 2 for EOF.
  */
-uint8_t __fastcall__ dirReadEntry (uint8_t lfn, DirEntry* pEntry)
+uint8_t __fastcall__ dirReadEntry(DirEntry* pEntry)
 {
     uint8_t byte;
     uint8_t rv;
 
     rv = 1;
 
-    if (!cbm_k_chkin(lfn) && !cbm_k_readst())
+    if (!cbm_k_readst())
     {
         /* skip 2 bytes, next basic line pointer */
         cbm_k_basin();
         cbm_k_basin();
 
         /* File-size */
-        pEntry->size = cbm_k_basin() | ((cbm_k_basin()) << 8);
+        pEntry->size  =  cbm_k_basin();
+        pEntry->size |= ((cbm_k_basin()) << 8);
 
         /* search for "blocks free", an entry, header or EOL */
         for(;;)
@@ -171,6 +178,18 @@ uint8_t __fastcall__ dirReadEntry (uint8_t lfn, DirEntry* pEntry)
     }
 
 ret_val:
-    cbm_k_clrch();
     return rv;
 }
+
+
+/******************************************************************************/
+/**
+ * Restore the default input and close the directory file.
+ */
+void __fastcall__ dirClose(uint8_t lfn)
+{
+    cbm_close(lfn);
+    cbm_k_clrch();
+}
+
+
