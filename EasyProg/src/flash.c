@@ -9,6 +9,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <conio.h>
 
 #include "flash.h"
 #include "screen.h"

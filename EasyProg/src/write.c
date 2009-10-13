@@ -64,6 +64,7 @@ static uint8_t readNextHeader()
     rv = readNextBankHeader(&bankHeader);
 
     nBank = bankHeader.bank[1];
+
     nAddress = 256 * bankHeader.loadAddr[0] + bankHeader.loadAddr[1];
     nSize = 256 * bankHeader.romLen[0] + bankHeader.romLen[1];
 
@@ -99,6 +100,8 @@ static uint8_t __fastcall__ writeStartUpCode(uint8_t* pBankOffset)
     uint8_t  nConfig;
     uint8_t* pBuffer;
 
+    *pBankOffset = 0;
+
     switch (internalCartType)
     {
     case INTERNAL_CART_TYPE_NORMAL_8K:
@@ -118,7 +121,6 @@ static uint8_t __fastcall__ writeStartUpCode(uint8_t* pBankOffset)
 
     case INTERNAL_CART_TYPE_OCEAN1:
         nConfig = EASYFLASH_IO_16K;
-        *pBankOffset = 0;
         break;
 
     case INTERNAL_CART_TYPE_EASYFLASH:
@@ -261,7 +263,7 @@ static uint8_t writeBinImage(uint8_t nChip)
     nBank = 0;
     do
     {
-        sprintf(strStatus, "Reading from file");
+        strcpy(strStatus, "Reading from file");
         setStatus(strStatus);
 
         nBytes = utilRead(pBuffer, 0x100);
