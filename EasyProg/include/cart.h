@@ -100,9 +100,9 @@ extern uint8_t      nChips;
 extern uint32_t     nCartBytes;
 extern const char* aStrInternalCartTypeName[];
 
-uint8_t readCartHeader(uint8_t lfn);
+uint8_t readCartHeader();
 void eraseFlash(void);
 void printCartInfo(void);
-uint8_t __fastcall__ readNextBankHeader(BankHeader* pBankHeader, uint8_t lfn);
+uint8_t __fastcall__ readNextBankHeader(BankHeader* pBankHeader);
 
 #endif // CART_H

@@ -50,6 +50,6 @@ uint8_t __fastcall__ flashVerifyBlock(uint8_t nBank, uint8_t nChip,
                                       uint16_t nOffset, uint8_t* pBlock);
 
 uint8_t flashWriteBlockFromFile(uint8_t nBank, uint8_t nChip,
-                                uint16_t nSize, uint8_t lfn);
+                                uint16_t nSize);
 
 #endif /* FLASH_H_ */

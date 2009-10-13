@@ -20,6 +20,11 @@
 ; 3. This notice may not be removed or altered from any source distribution.
 ;
 
+        .import         READST, BASIN
+        .importzp       ptr1, ptr2, ptr3, tmp1
+        .import         popax, popa
+
+
 EASYFLASH_BANK    = $DE00
 EASYFLASH_CONTROL = $DE02
 EASYFLASH_LED     = $80
@@ -74,3 +79,73 @@ _pFallbackDriverEnd:
 fallbackDriverStart = * + 2
 .incbin "eapi-am29f040-02"
 fallbackDriverEnd:
+
+
+; =============================================================================
+;
+; Like cbm_read, but without calling CHKIN/CLRCH. The caller must have
+; redirected the input already.
+;
+; int __fastcall__ utilRead(void* buffer, unsigned int size);
+;
+; Reads up to "size" bytes from a file to "buffer".
+; Returns the number of actually read bytes, 0 if there are no bytes left
+; (EOF).
+;
+; =============================================================================
+.export _utilRead
+_utilRead:
+        eor     #$FF
+        sta     ptr1
+        txa
+        eor     #$FF
+        sta     ptr1 + 1        ; Save -size-1
+
+        jsr     popax
+        sta     ptr2
+        stx     ptr2 + 1        ; Save buffer
+
+; bytesread = 0;
+
+        lda     #$00
+        sta     ptr3
+        sta     ptr3 + 1
+        beq     utilRead3       ; Branch always
+
+; Loop
+
+utilRead1:
+        jsr     READST
+        cmp     #0              ; Status ok?
+        bne     utilRead4
+
+        jsr     BASIN           ; Read next char from file
+        sta     tmp1            ; Save it for later
+
+        jsr     READST
+        and     #$BF
+        bne     utilRead4
+
+        lda     tmp1
+        ldy     #0
+        sta     (ptr2),y        ; Save read byte
+
+        inc     ptr2
+        bne     utilRead2
+        inc     ptr2+1          ; ++buffer;
+
+utilRead2:
+        inc     ptr3
+        bne     utilRead3
+        inc     ptr3 + 1        ; ++bytesread;
+utilRead3:
+        inc     ptr1
+        bne     utilRead1
+        inc     ptr1 + 1
+        bne     utilRead1
+
+utilRead4:
+        lda     ptr3
+        ldx     ptr3 + 1        ; return bytesread;
+
+        rts
