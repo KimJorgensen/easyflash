@@ -348,7 +348,6 @@ static void __fastcall__ execMenu(uint8_t x, uint8_t y,
  */
 static void loadEAPI(void)
 {
-    uint8_t rv;
     uint8_t useInternal;
     int nBytes;
 
@@ -356,23 +355,20 @@ static void loadEAPI(void)
 
     setStatus("Loading EasyAPI driver...");
     spritesOff();
-    rv = cbm_open(2, fileDlgGetDriveNumber(), CBM_READ, "eapi-????????-??");
-    if (rv)
+    if (cbm_open(2, fileDlgGetDriveNumber(), CBM_READ, "eapi-????????-??") ||
+        cbm_k_chkin(2))
     {
-        spritesOn();
         screenPrintSimpleDialog(apStrEAPINotFound);
     }
     else
     {
         // skip start address
-        nBytes = cbm_read(2, EAPI_LOAD_TO, 2);
+        nBytes = utilRead(EAPI_LOAD_TO, 2);
         if (nBytes > 0)
         {
             // load up to 1024 bytes to $c000
-            nBytes = cbm_read(2, EAPI_LOAD_TO, 1024);
+            nBytes = utilRead(EAPI_LOAD_TO, 1024);
         }
-        cbm_close(2);
-        spritesOn();
 
         if (nBytes <= 0)
         {
@@ -396,6 +392,10 @@ static void loadEAPI(void)
                pFallbackDriverEnd - pFallbackDriverStart);
     }
     EAPI_ZP_REAL_CODE_BASE = EAPI_LOAD_TO;
+
+    cbm_close(2);
+    cbm_k_clrch();
+    spritesOn();
 }
 
 

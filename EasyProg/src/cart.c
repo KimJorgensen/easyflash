@@ -26,7 +26,7 @@
 #include <conio.h>
 #include <ctype.h>
 #include <string.h>
-#include <cbm.h>
+#include "util.h"
 
 #include "cart.h"
 #include "screen.h"
@@ -55,12 +55,12 @@ static const char strCartSignature[16] = CART_SIGNATURE;
 static const char strChipSignature[4] = CHIP_SIGNATURE;
 
 
-uint8_t readCartHeader(uint8_t lfn)
+uint8_t readCartHeader()
 {
     int rv;
     uint8_t i;
 
-    rv = cbm_read(lfn, &cartHeader, sizeof(cartHeader));
+    rv = utilRead(&cartHeader, sizeof(cartHeader));
     if (rv != sizeof(cartHeader))
     {
         return 0;
@@ -115,15 +115,15 @@ void eraseFlash()
 
 /******************************************************************************/
 /**
- * Read the next chip header and data.
+ * Read the next chip header and data from the currently active input.
  *
  * return   CART_RV_ERR     if wrong data has been read
  *          CART_RV_OKAY    if everything was oky
  *          CART_RV_EOF     if everything has been read already
  */
-uint8_t __fastcall__ readNextBankHeader(BankHeader* pBankHeader, uint8_t lfn)
+uint8_t __fastcall__ readNextBankHeader(BankHeader* pBankHeader)
 {
-    if (cbm_read(lfn, pBankHeader, sizeof(BankHeader)) !=
+    if (utilRead(pBankHeader, sizeof(BankHeader)) !=
         sizeof(BankHeader))
     {
         return CART_RV_EOF;
