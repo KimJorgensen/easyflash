@@ -118,6 +118,10 @@ void hexViewer(void)
 {
     char key;
 
+    // we can discard the values => just use "key"
+    if (!eapiInit(&key, &key))
+        return;
+
     screenPrintFrame();
     cputsxy(1, 1, "Hex Viewer");
     cputsxy(12, 23, "<Up>/<Down>/<+>/<->/<Stop>");
