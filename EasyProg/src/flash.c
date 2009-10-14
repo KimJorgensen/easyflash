@@ -8,15 +8,17 @@
 #include <stdint.h>
 #include <string.h>
 #include <stdio.h>
-#include <cbm.h>
 #include <unistd.h>
+#include <conio.h>
 
 #include "flash.h"
 #include "screen.h"
-#include "flashcode.h"
+#include "eapiglue.h"
 #include "progress.h"
 #include "easyprog.h"
+#include "torturetest.h"
 #include "texts.h"
+#include "util.h"
 
 /******************************************************************************/
 
@@ -52,35 +54,26 @@ uint8_t eraseSector(uint8_t nBank, uint8_t nChip)
     pNormalBase  = apNormalRomBase[nChip];
     pUltimaxBase = apUltimaxRomBase[nChip];
 
-    flashCodeSetBank(nBank);
+    eapiSetBank(nBank);
 
-#ifndef EASYFLASH_FAKE
-    // send the erase command
-    flashCodeSectorErase(pUltimaxBase);
-#endif
-
-    // wait 50 us for the algorithm being started
-    // this is done by printing the status
     sprintf(strStatus, "Erasing %02X:%X:%04X",  nBank, nChip, 0);
     setStatus(strStatus);
 
-    progressSetMultipleBanksState(nBank, nChip,
-                                  FLASH_BANKS_ERASE_AT_ONCE,
-                                  PROGRESS_ERASED);
-
-#ifndef EASYFLASH_FAKE
-    if (flashCodeCheckProgress(pNormalBase))
+    // send the erase command
+    if (eapiSectorErase(pUltimaxBase))
     {
         setStatus("OK");
+        progressSetMultipleBanksState(nBank, nChip,
+                                      FLASH_BANKS_ERASE_AT_ONCE,
+                                      PROGRESS_ERASED);
         return 1;
     }
-#else
-    sleep(1);
-#endif
-
-    sprintf(strStatus, "Erase error at %02X:%X:%04X", nBank, nChip, 0);
-    setStatus(strStatus);
-    screenPrintSimpleDialog(apStrEraseFailed);
+    else
+    {
+        sprintf(strStatus, "Erase error at %02X:%X:%04X", nBank, nChip, 0);
+        setStatus(strStatus);
+        screenPrintSimpleDialog(apStrEraseFailed);
+    }
     return 0;
 }
 
@@ -140,27 +133,24 @@ uint8_t __fastcall__ flashWriteBlock(uint8_t nBank, uint8_t nChip,
             nOffset);
     setStatus(strStatus);
 
-    flashCodeSetBank(nBank);
+    eapiSetBank(nBank);
     pNormalBase  = apNormalRomBase[nChip];
 
     // when we write, we have to use the Ultimax address space
     pDest        = apUltimaxRomBase[nChip] + nOffset;
 
-    progressSetBankState(flashCodeGetBank(), nChip, PROGRESS_WORKING);
+    progressSetBankState(eapiGetBank(), nChip, PROGRESS_WORKING);
     for (nRemaining = 256; nRemaining; --nRemaining)
     {
          // send the write command
-         flashCodeWrite(pDest++, *pBlock++);
-
-         // we don't check the result, because we verify anyway
-         if (!flashCodeCheckProgress(pNormalBase))
+         if (!eapiWriteFlash(pDest++, *pBlock++))
          {
              screenPrintSimpleDialog(apStrFlashWriteFailed);
              return 0;
          }
     }
 
-    progressSetBankState(flashCodeGetBank(), nChip, PROGRESS_PROGRAMMED);
+    progressSetBankState(eapiGetBank(), nChip, PROGRESS_PROGRAMMED);
     return 1;
 }
 
@@ -189,11 +179,11 @@ uint8_t __fastcall__ flashVerifyBlock(uint8_t nBank, uint8_t nChip,
     pFlash      = pNormalBase + nOffset;
 
 #ifndef EASYFLASH_FAKE
-    pFlash = flashCodeVerifyFlash(pFlash, pBlock);
+    pFlash = tortureTestVerifyFlash(pFlash, pBlock);
     if (pFlash)
     {
         nOffset = pFlash - pNormalBase;
-        screenPrintVerifyError(flashCodeGetBank(), nChip, nOffset,
+        screenPrintVerifyError(eapiGetBank(), nChip, nOffset,
                                pBlock[nOffset], *pFlash);
         return 0;
     }
@@ -205,14 +195,14 @@ uint8_t __fastcall__ flashVerifyBlock(uint8_t nBank, uint8_t nChip,
 
 /******************************************************************************/
 /**
- * Write a block of bytes to the flash.
+ * Write a block of bytes from the currently active input to the flash.
  * The block will be written to offset 0 of this bank/chip.
  * The whole block must be located in one bank and in one flash chip.
  *
  * return 1 for success, 0 for failure
  */
 uint8_t flashWriteBlockFromFile(uint8_t nBank, uint8_t nChip,
-                                uint16_t nSize, uint8_t lfn)
+                                uint16_t nSize)
 {
     uint16_t nOffset;
     uint16_t nBytes;
@@ -226,7 +216,7 @@ uint8_t flashWriteBlockFromFile(uint8_t nBank, uint8_t nChip,
         sprintf(strStatus, "Reading from file");
         setStatus(strStatus);
 
-        if (cbm_read(lfn, buffer, nBytes) != nBytes)
+        if (utilRead(buffer, nBytes) != nBytes)
         {
             screenPrintSimpleDialog(apStrFileTooShort);
             return 0;

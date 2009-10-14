@@ -24,7 +24,11 @@ extern const char* apStrFileOpenError[];
 extern const char* apStrHeaderReadError[];
 extern const char* apStrChipReadError[];
 extern const char* apStrWriteComplete[];
-
+extern const char* apStrEAPINotFound[];
+extern const char* apStrEAPIInvalid[];
 extern const char* pStrTestFailed;
+extern const char* apStrDirFull[];
+extern const char* apStrTestEndless[];
+extern const char* apStrTestComplete[];
 
 #endif /* TEXTS_H_ */

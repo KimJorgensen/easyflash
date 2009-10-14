@@ -22,6 +22,7 @@
  * Thomas Giesel skoe@directbox.com
  */
 
+#include <c64.h>
 #include <stdint.h>
 #include <conio.h>
 #include <string.h>
@@ -68,6 +69,32 @@ void __fastcall__ screenPrintHex4(uint16_t n)
     tmp = n >> 8;
     screenPrintHex2(tmp);
     screenPrintHex2((uint8_t) n);
+}
+
+/******************************************************************************/
+/**
+ */
+void screenBing(void)
+{
+    unsigned f;
+
+    SID.amp = 0x0f;
+
+    // switch of prev. tone, init some values
+    memset(&(SID.v1), 0, 3 * sizeof(SID.v1));
+
+    SID.v1.ad =
+    SID.v2.ad = 0x08;
+
+    SID.v2.freq = 0x3900;
+
+    SID.v1.ctrl =
+    SID.v2.ctrl = 0x11;
+
+    for (f = 0x3800; f != 0x4400; ++f)
+        SID.v1.freq = f;
+
+    memset(&(SID.v1), 0, 3 * sizeof(SID.v1));
 }
 
 /******************************************************************************/
@@ -257,6 +284,7 @@ void __fastcall__ screenPrintMenu(uint8_t x, uint8_t y,
     uint8_t nEntry, nEntries;
     uint8_t tmp;
     uint8_t len;
+    const ScreenMenuEntry* pEntry;
     const char* pStr;
 
     // calculate length of longest entry
@@ -275,24 +303,35 @@ void __fastcall__ screenPrintMenu(uint8_t x, uint8_t y,
         screenPrintBox(x, y, len + 2, nEntries + 2);
     }
 
+    pEntry = pMenuEntries;
     for (nEntry = 0; nEntry != nEntries; ++nEntry)
     {
         gotoxy(x + 1, ++y);
 
-        pStr = pMenuEntries[nEntry].pStrLabel;
+        pStr = pEntry->pStrLabel;
 
         if (nEntry == nSelected)
             revers(1);
 
         cputc(' ');
-        textcolor(COLOR_EXTRA);
-        cputc(*pStr);
-        textcolor(COLOR_FOREGROUND);
-        cputs(pStr + 1);
+        if (pEntry->pCheckFunction())
+        {
+            textcolor(COLOR_EXTRA);
+            cputc(*pStr);
+            textcolor(COLOR_FOREGROUND);
+            cputs(pStr + 1);
+        }
+        else
+        {
+            textcolor(COLOR_GRAY1);
+            cputs(pStr);
+        }
         cclear(len + x - wherex() + 1);
 
         revers(0);
+        ++pEntry;
     }
+    textcolor(COLOR_FOREGROUND);
 }
 
 
@@ -320,6 +359,7 @@ void __fastcall__ screenDoMenu(uint8_t x, uint8_t y,
     {
         screenPrintMenu(x, y, pMenuEntries, nSelected, 0);
         key = cgetc();
+
         switch (key)
         {
         case CH_CURS_UP:
@@ -335,27 +375,34 @@ void __fastcall__ screenDoMenu(uint8_t x, uint8_t y,
             break;
 
         case CH_ENTER:
-            pMenuEntries[nSelected].pFunction();
-            return;
+            if (pMenuEntries[nSelected].pCheckFunction())
+            {
+                pMenuEntries[nSelected].pFunction();
+                return;
+            }
+            break;
 
         default:
             for (nEntry = 0; nEntry != nEntries; ++nEntry)
-                if (key == tolower(pMenuEntries[nEntry].pStrLabel[0]))
+            {
+                if (key == tolower(pMenuEntries[nEntry].pStrLabel[0]) &&
+                        pMenuEntries[nEntry].pCheckFunction())
                 {
                     screenPrintMenu(x, y, pMenuEntries, nEntry, 0);
                     pMenuEntries[nEntry].pFunction();
                     return;
                 }
+            }
         }
     } while (key != CH_STOP);
 }
 
 /******************************************************************************/
 /**
- * Print a dialog with some text lines and wait for a key.
+ * Print a dialog with some text lines and wait for a key if a flag is set.
  * The array of lines apStrLines must be terminated with a NULL pointer.
  *
- * flags            can contain BUTTON_ENTER and/or BUTTON_STOP.
+ * flags            may contain BUTTON_ENTER and/or BUTTON_STOP.
  * return           the button which has been pressed
  */
 uint8_t __fastcall__ screenPrintDialog(const char* apStrLines[], uint8_t flags)
@@ -364,6 +411,8 @@ uint8_t __fastcall__ screenPrintDialog(const char* apStrLines[], uint8_t flags)
     uint8_t nLines;
     uint8_t nLongestLength = 1;
     uint8_t xStart, xEnd, yStart, yEnd;
+
+    screenBing();
 
     for (y = 0; apStrLines[y]; ++y)
     {
@@ -414,7 +463,10 @@ uint8_t __fastcall__ screenPrintDialog(const char* apStrLines[], uint8_t flags)
     if (flags & BUTTON_STOP)
         screenPrintButton(xStart, yEnd - 3, "Stop");
 
-    return screenWaitKey(flags);
+    if (flags)
+        return screenWaitKey(flags);
+
+    return 0;
 }
 
 

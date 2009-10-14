@@ -248,3 +248,124 @@ different:
         ldx #0
         rts
 .endproc
+
+; =============================================================================
+;
+; Check if the 256 bytes of RAM at $DF00 are okay.
+;
+; Return 1 for success, 0 for error
+; uint8_t __fastcall__ tortureTestCheckRAM(void);
+;
+; parameters:
+;       base in AX (A = low), $8000 or $A000
+;
+; return:
+;       result in AX (A = low), 1 = okay, 0 = error
+;
+; =============================================================================
+.export _tortureTestCheckRAM
+.proc   _tortureTestCheckRAM
+_flashCodeCheckRAM:
+        ; write 0..255
+        ldx #0
+l1:
+        txa
+        sta $df00, x
+        dex
+        bne l1
+        ; check 0..255
+l2:
+        txa
+        cmp $df00, x
+        bne ret_err
+        dex
+        bne l2
+
+        ; write $55
+        lda #$55
+l3:
+        sta $df00, x
+        dex
+        bne l3
+        ; check $55
+l4:
+        cmp $df00, x
+        bne ret_err
+        dex
+        bne l4
+
+        ; write $AA
+        lda #$AA
+l5:
+        sta $df00, x
+        dex
+        bne l5
+        ; check $AA
+l6:
+        cmp $df00, x
+        bne ret_err
+        dex
+        bne l6  ; x = 0
+        lda #1
+        rts
+ret_err:
+        lda #0
+        tax
+        rts
+.endproc
+
+; =============================================================================
+;
+; Compare 256 bytes of flash contents and RAM contents. The bank must already
+; be set up. The whole block must be located in one bank and in one flash
+; chip.
+;
+; Return 0 for success, the bad flash memory address for error
+; uint8_t* __fastcall__ tortureTestVerifyFlash(uint8_t* pFlash, uint8_t* pRAM);
+;
+; !!! Do not call this from Ultimax mode, Use normal addresses (8000/a000) !!!
+;
+; parameters:
+;       RAM address in AX (A = low)
+;       flash address on cc65-stack
+;
+; return:
+;       result in AX (A = low), 0 = okay, address in flash = error
+;
+; =============================================================================
+.export _tortureTestVerifyFlash
+.proc   _tortureTestVerifyFlash
+_tortureTestVerifyFlash:
+
+        sta ptr1
+        stx ptr1 + 1
+
+        ; get and save address
+        jsr popax
+        sta ptr2
+        stx ptr2 + 1
+
+        ldy #0
+l1:
+        lda (ptr2), y
+        cmp (ptr1), y
+        bne bad
+        iny
+        bne l1
+
+        ; okay, return NULL
+        tya
+        tax
+        rts
+bad:
+        ; return bad flash address
+        ldx ptr2 + 1    ; high byte
+        clc
+        tya
+        adc ptr2        ; low byte + bad offset
+        bcc nohigh
+        inx
+nohigh:
+        rts
+
+.endproc
