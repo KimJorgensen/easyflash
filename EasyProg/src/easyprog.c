@@ -32,7 +32,7 @@
 #include "easyprog.h"
 #include "cart.h"
 #include "screen.h"
-#include "flashcode.h"
+#include "eapiglue.h"
 #include "flash.h"
 #include "texts.h"
 #include "buffer.h"
@@ -42,20 +42,33 @@
 #include "torturetest.h"
 #include "filedlg.h"
 #include "sprites.h"
+#include "util.h"
 
 /******************************************************************************/
 static void systemReset(void);
 static void showAbout(void);
 static void checkEraseAll(void);
+static uint8_t returnTrue(void);
+static uint8_t ifHaveValidFlash(void);
 
 /******************************************************************************/
 
 
 // Low/High flash chip manufacturer/device ID
-uint16_t anFlashId[2];
+uint8_t nManufacturerId;
+uint8_t nDeviceId;
 
 // File name of last CRT image
 char strFileName[FILENAME_MAX];
+
+// Driver name
+char strDriverName[18 + 1] = "Internal Fallback";
+
+// EAPI signature
+static const unsigned char pStrEAPISignature[] =
+{
+        0x65, 0x61, 0x70, 0x69 /* "EAPI" */
+};
 
 /******************************************************************************/
 /* Static variables */
@@ -63,92 +76,72 @@ char strFileName[FILENAME_MAX];
 // String describes the current action
 static char strStatus[41];
 
-// Index to the currently chosen menu entry
-static uint8_t nMenuSelection;
-
 /******************************************************************************/
 
 ScreenMenuEntry aMainMenuEntries[] =
 {
         {
-            EASYPROG_MENU_ENTRY_WRITE_CRT,
             "Write CRT to flash",
-            checkWriteCRTImage
+            checkWriteCRTImage,
+            ifHaveValidFlash
         },
         {
-            EASYPROG_MENU_ENTRY_CHECK_TYPE,
             "Check flash type",
-            (void (*)(void)) checkFlashType
+            (void (*)(void)) checkFlashType,
+            returnTrue
         },
         {
-            EASYPROG_MENU_ENTRY_ERASE_ALL,
             "Erase all",
-            checkEraseAll
+            checkEraseAll,
+            ifHaveValidFlash
         },
         {
-            EASYPROG_MENU_ENTRY_QUIT,
-            "Quit",
-            systemReset
+            "Start cartridge",
+            utilResetStartCartridge,
+            returnTrue
         },
-        { 0, NULL, NULL }
+        {
+            "Reset, cartridge off",
+            utilResetKillCartridge,
+            returnTrue
+        },
+        { NULL, NULL, 0 }
 };
 
 ScreenMenuEntry aExpertMenuEntries[] =
 {
         {
-            EASYPROG_MENU_ENTRY_WRITE_LOW,
             "Write BIN to LOROM",
-            checkWriteLOROMImage
+            checkWriteLOROMImage,
+            ifHaveValidFlash
         },
         {
-            EASYPROG_MENU_ENTRY_WRITE_HIGH,
             "Write BIN to HIROM",
-            checkWriteHIROMImage
+            checkWriteHIROMImage,
+            ifHaveValidFlash
         },
         {
-            EASYPROG_MENU_ENTRY_TORTURE_TEST,
             "Torture test",
-            tortureTest
+            tortureTest,
+            ifHaveValidFlash
         },
         {
-            EASYPROG_MENU_ENTRY_HEX_VIEWER,
             "Hex viewer",
-            hexViewer
+            hexViewer,
+            ifHaveValidFlash
         },
-        { 0, NULL, NULL }
+        { NULL, NULL, 0 }
 };
 
 ScreenMenuEntry aHelpMenuEntries[] =
 {
         {
-            EASYPROG_MENU_ENTRY_ABOUT,
             "About",
-            showAbout
+            showAbout,
+            returnTrue
         },
-        { 0, NULL, NULL }
+        { NULL, NULL, 0 }
 };
-
-/******************************************************************************/
-/**
- * Show a box with the current Flash type.
- */
-static void showFlashTypeBox(uint8_t y, uint8_t nChip)
-{
-    uint16_t id;
-
-    textcolor(COLOR_LIGHTFRAME);
-    screenPrintBox(16, y, 23, 3);
-    textcolor(COLOR_FOREGROUND);
-
-    id = anFlashId[nChip];
-
-    gotoxy (2, ++y);
-    cprintf("%4s Flash ID:", apStrLowHigh[nChip]);
-
-    gotoxy (17, y);
-    cprintf("%04X (%s)", id,
-        id == FLASH_TYPE_AMD_AM29F040 ? "Am29F040" : "unknown");
-}
 
 
 /******************************************************************************/
@@ -169,6 +162,8 @@ static void refreshStatusLine(void)
  */
 void refreshMainScreen(void)
 {
+    uint16_t id;
+
     screenPrintFrame();
 
     // menu entries
@@ -203,8 +198,27 @@ void refreshMainScreen(void)
     gotox(17);
     cputs(aStrInternalCartTypeName[internalCartType]);
 
-    showFlashTypeBox(10, 0);
-    showFlashTypeBox(13, 1);
+    textcolor(COLOR_LIGHTFRAME);
+    screenPrintBox(16, 10, 23, 3);
+    textcolor(COLOR_FOREGROUND);
+
+    id = (nManufacturerId << 8) | nDeviceId;
+
+    gotoxy(7, 11);
+    cputs("Flash ID:");
+    gotox(17);
+    cprintf("%04X (%s)", id,
+        id == FLASH_TYPE_AMD_AM29F040 ? "Am29F040" : "unknown");
+
+    textcolor(COLOR_LIGHTFRAME);
+    screenPrintBox(16, 13, 23, 3);
+    textcolor(COLOR_FOREGROUND);
+
+    gotoxy(3, 14);
+    cputs("Flash Driver:");
+    gotox(17);
+    cputs(strDriverName);
+
     progressShow();
 
     refreshStatusLine();
@@ -219,24 +233,36 @@ void refreshMainScreen(void)
  */
 uint8_t checkFlashType(void)
 {
-#ifdef EASYFLASH_FAKE
-    anFlashId[0] = FLASH_TYPE_AMD_AM29F040;
-    anFlashId[1] = FLASH_TYPE_AMD_AM29F040;
-#else
-    anFlashId[0] = flashCodeReadIds(ROM0_BASE);
-    anFlashId[1] = flashCodeReadIds(ROM1_BASE_ULTIMAX);
-#endif
-
-    if ((anFlashId[0] != FLASH_TYPE_AMD_AM29F040) ||
-        (anFlashId[1] != FLASH_TYPE_AMD_AM29F040))
+    if (eapiInit(&nManufacturerId, &nDeviceId) == 0)
     {
         screenPrintSimpleDialog(apStrWrongFlash);
         refreshMainScreen();
+        nManufacturerId = nDeviceId = 0;
         return 0;
     }
 
     refreshMainScreen();
     return 1;
+}
+
+
+/******************************************************************************/
+/**
+ * Always return 1.
+ */
+static uint8_t returnTrue(void)
+{
+   return 1;
+}
+
+
+/******************************************************************************/
+/**
+ * Return non-0 if the flash is okay and we have a driver which supports it.
+ */
+static uint8_t ifHaveValidFlash(void)
+{
+    return nManufacturerId | nDeviceId;
 }
 
 /******************************************************************************/
@@ -246,7 +272,7 @@ uint8_t checkFlashType(void)
  */
 static void checkRAM(void)
 {
-    if (!flashCodeCheckRAM())
+    if (!tortureTestCheckRAM())
     {
         screenPrintSimpleDialog(apStrBadRAM);
         refreshMainScreen();
@@ -318,11 +344,69 @@ static void __fastcall__ execMenu(uint8_t x, uint8_t y,
 
 /******************************************************************************/
 /**
+ * Load EAPI driver.
+ */
+static void loadEAPI(void)
+{
+    uint8_t useInternal;
+    int nBytes;
+
+    useInternal = 1;
+
+    setStatus("Loading EasyAPI driver...");
+    spritesOff();
+    if (cbm_open(2, fileDlgGetDriveNumber(), CBM_READ, "eapi-????????-??") ||
+        cbm_k_chkin(2))
+    {
+        screenPrintSimpleDialog(apStrEAPINotFound);
+    }
+    else
+    {
+        // skip start address
+        nBytes = utilRead(EAPI_LOAD_TO, 2);
+        if (nBytes > 0)
+        {
+            // load up to 1024 bytes to $c000
+            nBytes = utilRead(EAPI_LOAD_TO, 1024);
+        }
+
+        if (nBytes <= 0)
+        {
+            screenPrintSimpleDialog(apStrEAPINotFound);
+        }
+        else if (memcmp(EAPI_LOAD_TO, pStrEAPISignature, 4))
+        {
+            screenPrintSimpleDialog(apStrEAPIInvalid);
+        }
+        else
+        {
+            // correctly loaded
+            strcpy(strDriverName, EAPI_LOAD_TO + 4);
+            useInternal = 0;
+        }
+    }
+
+    if (useInternal)
+    {
+        memcpy(EAPI_LOAD_TO, pFallbackDriverStart,
+               pFallbackDriverEnd - pFallbackDriverStart);
+    }
+    EAPI_ZP_REAL_CODE_BASE = EAPI_LOAD_TO;
+
+    cbm_close(2);
+    cbm_k_clrch();
+    spritesOn();
+}
+
+
+/******************************************************************************/
+/**
  *
  */
 int main(void)
 {
     char key;
+    uint8_t nDrive;
 
     screenInit();
     progressInit();
@@ -332,10 +416,18 @@ int main(void)
     internalCartType = INTERNAL_CART_TYPE_NONE;
 
     refreshMainScreen();
-    fileDlgSetDriveNumber(8);
+
+    nDrive = *(uint8_t*)0xba;
+    if (nDrive < 8)
+        nDrive = 8;
+    fileDlgSetDriveNumber(nDrive);
+
+    loadEAPI();
+    screenBing();
 
     // this also makes visible 16kByte of flash memory
     checkFlashType();
+
     checkRAM();
 
     for (;;)

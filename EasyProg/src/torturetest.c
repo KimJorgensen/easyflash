@@ -30,7 +30,7 @@
 #include "easyprog.h"
 #include "torturetest.h"
 #include "flash.h"
-#include "flashcode.h"
+#include "eapiglue.h"
 
 /*
  * The cartridge test works like this:
@@ -127,22 +127,14 @@ static uint8_t tortureTestVerify(uint8_t nBank)
 static uint8_t tortureTestFlashIds(void)
 {
     char strStatus[41];
-    uint16_t rv0;
-    uint16_t rv1;
+    uint8_t nManufacturerId, nDeviceId;
     uint8_t nLoop;
 
     nLoop = 0;
     do
     {
-        rv0 = flashCodeReadIds(ROM0_BASE);
-        rv1 = flashCodeReadIds(ROM1_BASE_ULTIMAX);
-
-        if (rv0 != FLASH_TYPE_AMD_AM29F040 ||
-            rv1 != FLASH_TYPE_AMD_AM29F040)
+        if (!eapiInit(&nManufacturerId, &nDeviceId))
         {
-            sprintf(strStatus, "Flash ID error: %04X, %04X",
-                    rv0, rv1);
-
             screenPrintTwoLinesDialog(pStrTestFailed, strStatus);
             return 0;
         }
@@ -160,8 +152,12 @@ void tortureTest(void)
 
     if (screenAskEraseDialog() != BUTTON_ENTER)
         return;
+    screenPrintSimpleDialog(apStrTestEndless);
 
     refreshMainScreen();
+
+    if (!tortureTestFlashIds())
+        return;
 
     tortureTestWriteData();
 
@@ -180,7 +176,7 @@ void tortureTest(void)
             return;
         }
 
-        if (!flashCodeCheckRAM())
+        if (!tortureTestCheckRAM())
         {
             screenPrintSimpleDialog(apStrBadRAM);
             return;
@@ -194,5 +190,8 @@ void tortureTest(void)
 
         if (kbhit() && cgetc() == CH_STOP)
             return;
+
+        if (nLoop == FLASH_NUM_BANKS)
+            screenPrintDialog(apStrTestComplete, 0);
     }
 }

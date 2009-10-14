@@ -1,15 +1,17 @@
 
 
+VERSION := 1.3.4
+
 # do not remove intermediate targets
 .SECONDARY:
 
 obj :=
 obj += obj/crt0.o
 obj += obj/buffer.o
-obj += obj/flashcode.o
+obj += obj/eapiglueasm.o
 obj += obj/flash.o
 obj += obj/cart.o
-obj += obj/screen.o
+obj += obj/screen.opt.o
 obj += obj/easyprog.o
 obj += obj/texts.o
 obj += obj/hex.o
@@ -20,13 +22,16 @@ obj += obj/torturetestasm.o
 obj += obj/startupbin.o
 obj += obj/filedlg.o
 obj += obj/spritesasm.o
+obj += obj/util.o
+obj += obj/dir.o
 
 bin_acme :=
 bin_acme += obj/startup.bin
 bin_acme += obj/sprites.bin
 
 INCLUDE := include
-#DEFINE  := -D EASYFLASH_FAKE
+
+DEFINE  := -DEFVERSION=\"${VERSION}\"
 
 .PHONY: all
 all: easyprog.prg
@@ -45,6 +50,12 @@ obj/%.o: obj/%.s obj
 	ca65 -t c64 -o $@ $<
 
 ###############################################################################
+obj/%.opt.s: obj/%.s obj
+	#glopt65 -o $@ $<
+	cp $< $@
+	#echo bla
+
+###############################################################################
 # the binaries created with acme are included in ca65 source code
 # therefore we need a dependency here
 #
@@ -60,10 +71,11 @@ obj:
 	mkdir -p $@
 
 easyprog: $(obj) src/ld.cfg
-	ld65 -o $@ -m $@.map -C src/ld.cfg $(obj) --lib c64.lib
+	ld65 -o $@ -m $@.map -C src/ld.cfg $(obj) -L /usr/local/lib/cc65/lib --lib c64.lib
 
 easyprog.prg: easyprog
 	exomizer sfx 0x080d -o $@ -q $^
+	cp $@ easyprog-$(VERSION).prg
 
 .PHONY: clean
 clean:

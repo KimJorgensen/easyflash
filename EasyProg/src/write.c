@@ -38,6 +38,7 @@
 #include "filedlg.h"
 #include "sprites.h"
 #include "progress.h"
+#include "util.h"
 
 /******************************************************************************/
 /* Static variables */
@@ -50,19 +51,20 @@ static BankHeader bankHeader;
 
 /******************************************************************************/
 /**
- * Print a status line, read the next bank header and calculate nBank,
- * nAddress and nSize.
+ * Print a status line, read the next bank header from the currently active
+ * input and calculate nBank, nAddress and nSize.
  *
  * return CART_RV_OK, CART_RV_ERR or CART_RV_EOF
  */
-static uint8_t readNextHeader(uint8_t lfn)
+static uint8_t readNextHeader()
 {
     uint8_t rv;
 
     setStatus("Reading header from file");
-    rv = readNextBankHeader(&bankHeader, lfn);
+    rv = readNextBankHeader(&bankHeader);
 
     nBank = bankHeader.bank[1];
+
     nAddress = 256 * bankHeader.loadAddr[0] + bankHeader.loadAddr[1];
     nSize = 256 * bankHeader.romLen[0] + bankHeader.romLen[1];
 
@@ -98,6 +100,8 @@ static uint8_t __fastcall__ writeStartUpCode(uint8_t* pBankOffset)
     uint8_t  nConfig;
     uint8_t* pBuffer;
 
+    *pBankOffset = 0;
+
     switch (internalCartType)
     {
     case INTERNAL_CART_TYPE_NORMAL_8K:
@@ -117,7 +121,6 @@ static uint8_t __fastcall__ writeStartUpCode(uint8_t* pBankOffset)
 
     case INTERNAL_CART_TYPE_OCEAN1:
         nConfig = EASYFLASH_IO_16K;
-        *pBankOffset = 0;
         break;
 
     case INTERNAL_CART_TYPE_EASYFLASH:
@@ -165,17 +168,17 @@ static uint8_t __fastcall__ writeStartUpCode(uint8_t* pBankOffset)
 
 /******************************************************************************/
 /**
- * Write a cartridge image from the given file to flash.
+ * Write a cartridge image from the currently active input (file) to flash.
  *
  * return CART_RV_OK or CART_RV_ERR
  */
-static uint8_t writeCrtImage(uint8_t lfn)
+static uint8_t writeCrtImage()
 {
     uint8_t rv;
     uint8_t nBankOffset;
 
     setStatus("Reading CRT header");
-    if (!readCartHeader(lfn))
+    if (!readCartHeader())
     {
         screenPrintSimpleDialog(apStrHeaderReadError);
         return CART_RV_ERR;
@@ -189,7 +192,7 @@ static uint8_t writeCrtImage(uint8_t lfn)
 
     do
     {
-        rv = readNextHeader(lfn);
+        rv = readNextHeader();
         if (rv == CART_RV_ERR)
         {
             screenPrintSimpleDialog(apStrChipReadError);
@@ -204,15 +207,15 @@ static uint8_t writeCrtImage(uint8_t lfn)
             {
                 if (nSize > 0x2000)
                 {
-                    if (!flashWriteBlockFromFile(nBank, 0, 0x2000, lfn) ||
-                        !flashWriteBlockFromFile(nBank, 1, nSize - 0x2000, lfn))
+                    if (!flashWriteBlockFromFile(nBank, 0, 0x2000) ||
+                        !flashWriteBlockFromFile(nBank, 1, nSize - 0x2000))
                     {
                         return CART_RV_ERR;
                     }
                 }
                 else
                 {
-                    if (!flashWriteBlockFromFile(nBank, 0, nSize, lfn))
+                    if (!flashWriteBlockFromFile(nBank, 0, nSize))
                         return CART_RV_ERR;
                 }
             }
@@ -220,7 +223,7 @@ static uint8_t writeCrtImage(uint8_t lfn)
                       (nAddress == (uint16_t) ROM1_BASE_ULTIMAX)) &&
                      (nSize <= 0x2000))
             {
-                if (!flashWriteBlockFromFile(nBank, 1, nSize, lfn))
+                if (!flashWriteBlockFromFile(nBank, 1, nSize))
                     return CART_RV_ERR;
             }
             else
@@ -244,7 +247,7 @@ static uint8_t writeCrtImage(uint8_t lfn)
  *
  * return CART_RV_OK or CART_RV_ERR
  */
-static uint8_t writeBinImage(uint8_t lfn, uint8_t nChip)
+static uint8_t writeBinImage(uint8_t nChip)
 {
     uint8_t  nBank;
     uint16_t nOffset;
@@ -260,10 +263,10 @@ static uint8_t writeBinImage(uint8_t lfn, uint8_t nChip)
     nBank = 0;
     do
     {
-        sprintf(strStatus, "Reading from file");
+        strcpy(strStatus, "Reading from file");
         setStatus(strStatus);
 
-        nBytes = cbm_read(lfn, pBuffer, 0x100);
+        nBytes = utilRead(pBuffer, 0x100);
 
         if (nBytes >= 0)
         {
@@ -328,9 +331,8 @@ static void checkWriteImage(uint8_t imageType)
 
     spritesOff();
     lfn = 2;
-    rv = cbm_open(lfn, fileDlgGetDriveNumber(), CBM_READ, strFileName);
-
-    if (rv)
+    if (cbm_open(lfn, fileDlgGetDriveNumber(), CBM_READ, strFileName) ||
+        cbm_k_chkin(lfn))
     {
         screenPrintSimpleDialog(apStrFileOpenError);
         spritesOn();
@@ -342,18 +344,18 @@ static void checkWriteImage(uint8_t imageType)
 
     if (imageType == IMAGE_TYPE_CRT)
     {
-        if (writeCrtImage(lfn) == CART_RV_OK)
+        if (writeCrtImage() == CART_RV_OK)
             screenPrintSimpleDialog(apStrWriteComplete);
     }
     else
     {
-        if (writeBinImage(lfn, imageType == IMAGE_TYPE_HIROM) ==
-               CART_RV_OK)
+        if (writeBinImage(imageType == IMAGE_TYPE_HIROM) == CART_RV_OK)
         {
             screenPrintSimpleDialog(apStrWriteComplete);
         }
     }
 
+    cbm_k_clrch();
     cbm_close(lfn);
     spritesOn();
 }
