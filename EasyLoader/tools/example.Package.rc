@@ -24,7 +24,7 @@
 # file area
 #
 # all empty lines ans those starting whith a # are irgnored
-# en entry starting whith a dot "." is hidden in tehe listing
+# an line starting whith a dot "." is hidden in the listing
 # all paths are relative to this file
 # basic usage: "mode:file.prg" (whithout quotes)
 # extended: "mode:file.prg=newname"

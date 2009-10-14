@@ -121,10 +121,19 @@ start_saver:
 
 COPY_STARTSAVER_START:
 .pseudopc $df00 {
+	// load bank
 	lda P_SCREENSAVER_BANK
 	beq !no_saver+
 
+	// store bank (lower 8bit)
 	sta $de00
+	sta $df00
+
+	// store bank (higher 8bit)
+	lda #$00
+	sta $df01
+
+	// load and use offset
 	lda P_SCREENSAVER_OFS
 	sta smc_jsr+2
 smc_jsr:

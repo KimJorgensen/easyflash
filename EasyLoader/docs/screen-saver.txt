@@ -1,5 +1,5 @@
 
-um einen screen-saver im easyloader zu haben, muss man ein crt (nicht xbank)
+um einen screen-saver im easyloader zu haben, muss man ein crt (incl. xbank)
 mit dem namen "!el_screen-saver" auf dem easyflash ablegen.
 
 wenn der bildschirmschoner aktiv wird, dann:
@@ -20,4 +20,5 @@ benutzt werden darf folgender speicher:
  $c000-$ffff (aber nicht das easyflash ram)
 
 vic + co koennen umgebogen werden, aber am ende muss alles wieder sein wie
-vorher, was auch den easyflash-modus (16k) bertrifft.
+vorher, was auch den easyflash-modus (16k) bertrifft. (die easyflash-bank kann 
+belibig sein)
