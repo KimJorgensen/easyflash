@@ -85,6 +85,9 @@ copy_scan_boot_start:
 			iny
 			lda (TEMP), y
 			sta $de00
+			sta $df00
+			lda #$00
+			sta $df01
 			stx $de02
 			jmp ($fffc)
 			

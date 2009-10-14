@@ -1,5 +1,8 @@
 <?php
 
+ini_set('error_log', '/dev/stderr');
+ini_set('log_errors', true);
+
 if($argc != 3){
 	fail("usage: ".$argv[0]." <file> <package>\n");
 }
