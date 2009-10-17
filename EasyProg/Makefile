@@ -1,29 +1,32 @@
 
 
-VERSION := 1.3.4
+VERSION := 1.3.5
 
 # do not remove intermediate targets
 .SECONDARY:
 
 obj :=
 obj += obj/crt0.o
-obj += obj/buffer.o
 obj += obj/eapiglueasm.o
-obj += obj/flash.o
-obj += obj/cart.o
-obj += obj/screen.opt.o
-obj += obj/easyprog.o
 obj += obj/texts.o
-obj += obj/hex.o
-obj += obj/progress.o
-obj += obj/write.o
-obj += obj/torturetest.o
 obj += obj/torturetestasm.o
 obj += obj/startupbin.o
-obj += obj/filedlg.o
 obj += obj/spritesasm.o
 obj += obj/util.o
-obj += obj/dir.o
+obj += obj/easyprog.opt.o
+
+optobj :=
+optobj += obj/easyprog.o
+optobj += obj/flash.o
+optobj += obj/cart.o
+optobj += obj/screen.o
+optobj += obj/progress.o
+optobj += obj/dir.o
+optobj += obj/filedlg.o
+optobj += obj/hex.o
+optobj += obj/buffer.o
+optobj += obj/torturetest.o
+optobj += obj/write.o
 
 bin_acme :=
 bin_acme += obj/startup.bin
@@ -33,6 +36,8 @@ INCLUDE := include
 
 DEFINE  := -DEFVERSION=\"${VERSION}\"
 
+optasm := $(optobj:.o=.s)
+
 .PHONY: all
 all: easyprog.prg
 
@@ -41,7 +46,6 @@ all: easyprog.prg
 #
 headers := $(wildcard $(INCLUDE)/*.h)
 
-###############################################################################
 obj/%.s: src/%.c obj $(headers)
 	cc65 -t c64 -O -I $(INCLUDE) $(DEFINE) -o $@ $<
 
@@ -50,10 +54,12 @@ obj/%.o: obj/%.s obj
 	ca65 -t c64 -o $@ $<
 
 ###############################################################################
-obj/%.opt.s: obj/%.s obj
-	#glopt65 -o $@ $<
-	cp $< $@
-	#echo bla
+obj/easyprog.all.s: $(optasm)
+	gcat65 --add-removed -v -o $@ $^
+
+###############################################################################
+obj/%.opt.s: obj/%.all.s obj
+	glopt65 -o $@ $<
 
 ###############################################################################
 # the binaries created with acme are included in ca65 source code
