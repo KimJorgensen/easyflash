@@ -412,8 +412,6 @@ uint8_t __fastcall__ screenPrintDialog(const char* apStrLines[], uint8_t flags)
     uint8_t nLongestLength = 1;
     uint8_t xStart, xEnd, yStart, yEnd;
 
-    screenBing();
-
     for (y = 0; apStrLines[y]; ++y)
     {
         t = strlen(apStrLines[y]);
@@ -462,6 +460,8 @@ uint8_t __fastcall__ screenPrintDialog(const char* apStrLines[], uint8_t flags)
 
     if (flags & BUTTON_STOP)
         screenPrintButton(xStart, yEnd - 3, "Stop");
+
+    screenBing();
 
     if (flags)
         return screenWaitKey(flags);
