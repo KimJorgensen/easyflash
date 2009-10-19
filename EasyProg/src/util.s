@@ -24,6 +24,8 @@
         .importzp       ptr1, ptr2, ptr3, tmp1
         .import         popax, popa
 
+        .import         _utilStr
+
 
 EASYFLASH_BANK    = $DE00
 EASYFLASH_CONTROL = $DE02
@@ -80,6 +82,14 @@ fallbackDriverStart = * + 2
 .incbin "eapi-am29f040-02"
 fallbackDriverEnd:
 
+; =============================================================================
+; hex digits
+; =============================================================================
+.segment    "RODATA"
+hexDigits:
+        .byte "0123456789ABCDEF"
+
+.code
 
 ; =============================================================================
 ;
@@ -148,4 +158,158 @@ utilRead4:
         lda     ptr3
         ldx     ptr3 + 1        ; return bytesread;
 
+        rts
+
+; =============================================================================
+;
+; Append a single digit hex number to the string utilStr.
+;
+; void __fastcall__ utilAppendHex1(uint8_t n);
+;
+; parameters:
+;       value n in A
+;       address on cc65-stack
+;
+; return:
+;       -
+;
+; =============================================================================
+.export _utilAppendHex1
+_utilAppendHex1:
+        pha             ; remember n
+
+        ; get string end
+        jsr _utilGetStringEnd
+        sta ptr1
+        stx ptr1 + 1
+        pla
+        pha
+
+        ldy #0
+utilAppendHex1_:
+        ; get low nibble
+        pla
+        and #$0f
+        tax
+        lda hexDigits, x
+        sta (ptr1), y
+
+        ; 0-termination
+        lda #0
+        iny
+        sta (ptr1), y
+
+        rts
+
+
+; =============================================================================
+;
+; Append a two digit hex number to the string utilStr.
+;
+; void __fastcall__ utilAppendHex2(uint8_t n);
+;
+; parameters:
+;       value n in A
+;
+; return:
+;       -
+;
+; =============================================================================
+.export _utilAppendHex2
+_utilAppendHex2:
+        pha             ; remember n
+
+        ; get string end
+        jsr _utilGetStringEnd
+        sta ptr1
+        stx ptr1 + 1
+        pla
+
+        ; get high nibble
+        pha
+        lsr
+        lsr
+        lsr
+        lsr
+        tax
+        lda hexDigits, x
+        ldy #0
+        sta (ptr1), y
+
+        iny
+        bne utilAppendHex1_ ; always
+
+; =============================================================================
+;
+; Append a character to the string utilStr.
+;
+; void __fastcall__ utilAppendChar(char c);
+;
+; parameters:
+;       character c in A
+;
+; return:
+;       -
+;
+; =============================================================================
+.export _utilAppendChar
+_utilAppendChar:
+        pha             ; remember c
+
+        ; get string end
+        jsr _utilGetStringEnd
+        sta ptr1
+        stx ptr1 + 1
+
+        ldy #0
+        pla
+        sta (ptr1), y
+
+        ; 0-termination
+        tya
+        iny
+        sta (ptr1), y
+
+        rts
+
+; =============================================================================
+;
+; Return the address of end of utilStr.
+;
+; parameters:
+;       -
+;
+; return:
+;       address of 0-termination of string in AX
+;
+; changes:
+;       Y, C
+;
+; =============================================================================
+;.export _utilGetStringEnd
+_utilGetStringEnd:
+        lda #<_utilStr
+        ldx #>_utilStr
+        sta ptr1
+        stx ptr1 + 1
+
+        ldy #0
+gseNext:
+        lda (ptr1), y
+        beq gseEnd
+
+        iny
+        bne gseNoHi
+        inc ptr1 + 1
+        inx
+gseNoHi:
+        bne gseNext         ; always (as long as the string doesn't wrap to ZP)
+
+gseEnd:
+        clc
+        tya                 ; update low-byte
+        adc ptr1
+        bcc gseEndNoHi
+        inx
+gseEndNoHi:
         rts

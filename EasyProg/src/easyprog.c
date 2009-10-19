@@ -45,7 +45,6 @@
 #include "util.h"
 
 /******************************************************************************/
-static void systemReset(void);
 static void showAbout(void);
 static void checkEraseAll(void);
 static uint8_t returnTrue(void);
@@ -162,8 +161,6 @@ static void refreshStatusLine(void)
  */
 void refreshMainScreen(void)
 {
-    uint16_t id;
-
     screenPrintFrame();
 
     // menu entries
@@ -191,7 +188,7 @@ void refreshMainScreen(void)
     gotoxy(6, 5);
     cputs("File name:");
     gotox(17);
-    cprintf("%-16s", strFileName);
+    cputs(strFileName);
 
     gotoxy(7, 8);
     cputs("CRT Type:");
@@ -202,13 +199,16 @@ void refreshMainScreen(void)
     screenPrintBox(16, 10, 23, 3);
     textcolor(COLOR_FOREGROUND);
 
-    id = (nManufacturerId << 8) | nDeviceId;
-
     gotoxy(7, 11);
     cputs("Flash ID:");
     gotox(17);
-    cprintf("%04X (%s)", id,
-        id == FLASH_TYPE_AMD_AM29F040 ? "Am29F040" : "unknown");
+
+    utilStr[0] = '\0';
+    utilAppendHex2(nManufacturerId);
+    utilAppendHex2(nDeviceId);
+    cputs(utilStr);
+    cputs( (((nManufacturerId << 8) | nDeviceId) == FLASH_TYPE_AMD_AM29F040) ?
+           " (Am29F040)" : " (unknown)" );
 
     textcolor(COLOR_LIGHTFRAME);
     screenPrintBox(16, 13, 23, 3);
@@ -277,16 +277,6 @@ static void checkRAM(void)
         screenPrintSimpleDialog(apStrBadRAM);
         refreshMainScreen();
     }
-}
-
-
-/******************************************************************************/
-/**
- * Reset the box.
- */
-static void systemReset(void)
-{
-    __asm__ ("jmp ($fffc)");
 }
 
 
@@ -450,4 +440,5 @@ int main(void)
             break;
         }
     }
+    return 0;
 }

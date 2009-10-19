@@ -22,8 +22,8 @@
  * Thomas Giesel skoe@directbox.com
  */
 
-#include <stdio.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <conio.h>
 #include <string.h>
@@ -35,6 +35,7 @@
 #include "screen.h"
 #include "texts.h"
 #include "dir.h"
+#include "util.h"
 
 #define FILEDLG_ENTRIES (BUFFER_ALLOC_SIZE / sizeof(DirEntry))
 #define FILEDLG_LFN     72
@@ -173,8 +174,12 @@ static void fileDlgReadDir(void)
  */
 static void __fastcall__ fileDlgHeadline(const char* pStrType)
 {
-    gotoxy(FILEDLG_X + 1, FILEDLG_Y + 1);
-    cprintf("Select %s file - drive %d ", pStrType, nDriveNumber);
+    strcpy(utilStr, "Select ");
+    strcat(utilStr, pStrType);
+    strcat(utilStr, " file - drive ");
+    utilAppendDecimal(nDriveNumber);
+    utilAppendChar(' ');
+    cputsxy(FILEDLG_X + 1, FILEDLG_Y + 1, utilStr);
 }
 
 
@@ -205,7 +210,22 @@ static void __fastcall__ fileDlgPrintEntry(uint8_t nLine, uint8_t nEntry)
     if (nEntry == nSelection)
         revers(1);
 
-    cprintf("%5d %-16s %3s ", pEntry->size, pEntry->name, pEntry->type);
+    // clear line
+    cclear(27);
+
+    // blocks
+    utilStr[0] = 0;
+    utilAppendDecimal(pEntry->size);
+    gotox(FILEDLG_X + 6 - strlen(utilStr));
+    cputs(utilStr);
+
+    // name
+    gotox(FILEDLG_X + 7);
+    cputs(pEntry->name);
+
+    // type
+    gotox(FILEDLG_X + 24);
+    cputs(pEntry->type);
 
     revers(0);
 }

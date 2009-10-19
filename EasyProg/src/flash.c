@@ -7,7 +7,6 @@
 
 #include <stdint.h>
 #include <string.h>
-#include <stdio.h>
 #include <unistd.h>
 #include <conio.h>
 
@@ -41,7 +40,6 @@ uint8_t eraseSector(uint8_t nBank, uint8_t nChip)
 {
     uint8_t* pUltimaxBase;
     uint8_t* pNormalBase;
-    char strStatus[41];
 
     // start erasing at the first bank of this flash sector
     // we assume FLASH_BANKS_ERASE_AT_ONCE is a power of 2
@@ -56,8 +54,9 @@ uint8_t eraseSector(uint8_t nBank, uint8_t nChip)
 
     eapiSetBank(nBank);
 
-    sprintf(strStatus, "Erasing %02X:%X:%04X",  nBank, nChip, 0);
-    setStatus(strStatus);
+    strcpy(utilStr, "Erasing ");
+    utilAppendFlashAddr(nBank, nChip, 0);
+    setStatus(utilStr);
 
     // send the erase command
     if (eapiSectorErase(pUltimaxBase))
@@ -70,8 +69,9 @@ uint8_t eraseSector(uint8_t nBank, uint8_t nChip)
     }
     else
     {
-        sprintf(strStatus, "Erase error at %02X:%X:%04X", nBank, nChip, 0);
-        setStatus(strStatus);
+        strcpy(utilStr, "Erase error at ");
+        utilAppendFlashAddr(nBank, nChip, 0);
+        setStatus(utilStr);
         screenPrintSimpleDialog(apStrEraseFailed);
     }
     return 0;
@@ -118,7 +118,6 @@ uint8_t __fastcall__ flashWriteBlock(uint8_t nBank, uint8_t nChip,
     uint16_t rv;
     uint8_t* pDest;
     uint8_t* pNormalBase;
-    char strStatus[41];
 
     if (progressGetStateAt(nBank, nChip) == PROGRESS_UNTOUCHED)
     {
@@ -129,9 +128,10 @@ uint8_t __fastcall__ flashWriteBlock(uint8_t nBank, uint8_t nChip,
         }
     }
 
-    sprintf(strStatus, "Writing to %02X:%X:%04X", nBank, nChip,
-            nOffset);
-    setStatus(strStatus);
+    strcpy(utilStr, "Writing to ");
+    utilAppendFlashAddr(nBank, nChip, nOffset);
+
+    setStatus(utilStr);
 
     eapiSetBank(nBank);
     pNormalBase = apNormalRomBase[nChip];
@@ -167,10 +167,10 @@ uint8_t __fastcall__ flashVerifyBlock(uint8_t nBank, uint8_t nChip,
 {
     uint8_t* pNormalBase;
     uint8_t* pFlash;
-    char strStatus[41];
 
-    sprintf(strStatus, "Verifying %02X:%X:%04X", nBank, nChip, nOffset);
-    setStatus(strStatus);
+    strcpy(utilStr, "Verifying ");
+    utilAppendFlashAddr(nBank, nChip, nOffset);
+    setStatus(utilStr);
 
     pNormalBase = apNormalRomBase[nChip];
     pFlash      = pNormalBase + nOffset;
@@ -203,15 +203,14 @@ uint8_t flashWriteBlockFromFile(uint8_t nBank, uint8_t nChip,
 {
     uint16_t nOffset;
     uint16_t nBytes;
-    char strStatus[41];
 
     nOffset = 0;
     while (nSize)
     {
         nBytes = (nSize > FLASH_WRITE_SIZE) ? FLASH_WRITE_SIZE : nSize;
 
-        sprintf(strStatus, "Reading from file");
-        setStatus(strStatus);
+        strcpy(utilStr, "Reading from file");
+        setStatus(utilStr);
 
         if (utilRead(buffer, nBytes) != nBytes)
         {
