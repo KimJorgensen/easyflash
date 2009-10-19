@@ -117,11 +117,7 @@ _eapiSetBank:
 ; =============================================================================
 .export _eapiSectorErase
 _eapiSectorErase:
-        pha ; AX => XY
-        txa
-        tay
-        pla
-        tax
+        jsr axtoxy
         jsr EAPIEraseSector
         lda #0
         tax
@@ -134,9 +130,6 @@ eseError:
 ; =============================================================================
 ;
 ; Write a byte to the given address.
-;
-; This is done in background by the chip, the caller should check the progress
-; according to the flash spec.
 ;
 ; uint8_t __fastcall__ eapiWriteFlash(uint8_t* pAddr, uint8_t nVal);
 ;
@@ -155,11 +148,7 @@ _eapiWriteFlash:
 
         ; get address
         jsr popax
-        pha ; AX => XY
-        txa
-        tay
-        pla
-        tax
+        jsr axtoxy
 
         pla
 
@@ -171,3 +160,61 @@ _eapiWriteFlash:
 ewfError:
         rts
 
+; =============================================================================
+;
+; Write 256 bytes to the given address. The destination address must be
+; aligned to 256 bytes.
+;
+; uint8_t __fastcall__ eapiGlueWriteBlock(uint8_t* pDst, uint8_t* pSrc);
+;
+; parameters:
+;       source address in AX
+;       destination address on cc65-stack $8xxx/$9xxx or $Exxx/$Fxxx
+;
+; return:
+;       result in AX (A = low), 0x100 = okay, offset with error otherwise
+;
+; =============================================================================
+.export _eapiGlueWriteBlock
+_eapiGlueWriteBlock:
+        sta wbNext + 1
+        stx wbNext + 2
+
+        ; get address
+        jsr popax
+        jsr axtoxy
+
+wbNext:
+        lda $1000, x        ; will be modified
+
+        ; parameters for EAPIWriteFlash
+        ;       A   value
+        ;       XY  address (X = low), $8xxx/$9xxx or $Exxx/$Fxxx
+        jsr EAPIWriteFlash
+        bcs wbError
+
+        inx
+        bne wbNext
+
+        ; return 0x100 => okay
+        lda #0
+        ldx #$01
+        rts
+
+wbError:
+        ; return bad offset in AX
+        txa
+        ldx #0
+        rts
+
+
+; =============================================================================
+; Helper: Move register pair AX to XY
+; =============================================================================
+axtoxy:
+        pha
+        txa
+        tay
+        pla
+        tax
+        rts

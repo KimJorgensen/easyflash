@@ -115,7 +115,7 @@ uint8_t eraseAll(void)
 uint8_t __fastcall__ flashWriteBlock(uint8_t nBank, uint8_t nChip,
                                      uint16_t nOffset, uint8_t* pBlock)
 {
-    uint16_t nRemaining;
+    uint16_t rv;
     uint8_t* pDest;
     uint8_t* pNormalBase;
     char strStatus[41];
@@ -134,23 +134,20 @@ uint8_t __fastcall__ flashWriteBlock(uint8_t nBank, uint8_t nChip,
     setStatus(strStatus);
 
     eapiSetBank(nBank);
-    pNormalBase  = apNormalRomBase[nChip];
+    pNormalBase = apNormalRomBase[nChip];
 
     // when we write, we have to use the Ultimax address space
-    pDest        = apUltimaxRomBase[nChip] + nOffset;
+    pDest = apUltimaxRomBase[nChip] + nOffset;
 
-    progressSetBankState(eapiGetBank(), nChip, PROGRESS_WORKING);
-    for (nRemaining = 256; nRemaining; --nRemaining)
+    progressSetBankState(nBank, nChip, PROGRESS_WORKING);
+    rv = eapiGlueWriteBlock(pDest, pBlock);
+    if (rv != 0x100)
     {
-         // send the write command
-         if (!eapiWriteFlash(pDest++, *pBlock++))
-         {
-             screenPrintSimpleDialog(apStrFlashWriteFailed);
-             return 0;
-         }
+         screenPrintSimpleDialog(apStrFlashWriteFailed);
+         return 0;
     }
 
-    progressSetBankState(eapiGetBank(), nChip, PROGRESS_PROGRAMMED);
+    progressSetBankState(nBank, nChip, PROGRESS_PROGRAMMED);
     return 1;
 }
 
@@ -183,7 +180,7 @@ uint8_t __fastcall__ flashVerifyBlock(uint8_t nBank, uint8_t nChip,
     if (pFlash)
     {
         nOffset = pFlash - pNormalBase;
-        screenPrintVerifyError(eapiGetBank(), nChip, nOffset,
+        screenPrintVerifyError(nBank, nChip, nOffset,
                                pBlock[nOffset], *pFlash);
         return 0;
     }

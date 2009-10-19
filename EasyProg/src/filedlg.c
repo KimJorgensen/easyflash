@@ -153,8 +153,8 @@ static void fileDlgReadDir(void)
     strcpy(pEntry->type, "dir");
     ++pEntry;
     nDirEntries += 2;
-    qsort(aDirEntries, nDirEntries, sizeof(aDirEntries[0]),
-          fileDlgCompareEntries);
+    //qsort(aDirEntries, nDirEntries, sizeof(aDirEntries[0]),
+      //    fileDlgCompareEntries);
 
     if (nDirEntries == FILEDLG_ENTRIES)
     {

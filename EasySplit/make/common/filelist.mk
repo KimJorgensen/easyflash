@@ -14,7 +14,6 @@ src += WorkerThread.cpp
 src += match.c
 src += optimal.c
 src += search.c
-src += log.c
 src += radix.c
 src += progress.c
 src += output.c

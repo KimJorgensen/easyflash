@@ -33,6 +33,7 @@ all: world
 include cross-mingw.mk
 include cross-wx.mk
 
+cc            := $(gccprefix)/bin/$(cross)-gcc
 cxx           := $(gccprefix)/bin/$(cross)-c++
 strip         := $(gccprefix)/bin/$(cross)-strip
 cxxflags      := -O2 `$(wx-prefix)/bin/wx-config --static=yes --cxxflags`
