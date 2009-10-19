@@ -1,6 +1,9 @@
 
-
-VERSION := 1.3.5
+ifneq "$(release)" "yes"
+	version := $(shell date +%y%m%d-%H%M)
+else
+	version := 1.3.5
+endif
 
 # do not remove intermediate targets
 .SECONDARY:
@@ -13,7 +16,6 @@ obj += obj/torturetestasm.o
 obj += obj/startupbin.o
 obj += obj/spritesasm.o
 obj += obj/util.o
-obj += obj/easyprog.opt.o
 
 optobj :=
 optobj += obj/easyprog.o
@@ -34,9 +36,20 @@ bin_acme += obj/sprites.bin
 
 INCLUDE := include
 
-DEFINE  := -DEFVERSION=\"${VERSION}\"
+DEFINE  := -DEFVERSION=\"${version}\"
 
-optasm := $(optobj:.o=.s)
+
+GLOPT65 := $(shell which glopt65)
+GCAT65  := $(shell which gcat65)
+
+ifeq "$(GLOPT65)" ""
+	obj += $(optobj)
+	optobj :=
+	optasm :=
+else
+	obj += obj/easyprog.opt.o
+	optasm := $(optobj:.o=.s)
+endif
 
 .PHONY: all
 all: easyprog.prg
@@ -47,7 +60,7 @@ all: easyprog.prg
 headers := $(wildcard $(INCLUDE)/*.h)
 
 obj/%.s: src/%.c obj $(headers)
-	cc65 -t c64 -O -I $(INCLUDE) $(DEFINE) -o $@ $<
+	cc65 -t c64 -O --static-locals -I $(INCLUDE) $(DEFINE) -o $@ $<
 
 ###############################################################################
 obj/%.o: obj/%.s obj
@@ -81,7 +94,9 @@ easyprog: $(obj) src/ld.cfg
 
 easyprog.prg: easyprog
 	exomizer sfx 0x080d -o $@ -q $^
-	cp $@ easyprog-$(VERSION).prg
+ifeq "$(release)" "yes"
+	cp $@ easyprog-$(version).prg
+endif
 
 .PHONY: clean
 clean:
