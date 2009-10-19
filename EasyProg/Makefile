@@ -15,7 +15,7 @@ obj += obj/texts.o
 obj += obj/torturetestasm.o
 obj += obj/startupbin.o
 obj += obj/spritesasm.o
-obj += obj/util.o
+obj += obj/utilasm.o
 
 optobj :=
 optobj += obj/easyprog.o
@@ -29,7 +29,7 @@ optobj += obj/hex.o
 optobj += obj/buffer.o
 optobj += obj/torturetest.o
 optobj += obj/write.o
-optobj += obj/utilc.o
+optobj += obj/util.o
 
 bin_acme :=
 bin_acme += obj/startup.bin
