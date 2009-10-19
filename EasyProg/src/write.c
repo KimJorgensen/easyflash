@@ -360,8 +360,13 @@ static void checkWriteImage(uint8_t imageType)
     cbm_close(lfn);
     spritesOn();
 
-    gotoxy(0, 0);
-    cprintf("time: %u.%u", t / CLK_TCK, (t % CLK_TCK) / (CLK_TCK / 10));
+    {
+        strcpy(utilStr, "time: ");
+        utilAppendDecimal(t / CLK_TCK);
+        utilAppendChar('.');
+        utilAppendDecimal((t % CLK_TCK) / (CLK_TCK / 10));
+        cputsxy(0, 0, utilStr);
+    }
     for (;;);
 }
 

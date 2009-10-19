@@ -29,6 +29,7 @@ optobj += obj/hex.o
 optobj += obj/buffer.o
 optobj += obj/torturetest.o
 optobj += obj/write.o
+optobj += obj/utilc.o
 
 bin_acme :=
 bin_acme += obj/startup.bin

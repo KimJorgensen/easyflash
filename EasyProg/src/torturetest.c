@@ -23,6 +23,7 @@
  */
 
 #include <conio.h>
+#include <string.h>
 #include <stdio.h>
 
 #include "screen.h"
@@ -31,6 +32,7 @@
 #include "torturetest.h"
 #include "flash.h"
 #include "eapiglue.h"
+#include "util.h"
 
 /*
  * The cartridge test works like this:
@@ -146,7 +148,6 @@ static uint8_t tortureTestFlashIds(void)
 
 void tortureTest(void)
 {
-    char strStatus[41];
     uint16_t rv;
     uint16_t nLoop;
 
@@ -163,16 +164,19 @@ void tortureTest(void)
 
     for (nLoop = 0; ; ++nLoop)
     {
-        sprintf(strStatus, "Test loop %u", nLoop);
-        setStatus(strStatus);
+        strcpy(utilStr, "Test loop ");
+        utilAppendDecimal(nLoop);
+        setStatus(utilStr);
 
         rv = tortureTestBanking();
         if (rv != 0)
         {
-            sprintf(strStatus, "Bank test error: set %02X != read %02X",
-                    rv >> 8, rv & 0xff);
+            strcpy(utilStr, "Bank test error: set ");
+            utilAppendHex2(rv >> 8);
+            strcat(utilStr, " != read ");
+            utilAppendHex2(rv & 0xff);
 
-            screenPrintTwoLinesDialog(pStrTestFailed, strStatus);
+            screenPrintTwoLinesDialog(pStrTestFailed, utilStr);
             return;
         }
 

@@ -32,6 +32,7 @@
 #include "screen.h"
 #include "texts.h"
 #include "sprites.h"
+#include "util.h"
 
 static const char* pStrHexDigits = "0123456789ABCDEF";
 
@@ -519,13 +520,14 @@ void __fastcall__ screenPrintVerifyError(uint8_t nBank, uint8_t nChip,
                                          uint8_t nData,
                                          uint8_t nFlashVal)
 {
-    char strStatus[41];
+    utilStr[0] = '\0';
+    utilAppendFlashAddr(nBank, nChip, nOffset);
+    strcat(utilStr, ": data ");
+    utilAppendHex2(nData);
+    strcat(utilStr, " != flash ");
+    utilAppendHex2(nFlashVal);
 
-    sprintf(strStatus, "%02X:%X:%04X: data %02X != flash %02X",
-            nBank, nChip, nOffset,
-            nData, nFlashVal);
-
-    screenPrintTwoLinesDialog("Verify error at", strStatus);
+    screenPrintTwoLinesDialog("Verify error at", utilStr);
 }
 
 /******************************************************************************/
