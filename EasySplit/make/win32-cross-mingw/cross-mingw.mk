@@ -29,9 +29,9 @@
 mingw-build-dir := $(here)/mingw-build
 archive-dir     := $(here)/archive
 
-binutils  := binutils-2.19.1
-gcc       := gcc-4.3.3
-mingwrt   := mingwrt-3.15.2-mingw32
+binutils  := binutils-2.20
+gcc       := gcc-4.3.4
+mingwrt   := mingwrt-3.16-mingw32
 w32api    := w32api-3.13-mingw32
 
 cross     := i686-pc-mingw32
@@ -42,7 +42,7 @@ sudo      := sudo
 path      := $(gccprefix)/bin:$(path)
 
 .PHONY: install-mingw
-install-mingw: $(mingw-build-dir)/7-gcc-full.done
+install-mingw: $(mingw-build-dir)/7-gcc-full.done $(mingw-build-dir)/8-directx.done
 
 ###############################################################################
 # Rules to check the cross compiling environment
@@ -181,7 +181,8 @@ $(mingw-build-dir)/$(mingwrt): $(archive-dir)/$(mingwrt)-src.tar.gz
 # download mingw runtime
 $(archive-dir)/$(mingwrt)-src.tar.gz:
 	mkdir -p $(archive-dir)
-	cd $(archive-dir) && wget http://www.mirrorservice.org/sites/download.sourceforge.net/pub/sourceforge/m/mi/mingw/$(mingwrt)-src.tar.gz
+	#cd $(archive-dir) && wget http://www.mirrorservice.org/sites/download.sourceforge.net/pub/sourceforge/m/mi/mingw/$(mingwrt)-src.tar.gz
+	cd $(archive-dir) && wget http://www.mirrorservice.org/sites/download.sourceforge.net/pub/sourceforge/m/project/mi/mingw/MinGW%20Runtime/mingwrt-3.16/$(mingwrt)-src.tar.gz
 
 ###############################################################################
 # Final GCC C and C++ compilers
@@ -196,3 +197,17 @@ $(mingw-build-dir)/7-gcc-full.done: $(mingw-build-dir)/$(gcc) \
 		--enable-languages=c,c++
 	PATH=$(path) make -C $(mingw-build-dir)/obj-full-$(gcc)
 	$(sudo) bash -c "PATH=$(path) make -C $(mingw-build-dir)/obj-full-$(gcc) install"
+	touch $@
+
+###############################################################################
+# DirectX headers/libs
+
+# build mingw runtime
+$(mingw-build-dir)/8-directx.done: $(mingw-build-dir)/5-w32api.done $(archive-dir)/directx-devel.tar.gz
+	$(sudo) bash -c "cd $(gccprefix)/$(cross) && tar xzf $(archive-dir)/directx-devel.tar.gz"
+	touch $@
+
+# download directx headers/libs
+$(archive-dir)/directx-devel.tar.gz:
+	mkdir -p $(archive-dir)
+	cd $(archive-dir) && wget http://www.libsdl.org/extras/win32/common/directx-devel.tar.gz

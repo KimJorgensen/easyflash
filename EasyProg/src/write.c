@@ -22,8 +22,9 @@
  * Thomas Giesel skoe@directbox.com
  */
 
-#include <stdio.h>
+#include <conio.h>
 #include <string.h>
+#include <time.h>
 #include <cbm.h>
 
 #include "buffer.h"
@@ -312,6 +313,7 @@ static uint8_t writeBinImage(uint8_t nChip)
  */
 static void checkWriteImage(uint8_t imageType)
 {
+    unsigned t;
     uint8_t lfn, rv;
 
     checkFlashType();
@@ -342,22 +344,25 @@ static void checkWriteImage(uint8_t imageType)
     // make sure the right areas of the chip are erased
     progressInit();
 
+    t = clock();
+
     if (imageType == IMAGE_TYPE_CRT)
-    {
-        if (writeCrtImage() == CART_RV_OK)
-            screenPrintSimpleDialog(apStrWriteComplete);
-    }
+        rv = writeCrtImage();
     else
-    {
-        if (writeBinImage(imageType == IMAGE_TYPE_HIROM) == CART_RV_OK)
-        {
-            screenPrintSimpleDialog(apStrWriteComplete);
-        }
-    }
+        rv = writeBinImage(imageType == IMAGE_TYPE_HIROM);
+
+    t = clock() - t;
+
+    if (rv == CART_RV_OK)
+        screenPrintSimpleDialog(apStrWriteComplete);
 
     cbm_k_clrch();
     cbm_close(lfn);
     spritesOn();
+
+    gotoxy(0, 0);
+    cprintf("time: %u.%u", t / CLK_TCK, (t % CLK_TCK) / (CLK_TCK / 10));
+    for (;;);
 }
 
 
