@@ -89,17 +89,91 @@ static int fileDlgCompareEntries(const void* a, const void* b)
 {
     // arrow left must be the first entry
     if (((DirEntry*)a)->name[0] == 95)
-        return -1;
+        return 0;
     if (((DirEntry*)b)->name[0] == 95)
         return 1;
 
     if (fileDlgEntryIsDir((DirEntry*)a) && !fileDlgEntryIsDir((DirEntry*)b))
-        return -1;
+        return 0;
     if (fileDlgEntryIsDir((DirEntry*)b) && !fileDlgEntryIsDir((DirEntry*)a))
         return 1;
 
     return strcmp(((DirEntry*)a)->name,
-                  ((DirEntry*)b)->name);
+                  ((DirEntry*)b)->name) > 0;
+}
+
+/******************************************************************************/
+/**
+ * Heapsort, inspiration from http://de.wikipedia.org/wiki/Heapsort
+ */
+void fileDlgSort(void)
+{
+    DirEntry entry;
+    uint8_t parent, child, root, n;
+    n = nDirEntries;
+
+    root = n >> 1;
+
+    for (;;)
+    {
+        if (root)
+        {
+            parent = --root;
+            entry = aDirEntries[root];
+        }
+        else if (--n)
+        {
+            entry = aDirEntries[n];
+            aDirEntries[n] = aDirEntries[0];
+            parent = 0;
+        }
+        else
+            break;
+
+        while ((child = (parent + 1) << 1) < n)
+        {
+            if (fileDlgCompareEntries(aDirEntries + (child - 1), aDirEntries + child))
+                --child;
+
+            aDirEntries[parent] = aDirEntries[child];
+            parent = child;
+        }
+
+        if (child == n)
+        {
+            --child;
+            if (fileDlgCompareEntries(aDirEntries + child, &entry))
+            {
+                aDirEntries[parent] = aDirEntries[child];
+                aDirEntries[child] = entry;
+                continue;
+            }
+
+            child = parent;
+        }
+        else
+        {
+            if (fileDlgCompareEntries(aDirEntries + parent, &entry))
+            {
+                aDirEntries[parent] = entry;
+                continue;
+            }
+
+            child = (parent - 1) >> 1;
+        }
+
+        while (child != root)
+        {
+            parent = (child - 1) >> 1;
+            if (fileDlgCompareEntries(aDirEntries + parent, &entry))
+                break;
+
+            aDirEntries[child] = aDirEntries[parent];
+            child = parent;
+        }
+
+        aDirEntries[child] = entry;
+    }
 }
 
 /******************************************************************************/
@@ -154,8 +228,8 @@ static void fileDlgReadDir(void)
     strcpy(pEntry->type, "dir");
     ++pEntry;
     nDirEntries += 2;
-    //qsort(aDirEntries, nDirEntries, sizeof(aDirEntries[0]),
-      //    fileDlgCompareEntries);
+
+    fileDlgSort();
 
     if (nDirEntries == FILEDLG_ENTRIES)
     {
