@@ -104,7 +104,7 @@ static int fileDlgCompareEntries(const void* a, const void* b)
 
 /******************************************************************************/
 /**
- * Heapsort, inspiration from http://de.wikipedia.org/wiki/Heapsort
+ * Inspiration from http://de.wikipedia.org/wiki/Bottom-Up-Heapsort
  */
 void fileDlgSort(void)
 {

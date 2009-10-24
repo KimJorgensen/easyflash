@@ -61,7 +61,7 @@ all: easyprog.prg
 headers := $(wildcard $(INCLUDE)/*.h)
 
 obj/%.s: src/%.c obj $(headers)
-	cc65 -t c64 -O --static-locals -I $(INCLUDE) $(DEFINE) -o $@ $<
+	cc65 -t c64 -T -O --static-locals -I $(INCLUDE) $(DEFINE) -o $@ $<
 
 ###############################################################################
 obj/%.o: obj/%.s obj
