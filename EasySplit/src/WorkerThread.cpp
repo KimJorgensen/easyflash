@@ -75,7 +75,7 @@ void WorkerThread::LogText(const wxString& str)
 /*****************************************************************************/
 void* WorkerThread::Entry()
 {
-    struct crunch_options options = CRUNCH_OPTIONS_DEFAULT;
+    struct crunch_options options = {NULL, 65535, EASY_SPLIT_MAX_EXO_OFFSET, 1};
     struct crunch_info info;
     struct membuf inbuf;
     struct membuf outbuf;
@@ -91,7 +91,7 @@ void* WorkerThread::Entry()
     crunch(&inbuf, &outbuf, &options, &info);
     WorkerThread_Log("\n");
 
-    SaveFiles((uint8_t*) membuf_get(&outbuf), membuf_memlen(&outbuf));
+    SaveFiles((uint8_t*) membuf_get(&outbuf), membuf_memlen(&outbuf), membuf_memlen(&inbuf));
 
     membuf_free(&outbuf);
     membuf_free(&inbuf);
@@ -103,7 +103,7 @@ void* WorkerThread::Entry()
 /**
  *
  */
-bool WorkerThread::SaveFiles(uint8_t* pData, size_t len)
+bool WorkerThread::SaveFiles(uint8_t* pData, size_t len, size_t nOrigLen)
 {
     wxString str;
     int nRemaining;
@@ -115,10 +115,10 @@ bool WorkerThread::SaveFiles(uint8_t* pData, size_t len)
     nRemaining = len + sizeof(header);
     nFile = 1;
 
-    header.len[0] = nRemaining % 0x100;
-    header.len[1] = nRemaining / 0x100;
-    header.len[2] = nRemaining / 0x10000;
-    header.len[3] = nRemaining / 0x1000000;
+    header.len[0] = nOrigLen % 0x100;
+    header.len[1] = nOrigLen / 0x100;
+    header.len[2] = nOrigLen / 0x10000;
+    header.len[3] = nOrigLen / 0x1000000;
 
     while (nRemaining)
     {

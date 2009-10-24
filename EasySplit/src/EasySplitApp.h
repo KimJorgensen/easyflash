@@ -30,6 +30,9 @@
 
 #include "EasySplitMainFrame.h"
 
+/* This must fit to the buffer size of the decruncher in EasyProg */
+#define EASY_SPLIT_MAX_EXO_OFFSET (16 * 256)
+
 class PalettePanel;
 class MCChildFrame;
 
