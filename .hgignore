@@ -1,0 +1,15 @@
+syntax: glob
+obj/*
+*~
+*.map
+*.prg
+*.bak
+*.bck
+*.obj
+*.bin
+*.crt
+*.cache.lib
+*.cache.dcm
+EasyProg/easyprog
+EasyLoader/build/*
+EasyLoader/.deps/*

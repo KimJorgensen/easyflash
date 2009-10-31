@@ -1,0 +1,62 @@
+
+This document describes how to build MultiColor from source.
+
+You can get the sources for the latest released version or a developer snapshot
+here:
+
+http://multicolor.berlios.de/
+
+Linux and similar systems
+=========================
+
+1. install libwxgtk2.8-dev or whatever name it has on your system. This will
+   hopefully also install all other dependencies like libwxbase2.8-dev
+
+2. compile it (as normal user) using these commands:
+
+   cd make/gcc-default
+   make
+
+3. install it (optional, as root) using this command:
+
+   sudo make install
+
+Step 3 should even create a menu entry for Gnome, KDE or Xfce.
+
+Windows
+=======
+
+The official release for Windows is built on Linux using a cross compiler
+This is done like described in the Linux section above, except that the
+Makefile resides in make/win32-cross-mingw. It does also contain a target to
+cross-build wxWidgets.
+
+The source archive does also contain a project file for Visual Studio 2008.
+To set up the environment and the wxWidgets library you should read this
+first: http://wiki.wxwidgets.org/Microsoft_Visual_C%2B%2B_Guide
+
+When you managed to build the samples it should also be possible to build
+MultiColor. It relies on the environment variable WXWIN to be set.
+
+The project file may not be up-to-date. In this case simply remove all sources
+which do not exist anymore and add all sources (*.cpp) which are missing in
+the project.
+
+Also other compilers may work, you can check this page if you want to know
+more: http://wiki.wxwidgets.org/Guides_%26_Tutorials
+
+Mac OS X
+========
+
+todo
+
+Other platforms
+===============
+
+It may be possible to comile MultiColor on other platforms. The most important
+precondition is that wxWidgets runs on that box. You can check it on following
+page: http://wiki.wxwidgets.org/Supported_Platforms
+
+If you get it running somewhere else, I appreciate a report :)
+
+Thomas Giesel <skoe@directbox.com>
