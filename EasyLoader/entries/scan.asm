@@ -20,6 +20,7 @@ F_SCAN_DIR:{
 	:mov16 #[FILESYSTEM_START_ADDR - V_EFS_SIZE] ; ZP_EFS_ENTRY
 	:mov16 #P_DIR ; ZP_ENTRY
 	:mov #0 ; P_NUM_DIR_ENTRIES
+	:mov #0 ; P_SCREENSAVER_BANK // no screensaver for now
 
 big_loop:
 	:add16_8 ZP_EFS_ENTRY ; #V_EFS_SIZE

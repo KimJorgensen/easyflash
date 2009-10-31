@@ -116,10 +116,6 @@ ts:
 */
 
 start_saver:
-	// reset saver
-	lda #$00
-	sta P_SCREENSAVER_COUNTER+0
-	sta P_SCREENSAVER_COUNTER+1
 	// copy boot-code
 	:copy_to_df00 COPY_STARTSAVER_START ; COPY_STARTSAVER_END - COPY_STARTSAVER_START
 	// do boot
