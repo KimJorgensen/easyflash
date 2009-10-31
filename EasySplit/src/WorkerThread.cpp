@@ -75,7 +75,7 @@ void WorkerThread::LogText(const wxString& str)
 /*****************************************************************************/
 void* WorkerThread::Entry()
 {
-    struct crunch_options options = {NULL, 65535, EASY_SPLIT_MAX_EXO_OFFSET, 1};
+    struct crunch_options options = {NULL, 65535, EASY_SPLIT_MAX_EXO_OFFSET, 0};
     struct crunch_info info;
     struct membuf inbuf;
     struct membuf outbuf;
