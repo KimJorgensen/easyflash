@@ -15,6 +15,7 @@ obj += obj/texts.o
 obj += obj/torturetestasm.o
 obj += obj/startupbin.o
 obj += obj/spritesasm.o
+obj += obj/exostreamdecr1.o
 obj += obj/utilasm.o
 
 optobj :=
