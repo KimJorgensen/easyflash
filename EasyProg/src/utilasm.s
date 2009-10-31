@@ -20,12 +20,22 @@
 ; 3. This notice may not be removed or altered from any source distribution.
 ;
 
-        .import         READST, BASIN
-        .importzp       ptr1, ptr2, ptr3, tmp1
-        .import         popax, popa
+.import         BASIN
+.importzp       ptr1, ptr2, ptr3, tmp1
+.import         popax, popa
 
-        .import         _utilStr
+.import         init_decruncher
+.import         get_decrunched_byte
+.import         _utilStr
 
+
+.export buffer_start_hi: absolute
+.export buffer_len_hi: absolute
+buffer_start_hi   = $68             ; see buffer.h
+buffer_len_hi     = 16              ; see EASY_SPLIT_MAX_EXO_OFFSET and buffer.h
+
+; Kernal I/O Status Word ST
+ST                = $90
 
 EASYFLASH_BANK    = $DE00
 EASYFLASH_CONTROL = $DE02
@@ -85,9 +95,17 @@ fallbackDriverEnd:
 ; =============================================================================
 ; hex digits
 ; =============================================================================
-.segment    "RODATA"
+.rodata
 hexDigits:
         .byte "0123456789ABCDEF"
+
+; =============================================================================
+; Two's complement of uncompressed bytes remaining - 1 to be read from exomizer
+; =============================================================================
+.data
+.export _nUtilExoBytesRemaining
+_nUtilExoBytesRemaining:
+        .res 4
 
 .code
 
@@ -96,15 +114,15 @@ hexDigits:
 ; Like cbm_read, but without calling CHKIN/CLRCH. The caller must have
 ; redirected the input already.
 ;
-; int __fastcall__ utilRead(void* buffer, unsigned int size);
+; int __fastcall__ utilReadNormalFile(void* buffer, unsigned int size);
 ;
 ; Reads up to "size" bytes from a file to "buffer".
 ; Returns the number of actually read bytes, 0 if there are no bytes left
 ; (EOF).
 ;
 ; =============================================================================
-.export _utilRead
-_utilRead:
+.export _utilReadNormalFile
+_utilReadNormalFile:
         eor     #$FF
         sta     ptr1
         txa
@@ -125,14 +143,13 @@ _utilRead:
 ; Loop
 
 utilRead1:
-        jsr     READST
-        cmp     #0              ; Status ok?
+        lda     ST              ; Status ok?
         bne     utilRead4
 
         jsr     BASIN           ; Read next char from file
         sta     tmp1            ; Save it for later
 
-        jsr     READST
+        lda     ST
         and     #$BF
         bne     utilRead4
 
@@ -159,6 +176,137 @@ utilRead4:
         ldx     ptr3 + 1        ; return bytesread;
 
         rts
+
+
+; =============================================================================
+;
+; The decruncher jsr:s to the get_crunched_byte address when it wants to
+; read a crunched byte. This subroutine has to preserve x and y register
+; and must not modify the state of the carry flag.
+;
+; =============================================================================
+
+        .export get_crunched_byte
+get_crunched_byte:
+        ; save X, Y, C
+        txa
+        pha
+        tya
+        pha
+        php
+
+        lda ST          ; Status ok?
+        bne gcbErr
+
+        jsr BASIN
+        sta tmp1
+
+        lda ST
+        and #$BF
+        bne gcbErr
+
+        ; restore X, Y, C
+        plp
+        pla
+        tay
+        pla
+        tax
+
+        ; get result
+        lda tmp1
+        rts
+
+gcbErr:
+        dec $d020
+        jmp gcbErr;
+
+; =============================================================================
+;
+; See exomizer documentation
+;
+; void utilInitDecruncher(void);
+;
+; =============================================================================
+
+.export _utilInitDecruncher
+_utilInitDecruncher:
+        jmp init_decruncher
+
+
+; =============================================================================
+;
+; Like cbm_read, but without calling CHKIN/CLRCH. The caller must have
+; redirected the input already.
+;
+; int __fastcall__ utilReadEasySplitFile(void* buffer, unsigned int size);
+;
+; Reads up to "size" bytes from a file to "buffer".
+; Returns the number of actually read bytes, 0 if there are no bytes left
+; (EOF).
+;
+; =============================================================================
+.export _utilReadEasySplitFile
+_utilReadEasySplitFile:
+        eor     #$FF
+        sta     ptr1
+        txa
+        eor     #$FF
+        sta     ptr1 + 1        ; Save -size-1
+
+        jsr     popax
+        sta     ptr2
+        stx     ptr2 + 1        ; Save buffer
+
+; bytesread = 0;
+
+        lda     #$00
+        sta     ptr3
+        sta     ptr3 + 1
+        beq     urs3            ; Branch always
+
+; Loop
+
+urs1:
+        ; increment
+        inc _nUtilExoBytesRemaining
+        bne ursNoEOF
+        inc _nUtilExoBytesRemaining + 1
+        bne ursNoEOF
+        inc _nUtilExoBytesRemaining + 2
+        bne ursNoEOF
+        inc _nUtilExoBytesRemaining + 3
+        beq ursEnd2
+
+ursNoEOF:
+        jsr get_decrunched_byte
+        ldy     #0
+        sta     (ptr2),y        ; Save read byte
+
+        inc     ptr2
+        bne     urs2
+        inc     ptr2+1          ; ++buffer;
+urs2:
+        inc     ptr3
+        bne     urs3
+        inc     ptr3 + 1        ; ++bytesread;
+
+urs3:
+        ; increment bytes to read (negative), end if 0 is reached
+        inc     ptr1
+        bne     urs1
+        inc     ptr1 + 1
+        bne     urs1
+
+ursEnd:
+        lda     ptr3
+        ldx     ptr3 + 1        ; return bytesread;
+
+        rts
+
+ursEnd2:
+        dec $d021
+        jmp ursEnd2
+
 
 ; =============================================================================
 ;

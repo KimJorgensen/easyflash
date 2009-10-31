@@ -22,13 +22,94 @@
  * Thomas Giesel skoe@directbox.com
  */
 
+#include <buffer.h>
+#include <cbm.h>
+#include <string.h>
+#include <conio.h>
+
 #include "util.h"
 
 // globally visible string buffer for functions used here
 char utilStr[80];
 
+// points to utilRead function to be used to read bytes from file
+int __fastcall__ (*utilRead)(void* buffer, unsigned int size);
+
+
+/******************************************************************************/
+/**
+ * Open the file for read access. Check if the file is compressed. If yes,
+ * select utilReadExomizerFile as current input method. If not, select
+ * utilReadSelectNormalFile. Select this file as current input.
+ *
+ * return 0 if okay, 1 for error
+ */
+uint8_t __fastcall__ utilOpenFile(uint8_t nDrive, const char* pStrFileName)
+{
+    const char strEasySplitSignature[8] = { 0x65, 0x61, 0x73, 0x79, 0x73, 0x70, 0x6c, 0x74 };
+    char buffer[sizeof(strEasySplitSignature)];
+
+    if (cbm_open(UTIL_GLOBAL_READ_LFN, nDrive, CBM_READ, pStrFileName) ||
+        cbm_k_chkin(UTIL_GLOBAL_READ_LFN))
+    {
+        return 1;
+    }
+
+    utilRead = utilReadNormalFile;
+
+    // Check if it is compressed (EASYSPLIT)
+    if (utilReadNormalFile(buffer, sizeof(buffer)) != sizeof(buffer) ||
+        memcmp(buffer, strEasySplitSignature, sizeof(buffer)))
+    {
+        // No EasySplit file, open it again to rewind
+        utilCloseFile();
+
+        if (cbm_open(UTIL_GLOBAL_READ_LFN, nDrive, CBM_READ, pStrFileName) ||
+            cbm_k_chkin(UTIL_GLOBAL_READ_LFN))
+        {
+            return 1;
+        }
+    }
+    else
+    {
+        // an EasySplit file => read file size
+        if ( utilReadNormalFile(&nUtilExoBytesRemaining, sizeof(nUtilExoBytesRemaining)) !=
+             sizeof(nUtilExoBytesRemaining) )
+        {
+            return 1;
+        }
+
+        // the read function expects the two's complement - 1
+        nUtilExoBytesRemaining = -nUtilExoBytesRemaining - 1;
+        utilRead = utilReadEasySplitFile;
+        utilInitDecruncher();
+
+        gotoxy(0, 0);
+        cprintf("Easysplit, %ld bytes", nUtilExoBytesRemaining);
+        //for(;;);
+    }
+
+    return 0;
+}
+
+
+/******************************************************************************/
+/**
+ *
+ */
+void utilCloseFile(void)
+{
+    cbm_k_clrch();
+    cbm_close(UTIL_GLOBAL_READ_LFN);
+}
+
+
+/******************************************************************************/
+/**
+ *
+ */
 void __fastcall__ utilAppendFlashAddr(uint8_t nBank,
-                                      uint8_t nChip, 
+                                      uint8_t nChip,
                                       uint16_t nOffset)
 {
     utilAppendHex2(nBank);
@@ -40,6 +121,10 @@ void __fastcall__ utilAppendFlashAddr(uint8_t nBank,
 }
 
 
+/******************************************************************************/
+/**
+ *
+ */
 void __fastcall__ utilAppendDecimal(uint16_t n)
 {
     uint8_t aNum[5];
