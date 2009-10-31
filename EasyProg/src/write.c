@@ -25,7 +25,6 @@
 #include <conio.h>
 #include <string.h>
 #include <time.h>
-#include <cbm.h>
 
 #include "buffer.h"
 #include "cart.h"
@@ -134,7 +133,7 @@ static uint8_t __fastcall__ writeStartUpCode(uint8_t* pBankOffset)
     }
 
 
-    pBuffer = bufferAlloc();
+    pBuffer = BUFFER_WRITE_ADDR;
 
     // btw: the buffer must always be 256 bytes long
     // !!! keep this crap in sync with startup.s - especially the code size !!!
@@ -151,11 +150,9 @@ static uint8_t __fastcall__ writeStartUpCode(uint8_t* pBankOffset)
     if (!flashWriteBlock(0, 1, 0x1e00, pBuffer) ||
         !flashWriteBlock(0, 1, 0x1f00, startUpStart + 0x100))
     {
-        bufferFree(pBuffer);
         return writeCRTError();
     }
 
-    bufferFree(pBuffer);
 
     // write the sprites to 00:1:1800
     // keep this in sync with sprites.s
@@ -173,7 +170,7 @@ static uint8_t __fastcall__ writeStartUpCode(uint8_t* pBankOffset)
  *
  * return CART_RV_OK or CART_RV_ERR
  */
-static uint8_t writeCrtImage()
+static uint8_t writeCrtImage(void)
 {
     uint8_t rv;
     uint8_t nBankOffset;
@@ -259,7 +256,7 @@ static uint8_t writeBinImage(uint8_t nChip)
     // this will show the cartridge type from the header
     refreshMainScreen();
 
-    pBuffer = bufferAlloc();
+    pBuffer = BUFFER_WRITE_ADDR;
     nOffset = 0;
     nBank = 0;
     do
@@ -274,13 +271,11 @@ static uint8_t writeBinImage(uint8_t nChip)
             // the last block may be smaller than 265 bytes, then we write padding
             if (!flashWriteBlock(nBank, nChip, nOffset, pBuffer))
             {
-                bufferFree(pBuffer);
                 return 0;
             }
 
             if (!flashVerifyBlock(nBank, nChip, nOffset, pBuffer))
             {
-                bufferFree(pBuffer);
                 return 0;
             }
 
@@ -295,8 +290,6 @@ static uint8_t writeBinImage(uint8_t nChip)
             break;  // shorter code...
     }
     while (nBytes == 0x100);
-
-    bufferFree(pBuffer);
 
     if (nOffset || nBank)
         return CART_RV_OK;
@@ -314,7 +307,7 @@ static uint8_t writeBinImage(uint8_t nChip)
 static void checkWriteImage(uint8_t imageType)
 {
     unsigned t;
-    uint8_t lfn, rv;
+    uint8_t  rv;
 
     checkFlashType();
 
@@ -332,9 +325,8 @@ static void checkWriteImage(uint8_t imageType)
     setStatus("Checking file");
 
     spritesOff();
-    lfn = 2;
-    if (cbm_open(lfn, fileDlgGetDriveNumber(), CBM_READ, strFileName) ||
-        cbm_k_chkin(lfn))
+
+    if (utilOpenFile(fileDlgGetDriveNumber(), strFileName))
     {
         screenPrintSimpleDialog(apStrFileOpenError);
         spritesOn();
@@ -356,8 +348,7 @@ static void checkWriteImage(uint8_t imageType)
     if (rv == CART_RV_OK)
         screenPrintSimpleDialog(apStrWriteComplete);
 
-    cbm_k_clrch();
-    cbm_close(lfn);
+    utilCloseFile();
     spritesOn();
 
     {
