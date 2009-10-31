@@ -25,21 +25,13 @@
 #include <stdint.h>
 #include "buffer.h"
 
-static uint8_t aBuffer[BUFFER_ALLOC_SIZE];
-
-static uint8_t bBufferAllocated;
-
-void* bufferAlloc()
+void bufferHideROM(void)
 {
-    if (bBufferAllocated)
-        return 0;
-
-    bBufferAllocated = 1;
-    return aBuffer;
+    *(uint8_t*)0x01 = 0x36;    
 }
 
-void __fastcall__ bufferFree(void* p)
-{
-    bBufferAllocated = 0;
-}
 
+void bufferShowROM(void)
+{
+    *(uint8_t*)0x01 = 0x37;
+}
