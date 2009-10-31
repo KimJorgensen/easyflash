@@ -37,7 +37,7 @@
 #include "dir.h"
 #include "util.h"
 
-#define FILEDLG_ENTRIES (BUFFER_ALLOC_SIZE / sizeof(DirEntry))
+#define FILEDLG_MAX_ENTRIES 255
 #define FILEDLG_LFN     72
 
 #define FILEDLG_X 5
@@ -198,7 +198,7 @@ static void fileDlgReadDir(void)
 
     // read entries, but leave two slots free for "<-/..", see below
     while ((!dirReadEntry(pEntry)) && (nDirEntries
-            < FILEDLG_ENTRIES - 2))
+            < FILEDLG_MAX_ENTRIES - 2))
     {
         // only accept supported file types
         if (strcmp(pEntry->name, "..") &&
@@ -231,7 +231,7 @@ static void fileDlgReadDir(void)
 
     fileDlgSort();
 
-    if (nDirEntries == FILEDLG_ENTRIES)
+    if (nDirEntries == FILEDLG_MAX_ENTRIES)
     {
         screenPrintSimpleDialog(apStrDirFull);
         refreshMainScreen();
@@ -363,9 +363,10 @@ uint8_t __fastcall__ fileDlg(char* pStrName, const char* pStrType)
     uint8_t rv;
     DirEntry* pEntry;
 
+    bufferHideROM();
     fileDlgPrintFrame();
 
-    aDirEntries = bufferAlloc();
+    aDirEntries = BUFFER_DIR_ADDR;
     rv = 0;
 
     bReload = 1;
@@ -471,6 +472,6 @@ uint8_t __fastcall__ fileDlg(char* pStrName, const char* pStrType)
         }
     }
 end:
-    bufferFree(aDirEntries);
+    bufferShowROM();
     return rv;
 }

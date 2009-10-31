@@ -25,9 +25,19 @@
 #ifndef BUFFER_H_
 #define BUFFER_H_
 
-#define BUFFER_ALLOC_SIZE (8 * 1024)
+/* Buffer for exomizer, see utilasm.h */
+#define BUFFER_EXOMIZER_ADDR ((void*) 0x6800)
+#define BUFFER_EXOMIZER_SIZE ((void*) 0x1000)
 
-void* bufferAlloc();
-void __fastcall__ bufferFree(void* p);
+/* Buffer for Flash write memory block */
+#define BUFFER_WRITE_ADDR ((void*) 0x7800)
+#define BUFFER_WRITE_SIZE ((void*) 0x0100)
+
+/* Buffer for directory (below ROM) */
+#define BUFFER_DIR_ADDR ((void*) 0x8000)
+#define BUFFER_DIR_SIZE ((void*) 0x4000)
+
+void bufferHideROM(void);
+void bufferShowROM(void);
 
 #endif /* BUFFER_H_ */

@@ -353,11 +353,11 @@ static void loadEAPI(void)
     else
     {
         // skip start address
-        nBytes = utilRead(EAPI_LOAD_TO, 2);
+        nBytes = utilReadNormalFile(EAPI_LOAD_TO, 2);
         if (nBytes > 0)
         {
             // load up to 1024 bytes to $c000
-            nBytes = utilRead(EAPI_LOAD_TO, 1024);
+            nBytes = utilReadNormalFile(EAPI_LOAD_TO, 1024);
         }
 
         if (nBytes <= 0)
