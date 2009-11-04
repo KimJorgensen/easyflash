@@ -1,20 +1,16 @@
 ﻿
-the xbank file countans a multi banking cart for easyflash
+The EasyFlash's xbank cartridge format is a multibanking cartridge format which
+can be placed at any bank in the flash, though all the banks must be continous.
+It's similar to the EasyFlash cartridge format.
 
-the file has to be in IFF format with type 'Xbnk'
-IFF doku: http://de.wikipedia.org/wiki/Interchange_File_Format
+The magic cartrige id is 33 ($21).
 
-there are four cunks which are allowed:
-'CRT0', 'CRT1', 'CRT2' and 'CRT3'
+The Game and ExRom configuration in the crt header will be used to determine
+which mode should be apply at the startup.
 
-you have to specify at least one of these chunks, but may be all of them.
+The main difference is that it can be placed on any bank, unlike EasyFlash or
+e.g. a Ocean Type 1 cartridges.
 
-each of the chunks has to contain a multi banking cart as plain bin of the same
-program but for different crt use.
-
-CRT0: regular 8k crt's
-CRT1: regular 16k crt's
-CRT2: ultimax 16k crt's
-CRT3: ultimax 8k crt's
-
-the user may specify which type he wants or the program chooses the best matching or just the first
+The method is really simple: the starting bank will be stored in $df00/$df01,
+and the program has to care itself for the addition of the relative bank and
+the offset before writing it into the banking register.

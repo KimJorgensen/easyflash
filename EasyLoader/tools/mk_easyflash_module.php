@@ -18,7 +18,7 @@ if($MODE == 'build/easyloader_nrm.prg'){
 
 // $MODE = array(bank loader, bank fs, loader is high, is shadow mode)
 
-$f = file_get_contents('php://stdin');
+$f = file_get_contents($argv[1]);
 
 if(ord($f[0]) != 0x00 || ord($f[1]) != ($MODE[2] ? 0xa0 : 0x80)){
 	fail('wrong start address');
@@ -44,7 +44,6 @@ $more_crt8u = array();
 $more_crt16 = array();
 $more_crt16u = array();
 $more_files = array();
-$more_m2i = array();
 $mod256k = array();
 $more_xbank = array();
 $is_hidden = array();
@@ -78,7 +77,7 @@ foreach(split("[\r\n]+", file_get_contents($argv[2])) AS $ln){
 			$file = $BASE_PATH.$file;
 		}
 		$is_hidden[$file] = $hidden ? 0x80 : 0x00;
-		switch($mode){
+		switch(strtolower($mode)){
 		case 'p':
 		case 'prg':
 			$more_files[$file] = $name;
@@ -103,27 +102,8 @@ foreach(split("[\r\n]+", file_get_contents($argv[2])) AS $ln){
 			$mod256k = array($name, $file);
 			break;
 		case 'xbank':
-			$more_xbank[$file] = array(false, $name);
+			$more_xbank[$file] = $name;
 			break;
-		case 'xbank-8':
-		case 'xbank-8k':
-			$more_xbank[$file] = array('CRT0', $name);
-			break;
-		case 'xbank-16':
-		case 'xbank-16k':
-			$more_xbank[$file] = array('CRT1', $name);
-			break;
-		case 'xbank-m16':
-		case 'xbank-m16k':
-			$more_xbank[$file] = array('CRT2', $name);
-			break;
-		case 'xbank-m8':
-		case 'xbank-m8k':
-			$more_xbank[$file] = array('CRT3', $name);
-			break;
-//		case 'm2i':
-//			$more_m2i[$name] = $file;
-//			break;
 		}
 	}
 }
@@ -200,46 +180,43 @@ foreach($more_files AS $file => $name){
 	read all xbank's
 */
 
-foreach($more_xbank AS $file => $dummy){
-	list($mode, $name) = $dummy;
+foreach($more_xbank AS $file => $name){
 	$xb = read_xbank_file($file);
-	if(!$mode){
-		$mode = array_keys($xb);
-		$mode = $mode[0];
-	}
-
-	$bin = $xb[$mode]; // bin-data
-	$num_banks = ceil(strlen($bin) / 0x2000);
-
-	$data = array();
-	for($i=0; $i<$num_banks; $i++){
-		$data[] = substr($bin, $i*0x2000, 0x2000);
+	if(!$xb){
+		// something went wrong: next file
+		continue;
 	}
 
 	$var = array(
 		'dir' => array(
 			$name,
 			-1,
-			0x10 | ((int) substr($mode, -1)) | $is_hidden[$file],
-			$num_banks * 0x2000,
+			$is_hidden[$file],
+			count($xb['data']) * 0x2000,
 			0
 		),
-		'data' => $data,
+		'data' => $xb['data'],
 	);
 
-	switch($mode){
-	case 'CRT0':
+	switch($xb['mode']){
+	case '8k':
+		$var['dir'][2] |= 0x10;
 		$dir_crt8[] = $var;
 		break;
-	case 'CRT1':
+	case '16k':
+		$var['dir'][2] |= 0x11;
 		$dir_crt16[] = $var;
 		break;
-	case 'CRT2':
+	case 'm16k':
+		$var['dir'][2] |= 0x12;
 		$dir_crt16u[] = $var;
 		break;
-	case 'CRT3':
+	case 'm8k':
+		$var['dir'][2] |= 0x13;
 		$dir_crt8u[] = $var;
 		break;
+	default:
+		fail($xb['mode']);
 	}
 }
 
@@ -360,7 +337,7 @@ while(count($dir_crt8) > 0 || count($dir_crt8u) > 0){
 			if($b < count($N['data'])){
 				$CHIPS[0][$bank] = $N['data'][$b];
 			}
-			if($b < count($N['data'])){
+			if($b < count($M['data'])){
 				$CHIPS[1][$bank] = $M['data'][$b];
 			}
 			$bank++;
@@ -470,92 +447,6 @@ foreach(array_merge($dir_prg8, $dir_prg) AS $E){
 	$start += strlen($E['data']);
 }
 
-// find *'s
-foreach($more_m2i AS $k => $file){
-	if(substr($file, -1) == '*'){
-		unset($more_m2i[$k]);
-$dh = opendir(substr($file, 0, -1));
-while($e = readdir($dh)){
-	if($e[0] != '.') // no dot-files
-		$more_m2i[] = substr($file, 0, -1).$e;
-}
-closedir($dh);
-	}
-}
-// add some m2i
-foreach($more_m2i AS $file){
-
-	if(substr($file, -1) == '$'){
-$all_m2i = array();
-$dh = opendir(substr($file, 0, -1));
-while($e = readdir($dh)){
-	if($e[0] != '.') // no dot-files
-		$all_m2i[] = substr($file, 0, -1).$e;
-}
-closedir($dh);
-
-		for(;;){
-			shuffle($all_m2i);
-			$file = $all_m2i[0];
-			$m2i = read_m2i($file);
-			for($i=0; ($l=$m2i[$i]) && (strtolower($l[1]) != 'p'); $i++);
-			if(filesize($file.'/'.trim($l[2])) < 21*1024)
-				break;
-		}
-	}
-
-	$m2i = read_m2i($file);
-
-	$m2i_dir = '';
-	$m2i_data = '';
-	$m2i_dir_address = $start;
-	$start += (count($m2i)+1)*24;
-	foreach($m2i AS $r){
-//fail(var_export($r, 1));
-		if(strtolower($r[1]) == 'p' || strtolower($r[1]) == 's'){
-			// program
-			$d = file_get_contents($file.'/'.trim($r[2]));
-			$D = array(
-				$r[3],
-				$start >> 14,
-				0x01,
-				strlen($d),
-				$start & 0x3fff
-			);
-			$start += strlen($d);
-			$m2i_data .= $d;
-		}else{
-			// deleted
-			$D = array(
-				$r[3],
-				0,
-				0x03,
-				0,
-				0
-			);
-		}
-		$m2i_dir .= (str_pad(rtrim(substr($D[0], 0, 16)), 16, chr(0))); // name
-		$m2i_dir .= chr($D[2]); // type
-		$m2i_dir .= chr($D[1]); // bank
-		$m2i_dir .= pack('v', $D[4]); // offset, unused for crt
-		$m2i_dir .= substr(pack('V', $D[3]), 0, 3); // size (encode 32, take 24)
-		$m2i_dir .= chr(0x00); // pad
-	}
-	
-	$m2i_dir .= str_repeat(chr(0xff), 24); // end of dir marker
-	$m2i_dir .= $m2i_data; // attach files
-	
-	show(sprintf('m2i file %s at bank $%02x addr $%04x', $file, $m2i_dir_address >> 14, 0x8000+($m2i_dir_address & 0x3fff)));
-
-	$DIR[] = array(
-		basename($file),
-		$m2i_dir_address >> 14,
-		0x02 | $is_hidden[$file],
-		strlen($m2i_dir),
-		$m2i_dir_address & 0x3fff,
-	);
-	$data .= $m2i_dir;
-}
 
 for($o=0; $o<strlen($data); $o+=16*1024){
 	$CHIPS[0][$bank] = substr($data, $o       , 8*1024);
@@ -633,7 +524,7 @@ foreach($CHIPS[1] AS $i => $dummy){
 	echo pack('n', $i);
 	echo pack('n', 0xa000);
 	echo pack('n', 8*1024);
-	echo str_pad(substr($CHIPS[1][$i], 0, 8*1024), 8*1024, chr(0xff));
+	echo $x=str_pad(substr($CHIPS[1][$i], 0, 8*1024), 8*1024, chr(0xff));
 }
 
 if($config['show_free']){
@@ -800,34 +691,6 @@ function fail($text){
 	exit(1);
 }
 
-function read_m2i($file){
-	$dh = opendir($file.'/');
-	while(($m = readdir($dh)) !== false){
-		if(strlen($m) > 4 && substr(strtolower($m), -4) == '.m2i')
-			break;
-	}
-
-	if($m === false){
-		fail('unable to find a m2i: '.$file);
-	}
-
-	$m2i = split("[\r\n]+", file_get_contents($file.'/'.$m));
-	array_shift($m2i); // drop first line
-	foreach($m2i AS $k => $v){
-		if(trim($v) == ''){
-			unset($m2i[$k]);
-		}
-	}
-	$RET = array();
-	foreach($m2i AS $ln){
-		if(!preg_match('!^([pds]):([^:]*):(.*)$!i', $ln, $r)){
-			fail('umable to decode '.var_export($ln, 1));
-		}
-		$RET[] = $r;
-	}
-	return $RET;
-}
-
 function sort_dirs_crt($a, $b){
 	global $FREE_SORT_BANKS;
 	$la = count($a['data']) <= $FREE_SORT_BANKS;
@@ -850,32 +713,65 @@ function sort_dir($a, $b){
 }
 
 function read_xbank_file($file){
-	$f = fopen($file, 'r');
-	if(fread($f, 4) != 'FORM')
-		fail('no IFF file: '.$file);
-	fread($f, 4); // skip total size
-	if(fread($f, 4) != 'Xbnk')
-		fail('no xbank file: '.$file);
-	$r = array();
+	$f = fopen($file, 'rb');
+	
+	$crt_head = fread($f, 64);
+	if(substr($crt_head, 0, 16) != 'C64 CARTRIDGE   ' || ord($crt_head[0x16]) != 0 || ord($crt_head[0x17]) != 33){
+		// quick check for a crt failed
+		fail('check 1');
+		return false;
+	}
+	if($crt_head[0x18]){
+		$mode = 'm';
+	}else if($crt_head[0x19]){
+		$mode = '8k';
+		$minI = 0;
+		$maxI = 0;
+	}else{
+		$mode = '16k';
+		$minI = 0;
+		$maxI = 1;
+	}
+	
+	$banks = array(array(), array());
+	$max_bank = 0;
+	
 	while(!feof($f)){
-		$n = fread($f, 4); // read id
-		if($n == ''){
+		$chip_head = fread($f, 16);
+		if($chip_head == ''){
 			break;
 		}
-		$dummy = unpack('Nsize', fread($f, 4));
-		$size = $dummy['size'];
-		if(substr($n, 0, 3) == 'CRT' && ord($n[3]) >= 0x30 && ord($n[3]) <= 0x33){
-			$r[$n] = fread($f, $size);
-		}else{
-			fread($f, $size); // just ignore this chunk!
+		if(substr($chip_head, 0, 4) != 'CHIP'){
+			return false;
 		}
-		if(($size & 1) == 1){
-			// odd size: pad
-			fread($f, 1); // read pad-byte
+		
+		if(ord($chip_head[0xe]) == 0x20){
+			$banks[ord($chip_head[0xc]) == 0x80 ? 0 : 1][ord($chip_head[0xb])] = fread($f, 0x2000);
+		}else{ //if($chip_head[0xe] == 0x40){
+			$banks[0][ord($chip_head[0xb])] = fread($f, 0x2000);
+			$banks[1][ord($chip_head[0xb])] = fread($f, 0x2000);
+		}
+		$max_bank = max($max_bank, ord($chip_head[0xb]));
+	}
+	
+	if($mode == 'm'){
+		if(count($banks[0])){
+			$mode = 'm16k';
+			$minI = 0;
+			$maxI = 1;
+		}else{
+			$mode = 'm8k';
+			$minI = 1;
+			$maxI = 1;
 		}
 	}
-	fclose($f);
-	return $r;
+	$data = array();
+	for($b=0; $b<=$max_bank; $b++){
+		for($i=$minI; $i<=$maxI; $i++){
+			$data[] = str_pad($banks[$i][$b], 0x2000, chr(0xff));
+		}
+	}
+	return array('data' => $data, 'mode' => $mode);
 }
 
 ?>
