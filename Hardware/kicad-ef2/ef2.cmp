@@ -1,4 +1,4 @@
-Cmp-Mod V01 Created by Cvpcb (20091028 SVN-R2058) date = Mon 09 Nov 2009 21:04:51 CET
+Cmp-Mod V01 Created by Cvpcb (20091028 SVN-R2058) date = Tue 10 Nov 2009 22:30:28 CET
 
 BeginCmp
 TimeStamp = /4A9711C2;
@@ -263,7 +263,7 @@ BeginCmp
 TimeStamp = /4AC6646C;
 Reference = U1;
 ValeurCmp = XC95144XL-TQ100;
-IdModule  = TQFP_100;
+IdModule  = TQFP100-OK;
 EndCmp
 
 BeginCmp

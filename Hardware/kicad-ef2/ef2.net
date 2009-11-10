@@ -1,4 +1,4 @@
-# EESchema Netlist Version 1.1 created  Mon 09 Nov 2009 21:04:51 CET
+# EESchema Netlist Version 1.1 created  Tue 10 Nov 2009 22:30:28 CET
 (
  ( /4A9711C2 SM0805 C1 2u2
   ( 1 +5V )
@@ -201,7 +201,7 @@
   ( 1 GND )
   ( 2 /BUTTON_D )
  )
- ( /4AC6646C TQFP_100 U1 XC95144XL-TQ100
+ ( /4AC6646C TQFP100-OK U1 XC95144XL-TQ100
   ( 1 N-000098 )
   ( 2 /A15 )
   ( 3 /A14 )
