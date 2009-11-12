@@ -25,6 +25,7 @@
 #include <wx/ffile.h>
 #include <wx/thread.h>
 #include <stdarg.h>
+#include <stdlib.h>
 #include <stdint.h>
 
 extern "C"
@@ -38,22 +39,17 @@ extern "C"
 #include "EasySplitMainFrame.h"
 #include "EasySplitApp.h"
 
-
 /*****************************************************************************/
 
 WorkerThread* WorkerThread::m_pTheWorkerThread;
 
 /*****************************************************************************/
-WorkerThread::WorkerThread(
-        wxEvtHandler* pEventHandler,
+WorkerThread::WorkerThread(wxEvtHandler* pEventHandler,
         const wxString& stringInputFileName,
         const wxString& stringOutputFileName, unsigned nSize1, unsigned nSizeN) :
-    wxThread(wxTHREAD_JOINABLE),
-    m_pEventHandler(pEventHandler),
-    m_stringInputFileName(stringInputFileName),
-    m_stringOutputFileName(stringOutputFileName),
-    m_nSize1(nSize1),
-    m_nSizeN(nSizeN)
+    wxThread(wxTHREAD_JOINABLE), m_pEventHandler(pEventHandler),
+            m_stringInputFileName(stringInputFileName), m_stringOutputFileName(
+                    stringOutputFileName), m_nSize1(nSize1), m_nSizeN(nSizeN)
 {
     m_pTheWorkerThread = this;
 }
@@ -69,33 +65,60 @@ void WorkerThread::LogText(const wxString& str)
 {
     wxCommandEvent event(wxEVT_EASY_SPLIT_LOG);
     event.SetString(str);
+    event.SetInt(0);
     m_pEventHandler->AddPendingEvent(event);
 }
+
+
+/*****************************************************************************/
+/*
+ * Tell the main thread that we're done.
+ */
+void WorkerThread::LogComplete(void)
+{
+    wxCommandEvent event(wxEVT_EASY_SPLIT_LOG);
+
+    event.SetInt(1); // done!
+
+    m_pEventHandler->AddPendingEvent(event);
+}
+
 
 /*****************************************************************************/
 void* WorkerThread::Entry()
 {
-    struct crunch_options options = {NULL, 65535, EASY_SPLIT_MAX_EXO_OFFSET, 0};
+    struct crunch_options options =
+    { NULL, 65535, EASY_SPLIT_MAX_EXO_OFFSET, 0 };
     struct crunch_info info;
     struct membuf inbuf;
     struct membuf outbuf;
 
-    WorkerThread_Log("Input:  %s\n", (const char*)m_stringInputFileName.mb_str());
-    WorkerThread_Log("Output: %s.xx\n", (const char*)m_stringOutputFileName.mb_str());
+    WorkerThread_Log("Input:  %s\n",
+            (const char*) m_stringInputFileName.mb_str());
+    WorkerThread_Log("Output: %s.xx\n",
+            (const char*) m_stringOutputFileName.mb_str());
 
     membuf_init(&inbuf);
     membuf_init(&outbuf);
     if (read_file(m_stringInputFileName.mb_str(), &inbuf))
+    {
+        LogComplete();
         return NULL;
+    }
 
     crunch(&inbuf, &outbuf, &options, &info);
     WorkerThread_Log("\n");
 
-    SaveFiles((uint8_t*) membuf_get(&outbuf), membuf_memlen(&outbuf), membuf_memlen(&inbuf));
+    if (SaveFiles((uint8_t*) membuf_get(&outbuf), membuf_memlen(&outbuf),
+            membuf_memlen(&inbuf)))
+    {
+        WorkerThread_Log("\n\\o/\nREADY.\n\n");
+    }
 
     membuf_free(&outbuf);
     membuf_free(&inbuf);
 
+    LogComplete();
     return NULL;
 }
 
@@ -106,34 +129,46 @@ void* WorkerThread::Entry()
 bool WorkerThread::SaveFiles(uint8_t* pData, size_t len, size_t nOrigLen)
 {
     wxString str;
-    int nRemaining;
-    int nFile;
-    int nSize;
+    int nRemaining; /* remaining bytes w/o header */
+    int nSize; /* current file size w/o header */
 
-    EasySplitHeader header = { { 0x65, 0x61, 0x73, 0x79, 0x73, 0x70, 0x6c, 0x74 } }; /* EASYSPLT */
+    EasySplitHeader header =
+    {
+    { 0x65, 0x61, 0x73, 0x79, 0x73, 0x70, 0x6c, 0x74 } }; /* EASYSPLT */
 
-    nRemaining = len + sizeof(header);
-    nFile = 1;
+    nRemaining = len;
 
     header.len[0] = nOrigLen % 0x100;
     header.len[1] = nOrigLen / 0x100;
     header.len[2] = nOrigLen / 0x10000;
     header.len[3] = nOrigLen / 0x1000000;
+    header.id[0] = rand() & 0xff;
+    header.id[1] = rand() & 0xff;
 
-    while (nRemaining)
+    /* find out how many files we're going to write */
+    if (len <= m_nSize1 - sizeof(header))
+        header.nFiles = 1;
+    else
+        header.nFiles =
+                (len - (m_nSize1 - sizeof(header)) + (m_nSizeN - sizeof(header) - 1)) /
+                        (m_nSizeN - sizeof(header)) +
+                        1;
+
+    for (header.nThis = 0; header.nThis < header.nFiles; ++header.nThis)
     {
-        if (nFile == 1)
-            nSize = m_nSize1;
+        if (header.nThis == 0)
+            nSize = m_nSize1 - sizeof(header);
         else
-            nSize = m_nSizeN;
+            nSize = m_nSizeN - sizeof(header);
 
         if (nSize > nRemaining)
             nSize = nRemaining;
 
         str = m_stringOutputFileName;
-        str.Append(wxString::Format(_(".%02d"), nFile));
+        str.Append(wxString::Format(_(".%02x"), header.nThis + 1));
         WorkerThread_Log("Writing %u of %u bytes to %s...\n",
-                nSize, len + sizeof(header), (const char*) str.mb_str());
+                nSize + sizeof(header), len + header.nFiles * sizeof(header),
+                (const char*) str.mb_str());
 
         wxFFile file(str, _("w"));
         if (!file.IsOpened())
@@ -143,30 +178,16 @@ bool WorkerThread::SaveFiles(uint8_t* pData, size_t len, size_t nOrigLen)
             return false;
         }
 
-        if (nFile == 1)
+        if (file.Write(&header, sizeof(header)) != sizeof(header)
+                || file.Write(pData, nSize) != nSize)
         {
-            if (file.Write(&header, sizeof(header)) != sizeof(header) ||
-                file.Write(pData, nSize - sizeof(header)) != nSize - sizeof(header))
-            {
-                WorkerThread_Log("Error: Write to %s failed\n",
-                        (const char*) str.mb_str());
-                return false;
-            }
-            pData += nSize - sizeof(header);
+            WorkerThread_Log("Error: Write to %s failed\n",
+                    (const char*) str.mb_str());
+            return false;
         }
-        else
-        {
-            if (file.Write(pData, nSize) != nSize)
-            {
-                WorkerThread_Log("Error: Write to %s failed\n",
-                        (const char*) str.mb_str());
-                return false;
-            }
-            pData += nSize;
-        }
+        pData += nSize;
 
         nRemaining -= nSize;
-        ++nFile;
     }
     return true;
 }
@@ -183,7 +204,6 @@ void WorkerThread::Log(const char* pStrFormat, va_list args)
 
     LogText(wxString(str, wxConvUTF8));
 }
-
 
 /*****************************************************************************/
 /**

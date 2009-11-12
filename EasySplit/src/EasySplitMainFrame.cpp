@@ -37,25 +37,46 @@
 DEFINE_EVENT_TYPE(wxEVT_EASY_SPLIT_LOG)
 
 /*****************************************************************************/
+/*
+ * -pOuterSizer---------------------------------------------------
+ * |                                                             |
+ * | -pMainSizer------------------------------------------------ |
+ * | |                            |                            | |
+ * | ------------------------------pButtonSizer----------------- |
+ * | |                            |                            | |
+ * | ----------------------------------------------------------- |
+ * | |                            |                            | |
+ * | ----------------------------------------------------------- |
+ * | |                            |                            | |
+ * | ----------------------------------------------------------- |
+ * | |                            |                            | |
+ * | ----------------------------------------------------------- |
+ * |                        m_pButtonStart                       |
+ * |                        m_pTextCtrlLog                       |
+ * ---------------------------------------------------------------
+ */
 EasySplitMainFrame::EasySplitMainFrame(wxFrame* parent, const wxString& title) :
     wxFrame(parent, wxID_ANY, title, wxDefaultPosition, wxSize(800, 600),
-            wxDEFAULT_FRAME_STYLE & ~(wxRESIZE_BORDER | wxRESIZE_BOX | wxMAXIMIZE_BOX))
+            wxDEFAULT_FRAME_STYLE /*& ~(wxRESIZE_BORDER | wxRESIZE_BOX | wxMAXIMIZE_BOX)*/)
 {
     wxStaticText*       pText;
     wxBoxSizer*         pOuterSizer;
     wxFlexGridSizer*    pMainSizer;
     wxBoxSizer*         pButtonSizer;
 
+    wxPanel *pPanel = new wxPanel(this, wxID_ANY, wxDefaultPosition,
+            wxDefaultSize, wxTAB_TRAVERSAL);
+
     pOuterSizer = new wxBoxSizer(wxVERTICAL);
     pOuterSizer->AddSpacer(20);
 
     pMainSizer = new wxFlexGridSizer(2, 5, 10);
-    pOuterSizer->Add(pMainSizer);
+    pOuterSizer->Add(pMainSizer, 0, wxALIGN_CENTER);
 
     // Input file
-    pText = new wxStaticText(this, wxID_ANY, _("Input File"));
+    pText = new wxStaticText(pPanel, wxID_ANY, _("Input File"));
     pMainSizer->Add(pText, 0, wxALIGN_CENTER_VERTICAL | wxALIGN_RIGHT);
-    m_pInputFilePicker = new wxFilePickerCtrl(this, wxID_ANY, wxEmptyString,
+    m_pInputFilePicker = new wxFilePickerCtrl(pPanel, wxID_ANY, wxEmptyString,
             _("Select a file"), _("*"), wxDefaultPosition, wxDefaultSize,
             wxFLP_USE_TEXTCTRL | wxFLP_OPEN | wxFLP_FILE_MUST_EXIST);
     m_pInputFilePicker->SetMinSize(wxSize(300, m_pInputFilePicker->GetMinSize().GetHeight()));
@@ -64,27 +85,27 @@ EasySplitMainFrame::EasySplitMainFrame(wxFrame* parent, const wxString& title) :
     pMainSizer->AddSpacer(10);
 
     // Buttons for default sizes
-    pText = new wxStaticText(this, wxID_ANY, _("Default sizes"));
+    pText = new wxStaticText(pPanel, wxID_ANY, _("Default sizes"));
     pMainSizer->Add(pText, 0, wxALIGN_CENTER_VERTICAL | wxALIGN_RIGHT);
     pButtonSizer = new wxBoxSizer(wxHORIZONTAL);
     pMainSizer->Add(pButtonSizer);
-    m_pButtonSize170k = new wxButton(this, wxID_ANY, _("170 KiB (1541)"));
+    m_pButtonSize170k = new wxButton(pPanel, wxID_ANY, _("170 KiB (1541)"));
     pButtonSizer->Add(m_pButtonSize170k);
-    m_pButtonSize800k = new wxButton(this, wxID_ANY, _("800 KiB (1581)"));
+    m_pButtonSize800k = new wxButton(pPanel, wxID_ANY, _("800 KiB (1581)"));
     pButtonSizer->Add(m_pButtonSize800k);
 
     // Size of first file
-    pText = new wxStaticText(this, wxID_ANY, _("First file [KiB]"));
+    pText = new wxStaticText(pPanel, wxID_ANY, _("First file [KiB]"));
     pMainSizer->Add(pText, 0, wxALIGN_CENTER_VERTICAL | wxALIGN_RIGHT);
-    m_pSliderSize1 = new wxSlider(this, wxID_ANY, FILE_SIZE_1_1541, 50, 1024,
+    m_pSliderSize1 = new wxSlider(pPanel, wxID_ANY, FILE_SIZE_1_1541, 50, 1024,
             wxDefaultPosition, wxDefaultSize, wxSL_LABELS);
     m_pSliderSize1->SetMinSize(wxSize(300, m_pSliderSize1->GetMinSize().GetHeight()));
     pMainSizer->Add(m_pSliderSize1, wxEXPAND);
 
     // Size of subsequent files
-    pText = new wxStaticText(this, wxID_ANY, _("Subsequent files [KiB]"));
+    pText = new wxStaticText(pPanel, wxID_ANY, _("Subsequent files [KiB]"));
     pMainSizer->Add(pText, 0, wxALIGN_CENTER_VERTICAL | wxALIGN_RIGHT);
-    m_pSliderSizeN = new wxSlider(this, wxID_ANY, FILE_SIZE_N_1541, 50, 1024,
+    m_pSliderSizeN = new wxSlider(pPanel, wxID_ANY, FILE_SIZE_N_1541, 50, 1024,
             wxDefaultPosition, wxDefaultSize, wxSL_LABELS);
     m_pSliderSizeN->SetMinSize(wxSize(300, m_pSliderSizeN->GetMinSize().GetHeight()));
     pMainSizer->Add(m_pSliderSizeN, wxEXPAND);
@@ -92,9 +113,9 @@ EasySplitMainFrame::EasySplitMainFrame(wxFrame* parent, const wxString& title) :
     // Output file
     pMainSizer->AddSpacer(10);
     pMainSizer->AddSpacer(10);
-    pText = new wxStaticText(this, wxID_ANY, _("Output Files (+.01, .02,...)"));
+    pText = new wxStaticText(pPanel, wxID_ANY, _("Output Files (+.01, .02,...)"));
     pMainSizer->Add(pText, 0, wxALIGN_CENTER_VERTICAL | wxALIGN_RIGHT);
-    m_pOutputFilePicker = new wxFilePickerCtrl(this, wxID_ANY, wxEmptyString,
+    m_pOutputFilePicker = new wxFilePickerCtrl(pPanel, wxID_ANY, wxEmptyString,
             _("Select a file"), _("*"), wxDefaultPosition, wxDefaultSize,
             wxFLP_USE_TEXTCTRL | wxFLP_SAVE);
     m_pOutputFilePicker->SetMinSize(wxSize(300, m_pInputFilePicker->GetMinSize().GetHeight()));
@@ -102,16 +123,17 @@ EasySplitMainFrame::EasySplitMainFrame(wxFrame* parent, const wxString& title) :
 
     // Start Button
     pOuterSizer->AddSpacer(10);
-    m_pButtonStart = new wxButton(this, wxID_ANY, _("Go!"));
+    m_pButtonStart = new wxButton(pPanel, wxID_ANY, _("Go!"));
     pOuterSizer->Add(m_pButtonStart, 0, wxALIGN_CENTER_HORIZONTAL);
 
     // Text Control for Log
     pOuterSizer->AddSpacer(10);
-    m_pTextCtrlLog = new wxTextCtrl(this, wxID_ANY, _(""), wxDefaultPosition, wxDefaultSize, wxTE_MULTILINE | wxTE_READONLY);
+    m_pTextCtrlLog = new wxTextCtrl(pPanel, wxID_ANY, _(""), wxDefaultPosition, wxDefaultSize, wxTE_MULTILINE | wxTE_READONLY);
     m_pTextCtrlLog->SetMinSize(wxSize(500, 100));
-    pOuterSizer->Add(m_pTextCtrlLog, 0, wxALIGN_CENTER_VERTICAL | wxALIGN_CENTER_HORIZONTAL);
+    //m_pTextCtrlLog->
+    pOuterSizer->Add(m_pTextCtrlLog, 1, wxEXPAND | wxALL);
 
-    SetSizer(pOuterSizer);
+    pPanel->SetSizer(pOuterSizer);
     pOuterSizer->SetSizeHints(this);
 
     Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(EasySplitMainFrame::OnButton));
@@ -135,7 +157,8 @@ void EasySplitMainFrame::OnButton(wxCommandEvent& event)
     }
     else if (event.GetEventObject() == m_pButtonStart)
     {
-        DoIt();
+        if (m_pInputFilePicker->GetPath().size())
+            DoIt();
     }
 }
 
@@ -151,14 +174,34 @@ void EasySplitMainFrame::OnFilePickerChanged(wxFileDirPickerEvent& event)
 /*****************************************************************************/
 void EasySplitMainFrame::OnLog(wxCommandEvent& event)
 {
-    m_pTextCtrlLog->AppendText(event.GetString());
+    if (event.GetInt())
+    {
+        // means: done
+        EnableMyControls(true);
+    }
+    else
+    {
+        m_pTextCtrlLog->AppendText(event.GetString());
+    }
+}
+
+
+/*****************************************************************************/
+void EasySplitMainFrame::EnableMyControls(bool bEnable)
+{
+    m_pButtonSize170k->Enable(bEnable);
+    m_pButtonSize800k->Enable(bEnable);
+    m_pInputFilePicker->Enable(bEnable);
+    m_pOutputFilePicker->Enable(bEnable);
+    m_pSliderSize1->Enable(bEnable);
+    m_pSliderSizeN->Enable(bEnable);
 }
 
 
 /*****************************************************************************/
 void EasySplitMainFrame::DoIt()
 {
-    //Enable(false);
+    EnableMyControls(false);
 
     m_pTextCtrlLog->SetValue(_(""));
     m_pWorkerThread = new WorkerThread(

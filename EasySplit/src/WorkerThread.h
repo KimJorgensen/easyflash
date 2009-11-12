@@ -49,6 +49,7 @@ public:
     virtual ~WorkerThread();
 
     void Log(const char* pStrFormat, va_list args);
+    void LogComplete(void);
 
     static WorkerThread* m_pTheWorkerThread;
 protected:

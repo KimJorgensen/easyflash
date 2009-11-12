@@ -48,6 +48,7 @@ public:
     void FixFocus();
 
 protected:
+    void EnableMyControls(bool bEnable);
     void DoIt();
     void OnButton(wxCommandEvent& event);
     void OnLog(wxCommandEvent& event);
