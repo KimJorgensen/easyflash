@@ -59,8 +59,13 @@ DECLARE_APP(EasySplitApp)
 /*****************************************************************************/
 typedef struct EasySplitHeader_s
 {
-    char    id[8];  /* PETSCII EASYSPLT:  */
-    uint8_t len[4]; /* uncompressed file size (little endian) */
+    char    magic[8];   /* PETSCII EASYSPLT (hex 65 61 73 79 73 70 6c 74) */
+    uint8_t len[4];     /* uncompressed file size (little endian) */
+    uint8_t id[2];      /* 16 bit file ID, must be constant in all parts
+                         * which belong to one file. May be a random value,
+                         * a checksum or whatever. */
+    uint8_t nThis;      /* Number of this file (0 = 01, 1 = 02...) */
+    uint8_t nFiles;     /* Total number of files */
 }
 EasySplitHeader;
 
