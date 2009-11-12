@@ -44,7 +44,7 @@ include ../common/filelist.mk
 # Main target
 #
 .PHONY: world
-world: $(outdir)/EasySplit.exe $(outres)
+world: $(outdir)/EasySplit.exe $(outdir)/mingwm10.dll $(outres)
 
 ###############################################################################
 # This rule can link <here>/out/obj/*.o to <here>/out/EasySplit/EasySplit.exe
@@ -53,5 +53,11 @@ $(outdir)/EasySplit.exe: $(obj) | $(outdir) check-environment
 	$(cxx) --static  $(obj) -o $@ \
 		`$(wx-prefix)/bin/wx-config --static=yes --libs`
 	$(strip) $@
+
+###############################################################################
+# Copy mingwm10.dll to output directory
+# 
+$(outdir)/mingwm10.dll: $(mingwdll)
+	cp $^ $@
 
 include ../common/rules.mk
