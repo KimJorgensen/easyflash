@@ -37,6 +37,8 @@ w32api    := w32api-3.13-mingw32
 cross     := i686-pc-mingw32
 gccprefix := /opt/cross/$(cross)-$(gcc)
 
+mingwdll  := $(gccprefix)/$(cross)/bin/mingwm10.dll
+
 sudo      := sudo
 
 path      := $(gccprefix)/bin:$(path)
