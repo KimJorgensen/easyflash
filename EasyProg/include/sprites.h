@@ -8,7 +8,6 @@
 
 extern uint8_t* pSprites;
 void spritesShow(void);
-void spritesOn(void);
-void spritesOff(void);
+uint8_t __fastcall__ spritesOn(uint8_t on);
 
 #endif /* SPRITES_H_ */

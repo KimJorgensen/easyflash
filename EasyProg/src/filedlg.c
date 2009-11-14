@@ -184,15 +184,16 @@ static void fileDlgReadDir(void)
 {
     DirEntry* pEntry;
     uint8_t c;
+    uint8_t oldState;
 
     nDirEntries = 0;
     pEntry = aDirEntries;
 
-    spritesOff();
+    oldState = spritesOn(0);
     if (dirOpen(FILEDLG_LFN, nDriveNumber))
     {
         dirClose(FILEDLG_LFN);
-        spritesOn();
+        spritesOn(oldState);
         return;
     }
 
@@ -238,7 +239,7 @@ static void fileDlgReadDir(void)
         fileDlgPrintFrame();
     }
 
-    spritesOn();
+    spritesOn(oldState);
 }
 
 
@@ -313,15 +314,17 @@ static void __fastcall__ fileDlgPrintEntry(uint8_t nLine, uint8_t nEntry)
  */
 void __fastcall__ fileDlgChangeDir(const char* pStrDir)
 {
+    uint8_t oldState;
+
     char strCmd[3 + FILENAME_MAX];
 
     strcpy(strCmd, "cd:");
     strcpy(strCmd + 3, pStrDir);
 
-    spritesOff();
+    oldState = spritesOn(0);
     cbm_open(15, nDriveNumber, 15, strCmd);
     cbm_close(15);
-    spritesOn();
+    spritesOn(oldState);
 }
 
 

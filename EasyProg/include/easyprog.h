@@ -43,6 +43,4 @@ uint8_t checkFlashType(void);
 void __fastcall__ setStatus(const char* pStrStatus);
 void refreshMainScreen(void);
 
-extern char strFileName[];
-
 #endif /* EASYPROG_H_ */

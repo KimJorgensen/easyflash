@@ -34,11 +34,8 @@ zp_tmp   = ptr1
 ; Show the sprites in the upper right corner.
 ; void spritesShow(void);
 ;
-; Turn on the sprites.
-; void spritesOn(void);
-;
-; Turn off the sprites.
-; void spritesOff(void);
+; Turn on/off the sprites, return old state.
+; uint8_t spritesOn(uint8_t on);
 ;
 ; parameters:
 ;       -
@@ -49,7 +46,6 @@ zp_tmp   = ptr1
 ; =============================================================================
 .export _spritesShow
 .export _spritesOn
-.export _spritesOff
 _spritesShow:
         ; positions
         ldx #2 * NUM_LOGO_SPRITES - 1
@@ -100,15 +96,17 @@ sh3:
         sty $d01d               ; sprite expand X off
         sty $d01c               ; sprite MCM off
 
+        ; A != 0
 _spritesOn:
-        lda #%00011111
+        cmp #0
+        beq spSet               ; off?
+        lda #%00011111          ; on
 spSet:
-        sta $d015               ; sprite display enable
+        tay
+        lda $d015               ; return old state
+        sty $d015               ; sprite display enable
+        ldx #0
         rts
-
-_spritesOff:
-        lda #0
-        beq spSet
 
 spritePos:
     .byte 0 * 24, 56
@@ -119,7 +117,6 @@ spritePos:
 
 spriteCol:
     .byte 0, 0, 0, 0, 8
-
 
 
 ; =============================================================================

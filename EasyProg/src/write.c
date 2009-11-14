@@ -270,14 +270,10 @@ static uint8_t writeBinImage(uint8_t nChip)
         {
             // the last block may be smaller than 265 bytes, then we write padding
             if (!flashWriteBlock(nBank, nChip, nOffset, pBuffer))
-            {
                 return 0;
-            }
 
             if (!flashVerifyBlock(nBank, nChip, nOffset, pBuffer))
-            {
                 return 0;
-            }
 
             nOffset += 0x100;
             if (nOffset == 0x2000)
@@ -308,14 +304,28 @@ static void checkWriteImage(uint8_t imageType)
 {
     unsigned t;
     uint8_t  rv;
+    uint8_t  oldState;
 
     checkFlashType();
 
-    spritesOff();
-    rv = fileDlg(strFileName, imageType == IMAGE_TYPE_CRT ? "CRT" : "BIN");
-    spritesOn();
-    if (!rv)
-        return;
+    oldState = spritesOn(0);
+
+    do
+    {
+        rv = fileDlg(strFileName, imageType == IMAGE_TYPE_CRT ? "CRT" : "BIN");
+        if (!rv)
+        {
+            spritesOn(oldState);
+            return;
+        }
+
+        rv = utilOpenFile(fileDlgGetDriveNumber(), strFileName);
+        if (rv == 1)
+            screenPrintSimpleDialog(apStrFileOpenError);
+    }
+    while (rv != OPEN_FILE_OK);
+
+    spritesOn(oldState);
 
     if (screenAskEraseDialog() != BUTTON_ENTER)
         return;
@@ -323,15 +333,6 @@ static void checkWriteImage(uint8_t imageType)
     refreshMainScreen();
 
     setStatus("Checking file");
-
-    spritesOff();
-
-    if (utilOpenFile(fileDlgGetDriveNumber(), strFileName))
-    {
-        screenPrintSimpleDialog(apStrFileOpenError);
-        spritesOn();
-        return;
-    }
 
     // make sure the right areas of the chip are erased
     progressInit();
@@ -349,8 +350,8 @@ static void checkWriteImage(uint8_t imageType)
         screenPrintSimpleDialog(apStrWriteComplete);
 
     utilCloseFile();
-    spritesOn();
-
+    spritesOn(oldState);
+#if 0
     {
         strcpy(utilStr, "time: ");
         utilAppendDecimal(t / CLK_TCK);
@@ -359,6 +360,7 @@ static void checkWriteImage(uint8_t imageType)
         cputsxy(0, 0, utilStr);
     }
     for (;;);
+#endif
 }
 
 

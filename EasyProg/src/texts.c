@@ -72,6 +72,13 @@ const char* apStrFileTooShort[] =
         NULL
 };
 
+const char* apStrFileNoEasySplit[] =
+{
+        "This is not an EasySplit file",
+        "or it is damaged.",
+        NULL
+};
+
 const char* apStrWrongFlash[] =
 {
         "A flash chip does not work",
@@ -112,7 +119,7 @@ const char* apStrFlashWriteFailed[] =
 
 const char* apStrFileOpenError[] =
 {
-        "Cannot open cartridge image file.",
+        "Cannot open this file.",
         NULL
 };
 
