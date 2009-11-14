@@ -41,8 +41,8 @@ INCLUDE := include
 DEFINE  := -DEFVERSION=\"${version}\"
 
 
-GLOPT65 := $(shell which glopt65)
-GCAT65  := $(shell which gcat65)
+# GLOPT65 := $(shell which glopt65)
+# GCAT65  := $(shell which gcat65)
 
 ifeq "$(GLOPT65)" ""
 	obj += $(optobj)
