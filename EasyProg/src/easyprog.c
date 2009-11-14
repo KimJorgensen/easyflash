@@ -57,9 +57,6 @@ static uint8_t ifHaveValidFlash(void);
 uint8_t nManufacturerId;
 uint8_t nDeviceId;
 
-// File name of last CRT image
-char strFileName[FILENAME_MAX];
-
 // Driver name
 char strDriverName[18 + 1] = "Internal Fallback";
 
@@ -339,12 +336,13 @@ static void __fastcall__ execMenu(uint8_t x, uint8_t y,
 static void loadEAPI(void)
 {
     uint8_t useInternal;
+    uint8_t oldState;
     int nBytes;
 
     useInternal = 1;
 
     setStatus("Loading EasyAPI driver...");
-    spritesOff();
+    oldState = spritesOn(0);
     if (cbm_open(2, fileDlgGetDriveNumber(), CBM_READ, "eapi-????????-??") ||
         cbm_k_chkin(2))
     {
@@ -385,7 +383,7 @@ static void loadEAPI(void)
 
     cbm_close(2);
     cbm_k_clrch();
-    spritesOn();
+    spritesOn(oldState);
 }
 
 

@@ -27,7 +27,7 @@
 .import         init_decruncher
 .import         get_decrunched_byte
 .import         _utilStr
-
+.import         _utilAskForNextFile
 
 .export buffer_start_hi: absolute
 .export buffer_len_hi: absolute
@@ -198,12 +198,11 @@ get_crunched_byte:
         lda ST          ; Status ok?
         bne gcbErr
 
+get_crunched_byte2:
         jsr BASIN
         sta tmp1
 
         lda ST
-        and #$BF
-        bne gcbErr
 
         ; restore X, Y, C
         plp
@@ -217,8 +216,27 @@ get_crunched_byte:
         rts
 
 gcbErr:
-        dec $d020
-        jmp gcbErr;
+
+        ; backup cc65 ZP area
+        ldx #$1a        ; see ld.conf
+gbcE1:
+        lda $02, x      ; see ld.conf
+        sta $7900, x    ; BUFFER_ZP_BACKUP_ADDR
+        dex
+        bpl gbcE1
+
+        jsr _utilAskForNextFile
+
+        ; restore cc65 ZP area
+        ldx #$1a        ; see ld.conf
+gbcE2:
+        lda $7900, x    ; BUFFER_ZP_BACKUP_ADDR
+        sta $02, x      ; see ld.conf
+        dex
+        bpl gbcE2
+
+        jmp get_crunched_byte2
+
 
 ; =============================================================================
 ;
@@ -275,16 +293,19 @@ urs1:
         inc _nUtilExoBytesRemaining + 2
         bne ursNoEOF
         inc _nUtilExoBytesRemaining + 3
-        beq ursEnd2
+        beq ursEnd
 
 ursNoEOF:
+        ; don't forget: this may call the disk change dialoge
+        ; so before calling utilAskNextFile we must save the ptr1..ptr3
         jsr get_decrunched_byte
+
         ldy     #0
         sta     (ptr2),y        ; Save read byte
 
         inc     ptr2
         bne     urs2
-        inc     ptr2+1          ; ++buffer;
+        inc     ptr2 + 1        ; ++buffer;
 urs2:
         inc     ptr3
         bne     urs3
@@ -302,11 +323,6 @@ ursEnd:
         ldx     ptr3 + 1        ; return bytesread;
 
         rts
-
-ursEnd2:
-        dec $d021
-        jmp ursEnd2
-
 
 ; =============================================================================
 ;
