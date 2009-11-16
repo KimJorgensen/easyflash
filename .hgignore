@@ -1,5 +1,7 @@
 syntax: glob
 obj/*
+a.out
+*.tar.*
 *~
 *.map
 *.prg
@@ -8,8 +10,16 @@ obj/*
 *.obj
 *.bin
 *.crt
-*.cache.lib
-*.cache.dcm
+*.orig
+
 EasyProg/easyprog
+
 EasyLoader/build/*
 EasyLoader/.deps/*
+
+Hardware/*gerber*
+Hardware/*/*gerber*
+*.pho
+*-cache.lib
+*.cache.lib
+*.cache.dcm
