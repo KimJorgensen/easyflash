@@ -308,24 +308,19 @@ static void checkWriteImage(uint8_t imageType)
 
     checkFlashType();
 
-    oldState = spritesOn(0);
-
     do
     {
         rv = fileDlg(strFileName, imageType == IMAGE_TYPE_CRT ? "CRT" : "BIN");
         if (!rv)
-        {
-            spritesOn(oldState);
             return;
-        }
 
+        oldState = spritesOn(0);
         rv = utilOpenFile(fileDlgGetDriveNumber(), strFileName);
+        spritesOn(oldState);
         if (rv == 1)
             screenPrintSimpleDialog(apStrFileOpenError);
     }
     while (rv != OPEN_FILE_OK);
-
-    spritesOn(oldState);
 
     if (screenAskEraseDialog() != BUTTON_ENTER)
         return;
@@ -338,19 +333,20 @@ static void checkWriteImage(uint8_t imageType)
     progressInit();
 
     t = clock();
+    oldState = spritesOn(0);
 
     if (imageType == IMAGE_TYPE_CRT)
         rv = writeCrtImage();
     else
         rv = writeBinImage(imageType == IMAGE_TYPE_HIROM);
+    utilCloseFile();
 
+    spritesOn(oldState);
     t = clock() - t;
 
     if (rv == CART_RV_OK)
         screenPrintSimpleDialog(apStrWriteComplete);
 
-    utilCloseFile();
-    spritesOn(oldState);
 #if 0
     {
         strcpy(utilStr, "time: ");
