@@ -1,4 +1,8 @@
 ;
+; Modified by skoe:
+; - Reserve buffer in data segment
+;
+;
 ; Copyright (c) 2002, 2003 Magnus Lind.
 ;
 ; This software is provided 'as-is', without any express or implied warranty.
@@ -322,17 +326,10 @@ _bit_bits_done:
 ; this 156 byte table area may be relocated. It may also be clobbered
 ; by other data between decrunches.
 ; -------------------------------------------------------------------
+.data
 decrunch_table:
-	.byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-	.byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-	.byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-	.byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-	.byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-	.byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-	.byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-	.byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-	.byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-	.byte 0,0,0,0,0,0,0,0,0,0,0,0
+    .res 156
+
 ; -------------------------------------------------------------------
 ; end of decruncher
 ; -------------------------------------------------------------------
