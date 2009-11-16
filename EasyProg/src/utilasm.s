@@ -203,6 +203,8 @@ get_crunched_byte2:
         sta tmp1
 
         lda ST
+        and #(~$40)
+        bne gcbCancel
 
         ; restore X, Y, C
         plp
