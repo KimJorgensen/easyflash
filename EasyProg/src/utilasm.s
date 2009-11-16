@@ -196,7 +196,7 @@ get_crunched_byte:
         php
 
         lda ST          ; Status ok?
-        bne gcbErr
+        bne gcbNextFile
 
 get_crunched_byte2:
         jsr BASIN
@@ -215,28 +215,37 @@ get_crunched_byte2:
         lda tmp1
         rts
 
-gcbErr:
-
+gcbNextFile:
         ; backup cc65 ZP area
         ldx #$1a        ; see ld.conf
-gbcE1:
+gcbE1:
         lda $02, x      ; see ld.conf
         sta $7900, x    ; BUFFER_ZP_BACKUP_ADDR
         dex
-        bpl gbcE1
+        bpl gcbE1
 
         jsr _utilAskForNextFile
+        cmp #0
+        beq gcbCancel
 
         ; restore cc65 ZP area
         ldx #$1a        ; see ld.conf
-gbcE2:
+gcbE2:
         lda $7900, x    ; BUFFER_ZP_BACKUP_ADDR
         sta $02, x      ; see ld.conf
         dex
-        bpl gbcE2
+        bpl gcbE2
 
         jmp get_crunched_byte2
 
+gcbCancel:
+        ; skip the whole call chain and return from _utilReadEasySplitFile
+        ldx utilReadEasySplitFileEntrySP
+        txs
+
+        lda #0          ; return 0
+        tax
+        rts
 
 ; =============================================================================
 ;
@@ -263,6 +272,11 @@ _utilInitDecruncher:
 ; (EOF).
 ;
 ; =============================================================================
+.data
+utilReadEasySplitFileEntrySP:
+        .res 1
+
+.code
 .export _utilReadEasySplitFile
 _utilReadEasySplitFile:
         eor     #$FF
@@ -275,12 +289,17 @@ _utilReadEasySplitFile:
         sta     ptr2
         stx     ptr2 + 1        ; Save buffer
 
+        ; rememeber the stack pointer at this point
+        ; so we are able to cancel the whole call chain later
+        tsx
+        stx utilReadEasySplitFileEntrySP
+
 ; bytesread = 0;
 
-        lda     #$00
-        sta     ptr3
-        sta     ptr3 + 1
-        beq     urs3            ; Branch always
+        lda #$00
+        sta ptr3
+        sta ptr3 + 1
+        beq urs3                ; Branch always
 
 ; Loop
 
@@ -299,8 +318,6 @@ ursNoEOF:
         ; don't forget: this may call the disk change dialoge
         ; so before calling utilAskNextFile we must save the ptr1..ptr3
         jsr get_decrunched_byte
-
-        ldy     #0
         sta     (ptr2),y        ; Save read byte
 
         inc     ptr2
