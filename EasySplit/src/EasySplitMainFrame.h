@@ -54,22 +54,6 @@ protected:
     void OnLog(wxCommandEvent& event);
     void OnFilePickerChanged(wxFileDirPickerEvent& event);
 
-#if 0
-    void OnFocus(wxFocusEvent& event);
-
-    void OnOpen(wxCommandEvent &event);
-
-    void OnSave(wxCommandEvent& event);
-    void OnSaveAs(wxCommandEvent& event);
-
-    void OnClose(wxCloseEvent& event);
-    void OnQuit(wxCommandEvent& event);
-
-    void OnAbout(wxCommandEvent& event);
-
-    void OnKeyDown(wxKeyEvent& event);
-#endif
-
     wxFilePickerCtrl*   m_pInputFilePicker;
     wxFilePickerCtrl*   m_pOutputFilePicker;
     wxSlider*           m_pSliderSize1;

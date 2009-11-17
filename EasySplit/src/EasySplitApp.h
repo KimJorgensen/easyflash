@@ -57,15 +57,37 @@ DECLARE_APP(EasySplitApp)
 
 
 /*****************************************************************************/
+/*
+ * An EasySplit file contains data which is compressed in the same way as
+ * "exoraw -m 4096 -c" does it (exomizer 2 beta), i.e. max offset is 4k,
+ * no literal sequences are used. The compressed data is split into several
+ * files. Each of them has its own header.
+ *
+ * When the original file has a CBM-like start address, this is contained in
+ * the encrypted data transparently.
+ *
+ * This is the header for an EasySplit file.
+ */
 typedef struct EasySplitHeader_s
 {
-    char    magic[8];   /* PETSCII EASYSPLT (hex 65 61 73 79 73 70 6c 74) */
-    uint8_t len[4];     /* uncompressed file size (little endian) */
-    uint8_t id[2];      /* 16 bit file ID, must be constant in all parts
-                         * which belong to one file. May be a random value,
-                         * a checksum or whatever. */
-    uint8_t nThis;      /* Number of this file (0 = 01, 1 = 02...) */
-    uint8_t nFiles;     /* Total number of files */
+    /* PETSCII EASYSPLT (hex 65 61 73 79 73 70 6c 74) */
+    char    magic[8];
+
+    /* uncompressed file size (little endian) */
+    uint8_t len[4];
+
+    /*
+     * CRC-CCITT (start value 0xFFFF) of original file, little endian.
+     * When unpacking, you should at least check if all parts contain the
+     * same value to make sure not to mix parts of different files.
+     */
+    uint8_t crc16[2];
+
+    /* Number of this part (0 = "*.01", 1 = "*.02"...) */
+    uint8_t part;
+
+    /* Total number of parts */
+    uint8_t total;
 }
 EasySplitHeader;
 

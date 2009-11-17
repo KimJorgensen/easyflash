@@ -177,6 +177,13 @@ void EasySplitMainFrame::OnLog(wxCommandEvent& event)
     if (event.GetInt())
     {
         // means: done
+        if (m_pWorkerThread)
+        {
+            m_pWorkerThread->Wait();
+            delete m_pWorkerThread;
+            m_pWorkerThread = NULL;
+        }
+
         EnableMyControls(true);
     }
     else
@@ -195,22 +202,30 @@ void EasySplitMainFrame::EnableMyControls(bool bEnable)
     m_pOutputFilePicker->Enable(bEnable);
     m_pSliderSize1->Enable(bEnable);
     m_pSliderSizeN->Enable(bEnable);
+    m_pButtonStart->Enable(bEnable);
 }
 
 
 /*****************************************************************************/
 void EasySplitMainFrame::DoIt()
 {
-    EnableMyControls(false);
+    if (m_pWorkerThread && m_pWorkerThread->IsRunning())
+    {
+        return;
+    }
+    else
+    {
+        EnableMyControls(false);
 
-    m_pTextCtrlLog->SetValue(_(""));
-    m_pWorkerThread = new WorkerThread(
-            this,
-            m_pInputFilePicker->GetPath(),
-            m_pOutputFilePicker->GetPath(),
-            m_pSliderSize1->GetValue() * 1024,
-            m_pSliderSizeN->GetValue() * 1024);
-    m_pWorkerThread->Create();
-    m_pWorkerThread->Run();
+        m_pTextCtrlLog->SetValue(_(""));
+        m_pWorkerThread = new WorkerThread(
+                this,
+                m_pInputFilePicker->GetPath(),
+                m_pOutputFilePicker->GetPath(),
+                m_pSliderSize1->GetValue() * 1024,
+                m_pSliderSizeN->GetValue() * 1024);
+        m_pWorkerThread->Create();
+        m_pWorkerThread->Run();
+    }
 }
 
