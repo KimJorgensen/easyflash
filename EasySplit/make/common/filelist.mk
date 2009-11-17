@@ -24,11 +24,12 @@ src += exo_helper.c
 src += exodec.c
 src += getflag.c
 src += exo_util.c
+src += crc16.c
 
 ###############################################################################
 # This is a list of resource file to be built/copied
 #
-res :=
+res := easysplit.png
 
 ###############################################################################
 # Transform all names foo.cpp|c in $src to out/obj/foo.o
