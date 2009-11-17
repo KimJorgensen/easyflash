@@ -33,6 +33,7 @@ extern "C"
 #   include "exo_helper.h"
 #   include "membuf.h"
 #   include "membuf_io.h"
+#   include "crc16.h"
 }
 
 #include "WorkerThread.h"
@@ -92,6 +93,9 @@ void* WorkerThread::Entry()
     struct crunch_info info;
     struct membuf inbuf;
     struct membuf outbuf;
+    uint16_t      crc;
+    size_t        i, size;
+    uint8_t*      p;
 
     WorkerThread_Log("Input:  %s\n",
             (const char*) m_stringInputFileName.mb_str());
@@ -106,11 +110,18 @@ void* WorkerThread::Entry()
         return NULL;
     }
 
+
+    crc  = 0xffff;   // start value
+    p    = (uint8_t*) membuf_get(&inbuf);
+    size = membuf_memlen(&inbuf);
+    for (i = 0; i < size; ++i)
+        crc = crc16_update(crc, p[i]);
+
     crunch(&inbuf, &outbuf, &options, &info);
     WorkerThread_Log("\n");
 
     if (SaveFiles((uint8_t*) membuf_get(&outbuf), membuf_memlen(&outbuf),
-            membuf_memlen(&inbuf)))
+            size, crc))
     {
         WorkerThread_Log("\n\\o/\nREADY.\n\n");
     }
@@ -126,7 +137,8 @@ void* WorkerThread::Entry()
 /**
  *
  */
-bool WorkerThread::SaveFiles(uint8_t* pData, size_t len, size_t nOrigLen)
+bool WorkerThread::SaveFiles(uint8_t* pData, size_t len, size_t nOrigLen,
+        uint16_t crc)
 {
     wxString str;
     int nRemaining; /* remaining bytes w/o header */
@@ -142,21 +154,21 @@ bool WorkerThread::SaveFiles(uint8_t* pData, size_t len, size_t nOrigLen)
     header.len[1] = nOrigLen / 0x100;
     header.len[2] = nOrigLen / 0x10000;
     header.len[3] = nOrigLen / 0x1000000;
-    header.id[0] = rand() & 0xff;
-    header.id[1] = rand() & 0xff;
+    header.crc16[0] = crc & 0xff;
+    header.crc16[1] = crc >> 8;
 
     /* find out how many files we're going to write */
     if (len <= m_nSize1 - sizeof(header))
-        header.nFiles = 1;
+        header.total = 1;
     else
-        header.nFiles =
+        header.total =
                 (len - (m_nSize1 - sizeof(header)) + (m_nSizeN - sizeof(header) - 1)) /
                         (m_nSizeN - sizeof(header)) +
                         1;
 
-    for (header.nThis = 0; header.nThis < header.nFiles; ++header.nThis)
+    for (header.part = 0; header.part < header.total; ++header.part)
     {
-        if (header.nThis == 0)
+        if (header.part == 0)
             nSize = m_nSize1 - sizeof(header);
         else
             nSize = m_nSizeN - sizeof(header);
@@ -165,9 +177,9 @@ bool WorkerThread::SaveFiles(uint8_t* pData, size_t len, size_t nOrigLen)
             nSize = nRemaining;
 
         str = m_stringOutputFileName;
-        str.Append(wxString::Format(_(".%02x"), header.nThis + 1));
+        str.Append(wxString::Format(_(".%02x"), header.part + 1));
         WorkerThread_Log("Writing %u of %u bytes to %s...\n",
-                nSize + sizeof(header), len + header.nFiles * sizeof(header),
+                nSize + sizeof(header), len + header.part * sizeof(header),
                 (const char*) str.mb_str());
 
         wxFFile file(str, _("w"));

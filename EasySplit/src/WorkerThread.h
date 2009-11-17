@@ -55,7 +55,7 @@ public:
 protected:
     virtual void* Entry();
     void LogText(const wxString& str);
-    bool SaveFiles(uint8_t* pData, size_t len, size_t nOrigLen);
+    bool SaveFiles(uint8_t* pData, size_t len, size_t nOrigLen, uint16_t crc);
 
     wxEvtHandler* m_pEventHandler;
     wxString m_stringInputFileName;
