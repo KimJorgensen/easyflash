@@ -191,7 +191,7 @@ foreach($more_xbank AS $file => $name){
 		'dir' => array(
 			$name,
 			-1,
-			$is_hidden[$file],
+			$xb['type'] | $is_hidden[$file],
 			count($xb['data']) * 0x2000,
 			0
 		),
@@ -200,26 +200,21 @@ foreach($more_xbank AS $file => $name){
 
 	switch($xb['mode']){
 	case '8k':
-		$var['dir'][2] |= 0x10;
+		$var['dir'][6] = 0x10;
 		$dir_crt8[] = $var;
 		break;
 	case '16k':
-		$var['dir'][2] |= 0x11;
+		$var['dir'][6] = 0x11;
 		$dir_crt16[] = $var;
 		break;
-	case 'm16k':
-		$var['dir'][2] |= 0x12;
-		$dir_crt16u[] = $var;
-		break;
 	case 'm8k':
-		$var['dir'][2] |= 0x13;
+		$var['dir'][6] = 0x13;
 		$dir_crt8u[] = $var;
 		break;
 	default:
 		fail($xb['mode']);
 	}
 }
-
 
 
 usort($dir_prg8, 'sort_dirs_prg');
@@ -549,7 +544,7 @@ if($config['show_memmap']){
 
 	$d = array();
 	foreach($DIR AS $E){
-		switch($E[2] & 0x1f){
+		switch((isset($E[6]) ? $E[6] : $E[2]) & 0x1f){
 			case 0x10:
 				$crt = true;
 				$bs = 8*1024;
@@ -721,20 +716,10 @@ function read_xbank_file($file){
 		fail('check 1');
 		return false;
 	}
-	if($crt_head[0x18]){
-		$mode = 'm';
-	}else if($crt_head[0x19]){
-		$mode = '8k';
-		$minI = 0;
-		$maxI = 0;
-	}else{
-		$mode = '16k';
-		$minI = 0;
-		$maxI = 1;
-	}
 	
 	$banks = array(array(), array());
 	$max_bank = 0;
+	$has_low = $has_high = false;
 	
 	while(!feof($f)){
 		$chip_head = fread($f, 16);
@@ -746,32 +731,62 @@ function read_xbank_file($file){
 		}
 		
 		if(ord($chip_head[0xe]) == 0x20){
-			$banks[ord($chip_head[0xc]) == 0x80 ? 0 : 1][ord($chip_head[0xb])] = fread($f, 0x2000);
+			if(ord($chip_head[0xc]) == 0x80){
+				$banks[0][ord($chip_head[0xb])] = fread($f, 0x2000);
+				$has_low = true;
+			}else{
+				$banks[1][ord($chip_head[0xb])] = fread($f, 0x2000);
+				$has_high = true;
+			}
 		}else{ //if($chip_head[0xe] == 0x40){
 			$banks[0][ord($chip_head[0xb])] = fread($f, 0x2000);
 			$banks[1][ord($chip_head[0xb])] = fread($f, 0x2000);
+			$has_low = $has_high = true;
 		}
 		$max_bank = max($max_bank, ord($chip_head[0xb]));
 	}
 	
-	if($mode == 'm'){
-		if(count($banks[0])){
-			$mode = 'm16k';
-			$minI = 0;
-			$maxI = 1;
-		}else{
-			$mode = 'm8k';
-			$minI = 1;
-			$maxI = 1;
-		}
+	// extract mode (type of crt whithin this script)
+	
+	if($has_low && $has_high){
+		// 16k bank width
+		$mode = '16k';
+		$minI = 0;
+		$maxI = 1;
+	}else if($has_low){
+		// 8k normal
+		$mode = '8k';
+		$minI = 0;
+		$maxI = 0;
+	}else{
+		// 8k ultimax
+		$mode = 'm8k';
+		$minI = 1;
+		$maxI = 1;
 	}
+	
+	// extract type of the module
+	
+	if(ord($crt_head[0x18])){
+		if($has_low){
+			$type = 0x12; // m16k
+		}else{
+			$type = 0x13; // m8k
+		}
+	}else if(ord($crt_head[0x19])){
+		$type = 0x10; // 8k
+	}else{
+		$type = 0x11; // 16k
+	}
+
 	$data = array();
 	for($b=0; $b<=$max_bank; $b++){
 		for($i=$minI; $i<=$maxI; $i++){
 			$data[] = str_pad($banks[$i][$b], 0x2000, chr(0xff));
 		}
 	}
-	return array('data' => $data, 'mode' => $mode);
+	
+	return array('data' => $data, 'mode' => $mode, 'type' => $type);
 }
 
 ?>
