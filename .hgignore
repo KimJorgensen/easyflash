@@ -1,0 +1,25 @@
+syntax: glob
+obj/*
+a.out
+*.tar.*
+*~
+*.map
+*.prg
+*.bak
+*.bck
+*.obj
+*.bin
+*.crt
+*.orig
+
+EasyProg/easyprog
+
+EasyLoader/build/*
+EasyLoader/.deps/*
+
+Hardware/*gerber*
+Hardware/*/*gerber*
+*.pho
+*-cache.lib
+*.cache.lib
+*.cache.dcm
