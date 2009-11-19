@@ -26,23 +26,14 @@
 #endif // __WXMAC__
 
 #include <wx/menu.h>
-#include <wx/image.h>
+#include <wx/icon.h>
 #include <wx/stdpaths.h>
 #include <wx/filename.h>
 #include <wx/msgdlg.h>
 #include <wx/cmdline.h>
 
+#include "easysplit.xpm"
 #include "EasySplitApp.h"
-
-static const wxCmdLineEntryDesc cmdLineDesc[] =
-{
-    {
-        wxCMD_LINE_PARAM,  NULL, NULL, wxT("image file"),
-        wxCMD_LINE_VAL_STRING,
-        wxCMD_LINE_PARAM_MULTIPLE | wxCMD_LINE_PARAM_OPTIONAL
-    },
-    { wxCMD_LINE_NONE }
-};
 
 IMPLEMENT_APP(EasySplitApp);
 
@@ -73,9 +64,13 @@ bool EasySplitApp::OnInit()
 
     wxInitAllImageHandlers();
 #endif
+    wxIcon icon(easysplit_xpm);
+
     m_pMainFrame = new EasySplitMainFrame(NULL, _("EasySplit 0.1.0"));
+    m_pMainFrame->SetIcon(icon);
     m_pMainFrame->Show();
     SetTopWindow(m_pMainFrame);
+
 #if 0
     // open all files given on the command line
     for (i = 0; i < cmdLineParser.GetParamCount(); ++i)
@@ -86,43 +81,3 @@ bool EasySplitApp::OnInit()
     return true;
 }
 
-/*****************************************************************************/
-/*
- * Load an image from our ressources. If our executable is located in $(X),
- * search in $(X)/res first and then in $(X)/../share/multicolor.
- */
-wxImage EasySplitApp::GetImage(const wxString& dir, const wxString& name)
-{
-    wxStandardPaths paths;
-
-    // Find out the path of our images
-    wxFileName fileName(paths.GetExecutablePath());
-
-    fileName.AppendDir(wxT("res"));
-    fileName.AppendDir(dir);
-    fileName.SetFullName(name);
-
-    if (!fileName.IsFileReadable())
-    {
-        fileName.Assign(paths.GetExecutablePath());
-        fileName.RemoveLastDir();
-        fileName.AppendDir(wxT("share"));
-        fileName.AppendDir(wxT("multicolor"));
-        fileName.AppendDir(wxT("res"));
-        fileName.AppendDir(dir);
-        fileName.SetFullName(name);
-    }
-
-    return wxImage(fileName.GetFullPath(), wxBITMAP_TYPE_PNG);
-}
-
-
-/*****************************************************************************/
-/*
- * Load a bitmap from our ressources. If our executable is located in $(X),
- * search in $(X)/res first and then in $(X)/../share/multicolor.
- */
-wxBitmap EasySplitApp::GetBitmap(const wxString& dir, const wxString& name)
-{
-    return wxBitmap(GetImage(dir, name));
-}

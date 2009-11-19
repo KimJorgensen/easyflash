@@ -25,6 +25,7 @@ src += exodec.c
 src += getflag.c
 src += exo_util.c
 src += crc16.c
+src += easysplit.png
 
 ###############################################################################
 # This is a list of resource file to be built/copied
@@ -38,6 +39,8 @@ src_cpp := $(filter %.cpp,$(src))
 obj     := $(addprefix $(objdir)/, $(src_cpp:.cpp=.o))
 src_c   := $(filter %.c,$(src))
 obj     += $(addprefix $(objdir)/, $(src_c:.c=.o))
+src_png := $(filter %.png,$(src))
+xpm     := $(addprefix $(objdir)/, $(src_png:.png=.xpm))
 
 ###############################################################################
 # Transform all names in $res to out/MultiColor/res/*
@@ -47,4 +50,4 @@ outres := $(addprefix $(outdir)/res/, $(res))
 ###############################################################################
 # Poor men's dependencies: Let all files depend from all header files
 # 
-headers := $(wildcard $(srcdir)/*.h)
+headers := $(wildcard $(srcdir)/*.h) $(xpm)
