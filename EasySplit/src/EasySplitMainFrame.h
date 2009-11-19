@@ -61,6 +61,7 @@ protected:
     wxButton*           m_pButtonSize170k;
     wxButton*           m_pButtonSize800k;
     wxButton*           m_pButtonStart;
+    wxButton*           m_pButtonQuit;
     wxTextCtrl*         m_pTextCtrlLog;
 
     WorkerThread*       m_pWorkerThread;

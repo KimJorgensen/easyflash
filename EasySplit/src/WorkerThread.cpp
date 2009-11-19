@@ -22,7 +22,7 @@
  */
 
 #include <wx/wx.h>
-#include <wx/ffile.h>
+#include <wx/file.h>
 #include <wx/thread.h>
 #include <stdarg.h>
 #include <stdlib.h>
@@ -130,6 +130,7 @@ void* WorkerThread::Entry()
     membuf_free(&inbuf);
 
     LogComplete();
+
     return NULL;
 }
 
@@ -140,13 +141,15 @@ void* WorkerThread::Entry()
 bool WorkerThread::SaveFiles(uint8_t* pData, size_t len, size_t nOrigLen,
         uint16_t crc)
 {
+    wxFile *pFile;
     wxString str;
     int nRemaining; /* remaining bytes w/o header */
     int nSize; /* current file size w/o header */
 
     EasySplitHeader header =
     {
-    { 0x65, 0x61, 0x73, 0x79, 0x73, 0x70, 0x6c, 0x74 } }; /* EASYSPLT */
+        { 0x65, 0x61, 0x73, 0x79, 0x73, 0x70, 0x6c, 0x74 } /* EASYSPLT */
+    };
 
     nRemaining = len;
 
@@ -182,21 +185,28 @@ bool WorkerThread::SaveFiles(uint8_t* pData, size_t len, size_t nOrigLen,
                 nSize + sizeof(header), len + header.part * sizeof(header),
                 (const char*) str.mb_str());
 
-        wxFFile file(str, _("w"));
-        if (!file.IsOpened())
+        pFile = new wxFile(str, wxFile::write);
+        if (!pFile->IsOpened())
         {
             WorkerThread_Log("Error: Cannot open %s for writing\n",
                     (const char*) str.mb_str());
+            delete pFile;
             return false;
         }
 
-        if (file.Write(&header, sizeof(header)) != sizeof(header)
-                || file.Write(pData, nSize) != nSize)
+        if (pFile->Write((void*) &header, sizeof(header)) != sizeof(header)
+                || pFile->Write((void*) pData, nSize) != nSize)
         {
             WorkerThread_Log("Error: Write to %s failed\n",
                     (const char*) str.mb_str());
+            pFile->Close();
+            delete pFile;
             return false;
         }
+
+        pFile->Close();
+        delete pFile;
+
         pData += nSize;
 
         nRemaining -= nSize;
