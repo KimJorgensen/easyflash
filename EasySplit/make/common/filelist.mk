@@ -2,7 +2,7 @@
 outbase       := out
 outdir        := $(outbase)/EasySplit
 objdir        := $(outbase)/obj
-srcdir        := ../../src
+srcdir        := src
 
 ###############################################################################
 # This is the list of source files to be compiled

@@ -25,6 +25,7 @@
 #ifndef MCAPP_H
 #define MCAPP_H
 
+#include <stdint.h>
 #include <wx/app.h>
 #include <list>
 

@@ -18,7 +18,7 @@ cxxflags      := -O2 `wx-config --cxxflags`
 ldflags       :=
 endif
 
-include ../common/filelist.mk
+include make/common/filelist.mk
 
 ###############################################################################
 # Main targets
@@ -42,7 +42,7 @@ $(outdir)/easysplit: $(obj) | $(outdir) check-environment
 	$(cxx) $(ldflags) $(obj) -o $@ \
 		`wx-config --libs`
 
-include ../common/rules.mk
+include make/common/rules.mk
 
 .PHONY: check-environment
 check-environment:
