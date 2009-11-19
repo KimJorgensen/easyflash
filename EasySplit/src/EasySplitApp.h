@@ -43,12 +43,6 @@ public:
     virtual ~EasySplitApp();
     virtual bool OnInit();
 
-    static wxImage GetImage(const wxString& dir, const wxString& name);
-    static wxBitmap GetBitmap(const wxString& dir, const wxString& name);
-
-//    MCMainFrame* GetMainFrame();
-    PalettePanel* GetPalettePanel();
-
 protected:
     EasySplitMainFrame*    m_pMainFrame;
 };
