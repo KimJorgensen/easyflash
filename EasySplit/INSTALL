@@ -12,9 +12,8 @@ Linux and similar systems
 1. install libwxgtk2.8-dev or whatever name it has on your system. This will
    hopefully also install all other dependencies like libwxbase2.8-dev
 
-2. compile it (as normal user) using these commands:
+2. compile it (as normal user):
 
-   cd make/gcc-default
    make
 
 3. install it (optional, as root) using this command:
@@ -30,7 +29,7 @@ If you got a binary, just click on it one or two times.
 
 The official release for Windows is built on Linux using a cross compiler
 This is done like described in the Linux section above, except that the
-Makefile resides in make/win32-cross-mingw. It does also contain a target to
+Makefile resides in make/win32-cross-mingw. It also contains a target to
 cross-build wxWidgets.
 
 Mac OS X
