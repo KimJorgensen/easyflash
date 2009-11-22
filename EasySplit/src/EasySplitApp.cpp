@@ -56,28 +56,13 @@ EasySplitApp::~EasySplitApp()
 bool EasySplitApp::OnInit()
 {
     size_t i;
-#if 0
-    wxCmdLineParser cmdLineParser(cmdLineDesc, argc, argv);
-
-    if (cmdLineParser.Parse() != 0)
-        return false;
-
-    wxInitAllImageHandlers();
-#endif
     wxIcon icon(easysplit_xpm);
 
-    m_pMainFrame = new EasySplitMainFrame(NULL, _("EasySplit 0.1.0"));
+    m_pMainFrame = new EasySplitMainFrame(NULL, _("EasySplit 0.2.0"));
     m_pMainFrame->SetIcon(icon);
     m_pMainFrame->Show();
     SetTopWindow(m_pMainFrame);
 
-#if 0
-    // open all files given on the command line
-    for (i = 0; i < cmdLineParser.GetParamCount(); ++i)
-    {
-//        m_pMainFrame->LoadDoc(cmdLineParser.GetParam(i));
-    }
-#endif
     return true;
 }
 

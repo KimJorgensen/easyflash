@@ -37,6 +37,7 @@ cc            := $(gccprefix)/bin/$(cross)-gcc
 cxx           := $(gccprefix)/bin/$(cross)-c++
 strip         := $(gccprefix)/bin/$(cross)-strip
 cxxflags      := -O2 `$(wx-prefix)/bin/wx-config --static=yes --cxxflags`
+srcdir        := ../../src
 
 include ../common/filelist.mk
 

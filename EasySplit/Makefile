@@ -18,6 +18,8 @@ cxxflags      := -O2 `wx-config --cxxflags`
 ldflags       :=
 endif
 
+srcdir        := src
+
 include make/common/filelist.mk
 
 ###############################################################################
