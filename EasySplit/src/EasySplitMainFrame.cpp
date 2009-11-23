@@ -69,11 +69,10 @@ EasySplitMainFrame::EasySplitMainFrame(wxFrame* parent, const wxString& title) :
             wxDefaultSize, wxTAB_TRAVERSAL);
 
     pOuterSizer = new wxBoxSizer(wxVERTICAL);
-    pOuterSizer->AddSpacer(20);
 
     pMainSizer = new wxFlexGridSizer(5, 2, 8, 8);
     pMainSizer->AddGrowableCol(1);
-    pOuterSizer->Add(pMainSizer, 0, wxEXPAND);
+    pOuterSizer->Add(pMainSizer, 0, wxEXPAND | wxALL, 20);
 
     // Input file
     pText = new wxStaticText(pPanel, wxID_ANY, _("Input File"));
@@ -124,7 +123,6 @@ EasySplitMainFrame::EasySplitMainFrame(wxFrame* parent, const wxString& title) :
     pMainSizer->Add(m_pOutputFilePicker, 1, wxEXPAND);
 
     // Start Button
-    pOuterSizer->AddSpacer(10);
     pButtonSizer = new wxBoxSizer(wxHORIZONTAL);
     pOuterSizer->Add(pButtonSizer, 0, wxALIGN_CENTER_HORIZONTAL);
     m_pButtonQuit = new wxButton(pPanel, wxID_ANY, _("Quit"));
@@ -166,6 +164,16 @@ void EasySplitMainFrame::OnButton(wxCommandEvent& event)
     {
         if (m_pInputFilePicker->GetPath().size())
             DoIt();
+    }
+    else if (event.GetEventObject() == m_pButtonQuit)
+    {
+        if (m_pWorkerThread)
+        {
+            m_pWorkerThread->Kill();
+            delete m_pWorkerThread;
+            m_pWorkerThread = NULL;
+        }
+        Close();
     }
 }
 
