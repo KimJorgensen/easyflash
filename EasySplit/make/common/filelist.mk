@@ -3,6 +3,14 @@ outbase       := out
 outdir        := $(outbase)/EasySplit
 objdir        := $(outbase)/obj
 
+ifneq "$(release)" "yes"
+	version        := $(shell date +%y%m%d-%H%M)
+	version_suffix :=
+else
+	version        := 1.0.0
+	version_suffix := -$(version)
+endif
+
 ###############################################################################
 # This is the list of source files to be compiled
 #
@@ -32,6 +40,11 @@ src += easysplit.png
 res := easysplit.png
 
 ###############################################################################
+# This is a list of documents to be copied
+#
+doc := CHANGES COPYING README
+
+###############################################################################
 # Transform all names foo.cpp|c in $src to out/obj/foo.o
 #
 src_cpp := $(filter %.cpp,$(src))
@@ -45,6 +58,15 @@ xpm     := $(addprefix $(objdir)/, $(src_png:.png=.xpm))
 # Transform all names in $res to out/MultiColor/res/*
 # 
 outres := $(addprefix $(outdir)/res/, $(res))
+
+###############################################################################
+# Transform all names in $doc to out/MultiColor/* or *.txt
+# 
+ifeq "$(win32)" "yes"
+outdoc := $(addsuffix .txt, $(addprefix $(outdir)/, $(doc)))
+else
+outdoc := $(addprefix $(outdir)/, $(doc))
+endif
 
 ###############################################################################
 # Poor men's dependencies: Let all files depend from all header files

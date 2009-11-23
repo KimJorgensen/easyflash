@@ -3,6 +3,7 @@
 inst_prefix   := /usr/local
 bin_inst_dir  := $(inst_prefix)/bin
 res_inst_dir  := $(inst_prefix)/share/easysplit
+doc_inst_dir  := $(inst_prefix)/share/doc/easysplit
 desktop_inst_dir := $(inst_prefix)/share/applications
 
 cxx           := c++
@@ -26,7 +27,12 @@ include make/common/filelist.mk
 # Main targets
 #
 .PHONY: all
-all: $(outdir)/easysplit $(outres)
+all: $(outbase)/EasySplit$(version_suffix).tar.bz2
+
+$(outbase)/EasySplit$(version_suffix).tar.bz2: \
+		$(outdir)/easysplit $(outres) $(outdoc)
+	rm -f $@
+	cd $(dir $@) && tar cjf $(notdir $@) EasySplit
 
 .PHONY: install
 install: all
@@ -34,6 +40,8 @@ install: all
 	cp $(outdir)/easysplit $(bin_inst_dir)
 	mkdir -p $(res_inst_dir)
 	cp -r  $(outdir)/res $(res_inst_dir)
+	mkdir -p $(doc_inst_dir)
+	cp -r  $(outdir)/res $(doc_inst_dir)
 	mkdir -p $(desktop_inst_dir)
 	cp $(srcdir)/../res/easysplit.desktop $(desktop_inst_dir)
 

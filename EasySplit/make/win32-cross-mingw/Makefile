@@ -38,6 +38,7 @@ cxx           := $(gccprefix)/bin/$(cross)-c++
 strip         := $(gccprefix)/bin/$(cross)-strip
 cxxflags      := -O2 `$(wx-prefix)/bin/wx-config --static=yes --cxxflags`
 srcdir        := ../../src
+win32         := yes
 
 include ../common/filelist.mk
 
@@ -45,8 +46,13 @@ include ../common/filelist.mk
 # Main target
 #
 .PHONY: world
-world: $(outdir)/EasySplit.exe $(outdir)/mingwm10.dll $(outres)
+world: $(outbase)/EasySplit$(version_suffix).zip
 
+$(outbase)/EasySplit$(version_suffix).zip: \
+		$(outdir)/EasySplit.exe $(outdir)/mingwm10.dll $(outres) $(outdoc)
+	rm -f $@
+	cd $(dir $@) && zip -r $(notdir $@) EasySplit
+	
 ###############################################################################
 # This rule can link <here>/out/obj/*.o to <here>/out/EasySplit/EasySplit.exe
 # 

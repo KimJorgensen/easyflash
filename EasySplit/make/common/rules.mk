@@ -4,7 +4,10 @@
 #
 # variables used here must be set in the including Makefile
 
-INCLUDE += -I$(objdir)
+INCLUDE   += -I$(objdir)
+
+cflags    += -DVERSION=\"$(version)\"
+cxxflags  += -DVERSION=\"$(version)\"
 
 # don't delete intermediate files
 .SECONDARY:
@@ -40,6 +43,18 @@ $(objdir)/%.o: $(srcdir)/%.c $(headers) | $(objdir) check-environment
 $(objdir)/%.xpm: $(srcdir)/../res/%.png | $(objdir) check-environment
 	convert $< $@.tmp.xpm
 	cat $@.tmp.xpm | sed "s/static char/static const char/;s/_tmp//" > $@
+
+###############################################################################
+# This rule can copy * to <here>/out/EasySplit/*
+# 
+$(outdir)/%: $(srcdir)/../%
+	cp $< $@
+
+###############################################################################
+# This rule can convert * to <here>/out/EasySplit/*.txt using unix2dos
+# 
+$(outdir)/%.txt: $(srcdir)/../%
+	cat $< | unix2dos > $@
 
 ###############################################################################
 # make clean the simple way
