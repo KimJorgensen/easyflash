@@ -78,26 +78,29 @@ CartChip;
 #define CHIP_SIGNATURE { 0x43, 0x48, 0x49, 0x50 }
 
 // These are the cartridge types from the file header
-#define CART_TYPE_NORMAL     0
-#define CART_TYPE_OCEAN1     5
-#define CART_TYPE_EASYFLASH 32
-#define CART_TYPE_EASYFLASH_TMP 42 // <= remove me!
+#define CART_TYPE_NORMAL           0
+#define CART_TYPE_OCEAN1           5
+#define CART_TYPE_EASYFLASH       32
+#define CART_TYPE_EASYFLASH_XBANK 33
+#define CART_TYPE_EASYFLASH_TMP   42 // <= remove me!
 
 // These are detailed cartridge types, only used in this software
 // Keep in sync with aStrInternalCartTypeName!
-#define INTERNAL_CART_TYPE_NONE         0
-#define INTERNAL_CART_TYPE_UNKNOWN      1
-#define INTERNAL_CART_TYPE_NORMAL_8K    2
-#define INTERNAL_CART_TYPE_NORMAL_16K   3
-#define INTERNAL_CART_TYPE_ULTIMAX      4
-#define INTERNAL_CART_TYPE_OCEAN1       5
-#define INTERNAL_CART_TYPE_EASYFLASH    6
+#define INTERNAL_CART_TYPE_NONE            0
+#define INTERNAL_CART_TYPE_UNKNOWN         1
+#define INTERNAL_CART_TYPE_NORMAL_8K       2
+#define INTERNAL_CART_TYPE_NORMAL_16K      3
+#define INTERNAL_CART_TYPE_ULTIMAX         4
+#define INTERNAL_CART_TYPE_OCEAN1          5
+#define INTERNAL_CART_TYPE_EASYFLASH       6
+#define INTERNAL_CART_TYPE_EASYFLASH_XBANK 7
 
 // global variables to make the code more compact on cc65
 extern uint8_t      internalCartType;
 extern CartHeader   cartHeader;
 extern uint8_t      nChips;
 extern uint32_t     nCartBytes;
+extern uint8_t      nXbankConfig;
 extern const char* aStrInternalCartTypeName[];
 
 uint8_t readCartHeader();

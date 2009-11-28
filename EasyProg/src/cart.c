@@ -31,12 +31,14 @@
 #include "cart.h"
 #include "screen.h"
 #include "texts.h"
+#include "write.h"
 
 // global variables to make the code more compact on cc65
 uint8_t      internalCartType;
 CartHeader   cartHeader;
 uint8_t      nChips;
 uint32_t     nCartBytes;
+uint8_t      nXbankConfig;
 
 // Names for internal CRT types, keep in sync with INTERNAL_CART_TYPE_*!
 const char* aStrInternalCartTypeName[] =
@@ -47,7 +49,8 @@ const char* aStrInternalCartTypeName[] =
     "Normal up to 16k",
     "MAX",
     "Ocean Type 1",
-    "EasyFlash"
+    "EasyFlash",
+    "EasyFlash xbank"
 };
 
 
@@ -99,6 +102,21 @@ uint8_t readCartHeader()
     case CART_TYPE_EASYFLASH:
     case CART_TYPE_EASYFLASH_TMP: // remove me!
         internalCartType = INTERNAL_CART_TYPE_EASYFLASH;
+        break;
+
+    case CART_TYPE_EASYFLASH_XBANK:
+        internalCartType = INTERNAL_CART_TYPE_EASYFLASH_XBANK;
+        if (cartHeader.exromLine)
+        {
+            nXbankConfig = EASYFLASH_IO_ULTIMAX;
+        }
+        else
+        {
+            if (cartHeader.gameLine)
+                nXbankConfig = EASYFLASH_IO_8K;
+            else
+                nXbankConfig = EASYFLASH_IO_16K;
+        }
         break;
 
     default:
