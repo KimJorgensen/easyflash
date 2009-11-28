@@ -98,8 +98,8 @@ static int fileDlgCompareEntries(const void* a, const void* b)
     if (fileDlgEntryIsDir((DirEntry*)b) && !fileDlgEntryIsDir((DirEntry*)a))
         return 1;
 
-    return strcmp(((DirEntry*)a)->name,
-                  ((DirEntry*)b)->name) > 0;
+    return strcasecmp(((DirEntry*)a)->name,
+                      ((DirEntry*)b)->name) > 0;
 }
 
 /******************************************************************************/
