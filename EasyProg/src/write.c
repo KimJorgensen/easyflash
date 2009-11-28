@@ -100,38 +100,40 @@ static uint8_t __fastcall__ writeStartUpCode(uint8_t* pBankOffset)
     uint8_t  nConfig;
     uint8_t* pBuffer;
 
-    *pBankOffset = 0;
+    // most CRT types are put on bank 1
+    *pBankOffset = 1;
 
     switch (internalCartType)
     {
     case INTERNAL_CART_TYPE_NORMAL_8K:
         nConfig = EASYFLASH_IO_8K;
-        *pBankOffset = 1;
         break;
 
     case INTERNAL_CART_TYPE_NORMAL_16K:
         nConfig = EASYFLASH_IO_16K;
-        *pBankOffset = 1;
         break;
 
     case INTERNAL_CART_TYPE_ULTIMAX:
         nConfig = EASYFLASH_IO_ULTIMAX;
-        *pBankOffset = 1;
         break;
 
     case INTERNAL_CART_TYPE_OCEAN1:
         nConfig = EASYFLASH_IO_16K;
+        *pBankOffset = 0;
         break;
 
     case INTERNAL_CART_TYPE_EASYFLASH:
-        // nothing to do
+        *pBankOffset = 0;
         return CART_RV_OK;
+
+    case INTERNAL_CART_TYPE_EASYFLASH_XBANK:
+        nConfig = nXbankConfig;
+        break;
 
     default:
         screenPrintSimpleDialog(apStrUnsupportedCRTType);
         return CART_RV_ERR;
     }
-
 
     pBuffer = BUFFER_WRITE_ADDR;
 

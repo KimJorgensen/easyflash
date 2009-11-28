@@ -32,6 +32,7 @@ EASYFLASH_CONTROL = $DE02
 EASYFLASH_LED     = $80
 EASYFLASH_16K     = $07
 EASYFLASH_KILL    = $04
+EASYFLASH_XBANK   = $DF00
 
 DELAY_COUNTER     = $0200
 
@@ -160,6 +161,11 @@ startCart:
 patchStartBank = * + 1
             lda #0          ; start bank will be put here
             sta EASYFLASH_BANK
+
+            ; put the start bank into EF RAM, so an xbank CRT knows where it is
+            sta EASYFLASH_XBANK
+            ; put high byte here, in case we need it one day
+
 patchStartConfig = * + 1
             lda #0          ; start config will be put here
             !byte $2c       ; skip next instruction
