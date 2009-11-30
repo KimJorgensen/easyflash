@@ -90,9 +90,11 @@ EAPICodeBase:
 ;       A   Device ID
 ;       X   Manufacturer ID
 ;       EAPI_NUM_BANKS = Number of banks (currently 64)
+; changes:
+;       all registers are changed
 ;
 ; =============================================================================
-EAPICheckIds:
+EAPIInit:
         ; *** copy some code to EasyFlash private RAM ***
         ; length of data to be copied
         ldx #CopyToRAMCodeEnd - CopyToRAMCode - 1
@@ -240,12 +242,15 @@ returnOnly:
 
 ; =============================================================================
 ;
-; Write a byte to the given address.
+; Write a byte to the given address. The address must be as seen in Ultimax
+; mode, i.e. do not use the base addresses $8000 or $a000 but $8000 or $e000.
 ;
-; This is done in background by the chip, the caller should check the progress
-; using EAPICheckProgress.
+; When writing to flash memory only bits containing a '1' can be changed to
+; contain a '0'. Trying to change memory bits from '0' to '1' will result in
+; an error. You must erase a memory block to get '1' bits.
 ;
-; This function calls SEI/CLI.
+; This function calls SEI/CLI. It can only be used after having called
+; EAPIInit.
 ;
 ; parameters:
 ;       A   value
@@ -254,6 +259,8 @@ returnOnly:
 ; return:
 ;       C   set: Error
 ;           clear: Okay
+; changes:
+;       -
 ;
 ; =============================================================================
 EAPIWriteFlash:
@@ -369,16 +376,23 @@ checkProgress2:
 ; Erase the sector at the given address. The bank number currently set and the
 ; address together must point to the first byte of a 64 kByte sector.
 ;
-; This operation is done in background by the chip, the caller should check
-; the progress using EAPICheckProgress.
+; The address must be as seen in Ultimax mode, i.e. do not use the base
+; addresses $8000 or $a000 but $8000 or $e000.
 ;
-; This function calls SEI/CLI.
+; When erasing a sector, all bits of the 64 KiB area will be set to '1'.
+; This means that 8 banks with 8 KiB each will be erased, all of them either
+; in the LOROM chip when $8000 is used or in the HIROM chip when $e000 is
+; used.
+;
+; This function calls SEI/CLI. It can only be used after having called
+; EAPIInit.
 ;
 ; parameters:
-;       base in XY (X = low), $8000 or $E000
+;       XY  base address (X = low), $8000 or $E000
 ;
 ; return:
-;       -
+;       C   set: Error
+;           clear: Okay
 ;
 ; change:
 ;       -
@@ -462,6 +476,8 @@ sewait:
 ; Set the bank. This will take effect immediately for read access and will be
 ; used for the next write and erase commands.
 ;
+; This function can only be used after having called EAPIInit.
+;
 ; parameters:
 ;       bank in XY (X = low, currently 0..63; Y = high, currently 0)
 ;
@@ -480,8 +496,12 @@ EAPISetBank:
 
 ; =============================================================================
 ;
-; Get the selected bank.
+; Get the selected bank which has been set with EAPISetBank.
+; Note that the current bank number can not be read back using the hardware
+; register $de00 directly, this function uses a mirror of that register in RAM.
 ;
+; This function can only be used after having called EAPIInit.
+
 ; parameters:
 ;       -
 ;
