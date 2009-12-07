@@ -2,7 +2,7 @@
 ifneq "$(release)" "yes"
 	version := $(shell date +%y%m%d-%H%M)
 else
-	version := 1.3.5
+	version := 1.4.0
 endif
 
 # do not remove intermediate targets
