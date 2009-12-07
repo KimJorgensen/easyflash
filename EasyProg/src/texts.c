@@ -191,3 +191,11 @@ const char* apStrTestComplete[] =
         "Press <Stop> to abort.",
         NULL
 };
+
+const char* apStrDifferentFile[] =
+{
+        "This part doesn't fit to",
+        "the previous parts of the",
+        "file.",
+        NULL
+};
