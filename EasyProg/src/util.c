@@ -198,6 +198,7 @@ uint8_t utilAskForNextFile(void)
     {
         do
         {
+        	screenBing();
             refreshMainScreen();
             ret = fileDlg(strFileName, str);
 
