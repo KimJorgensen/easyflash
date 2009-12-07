@@ -46,6 +46,9 @@ int __fastcall__ (*utilRead)(void* buffer, unsigned int size);
 // Number of current split file (0...)
 static uint8_t nCurrentPart;
 
+// ID of current split file
+static uint16_t nCurrentFileId;
+
 
 /******************************************************************************/
 /* prototypes */
@@ -139,6 +142,16 @@ static uint8_t __fastcall__ utilOpenEasySplitFile(uint8_t nDrive,
         nUtilExoBytesRemaining = -nUtilExoBytesRemaining - 1;
         utilRead = utilReadEasySplitFile;
         utilInitDecruncher();
+        nCurrentFileId = *(uint16_t*)(header.id);
+    }
+    else
+    {
+        if (nCurrentFileId != *(uint16_t*)(header.id))
+        {
+            screenPrintDialog(apStrDifferentFile, BUTTON_ENTER);
+            utilCloseFile();
+            return OPEN_FILE_WRONG;
+        }
     }
 
     nCurrentPart = nPart;

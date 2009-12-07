@@ -40,9 +40,9 @@
 #define FILEDLG_MAX_ENTRIES 255
 #define FILEDLG_LFN     72
 
-#define FILEDLG_X 5
+#define FILEDLG_X 6
 #define FILEDLG_Y 3
-#define FILEDLG_W 29
+#define FILEDLG_W 28
 #define FILEDLG_H 19
 
 #define FILEDLG_Y_ENTRIES (FILEDLG_Y + 3)
@@ -201,6 +201,9 @@ static void fileDlgReadDir(void)
     while ((!dirReadEntry(pEntry)) && (nDirEntries
             < FILEDLG_MAX_ENTRIES - 2))
     {
+        if (pEntry->size > 9999)
+            pEntry->size = 9999;
+
         // only accept supported file types
         if (strcmp(pEntry->name, "..") &&
             strcmp(pEntry->name, ".") &&
@@ -211,7 +214,7 @@ static void fileDlgReadDir(void)
             ++nDirEntries;
         }
 
-        if (c == '+') c = '*'; else c = '+';
+        c = (c == '+') ? c = '*' : c = '+';
         cputcxy(FILEDLG_X + FILEDLG_W - 2, FILEDLG_Y + 1, c);
     }
     cputcxy(FILEDLG_X + FILEDLG_W - 2, FILEDLG_Y + 1, ' ');
@@ -267,7 +270,7 @@ static void fileDlgPrintFrame(void)
     screenPrintBox(FILEDLG_X, FILEDLG_Y, FILEDLG_W, FILEDLG_H);
     screenPrintSepLine(FILEDLG_X, FILEDLG_X + FILEDLG_W - 1, FILEDLG_Y + 2);
     screenPrintSepLine(FILEDLG_X, FILEDLG_X + FILEDLG_W - 1, FILEDLG_Y + FILEDLG_H - 3);
-    cputsxy(FILEDLG_X + 2, FILEDLG_Y + FILEDLG_H - 2, "Up/Down/0..9/Stop/Enter");
+    cputsxy(FILEDLG_X + 1, FILEDLG_Y + FILEDLG_H - 2, "Up/Down/0..9/F5/Stop/Enter");
 }
 
 
@@ -286,20 +289,20 @@ static void __fastcall__ fileDlgPrintEntry(uint8_t nLine, uint8_t nEntry)
         revers(1);
 
     // clear line
-    cclear(27);
+    cclear(FILEDLG_W - 2);
 
     // blocks
     utilStr[0] = 0;
     utilAppendDecimal(pEntry->size);
-    gotox(FILEDLG_X + 6 - strlen(utilStr));
+    gotox(FILEDLG_X + 5 - strlen(utilStr));
     cputs(utilStr);
 
     // name
-    gotox(FILEDLG_X + 7);
+    gotox(FILEDLG_X + 6);
     cputs(pEntry->name);
 
     // type
-    gotox(FILEDLG_X + 24);
+    gotox(FILEDLG_X + 23);
     cputs(pEntry->type);
 
     revers(0);
@@ -460,6 +463,10 @@ uint8_t __fastcall__ fileDlg(char* pStrName, const char* pStrType)
 
         case CH_STOP:
             goto end; // yeah!
+
+        case CH_F5:
+            bReload = 1;
+            break;
 
         default:
             if (key >= '0' && key <= '9')
