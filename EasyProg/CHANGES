@@ -1,4 +1,10 @@
 
+Version 1.4.0
+- Support files split and compressed with EasySplit
+- Support for xbank format
+- Sort directory entries case-insensitive
+- Allow 255 entries in directory dialog
+
 Version 1.3.5
 - Workarounds for 1541U SD-IF bugs
 - Fix hex viewer, it got broken in 1.3
