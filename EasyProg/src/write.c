@@ -325,7 +325,10 @@ static void checkWriteImage(uint8_t imageType)
     while (rv != OPEN_FILE_OK);
 
     if (screenAskEraseDialog() != BUTTON_ENTER)
+    {
+    	utilCloseFile();
         return;
+    }
 
     refreshMainScreen();
 
