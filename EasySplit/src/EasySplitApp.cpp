@@ -58,7 +58,7 @@ bool EasySplitApp::OnInit()
     size_t i;
     wxIcon icon(easysplit_xpm);
 
-    m_pMainFrame = new EasySplitMainFrame(NULL, _("EasySplit " VERSION));
+    m_pMainFrame = new EasySplitMainFrame(NULL, _T("EasySplit " VERSION));
     m_pMainFrame->SetIcon(icon);
     m_pMainFrame->Show();
     SetTopWindow(m_pMainFrame);
