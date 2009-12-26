@@ -1,5 +1,6 @@
 syntax: glob
 obj/*
+out/*
 a.out
 *.tar.*
 *~
@@ -23,3 +24,11 @@ Hardware/*/*gerber*
 *-cache.lib
 *.cache.lib
 *.cache.dcm
+
+*.jed
+*.xsvf
+*.log
+synth/*
+log/*
+isim/*
+tmperr.err
