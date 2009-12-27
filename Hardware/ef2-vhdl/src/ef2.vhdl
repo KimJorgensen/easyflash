@@ -85,6 +85,13 @@ architecture ef2_arc of ef2 is
     -- for 512 KiB.
     signal ram_bank: std_logic_vector(10 downto 0);
 
+    signal buttons_enabled: std_logic := '0';
+
+    -- Current cartridge mode
+    type cartridge_mode is (MODE_GEORAM, MODE_WARPSPEED64, MODE_WARPSPEED128);
+
+    signal cart_mode: cartridge_mode := MODE_GEORAM;
+
     component exp_bus_ctrl is
         port 
         (  
@@ -111,7 +118,7 @@ begin
         n_roml, n_romh, n_io1, n_io2, n_wr, n_reset, n_dotclk, phi2,
         bus_next_state, bus_current_state, bus_out_enable
     );
-        
+
     ---------------------------------------------------------------------------
     -- The stuff we don't use currently
     ---------------------------------------------------------------------------
@@ -125,6 +132,57 @@ begin
     pad3 <= '1';
     pad4 <= '1';
     pad5 <= '1';
+
+    ---------------------------------------------------------------------------
+    -- The buttons will be enabled after all buttons have been released one
+    -- time. This is done to prevent detection of button presses while the
+    -- circuit is powered up.
+    ---------------------------------------------------------------------------
+    enable_buttons: process(n_dotclk)
+    begin
+        if rising_edge(n_dotclk) then
+            if button_a = '0' and button_b = '0' and 
+               button_c = '0' and button_d = '0' then
+                buttons_enabled <= '1';
+            end if;
+        end if;
+    end process enable_buttons;
+
+    ---------------------------------------------------------------------------
+    -- Check the cartridge buttons. If one is pressed, reset the C64 and 
+    -- activate the cartridge mode according to the buttons
+    ---------------------------------------------------------------------------
+    switch_cartmode: process(n_dotclk)
+    begin
+        if rising_edge(n_dotclk) then -- remove me
+            n_reset <= 'Z';
+            if buttons_enabled = '1' then
+                if button_a = '1' then
+                    cart_mode <= MODE_GEORAM;
+                    n_reset <= '0';
+                elsif button_b = '1' then
+                    cart_mode <= MODE_WARPSPEED64;
+                    n_reset <= '0';
+                elsif button_c = '1' then
+                    cart_mode <= MODE_WARPSPEED128;
+                    n_reset <= '0';
+                end if;
+            end if;
+    --    end if;
+    end process switch_cartmode;
+
+    ---------------------------------------------------------------------------
+    -- Set the state of the LED.
+    ---------------------------------------------------------------------------
+    set_led: process(n_dotclk, button_a, button_b, button_c, button_d)
+    begin
+        if rising_edge(n_dotclk) then
+            n_led <= '1';
+            if cart_mode = MODE_GEORAM then
+                n_led <= '0';
+            end if;
+        end if;
+    end process set_led;
 
     ---------------------------------------------------------------------------
     -- Control the data bus of the expansion port. But it in high impedance
@@ -246,18 +304,5 @@ begin
             end if;
         end if;
     end process set_ram_bank;
-
-    ---------------------------------------------------------------------------
-    -- Test: POKE 57111,<LED>
-    ---------------------------------------------------------------------------
-    led_test: process(n_dotclk)
-    begin
-        if rising_edge(n_dotclk) then
-            if bus_next_state = BUS_WRITE_ENABLE and n_io2 = '0' and
-               addr(7 downto 0) = x"17" then
-                n_led <= not data(0);
-            end if;
-        end if;
-    end process led_test;
 
 end ef2_arc;
