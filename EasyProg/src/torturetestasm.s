@@ -77,7 +77,21 @@ _tortureTestFillBuffer:
         ; load bank number
         ldy #0
         lda (zpaddr), y
-        bcc fillConst
+fillWithBank:
+        sta (zpbuff), y
+        iny
+        iny
+        bne fillWithBank
+		; load chip number
+		iny
+        lda (zpaddr), y
+        dey
+fillWithChip:
+        iny
+        sta (zpbuff), y
+        iny
+        bne fillWithChip
+        rts
 
 notLT2k:
         ; byte 2k..4k-1 => 0xaa

@@ -12,6 +12,7 @@ uint16_t __fastcall__ tortureTestCompare(const uint8_t* pBuffer,
 uint8_t __fastcall__ tortureTestCheckRAM(void);
 uint8_t* __fastcall__ tortureTestVerifyFlash(uint8_t* pFlash, uint8_t* pRAM);
 
-void tortureTest(void);
+void tortureTestComplete(void);
+void tortureTestRead(void);
 
 #endif /* TORTURETEST_H_ */
