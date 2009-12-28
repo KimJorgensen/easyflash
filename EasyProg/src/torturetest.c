@@ -146,13 +146,22 @@ static uint8_t tortureTestFlashIds(void)
     return 1;
 }
 
-void tortureTest(void)
+/******************************************************************************/
+/**
+ * Start the torture test. If bComplete != 0, the test data is written to the
+ * flash memory first.
+ */
+static void tortureTest(uint8_t bComplete)
 {
     uint16_t rv;
     uint16_t nLoop;
 
-    if (screenAskEraseDialog() != BUTTON_ENTER)
-        return;
+    if (bComplete)
+    {
+    	if (screenAskEraseDialog() != BUTTON_ENTER)
+    		return;
+    }
+
     screenPrintSimpleDialog(apStrTestEndless);
 
     refreshMainScreen();
@@ -160,7 +169,8 @@ void tortureTest(void)
     if (!tortureTestFlashIds())
         return;
 
-    tortureTestWriteData();
+    if (bComplete)
+    	tortureTestWriteData();
 
     for (nLoop = 0; ; ++nLoop)
     {
@@ -198,4 +208,20 @@ void tortureTest(void)
         if (nLoop == FLASH_NUM_BANKS)
             screenPrintDialog(apStrTestComplete, 0);
     }
+}
+
+/******************************************************************************/
+/**
+ */
+void tortureTestComplete(void)
+{
+	tortureTest(1);
+}
+
+/******************************************************************************/
+/**
+ */
+void tortureTestRead(void)
+{
+	tortureTest(0);
 }

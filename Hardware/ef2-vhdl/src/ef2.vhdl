@@ -6,17 +6,20 @@
 -- 
 -- 19 mem_addr (will be 21 when flash memory is being used)
 --  8 mem_data
---  1 mem_data output enable
+--  1 mem_data tristate enable
 --  1 n_mem_wr
 --  1 n_mem_oe
 --  1 n_ram_cs
+--  1 n_reset tristate enable
 --  1 n_led
 -- ==
--- 32
+-- 33
 -- 
 -- 11 ram_bank
+--  1 buttons_enabled
+--  2 cart_mode
 -- ==
--- 11
+-- 14
 -- 
 -- component exp_bus_ctrl (u0):
 --  2 FDCPE_u0/bus_current_state_i
@@ -152,9 +155,9 @@ begin
     -- Check the cartridge buttons. If one is pressed, reset the C64 and 
     -- activate the cartridge mode according to the buttons
     ---------------------------------------------------------------------------
-    switch_cartmode: process(n_dotclk)
+    switch_cartmode: process(buttons_enabled, button_a, button_b, button_c)
     begin
-        if rising_edge(n_dotclk) then -- remove me
+        if rising_edge(n_dotclk) then
             n_reset <= 'Z';
             if buttons_enabled = '1' then
                 if button_a = '1' then
@@ -168,7 +171,7 @@ begin
                     n_reset <= '0';
                 end if;
             end if;
-    --    end if;
+        end if;
     end process switch_cartmode;
 
     ---------------------------------------------------------------------------
@@ -241,9 +244,6 @@ begin
     mem_control: process(n_dotclk, n_reset)
     begin
         n_mem_reset <= n_reset;
-
-        -- used for all of the 'else' branches
-        -- todo: put these in variables?
 
         if rising_edge(n_dotclk) then
 

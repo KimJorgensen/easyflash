@@ -118,7 +118,12 @@ ScreenMenuEntry aExpertMenuEntries[] =
         },
         {
             "Torture test",
-            tortureTest,
+            tortureTestComplete,
+            ifHaveValidFlash
+        },
+        {
+            "Read torture test",
+            tortureTestRead,
             ifHaveValidFlash
         },
         {
