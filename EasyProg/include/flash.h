@@ -12,6 +12,7 @@
 
 /// Manufacturer and Device ID
 #define FLASH_TYPE_AMD_AM29F040  0x01A4
+#define FLASH_TYPE_AMD_M29W160ET 0x20C4
 
 /// This bit is set in 29F040 when algorithm is running
 #define FLASH_ALG_RUNNING_BIT   0x08

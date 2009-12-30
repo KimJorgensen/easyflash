@@ -163,6 +163,8 @@ static void refreshStatusLine(void)
  */
 void refreshMainScreen(void)
 {
+	const char* str;
+
     screenPrintFrame();
 
     // menu entries
@@ -209,8 +211,21 @@ void refreshMainScreen(void)
     utilAppendHex2(nManufacturerId);
     utilAppendHex2(nDeviceId);
     cputs(utilStr);
-    cputs( (((nManufacturerId << 8) | nDeviceId) == FLASH_TYPE_AMD_AM29F040) ?
-           " (Am29F040)" : " (unknown)" );
+
+    switch ((nManufacturerId << 8) | nDeviceId)
+    {
+    case FLASH_TYPE_AMD_AM29F040:
+    	str = " (Am29F040)";
+    	break;
+
+    case FLASH_TYPE_AMD_M29W160ET:
+    	str = " (M29W160ET)";
+    	break;
+
+    default:
+    	str = " (unknown)";
+    }
+    cputs(str);
 
     textcolor(COLOR_LIGHTFRAME);
     screenPrintBox(16, 13, 23, 3);
