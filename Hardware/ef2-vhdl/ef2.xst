@@ -9,4 +9,3 @@ run
 -top ef2
 -opt_mode Speed
 -opt_level 1
--wysiwyg yes
