@@ -23,23 +23,27 @@
 --
 -- Registers used:
 -- 
--- 21 mem_addr (will be 21 when flash memory is being used)
+-- 21 mem_addr
 --  8 mem_data
 --  1 mem_data tristate enable
 --  1 n_mem_wr
 --  1 n_mem_oe
 --  1 n_ram_cs
+--  1 n_flash_cs
 --  1 n_reset tristate enable
 --  1 n_led
+--  1 n_exrom
+--  1 n_game
 -- ==
--- 35
+-- 38
 -- 
 -- 11 ram_bank
 --  7 flash_bank
 --  1 buttons_enabled
 --  1 cart_mode
+--  1 easyflash_boot
 -- ==
--- 20
+-- 21
 -- 
 -- component exp_bus_ctrl (u0):
 --  2 FDCPE_u0/bus_current_state_i
