@@ -42,15 +42,15 @@
 --          .     Write   Write   Idle .    .       .       .          .
 --          .     valid   enable    .  .    .       .       .          .
 --          .      (1)     (2)      .  .    .       .       .          .
---          .               .       .  .    .       .       .          .
+--          .       .       .       .  .    .       .       .          .
 --      if RW is 1: X ====================> X       .       .          .
 --          .     Read      .       .  .  Idle      .       .          .
 --          .     valid     .       .  .   (4)      .       .          .
 --          .      (3)      .       .  .            .       .          .
---          .               >-Out-ena---< (5)        .       .          .
+--          .               >-Out-ena---< (5)       .       .          .
 --          .                                               .          .
 --          .          if LOROM is 0 or HIROM is 0 (read from VIC):    .
--- ...====> X                                         X ===================...
+-- ...====> X                                       X ===================...
 --        Idle                                   Read       .          .
 --         (4)                                    valid     .          .
 --                                                 (3)      .          .
@@ -121,7 +121,7 @@ begin
     -- middle between two rising edges of our n_dotclk. Therefore we reset the
     -- counter asynchronously when phi2 changes from 0 to 1.
     ---------------------------------------------------------------------------
-    dotclk_counter: process(n_dotclk, phi2, dotclk_cnt)
+    dotclk_counter: process(n_dotclk, prev_phi2, phi2, dotclk_cnt)
     begin
         if prev_phi2 = '0' and phi2 = '1' and dotclk_cnt /= "000" then
             dotclk_cnt <= (others => '0');
@@ -145,7 +145,7 @@ begin
     -- Find out which state the expansion port bus will have on the *next*
     -- dotclk edge. This is combinatoric logic.
     ---------------------------------------------------------------------------
-    check_next_state : process(dotclk_cnt, n_wr,
+    check_next_state : process(dotclk_cnt, n_wr, bus_current_state_i,
                                n_io1, n_io2, n_roml, n_romh)
     begin
 
@@ -170,6 +170,9 @@ begin
                     bus_next_state_i <= BUS_WRITE_ENABLE;
 
             when BUS_WRITE_ENABLE =>
+                    bus_next_state_i <= BUS_WRITE_COMPLETE;
+
+            when BUS_WRITE_COMPLETE =>
                     bus_next_state_i <= BUS_IDLE;
 
             when BUS_READ_VALID =>

@@ -23,7 +23,7 @@ architecture ef2_tb_arc of ef2_tb is
             ba :        in std_logic := '1';
             n_flash_cs : out std_logic;
             n_led :     out std_logic;
-            n_irq :     out std_logic;
+            n_irq :     in std_logic := '1';
             n_dotclk :  in std_logic := 'X';
             n_dma :     out std_logic;
             phi2 :      in std_logic := 'X';
@@ -31,7 +31,7 @@ architecture ef2_tb_arc of ef2_tb is
             n_roml :    in std_logic := 'X';
             n_ram_cs :  out std_logic;
             n_wr :      in std_logic := '1';
-            n_nmi :     out std_logic;
+            n_nmi :     in std_logic := '1';
             n_mem_oe :  out std_logic;
             n_io1 :     in std_logic := 'X';
             n_io2 :     in std_logic := 'X';
