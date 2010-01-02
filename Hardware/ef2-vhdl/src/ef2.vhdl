@@ -70,8 +70,8 @@ entity ef2 is
            n_io1:       in std_logic;
            n_io2:       in std_logic;
            n_wr:        in std_logic;
-           n_irq:       inout std_logic;
-           n_nmi:       inout std_logic;
+           n_irq:       in std_logic;
+           n_nmi:       in std_logic;
            n_reset:     inout std_logic;
            n_dotclk:    in std_logic;
            phi2:        in std_logic;
@@ -158,8 +158,6 @@ begin
     -- The stuff we don't use currently
     ---------------------------------------------------------------------------
     n_dma <= 'Z';
-    n_irq <= 'Z';
-    n_nmi <= 'Z';
     n_reset <= 'Z';
     n_mem_reset <= '1'; 
     pad2 <= '1';
@@ -319,12 +317,14 @@ begin
     begin
         if rising_edge(n_dotclk) then
 
-            mem_data <= (others => 'Z');
-
             -- Is this correct ???
-            if bus_next_state = BUS_WRITE_VALID or
-               bus_next_state = BUS_WRITE_ENABLE then
+            if bus_next_state = BUS_WRITE_VALID then
                 mem_data <= data;
+
+            elsif bus_next_state = BUS_READ_VALID or 
+                  bus_next_state = BUS_IDLE then
+                mem_data <= (others => 'Z');
+
             end if;
         end if;
     end process prepare_mem_data;
@@ -367,28 +367,48 @@ begin
                         when others => null;
                     end case;
 
-                when BUS_WRITE_ENABLE =>
+                when BUS_WRITE_VALID =>
                     case cart_mode is
                         when MODE_GEORAM =>
                             if n_io1 = '0' then
                                 -- Write RAM at $de00
                                 n_ram_cs   <= '0';
-                                n_mem_wr   <= '0';
                             end if;
 
                         when MODE_EASYFLASH =>
                             if n_io2 = '0' then
                                 -- Write RAM at $df00
                                 n_ram_cs   <= '0';
-                                n_mem_wr   <= '0';
                             elsif n_roml = '0' or n_romh = '0' then
                                 -- Write FLASH at ROML/ROMH
                                 n_flash_cs <= '0';
+                            end if;
+
+                        when others => null;
+                    end case;
+
+                when BUS_WRITE_ENABLE =>
+                    case cart_mode is
+                        when MODE_GEORAM =>
+                            if n_io1 = '0' then
+                                -- Write RAM at $de00
+                                n_mem_wr   <= '0';
+                            end if;
+
+                        when MODE_EASYFLASH =>
+                            if n_io2 = '0' then
+                                -- Write RAM at $df00
+                                n_mem_wr   <= '0';
+                            elsif n_roml = '0' or n_romh = '0' then
+                                -- Write FLASH at ROML/ROMH
                                 n_mem_wr   <= '0';
                             end if;
 
                         when others => null;
                     end case;
+
+                when BUS_WRITE_COMPLETE =>
+                   n_mem_wr <= '1';
 
                 when others => null;
             end case;
