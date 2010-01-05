@@ -1,10 +1,10 @@
-# EESchema Netlist Version 1.1 created  Tue 10 Nov 2009 22:30:28 CET
+# EESchema Netlist Version 1.1 created  Tue 05 Jan 2010 23:15:55 CET
 (
- ( /4A9711C2 SM0805 C1 2u2
+ ( /4A9711C2 SM0805 C1 1u
   ( 1 +5V )
   ( 2 GND )
  )
- ( /4A9711DD SM0805 C2 2u2
+ ( /4A9711DD SM0805 C2 1u
   ( 1 +3.3V )
   ( 2 GND )
  )
@@ -40,19 +40,19 @@
   ( 1 GND )
   ( 2 +3.3V )
  )
- ( /4AE19E5E SM0805 C11 2u2
+ ( /4AE19E5E SM0805 C11 1u
   ( 1 N-000108 )
   ( 2 GND )
  )
- ( /4AE19FA2 SM0805 C12 2u2
+ ( /4AE19FA2 SM0805 C12 1u
   ( 1 N-000106 )
   ( 2 GND )
  )
- ( /4AE19FBD SM0805 C13 2u2
+ ( /4AE19FBD SM0805 C13 1u
   ( 1 N-000104 )
   ( 2 GND )
  )
- ( /4AE19FC2 SM0805 C14 2u2
+ ( /4AE19FC2 SM0805 C14 1u
   ( 1 N-000102 )
   ( 2 GND )
  )
@@ -133,35 +133,35 @@
   ( 1 +3.3V )
   ( 2 N-000113 )
  )
- ( /4AE19E42 SM0805 R2 2k2
+ ( /4AE19E42 SM0805 R2 1k
   ( 1 /BUTTON_A )
   ( 2 N-000108 )
  )
- ( /4AE19E37 SM0805 R3 22k
+ ( /4AE19E37 SM0805 R3 33k
   ( 1 +3.3V )
   ( 2 /BUTTON_A )
  )
- ( /4AE19FA1 SM0805 R4 2k2
+ ( /4AE19FA1 SM0805 R4 1k
   ( 1 /BUTTON_B )
   ( 2 N-000106 )
  )
- ( /4AE19FA0 SM0805 R5 22k
+ ( /4AE19FA0 SM0805 R5 33k
   ( 1 +3.3V )
   ( 2 /BUTTON_B )
  )
- ( /4AE19FBC SM0805 R6 2k2
+ ( /4AE19FBC SM0805 R6 1k
   ( 1 /BUTTON_C )
   ( 2 N-000104 )
  )
- ( /4AE19FBB SM0805 R7 22k
+ ( /4AE19FBB SM0805 R7 33k
   ( 1 +3.3V )
   ( 2 /BUTTON_C )
  )
- ( /4AE19FC1 SM0805 R8 2k2
+ ( /4AE19FC1 SM0805 R8 1k
   ( 1 /BUTTON_D )
   ( 2 N-000102 )
  )
- ( /4AE19FC0 SM0805 R9 22k
+ ( /4AE19FC0 SM0805 R9 33k
   ( 1 +3.3V )
   ( 2 /BUTTON_D )
  )
