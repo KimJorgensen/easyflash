@@ -61,8 +61,8 @@
 -- At the beginning of dotclk cycle 2 the address and data for a write access 
 -- can be clocked from the c64 bus to our memory bus.
 -- 
--- Note (2): One dotclock cycle after applying address and data to our memory
--- bus, we can activate /CE and /WE to the memory chip.
+-- Note (2): One dotclock cycle after applying address, data and /CE to our
+-- memory bus, we can activate /WE to the memory chip.
 -- 
 -- Note (3): Same as (1), but for read access. The signals /CS and /OE of the
 -- addressed memory chip are activated in this step.
@@ -72,7 +72,7 @@
 --
 -- Note (5): Output enable for expansion port data bus. This may become active
 -- as soon as port_read_complete is active. It is reset asynchronously when
--- phi2 changes its state.
+-- the cartridge is not addressed anymore.
 --
 
 library ieee;
@@ -158,7 +158,7 @@ begin
                     else
                         bus_next_state_i <= BUS_READ_VALID;
                     end if;
-                elsif dotclk_cnt = x"5" and (n_roml = '0' or n_romh = '0') then
+                elsif dotclk_cnt = x"6" and (n_roml = '0' or n_romh = '0') then
                     -- On C128 in Ultimax mode n_wr is don't care
                     -- when VIC-II reads from Cartridge ROM
                     bus_next_state_i <= BUS_READ_VALID;
@@ -167,13 +167,10 @@ begin
                 end if;
 
             when BUS_WRITE_VALID =>
-                    bus_next_state_i <= BUS_WRITE_ENABLE;
+                bus_next_state_i <= BUS_WRITE_ENABLE;
 
             when BUS_WRITE_ENABLE =>
-                    bus_next_state_i <= BUS_WRITE_COMPLETE;
-
-            when BUS_WRITE_COMPLETE =>
-                    bus_next_state_i <= BUS_IDLE;
+                bus_next_state_i <= BUS_IDLE;
 
             when BUS_READ_VALID =>
                 if dotclk_cnt = x"0" or dotclk_cnt = x"4" then
@@ -181,6 +178,7 @@ begin
                 else
                     bus_next_state_i <= BUS_READ_VALID;
                 end if;
+
         end case;
         
     end process check_next_state;
@@ -204,34 +202,25 @@ begin
 
     ---------------------------------------------------------------------------
     -- Create the output enable signal for the expansion port data bus.
-    -- It is activated in cylce 2 or 6 of dotclock when there's a read access
-    -- to our address space.
-    -- I is deactivated asynchronously when n_io1, n_io2, n_roml and n_romh
-    -- get inactive.
+    -- It is activated asynchronously when there's a read access to the 
+    -- cartridge address space.
     --
     -- Remember that VIC-II can read data from cartridge ROM e.g. in Ultimax
     -- mode when phi2 is low. In this case n_wr is don't care because it has
     -- a wrong state on C128.
+    -- 
+    -- When I did this synchronously I had some timing problems with different
+    -- C64 types. However, in this way it's quite similar to classical ROM 
+    -- cartridges. Seems the C64 knows best when it wants to read our data :)
     ---------------------------------------------------------------------------
-    check_port_out_enable: process(phi2, n_dotclk, 
-                                   n_io1, n_io2, n_roml, n_romh)
-        variable cart_addressed: boolean;
+    check_port_out_enable: process(phi2, n_wr, n_io1, n_io2, n_roml, n_romh)
     begin
-        if n_io1 = '0' or n_io2 = '0' or n_roml = '0' or n_romh = '0' then
-            cart_addressed := true;
+        if (n_io1 = '0' or n_io2 = '0' or n_roml = '0' or n_romh = '0') and
+           (n_wr = '1' or phi2 = '0')
+        then
+            bus_out_enable <= '1';
         else
-            cart_addressed := false;
-        end if;
-
-        if not cart_addressed then
             bus_out_enable <= '0';
-        elsif rising_edge(n_dotclk) then
-            -- CPU read or VIC-II read
-            if (dotclk_cnt = x"1" and n_wr = '1' and cart_addressed) or
-               (dotclk_cnt = x"5" and cart_addressed)
-            then
-                bus_out_enable <= '1';
-            end if;
         end if;
     end process check_port_out_enable;
 
