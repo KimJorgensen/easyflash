@@ -49,4 +49,6 @@ typedef struct EasySplitHeader_s
 }
 EasySplitHeader;
 
+void utilReset(void);
+
 #endif

@@ -1,5 +1,5 @@
 /*
- * EasyProg - geoupload.c - The main module
+ * GeoUpload - geoupload.c - The main module
  *
  * (c) 2009 Thomas Giesel
  *
@@ -77,6 +77,11 @@ ScreenMenuEntry aMainMenuEntries[] =
         {
             "Upload EasySplit image",
             uploadImage,
+            returnTrue
+        },
+        {
+            "Reset",
+            utilReset,
             returnTrue
         },
         { NULL, NULL, 0 }
@@ -186,7 +191,7 @@ static void uploadImage(void)
 
     do
     {
-        rv = fileDlg(strFileName, "image");
+        rv = fileDlg(strFileName, "a");
         if (!rv)
             return;
 
@@ -252,7 +257,7 @@ int main(void)
             break;
 
         case 'h':
-            execMenu(15, 2, aHelpMenuEntries);
+            execMenu(7, 2, aHelpMenuEntries);
             break;
         }
     }
