@@ -47,11 +47,10 @@
 -- 
 -- component exp_bus_ctrl (u0):
 --  2 FDCPE_u0/bus_current_state_i
---  1 FTCPE_u0/bus_out_enable
 --  3 FTCPE_u0/dotclk_cnt
 --  1 FDCPE_u0/prev_phi2
 -- ==
---  7
+--  6
 
 library ieee;
 use ieee.std_logic_1164.all;
@@ -317,14 +316,10 @@ begin
     begin
         if rising_edge(n_dotclk) then
 
-            -- Is this correct ???
             if bus_next_state = BUS_WRITE_VALID then
                 mem_data <= data;
-
-            elsif bus_next_state = BUS_READ_VALID or 
-                  bus_next_state = BUS_IDLE then
+            elsif bus_next_state = BUS_READ_VALID then
                 mem_data <= (others => 'Z');
-
             end if;
         end if;
     end process prepare_mem_data;
@@ -343,6 +338,7 @@ begin
                     n_ram_cs    <= '1';
                     n_mem_wr    <= '1';
                     n_mem_oe    <= '1';
+                    n_mem_wr    <= '1';
 
                 when BUS_READ_VALID =>
                     case cart_mode is
@@ -406,9 +402,6 @@ begin
 
                         when others => null;
                     end case;
-
-                when BUS_WRITE_COMPLETE =>
-                   n_mem_wr <= '1';
 
                 when others => null;
             end case;
