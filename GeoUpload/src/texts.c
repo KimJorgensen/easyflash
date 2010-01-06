@@ -1,5 +1,5 @@
 /*
- * EasyProg - texts.c - Texts
+ * texts.c - Texts
  *
  * (c) 2009 Thomas Giesel
  *

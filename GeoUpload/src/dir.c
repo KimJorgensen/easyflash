@@ -1,5 +1,5 @@
 /*
- * EasyProg - dir.c - Directory loader
+ * dir.c - Directory loader
  *
  * (c) 2009 Thomas Giesel
  *

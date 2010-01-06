@@ -1,5 +1,5 @@
 /*
- * EasyProg - filedlg.c - File open dialog
+ * filedlg.c - File open dialog
  *
  * (c) 2009 Thomas Giesel
  *
