@@ -46,11 +46,8 @@
 -- 21
 -- 
 -- component exp_bus_ctrl (u0):
---  2 FDCPE_u0/bus_current_state_i
---  3 FTCPE_u0/dotclk_cnt
---  1 FDCPE_u0/prev_phi2
--- ==
 --  6
+-- 
 
 library ieee;
 use ieee.std_logic_1164.all;
