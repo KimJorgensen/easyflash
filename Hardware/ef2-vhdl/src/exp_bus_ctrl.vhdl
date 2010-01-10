@@ -24,41 +24,43 @@
 -- Expansion Port Bus Control
 ----------------------------------------------------------------------------------
 -- 
--- dotclk: T ~ 125 ns (note: actually n_dotclk is negated)
+-- dotclk: T ~ 125 ns (note: actually our n_dotclk is negated)
 --       ---     ---     ---     ---     ---     ---     ---     ---     ---
 --  \ 0 /   \ 1 /   \ 2 /   \ 3 /   \ 4 /   \ 5 /   \ 6 /   \ 7 /   \ 0 /   \
 --   ---     ---     ---     ---     ---     ---     ---     ---     ---     -
---  .       .       .       .       .       .       .       .
--- phi2:    .       .       .       .       .       .       .
---  +?ns    .       .       .       +?ns    .       .       .
---  |=>|    .       .       .       |=>|    .       .       .
---      -------------------------------                                 --
---     /                               \                               /
---  ---                                 -------------------------------
---          .       .       .       .  .    .       .       .          .
--- bus states:      .       .       .  .    .       .       .          .
---          .       .       .       .  .    .       .       .          .
---      if RW is 0: X ====> X ====> X  .    .       .       .          .
---          .     Write   Write   Idle .    .       .       .          .
---          .     valid   enable    .  .    .       .       .          .
---          .      (1)     (2)      .  .    .       .       .          .
---          .       .       .       .  .    .       .       .          .
---      if RW is 1: X ====================> X       .       .          .
---          .     Read      .       .  .  Idle      .       .          .
---          .     valid     .       .  .   (4)      .       .          .
---          .      (3)      .       .  .            .       .          .
---          .               >-Out-ena---< (5)       .       .          .
---          .                                               .          .
---          .          if LOROM is 0 or HIROM is 0 (read from VIC):    .
--- ...====> X                                       X ===================...
---        Idle                                   Read       .          .
---         (4)                                    valid     .          .
---                                                 (3)      .          .
---                                                          >-Out-ena---< (5)
+--  .       .       .       .       .       .       .       .       .       .
+-- phi2:    .       .       .       .       .       .       .       .       .
+--  .       .       .       .       .       .       .       .       .       .
+-- ~40..~90ns       .       .     ~60..~90ns        .       .       .       .
+--  .==>    .       .       .       .=====> .       .       .       .       .
+-- ------                                --------------------------------
+--      \\             VIC              /XX/              CPU           \\
+--       ----------------------------------                              -----
+--          .       .       .       .       .       .       .       .       .
+-- bus states:      .       .       .       .       .       .       .       .
+--          .       .       .       .       .       .       .       .       .
+--          .       .       .       .   if RW is 0: X ====> X ====> X       .
+--          .       .       .       .       .     Write   Write   Idle      .
+--          .       .       .       .       .     valid   enable    .       .
+--          .       .       .       .       .      (1)     (2)      .       .
+--          .       .       .       .       .       .       .       .       .
+--          .       .       .       .       .   if RW is 1: X ============> X
+--          .       .       .       .       .     Read      .       .     Idle
+--          .       .       .       .       .     valid     .       .      (4)
+--          .       .       .       .       .      (3)      .       .   
+--          .       .       .       .       .     >--------Out-enable-----< 
+--          .       .       .       .       .                 (5)
+-- if LOROM is 0 or HIROM is 0 (read from VIC):
+--                          X ============> X
+--                        Read            Idle
+--                        valid            (4)
+--                         (3)
+--              >-------Out-enable---------<
+--                         (5)
 -- 
 -- Note (1): Due to AEC from VIC-II, addresses and data are not stable 
 -- immediately after the phi2 edge. We generate a safe timing using (n_)dotclk.
--- At the beginning of dotclk cycle 2 the address and data for a write access 
+-- At the beginning of dotclk cycle 7 the address and data for a write access 
 -- can be clocked from the c64 bus to our memory bus.
 -- 
 -- Note (2): One dotclock cycle after applying address, data and /CE to our
@@ -70,9 +72,19 @@
 -- Note (4): We leave the memory chip enabled for a while. It is deactivated
 -- after output is disabled.
 --
--- Note (5): Output enable for expansion port data bus. This may become active
--- as soon as port_read_complete is active. It is reset asynchronously when
--- the cartridge is not addressed anymore.
+-- Note (5): Output enable for expansion port data bus. It is generated 
+-- asynchronously when one of /IO1, /IO2, /ROML or /ROMH is low.
+--
+
+--
+-- Registers used:
+-- 
+-- component exp_bus_ctrl (u0):
+--  2 FDCPE_u0/bus_current_state_i
+--  3 FTCPE_u0/dotclk_cnt
+--  1 FDCPE_u0/prev_phi2
+-- ==
+--  6
 --
 
 library ieee;
@@ -119,11 +131,11 @@ begin
     --
     -- Our CPLD has async CLRs and we know that phi2 changes somewhere in the 
     -- middle between two rising edges of our n_dotclk. Therefore we reset the
-    -- counter asynchronously when phi2 changes from 0 to 1.
+    -- counter asynchronously when phi2 changes from 1 to 0.
     ---------------------------------------------------------------------------
     dotclk_counter: process(n_dotclk, prev_phi2, phi2, dotclk_cnt)
     begin
-        if prev_phi2 = '0' and phi2 = '1' and dotclk_cnt /= "000" then
+        if prev_phi2 = '1' and phi2 = '0' and dotclk_cnt /= "000" then
             dotclk_cnt <= (others => '0');
         elsif rising_edge(n_dotclk) then
             dotclk_cnt <= dotclk_cnt + 1;
@@ -152,13 +164,13 @@ begin
         case bus_current_state_i is
 
             when BUS_IDLE =>
-                if dotclk_cnt = x"1" then
+                if dotclk_cnt = x"5" then
                     if n_wr = '0' then
                         bus_next_state_i <= BUS_WRITE_VALID;
                     else
                         bus_next_state_i <= BUS_READ_VALID;
                     end if;
-                elsif dotclk_cnt = x"6" and (n_roml = '0' or n_romh = '0') then
+                elsif dotclk_cnt = x"2" and (n_roml = '0' or n_romh = '0') then
                     -- On C128 in Ultimax mode n_wr is don't care
                     -- when VIC-II reads from Cartridge ROM
                     bus_next_state_i <= BUS_READ_VALID;
