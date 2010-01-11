@@ -23,9 +23,7 @@
 --
 -- Registers used:
 -- 
--- 21 mem_addr
---  8 mem_data
---  1 mem_data tristate enable
+-- 13 mem_addr
 --  1 n_mem_wr
 --  1 n_mem_oe
 --  1 n_ram_cs
@@ -35,7 +33,7 @@
 --  1 n_exrom
 --  1 n_game
 -- ==
--- 38
+-- 21
 -- 
 -- 11 ram_bank
 --  7 flash_bank
@@ -300,24 +298,21 @@ begin
 
                     when others => null;
                 end case;
-                
-                mem_addr(7 downto 0) <= addr(7 downto 0);
             end if;
         end if;
     end process prepare_mem_address;
 
+    mem_addr(7 downto 0) <= addr(7 downto 0);
+
     ---------------------------------------------------------------------------
     -- Copy expansion bus data to memory bus data
     ---------------------------------------------------------------------------
-    prepare_mem_data: process(n_dotclk)
+    prepare_mem_data: process(bus_current_state, data)
     begin
-        if rising_edge(n_dotclk) then
-
-            if bus_next_state = BUS_WRITE_VALID then
-                mem_data <= data;
-            elsif bus_next_state = BUS_READ_VALID then
-                mem_data <= (others => 'Z');
-            end if;
+        if bus_current_state = BUS_READ_VALID then
+            mem_data <= (others => 'Z');
+        else
+            mem_data <= data;
         end if;
     end process prepare_mem_data;
 
