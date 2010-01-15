@@ -27,7 +27,6 @@ package ef2_types is
     (
         BUS_IDLE,
         BUS_WRITE_VALID,
-        BUS_WRITE_ENABLE,
         BUS_READ_VALID
     );
 
