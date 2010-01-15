@@ -93,13 +93,19 @@ end ef2;
 architecture ef2_arc of ef2 is
 
     -- next state of the bus, detected combinatorically
-    signal bus_next_state:  bus_state_type;
+    signal bus_next_state: bus_state_type;
 
     -- current state of the bus
     signal bus_current_state: bus_state_type;
 
     -- output enable for expansion port data bus
     signal bus_out_enable: std_logic;
+
+    -- /WE may only be active when this is '0' and n_do_write is '0'  
+    signal n_wr_enable_mask: std_logic;
+
+    -- This is '0' when a write access to our memory has to be done
+    signal n_do_write: std_logic;
 
     -- Memory bank for RAM. In GeoRAM and EasyFlash mode 256 bytes of RAM
     -- are visible at once. So this bank will go to memory bits 18 downto 8
@@ -120,7 +126,7 @@ architecture ef2_arc of ef2 is
 
     -- When we are in easyflash mode: boot enabled?
     signal easyflash_boot: std_logic := '1';
-    
+
     component exp_bus_ctrl is
         port 
         (  
@@ -132,6 +138,7 @@ architecture ef2_arc of ef2 is
             n_reset:    inout std_logic;
             n_dotclk:   in std_logic;
             phi2:       in std_logic;
+            n_wr_enable_mask:   out std_logic;
             bus_next_state:     out bus_state_type;
             bus_current_state:  out bus_state_type;
             bus_out_enable:     out std_logic            
@@ -145,7 +152,7 @@ begin
     u0: exp_bus_ctrl port map 
     (
         n_roml, n_romh, n_io1, n_io2, n_wr, n_reset, n_dotclk, phi2,
-        bus_next_state, bus_current_state, bus_out_enable
+        n_wr_enable_mask, bus_next_state, bus_current_state, bus_out_enable
     );
 
     ---------------------------------------------------------------------------
@@ -251,7 +258,7 @@ begin
                     if n_reset = '0' then
                         n_exrom <= '1';
                         n_game <= not easyflash_boot;
-                    elsif bus_next_state = BUS_WRITE_ENABLE and 
+                    elsif bus_next_state = BUS_WRITE_VALID and 
                           n_io1 = '0' and addr(1) = '1' then
                         -- $de02 (only addr(1) is checked in the original EF)
                         n_exrom <= not data(1);
@@ -328,9 +335,8 @@ begin
                 when BUS_IDLE =>
                     n_flash_cs  <= '1';
                     n_ram_cs    <= '1';
-                    n_mem_wr    <= '1';
                     n_mem_oe    <= '1';
-                    n_mem_wr    <= '1';
+                    n_do_write  <= '1';
 
                 when BUS_READ_VALID =>
                     case cart_mode is
@@ -361,35 +367,18 @@ begin
                             if n_io1 = '0' then
                                 -- Write RAM at $de00
                                 n_ram_cs   <= '0';
+                                n_do_write <= '0';
                             end if;
 
                         when MODE_EASYFLASH =>
                             if n_io2 = '0' then
                                 -- Write RAM at $df00
                                 n_ram_cs   <= '0';
+                                n_do_write <= '0';
                             elsif n_roml = '0' or n_romh = '0' then
                                 -- Write FLASH at ROML/ROMH
                                 n_flash_cs <= '0';
-                            end if;
-
-                        when others => null;
-                    end case;
-
-                when BUS_WRITE_ENABLE =>
-                    case cart_mode is
-                        when MODE_GEORAM =>
-                            if n_io1 = '0' then
-                                -- Write RAM at $de00
-                                n_mem_wr   <= '0';
-                            end if;
-
-                        when MODE_EASYFLASH =>
-                            if n_io2 = '0' then
-                                -- Write RAM at $df00
-                                n_mem_wr   <= '0';
-                            elsif n_roml = '0' or n_romh = '0' then
-                                -- Write FLASH at ROML/ROMH
-                                n_mem_wr   <= '0';
+                                n_do_write <= '0';
                             end if;
 
                         when others => null;
@@ -399,6 +388,10 @@ begin
             end case;
         end if;
     end process mem_control;
+
+    -- n_mem_wr may only be low when both of these are low, this makes sure
+    -- that n_mem_wr is low for only the second half of the dotclk cylce
+    n_mem_wr <= n_do_write or n_wr_enable_mask;
 
     ---------------------------------------------------------------------------
     -- Set the RAM bank.
@@ -415,7 +408,7 @@ begin
         if n_reset = '0' then
             ram_bank <= (others => '0');
         elsif rising_edge(n_dotclk) then
-            if bus_next_state = BUS_WRITE_ENABLE then
+            if bus_next_state = BUS_WRITE_VALID then
                 case cart_mode is
                     when MODE_GEORAM =>
                         if n_io2 = '0' then
@@ -446,7 +439,7 @@ begin
         if n_reset = '0' then
             flash_bank <= (others => '0');
         elsif rising_edge(n_dotclk) then
-            if bus_next_state = BUS_WRITE_ENABLE then
+            if bus_next_state = BUS_WRITE_VALID then
                 case cart_mode is
                     when MODE_EASYFLASH =>
                         -- $de00 (only addr(1) is checked in the original EF)

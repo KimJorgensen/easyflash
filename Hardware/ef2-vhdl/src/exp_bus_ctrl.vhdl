@@ -39,10 +39,11 @@
 --          .       .       .       .       .       .       .       .       .
 -- bus states:      .       .       .       .       .       .       .       .
 --          .       .       .       .       .       .       .       .       .
---          .       .       .       .   if RW is 0: X ====> X ====> X       .
---          .       .       .       .       .     Write   Write   Idle      .
---          .       .       .       .       .     valid   enable    .       .
---          .       .       .       .       .      (1)     (2)      .       .
+--          .       .       .       .       .  if RW is 0:  X ====> X       .
+--          .       .       .       .       .       .       .   >WE-<
+--          .       .       .       .       .       .     Write   Idle      .
+--          .       .       .       .       .       .     valid     .       .
+--          .       .       .       .       .       .      (1)      .       .
 --          .       .       .       .       .       .       .       .       .
 --          .       .       .       .       .   if RW is 1: X ============> X
 --          .       .       .       .       .     Read      .       .     Idle
@@ -95,14 +96,15 @@ use work.ef2_types.all;
 
 entity exp_bus_ctrl is
     port ( 
-            n_roml:     in std_logic;
-            n_romh:     in std_logic;
-            n_io1:      in std_logic;
-            n_io2:      in std_logic;
-            n_wr:       in std_logic;
-            n_reset:    inout std_logic;
-            n_dotclk:   in std_logic;
-            phi2:       in std_logic;
+            n_roml:         in std_logic;
+            n_romh:         in std_logic;
+            n_io1:          in std_logic;
+            n_io2:          in std_logic;
+            n_wr:           in std_logic;
+            n_reset:        inout std_logic;
+            n_dotclk:       in std_logic;
+            phi2:           in std_logic;
+            n_wr_enable_mask:   out std_logic;
             bus_next_state:     out bus_state_type;
             bus_current_state:  out bus_state_type;
             bus_out_enable:     out std_logic
@@ -123,7 +125,7 @@ architecture exp_bus_ctrl_arc of exp_bus_ctrl is
 
     -- Remember the state of phi2 on previous dotclk edge
     signal prev_phi2:       std_logic;
-
+    
 begin
 
     ---------------------------------------------------------------------------
@@ -154,6 +156,28 @@ begin
     end process save_prev_phi2;
 
     ---------------------------------------------------------------------------
+    -- Create the write enable mask. This is '0' half a cycle after being in
+    -- state BUS_WRITE_VALID.
+    -- 
+    --            state:   ____----____
+    -- n_wr_enable_mask:   ------____--
+    -- 
+    ---------------------------------------------------------------------------
+    shift_write_enable: process(n_reset, n_dotclk)
+    begin
+        if n_reset = '0' then
+            n_wr_enable_mask <= '1';
+        -- falling => inverted clock!
+        elsif falling_edge(n_dotclk) then
+            if bus_current_state_i = BUS_WRITE_VALID then
+                n_wr_enable_mask <= '0';
+            else
+                n_wr_enable_mask <= '1';
+            end if;
+        end if;
+    end process shift_write_enable;
+    
+    ---------------------------------------------------------------------------
     -- Find out which state the expansion port bus will have on the *next*
     -- dotclk edge. This is combinatoric logic.
     ---------------------------------------------------------------------------
@@ -164,7 +188,7 @@ begin
         case bus_current_state_i is
 
             when BUS_IDLE =>
-                if dotclk_cnt = x"5" then
+                if dotclk_cnt = x"6" then
                     if n_wr = '0' then
                         bus_next_state_i <= BUS_WRITE_VALID;
                     else
@@ -179,9 +203,6 @@ begin
                 end if;
 
             when BUS_WRITE_VALID =>
-                bus_next_state_i <= BUS_WRITE_ENABLE;
-
-            when BUS_WRITE_ENABLE =>
                 bus_next_state_i <= BUS_IDLE;
 
             when BUS_READ_VALID =>
