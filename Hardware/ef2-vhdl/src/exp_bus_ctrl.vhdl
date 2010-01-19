@@ -45,16 +45,16 @@
 --          .       .       .       .       .       .     valid     .       .
 --          .       .       .       .       .       .      (1)      .       .
 --          .       .       .       .       .       .       .       .       .
---          .       .       .       .       .   if RW is 1: X ============> X
---          .       .       .       .       .     Read      .       .     Idle
---          .       .       .       .       .     valid     .       .      (4)
+--          .       .       .       .   if RW is 1: X ====> X ============> X
+--          .       .       .       .       .     Read    Read      .     Idle
+--          .       .       .       .       .     valid  complete   .      (4)
 --          .       .       .       .       .      (3)      .       .   
 --          .       .       .       .       .     >--------Out-enable-----< 
 --          .       .       .       .       .                 (5)
 -- if LOROM is 0 or HIROM is 0 (read from VIC):
---                          X ============> X
---                        Read            Idle
---                        valid            (4)
+--                          X ====> X ====> X
+--                        Read    Read     Idle
+--                        valid  complete   (4)
 --                         (3)
 --              >-------Out-enable---------<
 --                         (5)
@@ -68,7 +68,8 @@
 -- memory bus, we can activate /WE to the memory chip.
 -- 
 -- Note (3): Same as (1), but for read access. The signals /CS and /OE of the
--- addressed memory chip are activated in this step.
+-- addressed memory chip are activated in this step. Note that we need one 
+-- cycle more for the CPU-reads-kernal-from-cartridge stuff
 -- 
 -- Note (4): We leave the memory chip enabled for a while. It is deactivated
 -- after output is disabled.
@@ -104,9 +105,9 @@ entity exp_bus_ctrl is
             n_reset:        inout std_logic;
             n_dotclk:       in std_logic;
             phi2:           in std_logic;
-            n_wr_enable_mask:   out std_logic;
             bus_next_state:     out bus_state_type;
             bus_current_state:  out bus_state_type;
+            dotclk_cnt:         out std_logic_vector(2 downto 0);
             bus_out_enable:     out std_logic
     );
 end exp_bus_ctrl;
@@ -120,8 +121,8 @@ architecture exp_bus_ctrl_arc of exp_bus_ctrl is
     -- current state of the bus
     signal bus_current_state_i: bus_state_type;
 
-    -- count dotclk cycles in a phi2 cycle, 0 when rising edge of phi2 happens
-    signal dotclk_cnt:      std_logic_vector(2 downto 0);
+    -- count dotclk cycles in a phi2 cycle, 0 when falling edge of phi2 happens
+    signal dotclk_cnt_i:    std_logic_vector(2 downto 0);
 
     -- Remember the state of phi2 on previous dotclk edge
     signal prev_phi2:       std_logic;
@@ -135,14 +136,16 @@ begin
     -- middle between two rising edges of our n_dotclk. Therefore we reset the
     -- counter asynchronously when phi2 changes from 1 to 0.
     ---------------------------------------------------------------------------
-    dotclk_counter: process(n_dotclk, prev_phi2, phi2, dotclk_cnt)
+    dotclk_counter: process(n_dotclk, prev_phi2, phi2, dotclk_cnt_i)
     begin
-        if prev_phi2 = '1' and phi2 = '0' and dotclk_cnt /= "000" then
-            dotclk_cnt <= (others => '0');
+        if prev_phi2 = '1' and phi2 = '0' and dotclk_cnt_i /= "000" then
+            dotclk_cnt_i <= (others => '0');
         elsif rising_edge(n_dotclk) then
-            dotclk_cnt <= dotclk_cnt + 1;
+            dotclk_cnt_i <= dotclk_cnt_i + 1;
         end if;
     end process dotclk_counter;
+
+    dotclk_cnt <= dotclk_cnt_i;
 
     ---------------------------------------------------------------------------
     -- Remember the phi2 state on each dotclk edge, used to synchronize
@@ -154,47 +157,25 @@ begin
             prev_phi2 <= phi2;
         end if;
     end process save_prev_phi2;
-
-    ---------------------------------------------------------------------------
-    -- Create the write enable mask. This is '0' half a cycle after being in
-    -- state BUS_WRITE_VALID.
-    -- 
-    --            state:   ____----____
-    -- n_wr_enable_mask:   ------____--
-    -- 
-    ---------------------------------------------------------------------------
-    shift_write_enable: process(n_reset, n_dotclk)
-    begin
-        if n_reset = '0' then
-            n_wr_enable_mask <= '1';
-        -- falling => inverted clock!
-        elsif falling_edge(n_dotclk) then
-            if bus_current_state_i = BUS_WRITE_VALID then
-                n_wr_enable_mask <= '0';
-            else
-                n_wr_enable_mask <= '1';
-            end if;
-        end if;
-    end process shift_write_enable;
     
     ---------------------------------------------------------------------------
     -- Find out which state the expansion port bus will have on the *next*
     -- dotclk edge. This is combinatoric logic.
     ---------------------------------------------------------------------------
-    check_next_state : process(dotclk_cnt, n_wr, bus_current_state_i,
+    check_next_state : process(dotclk_cnt_i, n_wr, bus_current_state_i,
                                n_io1, n_io2, n_roml, n_romh)
     begin
 
         case bus_current_state_i is
 
             when BUS_IDLE =>
-                if dotclk_cnt = x"6" then
-                    if n_wr = '0' then
-                        bus_next_state_i <= BUS_WRITE_VALID;
-                    else
+                if dotclk_cnt_i = x"5" then
+                    if n_wr = '1' then
                         bus_next_state_i <= BUS_READ_VALID;
+                    else
+                        bus_next_state_i <= BUS_WRITE_VALID;
                     end if;
-                elsif dotclk_cnt = x"2" and (n_roml = '0' or n_romh = '0') then
+                elsif dotclk_cnt_i = x"2" and (n_roml = '0' or n_romh = '0') then
                     -- On C128 in Ultimax mode n_wr is don't care
                     -- when VIC-II reads from Cartridge ROM
                     bus_next_state_i <= BUS_READ_VALID;
@@ -203,13 +184,19 @@ begin
                 end if;
 
             when BUS_WRITE_VALID =>
+                bus_next_state_i <= BUS_WRITE_ENABLE;
+
+            when BUS_WRITE_ENABLE =>
                 bus_next_state_i <= BUS_IDLE;
 
             when BUS_READ_VALID =>
-                if dotclk_cnt = x"0" or dotclk_cnt = x"4" then
+                bus_next_state_i <= BUS_READ_COMPLETE;
+            
+            when BUS_READ_COMPLETE =>
+                if dotclk_cnt_i = x"0" or dotclk_cnt_i = x"4" then
                     bus_next_state_i <= BUS_IDLE;
                 else
-                    bus_next_state_i <= BUS_READ_VALID;
+                    bus_next_state_i <= BUS_READ_COMPLETE;
                 end if;
 
         end case;
@@ -228,7 +215,6 @@ begin
         elsif rising_edge(n_dotclk) then
             bus_current_state_i <= bus_next_state_i;
         end if;
-        
     end process enter_next_state;
 
     bus_current_state <= bus_current_state_i;
@@ -249,7 +235,7 @@ begin
     check_port_out_enable: process(phi2, n_wr, n_io1, n_io2, n_roml, n_romh)
     begin
         if (n_io1 = '0' or n_io2 = '0' or n_roml = '0' or n_romh = '0') and
-           (n_wr = '1' or phi2 = '0')
+           (n_wr = '1') -- or phi2 = '0')
         then
             bus_out_enable <= '1';
         else
