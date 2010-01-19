@@ -55,7 +55,7 @@ use work.ef2_types.all;
 
 
 entity ef2 is
-    port ( addr:        in std_logic_vector (15 downto 0);
+    port ( addr:        inout std_logic_vector (15 downto 0);
            data:        inout std_logic_vector (7 downto 0);
            n_dma:       out std_logic;
            ba:          in std_logic;
@@ -65,7 +65,7 @@ entity ef2 is
            n_io2:       in std_logic;
            n_wr:        in std_logic;
            n_irq:       in std_logic;
-           n_nmi:       in std_logic;
+           n_nmi:       inout std_logic;
            n_reset:     inout std_logic;
            n_dotclk:    in std_logic;
            phi2:        in std_logic;
@@ -98,15 +98,18 @@ architecture ef2_arc of ef2 is
     -- current state of the bus
     signal bus_current_state: bus_state_type;
 
+    -- count dotclk cycles in a phi2 cycle, 0 when falling edge of phi2 happens
+    signal dotclk_cnt: std_logic_vector(2 downto 0);
+
     -- output enable for expansion port data bus
     signal bus_out_enable: std_logic;
 
-    -- /WE may only be active when this is '0' and n_do_write is '0'  
-    signal n_wr_enable_mask: std_logic;
+    -- This is '0' when our memory chips have output enabled
+    signal n_mem_oe_i: std_logic;
 
-    -- This is '0' when a write access to our memory has to be done
-    signal n_do_write: std_logic;
-
+    -- This is '1' when the CPU reads from the kernal address space
+    signal kernal_space_read: std_logic;
+    
     -- Memory bank for RAM. In GeoRAM and EasyFlash mode 256 bytes of RAM
     -- are visible at once. So this bank will go to memory bits 18 downto 8
     -- for 512 KiB.
@@ -119,14 +122,28 @@ architecture ef2_arc of ef2 is
 
     signal buttons_enabled: std_logic := '0';
 
-    -- Current cartridge mode
-    type cartridge_mode is (MODE_GEORAM, MODE_EASYFLASH);
+    -- at least one of the lines n_io1, n_io2, n_roml, n_romh is active
+    signal cart_addressed: std_logic;
 
+    -- This is '1' when a hiram detection is in progress
+    signal detecting_hiram: std_logic;
+
+    -- Current cartridge mode
+    type cartridge_mode is (MODE_GEORAM, MODE_EASYFLASH, MODE_KERNAL, MODE_FC3);
     signal cart_mode: cartridge_mode := MODE_GEORAM;
 
     -- When we are in easyflash mode: boot enabled?
     signal easyflash_boot: std_logic := '1';
 
+    -- I/O 0xdfff is addressed 
+    signal io_dfff_addressed: std_logic;
+
+    -- Internal state of NMI line
+    signal n_nmi_i: std_logic;
+
+    -- When the freezer button is pressed and BA is low, this is '1'
+    signal freezer: std_logic;
+    
     component exp_bus_ctrl is
         port 
         (  
@@ -138,9 +155,9 @@ architecture ef2_arc of ef2 is
             n_reset:    inout std_logic;
             n_dotclk:   in std_logic;
             phi2:       in std_logic;
-            n_wr_enable_mask:   out std_logic;
             bus_next_state:     out bus_state_type;
             bus_current_state:  out bus_state_type;
+            dotclk_cnt:         out std_logic_vector(2 downto 0);
             bus_out_enable:     out std_logic            
         );
     end component;
@@ -152,7 +169,7 @@ begin
     u0: exp_bus_ctrl port map 
     (
         n_roml, n_romh, n_io1, n_io2, n_wr, n_reset, n_dotclk, phi2,
-        n_wr_enable_mask, bus_next_state, bus_current_state, bus_out_enable
+        bus_next_state, bus_current_state, dotclk_cnt, bus_out_enable
     );
 
     ---------------------------------------------------------------------------
@@ -165,6 +182,18 @@ begin
     pad3 <= '1';
     pad4 <= '1';
     pad5 <= '1';
+    addr <= (others => 'Z');
+
+    ---------------------------------------------------------------------------
+    -- Combinatorical logic used here and there
+    ---------------------------------------------------------------------------
+    kernal_space_read <= '1' when addr(15 downto 13) = "111" and n_wr = '1' 
+        else '0';
+
+    io_dfff_addressed <= '1' when 
+        n_io2 = '0' and addr(7 downto 0) = x"ff" else '0';
+
+    cart_addressed <= not (n_io1 and n_io2 and n_roml and n_romh);
 
     ---------------------------------------------------------------------------
     -- The buttons will be enabled after all buttons have been released one
@@ -189,6 +218,8 @@ begin
     begin
         if rising_edge(n_dotclk) then
             n_reset <= 'Z';
+            freezer <= '0';
+            
             if buttons_enabled = '1' then
                 if button_a = '1' then
                     cart_mode <= MODE_GEORAM;
@@ -199,6 +230,11 @@ begin
                     easyflash_boot <= '1';
                     n_reset <= '0';
 
+                elsif button_c = '1' then
+                    cart_mode <= MODE_KERNAL;
+                    -- cart_mode <= MODE_FC3;
+                    n_reset <= '0';
+
                 elsif button_d = '1' then
                     -- This button has a special function depending from mode
                     case cart_mode is
@@ -206,6 +242,10 @@ begin
                             easyflash_boot <= '0';
                             n_reset <= '0';
 
+                        when MODE_FC3 =>
+                            if ba = '1' then
+                                freezer <= '1'; -- todo: Counter?
+                            end if;
                         when others => null;
                     end case;
                 end if;
@@ -246,19 +286,32 @@ begin
     ---------------------------------------------------------------------------
     --
     ---------------------------------------------------------------------------
-    set_game_exrom: process(n_dotclk, n_reset)
+    set_game_exrom_dma: process(n_dotclk, n_reset)
     begin
-        if rising_edge(n_dotclk) then
+        if n_reset = '0' then
+            detecting_hiram <= '0';
+            n_exrom  <= '1';
+            n_game  <= '1';
+
             case cart_mode is
-                when MODE_GEORAM =>
-                    n_exrom <= '1';
-                    n_game <= '1';
+                when MODE_EASYFLASH =>
+                    n_game  <= not easyflash_boot;
+
+                when MODE_FC3 =>
+                    n_exrom <= '0';
+                    n_game <= '0';
+                    
+                when others => null;
+            end case;
+
+        elsif rising_edge(n_dotclk) then
+
+            n_dma   <= '1';            
+
+            case cart_mode is
                     
                 when MODE_EASYFLASH =>
-                    if n_reset = '0' then
-                        n_exrom <= '1';
-                        n_game <= not easyflash_boot;
-                    elsif bus_next_state = BUS_WRITE_VALID and 
+                    if bus_next_state = BUS_WRITE_VALID and 
                           n_io1 = '0' and addr(1) = '1' then
                         -- $de02 (only addr(1) is checked in the original EF)
                         n_exrom <= not data(1);
@@ -269,10 +322,81 @@ begin
                         end if;
                     end if;
 
+--                when MODE_KERNAL =>
+                    -- go to Ultimax mode when kernal is read
+--                    if kernal_space_read = '1' and bus_next_state = BUS_READ_VALID then
+  --                      -- 16k mode
+    --                    n_game <= '0';
+      --                  n_exrom <= '0';
+        --                n_dma <= '0';
+          --              detecting_hiram <= '1';
+            --        elsif detecting_hiram = '1' and bus_next_state = BUS_READ_COMPLETE then
+   --                     -- Ultimax mode
+     --                   n_game <= '0';
+       --                 n_exrom <= '1';
+         --           else
+           --             n_game <= '1';
+             --           n_exrom <= '1';
+               --         detecting_hiram <= '0';
+                 --   end if;
+
+                when MODE_FC3 =>
+                    if bus_next_state = BUS_WRITE_VALID and io_dfff_addressed = '1' then
+                        -- $dfff
+                        n_exrom <= data(4);
+                        n_game  <= data(5);
+                    elsif freezer = '1' then
+                        n_game <= '0';
+                    end if;
+
                 when others => null;
             end case;
-        end if;      
-    end process set_game_exrom;
+        end if;
+    end process set_game_exrom_dma;
+
+    ---------------------------------------------------------------------------
+    --
+    ---------------------------------------------------------------------------
+    set_nmi: process(n_dotclk, n_reset, cart_mode)
+    begin
+        if n_reset = '0' then
+            if cart_mode = MODE_FC3 then
+                n_nmi_i <= '0';
+            else
+                n_nmi_i <= '1';
+            end if;
+        elsif rising_edge(n_dotclk) then
+            if cart_mode = MODE_FC3 then
+                if bus_next_state = BUS_WRITE_VALID and 
+                   io_dfff_addressed = '1' then
+                    -- $dfff
+                    if data(6) = '0' then
+                        n_nmi_i <= '0';
+                    else
+                        n_nmi_i <= '1';
+                    end if;
+                end if;
+            end if;
+        end if;
+    end process set_nmi;
+
+    n_nmi <= 'Z' when n_nmi_i = '1' and freezer = '0' else '0';
+
+    ---------------------------------------------------------------------------
+    -- Pull down A14 for Kernal mode (HIRAM detection)
+    ---------------------------------------------------------------------------
+    prepare_pull_down_a14: process(n_dotclk)
+    begin
+        if rising_edge(n_dotclk) then
+            -- we put the CPU in DMA-mode, put 0xBxxx on address bus
+            if cart_mode = MODE_KERNAL and kernal_space_read = '1' and 
+               bus_next_state = BUS_READ_VALID then
+                addr(14) <= '0';
+            else
+                addr(14) <= 'Z';
+            end if;
+        end if;
+    end process prepare_pull_down_a14;
 
     ---------------------------------------------------------------------------
     -- Put the addresses onto the memory address bus
@@ -303,6 +427,23 @@ begin
                                 "1" & flash_bank & addr(12 downto 8);
                         end if;
 
+                    when MODE_KERNAL =>
+                        -- Prepare Kernal address in bank 0x44 (even if not needed)
+                        mem_addr(20 downto 8) <= x"44" & addr(12 downto 8);
+
+                    when MODE_FC3 =>
+                        if n_roml = '0' then
+                            -- Show current Flash bank at ROML or ROMH
+                            mem_addr(20 downto 8) <= 
+                                x"4" & "00" & flash_bank(1 downto 0) & addr(12 downto 8);
+                        elsif n_romh = '0' then
+                            mem_addr(20 downto 8) <= 
+                                x"c" & "00" & flash_bank(1 downto 0) & addr(12 downto 8);
+                        elsif n_io1 = '0' or n_io2 = '0' then
+                            mem_addr(20 downto 8) <= 
+                                x"4" & "00" & flash_bank(1 downto 0) & addr(12 downto 8);
+                        end if;
+
                     when others => null;
                 end case;
             end if;
@@ -314,9 +455,9 @@ begin
     ---------------------------------------------------------------------------
     -- Copy expansion bus data to memory bus data
     ---------------------------------------------------------------------------
-    prepare_mem_data: process(bus_current_state, data)
+    prepare_mem_data: process(n_mem_oe_i, data)
     begin
-        if bus_current_state = BUS_READ_VALID then
+        if n_mem_oe_i = '0' then
             mem_data <= (others => 'Z');
         else
             mem_data <= data;
@@ -328,15 +469,21 @@ begin
     ---------------------------------------------------------------------------
     mem_control: process(n_dotclk, n_reset)
     begin
-        if rising_edge(n_dotclk) then
+        if n_reset = '0' then
+            n_flash_cs  <= '1';
+            n_ram_cs    <= '1';
+            n_mem_oe_i  <= '1';
+            n_mem_wr    <= '1';
+        
+        elsif rising_edge(n_dotclk) then
 
             case bus_next_state is
 
                 when BUS_IDLE =>
                     n_flash_cs  <= '1';
                     n_ram_cs    <= '1';
-                    n_mem_oe    <= '1';
-                    n_do_write  <= '1';
+                    n_mem_oe_i  <= '1';
+                    n_mem_wr    <= '1';
 
                 when BUS_READ_VALID =>
                     case cart_mode is
@@ -344,41 +491,78 @@ begin
                             if n_io1 = '0' then
                                 -- Read RAM at $de00
                                 n_ram_cs   <= '0';
-                                n_mem_oe   <= '0';
+                                n_mem_oe_i <= '0';
                             end if;
 
                         when MODE_EASYFLASH =>
                             if n_io2 = '0' then
                                 -- Read RAM at $df00
                                 n_ram_cs   <= '0';
-                                n_mem_oe   <= '0';
+                                n_mem_oe_i <= '0';
                             elsif n_roml = '0' or n_romh = '0' then
                                 -- Read FLASH at ROML/ROMH
                                 n_flash_cs <= '0';
-                                n_mem_oe   <= '0';
+                                n_mem_oe_i <= '0';
+                            end if;
+
+                        when MODE_FC3 =>
+                            if cart_addressed = '1' then
+                                -- Read FLASH at ROML/ROMH/IO1/IO2
+                                n_flash_cs <= '0';
+                                n_mem_oe_i <= '0';
                             end if;
 
                         when others => null;
                     end case;
+
+--                when BUS_READ_COMPLETE =>
+  --                  if cart_mode = MODE_KERNAL then
+    --                    -- read kernal at 0xe000..0xffff
+      --                  if kernal_space_read = '1' then
+        --                    -- we did some preparations to detect HIRAM
+          --                  if n_romh = '0' then
+            --                    -- read rom
+              --                  n_flash_cs <= '0';
+--                            else
+  --                              -- read ram below rom
+    --                            n_ram_cs <= '0';
+      --                      end if;
+        --                    n_mem_oe_i <= '0';
+          --              end if;
+            --        end if;
 
                 when BUS_WRITE_VALID =>
                     case cart_mode is
                         when MODE_GEORAM =>
                             if n_io1 = '0' then
                                 -- Write RAM at $de00
-                                n_ram_cs   <= '0';
-                                n_do_write <= '0';
+                                n_ram_cs <= '0';
                             end if;
 
                         when MODE_EASYFLASH =>
                             if n_io2 = '0' then
                                 -- Write RAM at $df00
-                                n_ram_cs   <= '0';
-                                n_do_write <= '0';
+                                n_ram_cs <= '0';
                             elsif n_roml = '0' or n_romh = '0' then
                                 -- Write FLASH at ROML/ROMH
                                 n_flash_cs <= '0';
-                                n_do_write <= '0';
+                            end if;
+
+                        when others => null;
+                    end case;
+
+                when BUS_WRITE_ENABLE =>
+                    case cart_mode is
+                        when MODE_GEORAM =>
+                            if n_io1 = '0' then
+                                -- Write RAM at $de00
+                                n_mem_wr <= '0';
+                            end if;
+
+                        when MODE_EASYFLASH =>
+                            if n_io2 = '0' or n_roml = '0' or n_romh = '0' then
+                                -- Write RAM at $df00 or FLASH at ROML/ROMH
+                                n_mem_wr <= '0';
                             end if;
 
                         when others => null;
@@ -389,9 +573,7 @@ begin
         end if;
     end process mem_control;
 
-    -- n_mem_wr may only be low when both of these are low, this makes sure
-    -- that n_mem_wr is low for only the second half of the dotclk cylce
-    n_mem_wr <= n_do_write or n_wr_enable_mask;
+    n_mem_oe <= n_mem_oe_i;
 
     ---------------------------------------------------------------------------
     -- Set the RAM bank.
@@ -446,7 +628,12 @@ begin
                         if n_io1 = '0' and addr(1) = '0' then
                             flash_bank(6 downto 0) <= data(6 downto 0);
                         end if;
-                    
+
+                    when MODE_FC3 =>
+                        if io_dfff_addressed = '1' then
+                            flash_bank(1 downto 0) <= data(1 downto 0);
+                        end if;
+
                     when others => null;
                 end case;
             end if;
