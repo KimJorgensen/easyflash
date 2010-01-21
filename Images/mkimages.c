@@ -9,6 +9,9 @@ static const char* ef2_crt_name = "ef2-multi-crt.crt";
 static FILE*    fp;
 static size_t   crt_size;
 
+#define FC3_BASE_BANK           0x40
+#define EXOS_KERNAL_BASE_BANK   0x44
+
 /******************************************************************************/
 /*
  * Write the CRT header to the output file. 
@@ -89,7 +92,7 @@ static int writeFC3(void)
     fpIn = fopen("fc3-1988.bin", "rb");
     if (fpIn == NULL)
     {
-        fprintf(stderr, "Cannot open FC-III binary\n");
+        fprintf(stderr, "Cannot open fc3-1988.bin\n");
         return 0;
     }
     if (fread(buff, 64 * 1024, 1, fpIn) != 1)
@@ -101,12 +104,45 @@ static int writeFC3(void)
 
     for (bank = 0; bank < 4; ++bank)
     {
-        writeChipHeader(64 + bank, 0x8000, 0x4000);
+        writeChipHeader(FC3_BASE_BANK + bank, 0x8000, 0x4000);
         if (fwrite(buff + 0x4000 * bank, 0x4000, 1, fp) != 1)
         {
-            fprintf(stderr, "Cannot write FC-III data\n");
+            fprintf(stderr, "Failed to write\n");
             return 0;
         }
+    }
+
+    return 1;
+}
+
+/******************************************************************************/
+/**
+ * Read the EXOS binary image and write it to the CRT file.
+ * Return 1 on success, 0 on error.
+ */
+static int writeEXOS(void)
+{
+    FILE* fpIn;
+    char buff[8 * 1024];
+
+    fpIn = fopen("exos.bin", "rb");
+    if (fpIn == NULL)
+    {
+        fprintf(stderr, "Cannot open exos.bin\n");
+        return 0;
+    }
+    if (fread(buff, 8 * 1024, 1, fpIn) != 1)
+    {
+        fprintf(stderr, "Cannot read exos.bin\n");
+        return 0;
+    }
+    fclose(fpIn);
+
+    writeChipHeader(EXOS_KERNAL_BASE_BANK, 0x8000, 0x2000);
+    if (fwrite(buff, 0x2000, 1, fp) != 1)
+    {
+        fprintf(stderr, "Failed to write\n");
+        return 0;
     }
 
     return 1;
@@ -121,6 +157,9 @@ int main(void)
         goto error;
 
     if (!writeFC3())
+        goto error;
+
+    if (!writeEXOS())
         goto error;
 
     fclose(fp);
