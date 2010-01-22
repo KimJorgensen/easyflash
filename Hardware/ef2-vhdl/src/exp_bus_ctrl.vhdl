@@ -234,13 +234,13 @@ begin
     ---------------------------------------------------------------------------
     check_port_out_enable: process(phi2, n_wr, n_io1, n_io2, n_roml, n_romh)
     begin
-        if (n_io1 = '0' or n_io2 = '0' or n_roml = '0' or n_romh = '0') and
-           (n_wr = '1') -- or phi2 = '0')
-        then
-            bus_out_enable <= '1';
-        else
+--        if (n_io1 = '0' or n_io2 = '0' or n_roml = '0' or n_romh = '0') and
+  --         (n_wr = '1') -- or phi2 = '0')
+    --    then
+      --      bus_out_enable <= '1';
+  --      else
             bus_out_enable <= '0';
-        end if;
+    --    end if;
     end process check_port_out_enable;
 
 end exp_bus_ctrl_arc;

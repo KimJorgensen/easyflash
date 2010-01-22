@@ -46,8 +46,8 @@ NET "button_a"      LOC = "P41";
 NET "pad2"          LOC = "P42";
 NET "pad3"          LOC = "P43";
 
-NET "pad4"          LOC = "P46";
-NET "pad5"          LOC = "P49";
+NET "clk_out"       LOC = "P46";
+NET "clk_in"        LOC = "P49";
 NET "n_led"         LOC = "P50";
 
 NET "mem_data<0>"   LOC = "P52";
@@ -141,3 +141,5 @@ NET "data<4>"       SLEW = SLOW;
 NET "data<5>"       SLEW = SLOW;
 NET "data<6>"       SLEW = SLOW;
 NET "data<7>"       SLEW = SLOW;
+
+NET "clk_out"       SLEW = SLOW;
