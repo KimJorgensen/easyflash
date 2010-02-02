@@ -24,33 +24,37 @@
 -- Expansion Port Bus Control
 ----------------------------------------------------------------------------------
 -- 
--- dotclk: T ~ 125 ns (note: actually our n_dotclk is negated)
+-- dotclk: T ~ 125 ns
 --       ---     ---     ---     ---     ---     ---     ---     ---     ---
 --  \ 0 /   \ 1 /   \ 2 /   \ 3 /   \ 4 /   \ 5 /   \ 6 /   \ 7 /   \ 0 /   \
 --   ---     ---     ---     ---     ---     ---     ---     ---     ---     -
---  .       .       .       .       .       .       .       .       .       .
--- phi2:    .       .       .       .       .       .       .       .       .
---  .       .       .       .       .       .       .       .       .       .
--- ~40..~90ns       .       .     ~60..~90ns        .       .       .       .
---  .==>    .       .       .       .=====> .       .       .       .       .
+-- clk:
+--   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -
+--  / \ /0\ /1\ /2\ /3\ /4\ /5\ /6\ /7\ /8\ /9\ /A\ /B\ /C\ /D\ /E\ /F\ /0\ /1\ 
+--     -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   
+--  .       .       .       .       .       .       .   .   .   .   .   .   .
+-- phi2:    .       .       .       .       .       .   .   .   .   .   .   .
+--  .       .       .       .       .       .       .   .   .   .   .   .   .
+-- ~40..~90ns       .       .     ~60..~90ns        .   .   .   .   .   .   .
+--  .==>    .       .       .       .=====> .       .   .   .   .   .   .   .
 -- ------                                --------------------------------
 --      \\             VIC              /XX/              CPU           \\
 --       ----------------------------------                              -----
---          .       .       .       .       .       .       .       .       .
--- bus states:      .       .       .       .       .       .       .       .
---          .       .       .       .       .       .       .       .       .
---          .       .       .       .       .  if RW is 0:  X ====> X       .
---          .       .       .       .       .       .       .   >WE-<
---          .       .       .       .       .       .     Write   Idle      .
---          .       .       .       .       .       .     valid     .       .
---          .       .       .       .       .       .      (1)      .       .
---          .       .       .       .       .       .       .       .       .
+--          .       .       .       .       .       .   .   .   .   .   .   .
+-- bus states:      .       .       .       .       .   .   .   .   .   .   .
+--          .       .       .       .       .       .   .   .   .   .   .   .
+--          .       .       .       .       .  if RW is 0:  X > X ====> X   .
+--          .       .       .       .       .       .   . Write Write  Idle .
+--          .       .       .       .       .       .   . valid enable      .
+--          .       .       .       .       .       .   .  (1)   (2)        .
+--          .       .       .       .       .       .   .   .       .       .
 --          .       .       .       .   if RW is 1: X ====> X ============> X
---          .       .       .       .       .     Read    Read      .     Idle
---          .       .       .       .       .     valid  complete   .      (4)
---          .       .       .       .       .      (3)      .       .   
---          .       .       .       .       .     >--------Out-enable-----< 
---          .       .       .       .       .                 (5)
+--          .       .       .       .       .     Read  . Read      .   . Idle
+--          .       .       .       .       .     valid .complete   .   .  (4)
+--          .       .       .       .       .      (3)  .   .       .   .   .
+--          .       .       .       .       .     >--------Out-enable-----< .
+--          .       .       .       .       .       .   .   .  (5)
+--          .       .       .       .       .       
 -- if LOROM is 0 or HIROM is 0 (read from VIC):
 --                          X ====> X ====> X
 --                        Read    Read     Idle
@@ -97,18 +101,21 @@ use work.ef2_types.all;
 
 entity exp_bus_ctrl is
     port ( 
-            n_roml:         in std_logic;
-            n_romh:         in std_logic;
-            n_io1:          in std_logic;
-            n_io2:          in std_logic;
-            n_wr:           in std_logic;
-            n_reset:        inout std_logic;
-            n_dotclk:       in std_logic;
-            phi2:           in std_logic;
+            n_roml:             in std_logic;
+            n_romh:             in std_logic;
+            n_io1:              in std_logic;
+            n_io2:              in std_logic;
+            n_wr:               in std_logic;
+            n_reset:            inout std_logic;
+            clk:                in std_logic;
+            phi2:               in std_logic;
+            ba:                 in std_logic;
+            addr:               in std_logic_vector(15 downto 12);
             bus_next_state:     out bus_state_type;
             bus_current_state:  out bus_state_type;
-            dotclk_cnt:         out std_logic_vector(2 downto 0);
-            bus_out_enable:     out std_logic
+            bus_out_enable:     out std_logic;
+            hrdet_next_state:   out hiram_det_state_type;
+            hrdet_current_state: out hiram_det_state_type            
     );
 end exp_bus_ctrl;
 
@@ -116,44 +123,63 @@ end exp_bus_ctrl;
 architecture exp_bus_ctrl_arc of exp_bus_ctrl is
 
     -- next state of the bus, detected combinatorically
-    signal bus_next_state_i:  bus_state_type;
+    signal bus_next_state_i:        bus_state_type;
 
     -- current state of the bus
-    signal bus_current_state_i: bus_state_type;
+    signal bus_current_state_i:     bus_state_type;
+
+    -- current state of the hiram detection
+    signal hrdet_current_state_i:   hiram_det_state_type;
+
+    -- next state of the hiram detection
+    signal hrdet_next_state_i:      hiram_det_state_type;
 
     -- count dotclk cycles in a phi2 cycle, 0 when falling edge of phi2 happens
-    signal dotclk_cnt_i:    std_logic_vector(2 downto 0);
+    signal clk_cnt:                 std_logic_vector(3 downto 0);
 
     -- Remember the state of phi2 on previous dotclk edge
-    signal prev_phi2:       std_logic;
-    
+    signal prev_phi2:               std_logic;
+
+    -- This is '1' when the CPU addresses kernal space
+    signal kernal_space_addressed: std_logic;
+
+    -- This is '1' when the CPU reads from the kernal address space
+    signal kernal_space_cpu_read:   std_logic;
+
 begin
+
+    ---------------------------------------------------------------------------
+    -- Combinatorical logic used here and there
+    ---------------------------------------------------------------------------
+    kernal_space_addressed <= '1' when addr(15 downto 13) = "111" else '0';
+
+    kernal_space_cpu_read <= '1' when kernal_space_addressed = '1' and 
+        ba = '1' and n_wr = '1' 
+        else '0';
 
     ---------------------------------------------------------------------------
     -- Count cycles of dotclock 0..7
     --
     -- Our CPLD has async CLRs and we know that phi2 changes somewhere in the 
-    -- middle between two rising edges of our n_dotclk. Therefore we reset the
-    -- counter asynchronously when phi2 changes from 1 to 0.
+    -- middle between two rising edges of our clk. Therefore we reset the
+    -- counter asynchronously when phi2 changes from 1 to 0.                      <= todo: update
     ---------------------------------------------------------------------------
-    dotclk_counter: process(n_dotclk, prev_phi2, phi2, dotclk_cnt_i)
+    dotclk_counter: process(clk, prev_phi2, phi2, clk_cnt)
     begin
-        if prev_phi2 = '1' and phi2 = '0' and dotclk_cnt_i /= "000" then
-            dotclk_cnt_i <= (others => '0');
-        elsif rising_edge(n_dotclk) then
-            dotclk_cnt_i <= dotclk_cnt_i + 1;
+        if prev_phi2 = '1' and phi2 = '0' and clk_cnt /= "000" then
+            clk_cnt <= (others => '0');
+        elsif rising_edge(clk) then
+            clk_cnt <= clk_cnt + 1;
         end if;
     end process dotclk_counter;
-
-    dotclk_cnt <= dotclk_cnt_i;
 
     ---------------------------------------------------------------------------
     -- Remember the phi2 state on each dotclk edge, used to synchronize
     -- dotclk_cnt to phi2, see process dotclk_counter
     ---------------------------------------------------------------------------
-    save_prev_phi2: process(n_dotclk)
+    save_prev_phi2: process(clk)
     begin
-        if rising_edge(n_dotclk) then
+        if rising_edge(clk) then
             prev_phi2 <= phi2;
         end if;
     end process save_prev_phi2;
@@ -162,23 +188,21 @@ begin
     -- Find out which state the expansion port bus will have on the *next*
     -- dotclk edge. This is combinatoric logic.
     ---------------------------------------------------------------------------
-    check_next_state : process(dotclk_cnt_i, n_wr, bus_current_state_i,
+    check_next_state : process(clk_cnt, n_wr, bus_current_state_i,
                                n_io1, n_io2, n_roml, n_romh)
     begin
 
         case bus_current_state_i is
 
             when BUS_IDLE =>
-                if dotclk_cnt_i = x"5" then
-                    if n_wr = '1' then
+                if clk_cnt = x"A" and n_wr = '1' then
                         bus_next_state_i <= BUS_READ_VALID;
-                    else
+                elsif clk_cnt = x"C" and n_wr = '0' then
                         bus_next_state_i <= BUS_WRITE_VALID;
-                    end if;
-                elsif dotclk_cnt_i = x"2" and (n_roml = '0' or n_romh = '0') then
-                    -- On C128 in Ultimax mode n_wr is don't care
-                    -- when VIC-II reads from Cartridge ROM
-                    bus_next_state_i <= BUS_READ_VALID;
+--                elsif clk_cnt = x"4" and (n_roml = '0' or n_romh = '0') then
+  --                  -- On C128 in Ultimax mode n_wr is don't care
+    --                -- when VIC-II reads from Cartridge ROM
+      --              bus_next_state_i <= BUS_READ_VALID;
                 else
                     bus_next_state_i <= BUS_IDLE;
                 end if;
@@ -187,13 +211,21 @@ begin
                 bus_next_state_i <= BUS_WRITE_ENABLE;
 
             when BUS_WRITE_ENABLE =>
-                bus_next_state_i <= BUS_IDLE;
+                if clk_cnt = x"F" then
+                    bus_next_state_i <= BUS_IDLE;
+                else
+                    bus_next_state_i <= BUS_WRITE_ENABLE;
+                end if;
 
             when BUS_READ_VALID =>
-                bus_next_state_i <= BUS_READ_COMPLETE;
+                if clk_cnt = x"C" then
+                    bus_next_state_i <= BUS_READ_COMPLETE;
+                else
+                    bus_next_state_i <= BUS_READ_VALID;
+                end if;
             
             when BUS_READ_COMPLETE =>
-                if dotclk_cnt_i = x"0" or dotclk_cnt_i = x"4" then
+                if clk_cnt = x"0" or clk_cnt = x"8" then
                     bus_next_state_i <= BUS_IDLE;
                 else
                     bus_next_state_i <= BUS_READ_COMPLETE;
@@ -208,11 +240,11 @@ begin
     ---------------------------------------------------------------------------
     -- Make the next state of the expansion port bus to the current state
     ---------------------------------------------------------------------------
-    enter_next_state: process(n_dotclk, n_reset)
+    enter_next_state: process(clk, n_reset)
     begin
         if n_reset = '0' then
                 bus_current_state_i <= BUS_IDLE;
-        elsif rising_edge(n_dotclk) then
+        elsif rising_edge(clk) then
             bus_current_state_i <= bus_next_state_i;
         end if;
     end process enter_next_state;
@@ -234,14 +266,100 @@ begin
     ---------------------------------------------------------------------------
     check_port_out_enable: process(phi2, n_wr, n_io1, n_io2, n_roml, n_romh)
     begin
---        if (n_io1 = '0' or n_io2 = '0' or n_roml = '0' or n_romh = '0') and
-  --         (n_wr = '1') -- or phi2 = '0')
-    --    then
-      --      bus_out_enable <= '1';
-  --      else
+        if (n_io1 = '0' or n_io2 = '0' or n_roml = '0' or n_romh = '0') and
+           (n_wr = '1') -- or phi2 = '0')
+        then
+            bus_out_enable <= '1';
+        else
             bus_out_enable <= '0';
-    --    end if;
+        end if;
     end process check_port_out_enable;
 
+
+    ---------------------------------------------------------------------------
+    -- 
+    -- This ist the state machine for the HIRAM detection. The state of this
+    -- signal is essential to implement an external kernal. But as it is not
+    -- available on the Expansion Port, we derive it from the PLA equatation.
+    -- The signals shown in the following diagram are not set in this
+    -- process, thei're show fyi only.
+    -- 
+    --        -   -   -   -   -   -   -   -   -   -   -   -
+    -- clk:  /6\ /7\ /8\ /9\ /A\ /B\ /C\ /D\ /E\ /F\ /0\ /1\ 
+    --          -   -   -   -   -   -   -   -   -   -   -   
+    --           .       .       .       .       .       .
+    --                --------------------------------
+    -- phi2:         /XX/              CPU           \\
+    --        ----------                              -----
+    --           .       .       .       .       .       .
+    --           .       .       .       .       .       .
+    --           if RW is 1 and kernal addressed by CPU:
+    --        -------------------         -----------------
+    -- /DMA:                     \       /
+    --           .       .        -------
+    --           .       .       .   .   .       .       .
+    --        -----------------------     -----------------
+    --  A14:  XXXXXXXXXXXXXXXXXXXXXXX\   /XXXXXXXXXXXXXXXXX
+    --        ---------------------------------------------
+    --           .       .       .   .   .       .       .
+    --        -------------------                         -
+    -- /GAME:                    \                       /                 
+    --           .       .        -----------------------
+    --           .       .       .   .   .       .       .
+    --        -------------------         -----------------
+    -- /EXROM:                   \       /
+    --           .       .        -------
+    --           .       .       .   .   .       .       .
+    --        ------------------------- --- ---------------
+    -- /ROMH:                          X   X
+    --                           .   .  ---              .
+    --                           .   .   .               .
+    --                           .   .   .               .
+    --                           X > X > X ==============>
+    --                         DMA Dtct Read           Idle
+    -- 
+    ---------------------------------------------------------------------------
+    check_hiram_detect_next_state : process(clk_cnt, 
+                                            hrdet_current_state_i,
+                                            kernal_space_cpu_read)
+    begin
+        case hrdet_current_state_i is
+            when HRDET_STATE_IDLE =>
+                if clk_cnt = x"A" and kernal_space_cpu_read = '1' then                    
+                    hrdet_next_state_i <= HRDET_STATE_DMA;
+                else
+                    hrdet_next_state_i <= HRDET_STATE_IDLE;
+                end if;
+
+            when HRDET_STATE_DMA =>
+                hrdet_next_state_i <= HRDET_STATE_DETECT;
+
+            when HRDET_STATE_DETECT =>
+                hrdet_next_state_i <= HRDET_STATE_READ;
+
+            when HRDET_STATE_READ =>
+                if clk_cnt = x"0" then
+                    hrdet_next_state_i <= HRDET_STATE_IDLE;
+                else 
+                    hrdet_next_state_i <= HRDET_STATE_READ;
+                end if;
+        end case;
+    end process check_hiram_detect_next_state;
+
+    hrdet_next_state <= hrdet_next_state_i;
+
+    ---------------------------------------------------------------------------
+    -- Make the next state of hiram detection to the current state
+    ---------------------------------------------------------------------------
+    enter_next_hrdet_state: process(clk, n_reset)
+    begin
+        if n_reset = '0' then
+            hrdet_current_state_i <= HRDET_STATE_IDLE;
+        elsif rising_edge(clk) then
+            hrdet_current_state_i <= hrdet_next_state_i;
+        end if;
+    end process enter_next_hrdet_state;
+
+    hrdet_current_state <= hrdet_current_state_i;
+
 end exp_bus_ctrl_arc;
-    

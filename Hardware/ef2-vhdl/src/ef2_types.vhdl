@@ -32,4 +32,13 @@ package ef2_types is
         BUS_READ_COMPLETE
     );
 
+    -- states for the hiram detection
+    type hiram_det_state_type is 
+    (
+        HRDET_STATE_IDLE, 
+        HRDET_STATE_DMA, 
+        HRDET_STATE_DETECT, 
+        HRDET_STATE_READ
+    );
+
 end ef2_types;
