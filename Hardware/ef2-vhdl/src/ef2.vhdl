@@ -1,6 +1,6 @@
 ----------------------------------------------------------------------------------
 -- 
--- (c) 2009 Thomas 'skoe' Giesel
+-- (c) 2010 Thomas 'skoe' Giesel
 --
 -- This software is provided 'as-is', without any express or implied
 -- warranty.  In no event will the authors be held liable for any damages
@@ -92,48 +92,47 @@ end ef2;
 
 architecture ef2_arc of ef2 is
 
+    -- This clock is about 16 MHz, double frequency of dotclock
+    signal clk:                     std_logic;
+    
     -- next state of the bus, detected combinatorically
-    signal bus_next_state: bus_state_type;
+    signal bus_next_state:          bus_state_type;
 
     -- current state of the bus
-    signal bus_current_state: bus_state_type;
+    signal bus_current_state:       bus_state_type;
 
-    -- count dotclk cycles in a phi2 cycle, 0 when falling edge of phi2 happens
-    signal dotclk_cnt: std_logic_vector(2 downto 0);
+    -- current state of the hiram detection
+    signal hrdet_current_state:     hiram_det_state_type;
+
+    -- next state of the hiram detection
+    signal hrdet_next_state:        hiram_det_state_type;
 
     -- output enable for expansion port data bus
-    signal bus_out_enable: std_logic;
+    signal bus_out_enable:          std_logic;
 
     -- This is '0' when our memory chips have output enabled
-    signal n_mem_oe_i: std_logic;
+    signal n_mem_oe_i:              std_logic;
 
     -- This is '1' when the CPU addresses kernal space
-    signal kernal_space_addressed: std_logic;
-
-    -- This is '1' when the CPU reads from the kernal address space
-    signal kernal_space_read: std_logic;
+    signal kernal_space_addressed:  std_logic;
 
     -- This is '1' when the CPU writes to the kernal address space
-    signal kernal_space_write: std_logic;
+    signal kernal_space_cpu_write:  std_logic;
     
     -- Memory bank for RAM. In GeoRAM and EasyFlash mode 256 bytes of RAM
     -- are visible at once. So this bank will go to memory bits 18 downto 8
     -- for 512 KiB.
-    signal ram_bank: std_logic_vector(10 downto 0);
+    signal ram_bank:            std_logic_vector(10 downto 0);
 
     -- Memory bank for Flash ROM. Usually 8 KiB of ROM can be visible at
     -- LOROM and 8 KiB of ROM can be seen at HIROM. So this bank will go to 
     -- memory bits 19 downto 13 for 1 MiB (bit 20 is for HIROM/LOROM).
-    signal flash_bank: std_logic_vector(6 downto 0);
+    signal flash_bank:          std_logic_vector(6 downto 0);
 
-    signal buttons_enabled: std_logic := '0';
+    signal buttons_enabled:     std_logic := '0';
 
     -- at least one of the lines n_io1, n_io2, n_roml, n_romh is active
     signal cart_addressed: std_logic;
-
-    type hiram_detection_state is (
-        HRDET_STATE_IDLE, HRDET_STATE_DETECT, HRDET_STATE_READ1,  HRDET_STATE_READ2);
-    signal hiram_detection: hiram_detection_state;
 
     -- Current cartridge mode
     type cartridge_mode is (MODE_GEORAM, MODE_EASYFLASH, MODE_KERNAL, MODE_FC3);
@@ -160,12 +159,15 @@ architecture ef2_arc of ef2 is
             n_io2:      in std_logic;
             n_wr:       in std_logic;
             n_reset:    inout std_logic;
-            n_dotclk:   in std_logic;
+            clk:        in std_logic;
             phi2:       in std_logic;
+            ba:         in std_logic;            
+            addr:       in std_logic_vector(15 downto 12);
             bus_next_state:     out bus_state_type;
             bus_current_state:  out bus_state_type;
-            dotclk_cnt:         out std_logic_vector(2 downto 0);
-            bus_out_enable:     out std_logic            
+            bus_out_enable:     out std_logic;
+            hrdet_next_state:   out hiram_det_state_type;
+            hrdet_current_state: out hiram_det_state_type
         );
     end component;
 
@@ -175,15 +177,17 @@ begin
     ---------------------------------------------------------------------------
     u0: exp_bus_ctrl port map 
     (
-        n_roml, n_romh, n_io1, n_io2, n_wr, n_reset, n_dotclk, phi2,
-        bus_next_state, bus_current_state, dotclk_cnt, bus_out_enable
+        n_roml, n_romh, n_io1, n_io2, n_wr, n_reset, clk, phi2,
+        ba, addr(15 downto 12),
+        bus_next_state, bus_current_state, bus_out_enable,
+        hrdet_next_state, hrdet_current_state
     );
 
     ---------------------------------------------------------------------------
     -- Double clock frequency
     ---------------------------------------------------------------------------
-    clk_out <= n_dotclk;
-    pad2 <= n_dotclk xor clk_in;
+    clk_out <= not n_dotclk;
+    clk <= n_dotclk xor clk_in;
 
     ---------------------------------------------------------------------------
     -- The stuff we don't use currently
@@ -191,7 +195,7 @@ begin
     n_dma <= 'Z';
     n_reset <= 'Z';
     n_mem_reset <= '1'; 
-    -- pad2 <= '1';
+    pad2 <= '1';
     pad3 <= '1';
     addr <= (others => 'Z');
 
@@ -200,12 +204,10 @@ begin
     ---------------------------------------------------------------------------
     kernal_space_addressed <= '1' when addr(15 downto 13) = "111" else '0';
 
-    kernal_space_read <= '1' when kernal_space_addressed = '1' and 
-        ba = '1' and n_wr = '1' 
-        else '0';
-
-    kernal_space_write <= '1' when kernal_space_addressed = '1' and n_wr = '0'  
-        else '0';
+    -- Note: Do not check BA here, since the CPU can also write in the first
+    -- cycles of BA = '0'
+    kernal_space_cpu_write <= '1' when kernal_space_addressed = '1' and 
+        n_wr = '0' else '0';
 
     io_dfff_addressed <= '1' when 
         n_io2 = '0' and addr(7 downto 0) = x"ff" else '0';
@@ -217,9 +219,9 @@ begin
     -- time. This is done to prevent detection of button presses while the
     -- circuit is powered up.
     ---------------------------------------------------------------------------
-    enable_buttons: process(n_dotclk)
+    enable_buttons: process(clk)
     begin
-        if rising_edge(n_dotclk) then
+        if rising_edge(clk) then
             if button_a = '0' and button_b = '0' and 
                button_c = '0' and button_d = '0' then
                 buttons_enabled <= '1';
@@ -231,9 +233,9 @@ begin
     -- Check the cartridge buttons. If one is pressed, reset the C64 and 
     -- activate the cartridge mode according to the buttons
     ---------------------------------------------------------------------------
-    switch_cartmode: process(n_dotclk)
+    switch_cartmode: process(clk)
     begin
-        if rising_edge(n_dotclk) then
+        if rising_edge(clk) then
             n_reset <= 'Z';
             freezer <= '0';
             
@@ -273,9 +275,9 @@ begin
     ---------------------------------------------------------------------------
     -- Set the state of the LED.
     ---------------------------------------------------------------------------
-    set_led: process(n_dotclk)
+    set_led: process(clk)
     begin
-        if rising_edge(n_dotclk) then
+        if rising_edge(clk) then
             n_led <= '1';
             if cart_mode = MODE_GEORAM then
                 n_led <= '0';
@@ -303,12 +305,12 @@ begin
     ---------------------------------------------------------------------------
     --
     ---------------------------------------------------------------------------
-    set_game_exrom_dma: process(n_dotclk, n_reset)
+    set_game_exrom_dma: process(clk, n_reset, cart_mode)
     begin
         if n_reset = '0' then
-            hiram_detection <= HRDET_STATE_IDLE;
             n_exrom  <= '1';
-            n_game  <= '1';
+            n_game   <= '1';
+            n_dma    <= '1';
 
             case cart_mode is
                 when MODE_EASYFLASH =>
@@ -321,9 +323,7 @@ begin
                 when others => null;
             end case;
 
-        elsif rising_edge(n_dotclk) then
-
-            n_dma   <= '1';            
+        elsif rising_edge(clk) then
 
             case cart_mode is
                     
@@ -340,26 +340,26 @@ begin
                     end if;
 
                 when MODE_KERNAL =>
-                    -- go to Ultimax mode when kernal is read
-                    if kernal_space_read = '1' and bus_next_state = BUS_READ_VALID then
-                        -- 16k mode (1 cycle)
-                        n_game <= '0';
-                        n_exrom <= '0';
-                        n_dma <= '0';
-                        hiram_detection <= HRDET_STATE_DETECT;
-                    elsif hiram_detection = HRDET_STATE_DETECT then
-                        -- Ultimax mode (2 cycles - this is the #1)
-                        n_game <= '0';
-                        n_exrom <= '1';
-                        hiram_detection <= HRDET_STATE_READ1;
-                    elsif hiram_detection = HRDET_STATE_READ1 then
-                        -- Ultimax mode (2 cycles - this is the #2)
-                        hiram_detection <= HRDET_STATE_READ2;
-                    else
-                        n_game <= '1';
-                        n_exrom <= '1';
-                        hiram_detection <= HRDET_STATE_IDLE;
-                    end if;
+                    -- HIRAM detection needed to distinguish RAM and ROM read
+                    -- refer to hrdet state machine comments
+                    case hrdet_next_state is
+                        when HRDET_STATE_IDLE =>
+                            n_dma <= '1';
+                            n_exrom <= '1';
+                            n_game <= '1';
+
+                        when HRDET_STATE_DMA =>
+                            n_dma <= '0';
+                            n_game <= '0';
+                            n_exrom <= '0';
+
+                        when HRDET_STATE_READ =>
+                            -- Ultimax mode
+                            n_dma <= '1';
+                            n_exrom <= '1';
+
+                        when others => null;
+                    end case;
 
                 when MODE_FC3 =>
                     if bus_next_state = BUS_WRITE_VALID and io_dfff_addressed = '1' then
@@ -378,7 +378,7 @@ begin
     ---------------------------------------------------------------------------
     --
     ---------------------------------------------------------------------------
-    set_nmi: process(n_dotclk, n_reset, cart_mode)
+    set_nmi: process(clk, n_reset, cart_mode)
     begin
         if n_reset = '0' then
             if cart_mode = MODE_FC3 then
@@ -386,7 +386,7 @@ begin
             else
                 n_nmi_i <= '1';
             end if;
-        elsif rising_edge(n_dotclk) then
+        elsif rising_edge(clk) then
             if cart_mode = MODE_FC3 then
                 if bus_next_state = BUS_WRITE_VALID and 
                    io_dfff_addressed = '1' then
@@ -406,27 +406,44 @@ begin
     ---------------------------------------------------------------------------
     -- Pull down A14 for Kernal mode (HIRAM detection)
     ---------------------------------------------------------------------------
-    prepare_pull_down_a14: process(n_dotclk)
+    pull_down_a14: process(clk)
     begin
-        if rising_edge(n_dotclk) then
+        if rising_edge(clk) then
             -- we put the CPU in DMA-mode, put 0xBxxx on address bus
-            if cart_mode = MODE_KERNAL and kernal_space_read = '1' and 
-               bus_next_state = BUS_READ_VALID then
+            if cart_mode = MODE_KERNAL and 
+               hrdet_next_state = HRDET_STATE_DETECT then
                 addr(14) <= '0';
             else
                 addr(14) <= 'Z';
             end if;
         end if;
-    end process prepare_pull_down_a14;
+    end process pull_down_a14;
 
     ---------------------------------------------------------------------------
     -- Put the addresses onto the memory address bus
     ---------------------------------------------------------------------------
-    prepare_mem_address: process(n_dotclk)
+    prepare_mem_address: process(clk)
     begin
-        if rising_edge(n_dotclk) then
-            if bus_next_state = BUS_READ_VALID or 
-               bus_next_state = BUS_WRITE_VALID then
+        if rising_edge(clk) then
+            
+            if cart_mode = MODE_KERNAL then
+                if hrdet_current_state = HRDET_STATE_DETECT then
+                    -- we did some preparations to detect HIRAM
+                    if n_romh = '0' then
+                        -- Prepare Kernal address in flash bank 0x44 (even if not needed)
+                        mem_addr(20 downto 8) <= x"44" & addr(12 downto 8);
+                    else
+                        -- read ram below rom
+                        mem_addr(20 downto 8) <= x"00" & addr(12 downto 8);
+                    end if;
+
+                elsif bus_next_state = BUS_WRITE_VALID then
+                    -- Write accesses always go to RAM
+                    mem_addr(20 downto 8) <= x"00" & addr(12 downto 8);
+                end if;            
+
+            elsif bus_next_state = BUS_READ_VALID or 
+                  bus_next_state = BUS_WRITE_VALID then
 
                 case cart_mode is
                     when MODE_GEORAM =>
@@ -447,7 +464,7 @@ begin
                             mem_addr(20 downto 8) <= 
                                 "1" & flash_bank & addr(12 downto 8);
                         end if;
-
+    
                     when MODE_FC3 =>
                         if n_roml = '0' then
                             -- Show current Flash bank at ROML or ROMH
@@ -460,25 +477,8 @@ begin
                             mem_addr(20 downto 8) <= 
                                 x"4" & "00" & flash_bank(1 downto 0) & addr(12 downto 8);
                         end if;
-
-                    when MODE_KERNAL =>
-                        if bus_next_state = BUS_WRITE_VALID then
-                            -- Write accesses always go to RAM
-                            mem_addr(20 downto 8) <= x"00" & addr(12 downto 8);
-                        end if;
-                        
                     when others => null;
                 end case;
-
-            elsif cart_mode = MODE_KERNAL and hiram_detection = HRDET_STATE_DETECT then
-                -- we did some preparations to detect HIRAM
-                if n_romh = '0' then
-                    -- Prepare Kernal address in flash bank 0x44 (even if not needed)
-                    mem_addr(20 downto 8) <= x"44" & addr(12 downto 8);
-                else
-                    -- read ram below rom
-                    mem_addr(20 downto 8) <= x"00" & addr(12 downto 8);
-                end if;
             end if;
         end if;
     end process prepare_mem_address;
@@ -500,7 +500,7 @@ begin
     ---------------------------------------------------------------------------
     -- Control lines for read/write from RAM or Flash
     ---------------------------------------------------------------------------
-    mem_control: process(n_dotclk, n_reset)
+    mem_control: process(clk, n_reset)
     begin
         if n_reset = '0' then
             n_flash_cs  <= '1';
@@ -508,7 +508,7 @@ begin
             n_mem_oe_i  <= '1';
             n_mem_wr    <= '1';
         
-        elsif rising_edge(n_dotclk) then
+        elsif rising_edge(clk) then
 
             case bus_next_state is
 
@@ -551,7 +551,7 @@ begin
                 when BUS_READ_COMPLETE =>
                     if cart_mode = MODE_KERNAL then
                         -- read kernal at 0xe000..0xffff
-                        if hiram_detection = HRDET_STATE_DETECT then
+                        if hrdet_current_state = HRDET_STATE_DETECT then
                             -- we did some preparations to detect HIRAM
                             if n_romh = '0' then
                                 -- read rom
@@ -582,7 +582,7 @@ begin
                             end if;
 
                         when MODE_KERNAL =>
-                            if kernal_space_write = '1' then
+                            if kernal_space_cpu_write = '1' then
                                 n_ram_cs <= '0';
                             end if;
 
@@ -604,7 +604,7 @@ begin
                             end if;
 
                         when MODE_KERNAL =>
-                            if kernal_space_write = '1' then
+                            if kernal_space_cpu_write = '1' then
                                 n_mem_wr <= '0';
                             end if;
 
@@ -628,11 +628,11 @@ begin
     -- In EasyFlash mode:
     --     RAM bank not used, always 0
     ---------------------------------------------------------------------------
-    set_ram_bank: process(n_dotclk, n_reset)
+    set_ram_bank: process(clk, n_reset)
     begin
         if n_reset = '0' then
             ram_bank <= (others => '0');
-        elsif rising_edge(n_dotclk) then
+        elsif rising_edge(clk) then
             if bus_next_state = BUS_WRITE_VALID then
                 case cart_mode is
                     when MODE_GEORAM =>
@@ -659,11 +659,11 @@ begin
     -- In EasyFlash mode:
     --     $de00 select flash bank 8 KiB block (i.e. bits 19 downto 13)
     ---------------------------------------------------------------------------
-    set_flash_bank: process(n_dotclk, n_reset)
+    set_flash_bank: process(clk, n_reset)
     begin
         if n_reset = '0' then
             flash_bank <= (others => '0');
-        elsif rising_edge(n_dotclk) then
+        elsif rising_edge(clk) then
             if bus_next_state = BUS_WRITE_VALID then
                 case cart_mode is
                     when MODE_EASYFLASH =>
