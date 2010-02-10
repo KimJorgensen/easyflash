@@ -70,24 +70,41 @@ void progressShow(void)
  */
 void progressUpdate(void)
 {
-    uint8_t  y = 17;
-    uint8_t  i;
-    uint8_t  line;
-    char*    p;
+    uint8_t nChip, nBank;
 
-    p = m_aBlockStates[0];
-    for (line = 2 * FLASH_NUM_BANKS / PROGRESS_BANKS_PER_LINE; line; --line)
+    for (nChip = 0; nChip < 2; ++nChip)
     {
-        gotoxy(6, y++);
-        for (i = PROGRESS_BANKS_PER_LINE; i; --i)
-            cputc(*p++);
+        for (nBank = 0; nBank < FLASH_NUM_BANKS; ++nBank)
+            progressUpdateBank(nChip, nBank);
     }
 }
 
 
 /******************************************************************************/
 /**
- * Set the state of a certain bank. The display is updated automatically.
+ * Update the value of a single bank in the progress display area.
+ *
+ */
+void __fastcall__ progressUpdateBank(uint8_t nChip, uint8_t nBank)
+{
+    uint8_t  x, y;
+
+    // when we have more physical banks than shown in the display =>
+    // use last visible bank
+    if (nBank >= FLASH_NUM_BANKS)
+        nBank = FLASH_NUM_BANKS - 1;
+
+    y = 17 + nChip * (FLASH_NUM_BANKS / PROGRESS_BANKS_PER_LINE) +
+        nBank / PROGRESS_BANKS_PER_LINE;
+    x = 6 + nBank % PROGRESS_BANKS_PER_LINE;
+
+    cputcxy(x, y, m_aBlockStates[nChip][nBank]);
+}
+
+
+/******************************************************************************/
+/**
+ * Set the state of a single bank. The display is updated automatically.
  */
 void __fastcall__ progressSetBankState(uint8_t nBank, uint8_t nChip,
                                        uint8_t state)
@@ -95,7 +112,7 @@ void __fastcall__ progressSetBankState(uint8_t nBank, uint8_t nChip,
     if ((nBank < FLASH_NUM_BANKS) && (nChip < 2))
     {
         m_aBlockStates[nChip][nBank] = state;
-        progressUpdate();
+        progressUpdateBank(nChip, nBank);
     }
 }
 
@@ -114,9 +131,9 @@ void __fastcall__ progressSetMultipleBanksState(uint8_t nBank, uint8_t nChip,
         if ((i < FLASH_NUM_BANKS) && (nChip < 2))
         {
             m_aBlockStates[nChip][i] = state;
+            progressUpdateBank(nChip, i);
         }
     }
-    progressUpdate();
 }
 
 
