@@ -36,8 +36,8 @@
 
 void progressInit(void);
 void progressShow(void);
-void progressUpdate(void);
-void __fastcall__ progressUpdateBank(uint8_t nChip, uint8_t nBank);
+void progressUpdateDisplay(void);
+void __fastcall__ progressDisplayBank(uint8_t nChip, uint8_t nBank);
 void __fastcall__ progressSetBankState(uint8_t nBank, uint8_t nChip,
                                        uint8_t state);
 void __fastcall__ progressSetMultipleBanksState(uint8_t nBank, uint8_t nChip,

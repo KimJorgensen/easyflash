@@ -35,7 +35,7 @@
 /* Static variables */
 
 // Array with the state of all banks on high and low flash.
-static char m_aBlockStates[2][FLASH_NUM_BANKS];
+static char m_aBlockStates[2][FLASH_MAX_NUM_BANKS];
 
 /******************************************************************************/
 /**
@@ -61,21 +61,21 @@ void progressShow(void)
 
     cputsxy(2, y, "Lo:");
     cputsxy(2, y + 2, "Hi:");
-    progressUpdate();
+    progressUpdateDisplay();
 }
 
 /******************************************************************************/
 /**
  * Update the progress display area, values only.
  */
-void progressUpdate(void)
+void progressUpdateDisplay(void)
 {
     uint8_t nChip, nBank;
 
     for (nChip = 0; nChip < 2; ++nChip)
     {
         for (nBank = 0; nBank < FLASH_NUM_BANKS; ++nBank)
-            progressUpdateBank(nChip, nBank);
+            progressDisplayBank(nChip, nBank);
     }
 }
 
@@ -85,14 +85,14 @@ void progressUpdate(void)
  * Update the value of a single bank in the progress display area.
  *
  */
-void __fastcall__ progressUpdateBank(uint8_t nChip, uint8_t nBank)
+void __fastcall__ progressDisplayBank(uint8_t nChip, uint8_t nBank)
 {
     uint8_t  x, y;
 
     // when we have more physical banks than shown in the display =>
     // use last visible bank
     if (nBank >= FLASH_NUM_BANKS)
-        nBank = FLASH_NUM_BANKS - 1;
+        return;
 
     y = 17 + nChip * (FLASH_NUM_BANKS / PROGRESS_BANKS_PER_LINE) +
         nBank / PROGRESS_BANKS_PER_LINE;
@@ -109,10 +109,10 @@ void __fastcall__ progressUpdateBank(uint8_t nChip, uint8_t nBank)
 void __fastcall__ progressSetBankState(uint8_t nBank, uint8_t nChip,
                                        uint8_t state)
 {
-    if ((nBank < FLASH_NUM_BANKS) && (nChip < 2))
+    if ((nBank < FLASH_MAX_NUM_BANKS) && (nChip < 2))
     {
         m_aBlockStates[nChip][nBank] = state;
-        progressUpdateBank(nChip, nBank);
+        progressDisplayBank(nChip, nBank);
     }
 }
 
@@ -125,13 +125,13 @@ void __fastcall__ progressSetMultipleBanksState(uint8_t nBank, uint8_t nChip,
                                                 uint8_t nBankCount,
                                                 uint8_t state)
 {
-    int i;
+    uint8_t i;
     for (i = nBank; i < nBank + nBankCount; ++i)
     {
-        if ((i < FLASH_NUM_BANKS) && (nChip < 2))
+        if ((i < FLASH_MAX_NUM_BANKS) && (nChip < 2))
         {
             m_aBlockStates[nChip][i] = state;
-            progressUpdateBank(nChip, i);
+            progressDisplayBank(nChip, i);
         }
     }
 }
@@ -143,7 +143,7 @@ void __fastcall__ progressSetMultipleBanksState(uint8_t nBank, uint8_t nChip,
  */
 uint8_t __fastcall__ progressGetStateAt(uint8_t nBank, uint8_t nChip)
 {
-    if ((nBank < FLASH_NUM_BANKS) && (nChip < 2))
+    if ((nBank < FLASH_MAX_NUM_BANKS) && (nChip < 2))
     {
         return m_aBlockStates[nChip][nBank];
     }

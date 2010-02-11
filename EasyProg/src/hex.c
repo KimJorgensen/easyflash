@@ -81,7 +81,7 @@ static void hexNextBank(void)
         nOffset = 0;
         nChip = 1;
     }
-    else if (nBank < FLASH_NUM_BANKS)
+    else if (nBank < FLASH_MAX_NUM_BANKS)
     {
         ++nBank;
         nChip = 0;
