@@ -2,7 +2,7 @@
 ifneq "$(release)" "yes"
 	version := $(shell date +%y%m%d-%H%M)
 else
-	version := 1.4.0
+	version := 1.4.3
 endif
 
 # do not remove intermediate targets
@@ -17,41 +17,30 @@ obj += obj/startupbin.o
 obj += obj/spritesasm.o
 obj += obj/exostreamdecr1.o
 obj += obj/utilasm.o
-
-optobj :=
-optobj += obj/easyprog.o
-optobj += obj/flash.o
-optobj += obj/cart.o
-optobj += obj/screen.o
-optobj += obj/progress.o
-optobj += obj/dir.o
-optobj += obj/filedlg.o
-optobj += obj/hex.o
-optobj += obj/buffer.o
-optobj += obj/torturetest.o
-optobj += obj/write.o
-optobj += obj/util.o
+obj += obj/easyprog.o
+obj += obj/flash.o
+obj += obj/cart.o
+obj += obj/screen.o
+obj += obj/progress.o
+obj += obj/dir.o
+obj += obj/filedlg.o
+obj += obj/hex.o
+obj += obj/buffer.o
+obj += obj/torturetest.o
+obj += obj/write.o
+obj += obj/util.o
 
 bin_acme :=
 bin_acme += obj/startup.bin
 bin_acme += obj/sprites.bin
 
-INCLUDE := include
+INCLUDE  := include
 
-DEFINE  := -DEFVERSION=\"${version}\"
+DEFINE   := -DEFVERSION=\"${version}\"
 
-
-# GLOPT65 := $(shell which glopt65)
-# GCAT65  := $(shell which gcat65)
-
-ifeq "$(GLOPT65)" ""
-	obj += $(optobj)
-	optobj :=
-	optasm :=
-else
-	obj += obj/easyprog.opt.o
-	optasm := $(optobj:.o=.s)
-endif
+eapi_dir := ../EasySDK/eapi
+eapi_src := $(eapi_dir)/eapi-am29f040-02
+eapi     := obj/eapi-am29f040-02
 
 .PHONY: all
 all: easyprog.prg
@@ -69,19 +58,15 @@ obj/%.o: obj/%.s obj
 	ca65 -t c64 -o $@ $<
 
 ###############################################################################
-obj/easyprog.all.s: $(optasm)
-	gcat65 --add-removed -v -o $@ $^
-
-###############################################################################
-obj/%.opt.s: obj/%.all.s obj
-	glopt65 -o $@ $<
-
-###############################################################################
 # the binaries created with acme are included in ca65 source code
-# therefore we need a dependency here
+# therefore we need a dependency here, and we need the built-in eapi
 #
-obj/%.o: src/%.s obj $(bin_acme)
+obj/%.o: src/%.s obj $(bin_acme) $(eapi)
 	ca65 -t c64 -o $@ $<
+
+$(eapi): obj
+	make -C $(eapi_dir)
+	cp $(eapi_src) obj
 
 ###############################################################################
 obj/%.bin: src/%.s obj

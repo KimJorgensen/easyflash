@@ -218,3 +218,22 @@ axtoxy:
         pla
         tax
         rts
+
+
+; =============================================================================
+;
+; Include fallback EAPI driver.
+;
+; =============================================================================
+.segment    "RODATA"
+.export _pFallbackDriverStart
+_pFallbackDriverStart:
+        .word fallbackDriverStart
+
+.export _pFallbackDriverEnd
+_pFallbackDriverEnd:
+        .word fallbackDriverEnd
+
+fallbackDriverStart = * + 2
+.incbin "obj/eapi-am29f040-02"
+fallbackDriverEnd:
