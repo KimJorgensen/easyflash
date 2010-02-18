@@ -27,6 +27,7 @@ device     := $(dev_type)-$(dev_pkg)-$(dev_speed)
 device_fit := $(dev_type)-$(dev_speed)-$(dev_pkg)
 
 fit_flags  := -p $(device_fit) -ofmt vhdl -log fitter.log -optimize density
+fit_flags  += -power low -slew slow
 fit_filter_output := "^CS: block property:\|^$$"
 
 # directories to be created

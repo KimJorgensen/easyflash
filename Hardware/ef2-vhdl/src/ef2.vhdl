@@ -275,15 +275,15 @@ begin
     ---------------------------------------------------------------------------
     -- Set the state of the LED.
     ---------------------------------------------------------------------------
-    set_led: process(clk)
-    begin
-        if rising_edge(clk) then
-            n_led <= '1';
-            if cart_mode = MODE_GEORAM then
-                n_led <= '0';
-            end if;
-        end if;
-    end process set_led;
+--    set_led: process(clk)
+  --  begin
+    --    if rising_edge(clk) then
+      --      n_led <= '1';
+        --    if cart_mode = MODE_GEORAM then
+          --      n_led <= '0';
+--            end if;
+  --      end if;
+    --end process set_led;
 
     ---------------------------------------------------------------------------
     -- Control the data bus of the expansion port. But it in high impedance
@@ -427,20 +427,15 @@ begin
         if rising_edge(clk) then
             
             if cart_mode = MODE_KERNAL then
-                if hrdet_current_state = HRDET_STATE_DETECT then
-                    -- we did some preparations to detect HIRAM
-                    if n_romh = '0' then
-                        -- Prepare Kernal address in flash bank 0x44 (even if not needed)
-                        mem_addr(20 downto 8) <= x"44" & addr(12 downto 8);
-                    else
-                        -- read ram below rom
-                        mem_addr(20 downto 8) <= x"00" & addr(12 downto 8);
-                    end if;
+                if hrdet_next_state = HRDET_STATE_DMA then
+                    -- Prepare read address, no matter if it will be 
+                    -- ROM or RAM: High address lines will work for both
+                    mem_addr(20 downto 8) <= x"44" & addr(12 downto 8);
 
                 elsif bus_next_state = BUS_WRITE_VALID then
-                    -- Write accesses always go to RAM
-                    mem_addr(20 downto 8) <= x"00" & addr(12 downto 8);
-                end if;            
+                    -- Write accesses always go to RAM, same address as above
+                    mem_addr(20 downto 8) <= x"44" & addr(12 downto 8);
+                end if;
 
             elsif bus_next_state = BUS_READ_VALID or 
                   bus_next_state = BUS_WRITE_VALID then
@@ -477,6 +472,7 @@ begin
                             mem_addr(20 downto 8) <= 
                                 x"4" & "00" & flash_bank(1 downto 0) & addr(12 downto 8);
                         end if;
+
                     when others => null;
                 end case;
             end if;
@@ -507,27 +503,51 @@ begin
             n_ram_cs    <= '1';
             n_mem_oe_i  <= '1';
             n_mem_wr    <= '1';
+            n_led       <= '1';
         
         elsif rising_edge(clk) then
 
-            case bus_next_state is
+            case cart_mode is
 
-                when BUS_IDLE =>
-                    n_flash_cs  <= '1';
-                    n_ram_cs    <= '1';
-                    n_mem_oe_i  <= '1';
-                    n_mem_wr    <= '1';
-
-                when BUS_READ_VALID =>
-                    case cart_mode is
-                        when MODE_GEORAM =>
+                when MODE_GEORAM =>
+                    case bus_next_state is
+                        when BUS_IDLE =>
+                            n_flash_cs  <= '1';
+                            n_ram_cs    <= '1';
+                            n_mem_oe_i  <= '1';
+                            n_mem_wr    <= '1';
+                            
+                        when BUS_READ_VALID =>
                             if n_io1 = '0' then
                                 -- Read RAM at $de00
                                 n_ram_cs   <= '0';
                                 n_mem_oe_i <= '0';
                             end if;
+            
+                        when BUS_WRITE_VALID =>
+                            if n_io1 = '0' then
+                                -- Write RAM at $de00
+                                n_ram_cs <= '0';
+                            end if;
 
-                        when MODE_EASYFLASH =>
+                        when BUS_WRITE_ENABLE =>
+                            if n_io1 = '0' then
+                                -- Write RAM at $de00
+                                n_mem_wr <= '0';
+                            end if;
+
+                        when others => null;
+                    end case;
+
+                when MODE_EASYFLASH =>
+                    case bus_next_state is
+                        when BUS_IDLE =>
+                            n_flash_cs  <= '1';
+                            n_ram_cs    <= '1';
+                            n_mem_oe_i  <= '1';
+                            n_mem_wr    <= '1';
+                            
+                        when BUS_READ_VALID =>
                             if n_io2 = '0' then
                                 -- Read RAM at $df00
                                 n_ram_cs   <= '0';
@@ -538,7 +558,33 @@ begin
                                 n_mem_oe_i <= '0';
                             end if;
 
-                        when MODE_FC3 =>
+                        when BUS_WRITE_VALID =>
+                            if n_io2 = '0' then
+                                -- Write RAM at $df00
+                                n_ram_cs <= '0';
+                            elsif n_roml = '0' or n_romh = '0' then
+                                -- Write FLASH at ROML/ROMH
+                                n_flash_cs <= '0';
+                            end if;
+            
+                        when BUS_WRITE_ENABLE =>
+                            if n_io2 = '0' or n_roml = '0' or n_romh = '0' then
+                                -- Write RAM at $df00 or FLASH at ROML/ROMH
+                                n_mem_wr <= '0';
+                            end if;
+
+                        when others => null;
+                    end case;
+
+                when MODE_FC3 =>
+                    case bus_next_state is
+                        when BUS_IDLE =>
+                            n_flash_cs  <= '1';
+                            n_ram_cs    <= '1';
+                            n_mem_oe_i  <= '1';
+                            n_mem_wr    <= '1';
+
+                        when BUS_READ_VALID =>
                             if cart_addressed = '1' then
                                 -- Read FLASH at ROML/ROMH/IO1/IO2
                                 n_flash_cs <= '0';
@@ -548,68 +594,41 @@ begin
                         when others => null;
                     end case;
 
-                when BUS_READ_COMPLETE =>
-                    if cart_mode = MODE_KERNAL then
-                        -- read kernal at 0xe000..0xffff
-                        if hrdet_current_state = HRDET_STATE_DETECT then
-                            -- we did some preparations to detect HIRAM
-                            if n_romh = '0' then
-                                -- read rom
-                                n_flash_cs <= '0';
-                            else
-                                -- read ram below rom
-                                n_ram_cs <= '0';
-                            end if;
-                            n_mem_oe_i <= '0';
+                when MODE_KERNAL =>
+                    -- read kernal at 0xe000..0xffff
+                    if hrdet_current_state = HRDET_STATE_DETECT then
+                        -- we did some preparations to detect HIRAM
+                        if n_romh = '0' then
+                            -- read rom
+                            n_flash_cs <= '0';
+                            n_led <= '1';
+                        else
+                            -- read ram below rom
+                            n_ram_cs <= '0';
+                            n_led <= '0';
                         end if;
+                        n_mem_oe_i <= '0';
+                    else
+                        case bus_next_state is
+                            when BUS_IDLE =>
+                                n_flash_cs  <= '1';
+                                n_ram_cs    <= '1';
+                                n_mem_oe_i  <= '1';
+                                n_mem_wr    <= '1';
+            
+                            when BUS_WRITE_VALID =>
+                                if kernal_space_cpu_write = '1' then
+                                    n_ram_cs <= '0';
+                                end if;
+    
+                            when BUS_WRITE_ENABLE =>
+                                if kernal_space_cpu_write = '1' then
+                                    n_mem_wr <= '0';
+                                end if;
+
+                            when others => null;
+                        end case;
                     end if;
-
-                when BUS_WRITE_VALID =>
-                    case cart_mode is
-                        when MODE_GEORAM =>
-                            if n_io1 = '0' then
-                                -- Write RAM at $de00
-                                n_ram_cs <= '0';
-                            end if;
-
-                        when MODE_EASYFLASH =>
-                            if n_io2 = '0' then
-                                -- Write RAM at $df00
-                                n_ram_cs <= '0';
-                            elsif n_roml = '0' or n_romh = '0' then
-                                -- Write FLASH at ROML/ROMH
-                                n_flash_cs <= '0';
-                            end if;
-
-                        when MODE_KERNAL =>
-                            if kernal_space_cpu_write = '1' then
-                                n_ram_cs <= '0';
-                            end if;
-
-                        when others => null;
-                    end case;
-
-                when BUS_WRITE_ENABLE =>
-                    case cart_mode is
-                        when MODE_GEORAM =>
-                            if n_io1 = '0' then
-                                -- Write RAM at $de00
-                                n_mem_wr <= '0';
-                            end if;
-
-                        when MODE_EASYFLASH =>
-                            if n_io2 = '0' or n_roml = '0' or n_romh = '0' then
-                                -- Write RAM at $df00 or FLASH at ROML/ROMH
-                                n_mem_wr <= '0';
-                            end if;
-
-                        when MODE_KERNAL =>
-                            if kernal_space_cpu_write = '1' then
-                                n_mem_wr <= '0';
-                            end if;
-
-                        when others => null;
-                    end case;
 
                 when others => null;
             end case;

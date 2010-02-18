@@ -134,10 +134,10 @@ architecture exp_bus_ctrl_arc of exp_bus_ctrl is
     -- next state of the hiram detection
     signal hrdet_next_state_i:      hiram_det_state_type;
 
-    -- count dotclk cycles in a phi2 cycle, 0 when falling edge of phi2 happens
+    -- count clk cycles in a phi2 cycle, 0 when falling edge of phi2 happens
     signal clk_cnt:                 std_logic_vector(3 downto 0);
 
-    -- Remember the state of phi2 on previous dotclk edge
+    -- Remember the state of phi2 on previous clk edge
     signal prev_phi2:               std_logic;
 
     -- This is '1' when the CPU addresses kernal space
@@ -158,24 +158,24 @@ begin
         else '0';
 
     ---------------------------------------------------------------------------
-    -- Count cycles of dotclock 0..7
+    -- Count cycles of clk 0..15
     --
     -- Our CPLD has async CLRs and we know that phi2 changes somewhere in the 
     -- middle between two rising edges of our clk. Therefore we reset the
     -- counter asynchronously when phi2 changes from 1 to 0.                      <= todo: update
     ---------------------------------------------------------------------------
-    dotclk_counter: process(clk, prev_phi2, phi2, clk_cnt)
+    clk_counter: process(clk, prev_phi2, phi2, clk_cnt)
     begin
         if prev_phi2 = '1' and phi2 = '0' and clk_cnt /= "000" then
             clk_cnt <= (others => '0');
         elsif rising_edge(clk) then
             clk_cnt <= clk_cnt + 1;
         end if;
-    end process dotclk_counter;
+    end process clk_counter;
 
     ---------------------------------------------------------------------------
-    -- Remember the phi2 state on each dotclk edge, used to synchronize
-    -- dotclk_cnt to phi2, see process dotclk_counter
+    -- Remember the phi2 state on each clk edge, used to synchronize
+    -- dotclk_cnt to phi2, see process clk_counter
     ---------------------------------------------------------------------------
     save_prev_phi2: process(clk)
     begin
@@ -186,7 +186,7 @@ begin
     
     ---------------------------------------------------------------------------
     -- Find out which state the expansion port bus will have on the *next*
-    -- dotclk edge. This is combinatoric logic.
+    -- clk edge. This is combinatoric logic.
     ---------------------------------------------------------------------------
     check_next_state : process(clk_cnt, n_wr, bus_current_state_i,
                                n_io1, n_io2, n_roml, n_romh)
@@ -287,36 +287,36 @@ begin
     --        -   -   -   -   -   -   -   -   -   -   -   -
     -- clk:  /6\ /7\ /8\ /9\ /A\ /B\ /C\ /D\ /E\ /F\ /0\ /1\ 
     --          -   -   -   -   -   -   -   -   -   -   -   
-    --           .       .       .       .       .       .
+    --           .       .   .   .   .   .       .       .
     --                --------------------------------
     -- phi2:         /XX/              CPU           \\
     --        ----------                              -----
-    --           .       .       .       .       .       .
-    --           .       .       .       .       .       .
+    --           .       .   .       .   .       .       .
+    --           .       .   .       .   .       .       .
     --           if RW is 1 and kernal addressed by CPU:
-    --        -------------------         -----------------
-    -- /DMA:                     \       /
-    --           .       .        -------
-    --           .       .       .   .   .       .       .
+    --        ---------------             -----------------
+    -- /DMA:                 \           /
+    --           .       .   .-----------        .       .
+    --           .       .   .       .   .       .       .
     --        -----------------------     -----------------
     --  A14:  XXXXXXXXXXXXXXXXXXXXXXX\   /XXXXXXXXXXXXXXXXX
     --        ---------------------------------------------
-    --           .       .       .   .   .       .       .
-    --        -------------------                         -
-    -- /GAME:                    \                       /                 
-    --           .       .        -----------------------
-    --           .       .       .   .   .       .       .
-    --        -------------------         -----------------
-    -- /EXROM:                   \       /
-    --           .       .        -------
-    --           .       .       .   .   .       .       .
+    --           .       .   .       .   .       .       .
+    --        ---------------                             -
+    -- /GAME:                \                           /                 
+    --           .       .   .---------------------------
+    --           .       .   .       .   .       .       .
+    --        ---------------             -----------------
+    -- /EXROM:               \           /
+    --           .       .   .-----------
+    --           .       .   .       .   .       .       .
     --        ------------------------- --- ---------------
     -- /ROMH:                          X   X
-    --                           .   .  ---              .
-    --                           .   .   .               .
-    --                           .   .   .               .
-    --                           X > X > X ==============>
-    --                         DMA Dtct Read           Idle
+    --                       .       .  ---              .
+    --                       .       .   .               .
+    --                       .       .   .               .
+    --                       x ====> X > X ==============>
+    --                      DMA     Dtct Read          Idle
     -- 
     ---------------------------------------------------------------------------
     check_hiram_detect_next_state : process(clk_cnt, 
@@ -325,14 +325,18 @@ begin
     begin
         case hrdet_current_state_i is
             when HRDET_STATE_IDLE =>
-                if clk_cnt = x"A" and kernal_space_cpu_read = '1' then                    
+                if clk_cnt = x"9" and kernal_space_cpu_read = '1' then                    
                     hrdet_next_state_i <= HRDET_STATE_DMA;
                 else
                     hrdet_next_state_i <= HRDET_STATE_IDLE;
                 end if;
 
             when HRDET_STATE_DMA =>
-                hrdet_next_state_i <= HRDET_STATE_DETECT;
+                if clk_cnt = x"b" then
+                    hrdet_next_state_i <= HRDET_STATE_DETECT;
+                else
+                    hrdet_next_state_i <= HRDET_STATE_DMA;
+                end if;                
 
             when HRDET_STATE_DETECT =>
                 hrdet_next_state_i <= HRDET_STATE_READ;
