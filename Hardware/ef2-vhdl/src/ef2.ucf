@@ -1,7 +1,5 @@
 
 
-NET "n_dotclk"      BUFG = CLK;
-
 NET "n_exrom"       LOC = "P1";
 NET "addr<15>"      LOC = "P2";
 NET "addr<14>"      LOC = "P3";
@@ -24,7 +22,7 @@ NET "data<6>"       LOC = "P19";
 NET "data<5>"       LOC = "P20";	
 
 NET "phi2"          LOC = "P22";
-NET "n_dotclk"      LOC = "P23";
+NET "n_dotclk"      LOC = "P23" | BUFG = CLK;
 NET "data<4>"       LOC = "P24";
 NET "addr<4>"       LOC = "P25";
 
@@ -98,48 +96,3 @@ NET "n_game"        LOC = "P97";
 
 NET "n_reset"       LOC = "P99";
 
-###############################################################################
-### Slew Rates
-###############################################################################
-
-NET "mem_addr<0>"   SLEW = SLOW;
-NET "mem_addr<1>"   SLEW = SLOW;
-NET "mem_addr<2>"   SLEW = SLOW;
-NET "mem_addr<3>"   SLEW = SLOW;
-NET "mem_addr<4>"   SLEW = SLOW;
-NET "mem_addr<5>"   SLEW = SLOW;
-NET "mem_addr<6>"   SLEW = SLOW;
-NET "mem_addr<7>"   SLEW = SLOW;
-NET "mem_addr<8>"   SLEW = SLOW;
-NET "mem_addr<9>"   SLEW = SLOW;
-NET "mem_addr<10>"  SLEW = SLOW;
-NET "mem_addr<11>"  SLEW = SLOW;
-NET "mem_addr<12>"  SLEW = SLOW;
-NET "mem_addr<13>"  SLEW = SLOW;
-NET "mem_addr<14>"  SLEW = SLOW;
-NET "mem_addr<15>"  SLEW = SLOW;
-NET "mem_addr<16>"  SLEW = SLOW;
-NET "mem_addr<17>"  SLEW = SLOW;
-NET "mem_addr<18>"  SLEW = SLOW;
-NET "mem_addr<19>"  SLEW = SLOW;
-NET "mem_addr<20>"  SLEW = SLOW;
-
-NET "mem_data<0>"   SLEW = SLOW;
-NET "mem_data<1>"   SLEW = SLOW;
-NET "mem_data<2>"   SLEW = SLOW;
-NET "mem_data<3>"   SLEW = SLOW;
-NET "mem_data<4>"   SLEW = SLOW;
-NET "mem_data<5>"   SLEW = SLOW;
-NET "mem_data<6>"   SLEW = SLOW;
-NET "mem_data<7>"   SLEW = SLOW;
-
-NET "data<0>"       SLEW = SLOW;
-NET "data<1>"       SLEW = SLOW;
-NET "data<2>"       SLEW = SLOW;
-NET "data<3>"       SLEW = SLOW;
-NET "data<4>"       SLEW = SLOW;
-NET "data<5>"       SLEW = SLOW;
-NET "data<6>"       SLEW = SLOW;
-NET "data<7>"       SLEW = SLOW;
-
-NET "clk_out"       SLEW = SLOW;
