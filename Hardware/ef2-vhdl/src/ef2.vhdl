@@ -131,6 +131,10 @@ architecture ef2_arc of ef2 is
 
     signal buttons_enabled:     std_logic := '0';
 
+    -- will be set to '1' as soon as romh went '0' after n_reset has been
+    -- released. This shows us that is is a C64 (or C64 mode of C128)
+    signal romh_seen:           std_logic;
+    
     -- at least one of the lines n_io1, n_io2, n_roml, n_romh is active
     signal cart_addressed: std_logic;
 
@@ -286,6 +290,25 @@ begin
     --end process set_led;
 
     ---------------------------------------------------------------------------
+    -- When the C128 starts, it must be kicked to the C64 mode by us. To do 
+    -- this, we pull down GAME (=> Ultimax mode) until it wants to read the
+    -- reset vector and therefore pulls down ROMH. This also works on the C64,
+    -- but there the first bus access leads to this behaviour already.
+    -- 
+    -- Here we remember if n_romh has been low after reset.
+    ---------------------------------------------------------------------------
+    check_romh_seen: process(clk, n_reset)
+    begin
+        if n_reset = '0' then
+            romh_seen <= '0';
+        elsif rising_edge(clk) then
+            if n_romh = '0' and bus_next_state = BUS_READ_VALID then
+                romh_seen <= '1';
+            end if;
+        end if;
+    end process check_romh_seen;
+
+    ---------------------------------------------------------------------------
     -- Control the data bus of the expansion port. But it in high impedance
     -- whenever there is no read access active from the expansion port.
     -- Otherwise route the right data to the port.
@@ -340,26 +363,33 @@ begin
                     end if;
 
                 when MODE_KERNAL =>
-                    -- HIRAM detection needed to distinguish RAM and ROM read
-                    -- refer to hrdet state machine comments
-                    case hrdet_next_state is
-                        when HRDET_STATE_IDLE =>
-                            n_dma <= '1';
-                            n_exrom <= '1';
-                            n_game <= '1';
+                    if romh_seen = '0' then
+                        -- keep n_game low until C128 went to C64 mode
+                        n_dma <= '1';
+                        n_exrom <= '1';
+                        n_game <= '0';
+                    else
+                       -- HIRAM detection needed to distinguish RAM and ROM read
+                        -- refer to hrdet state machine comments
+                        case hrdet_next_state is
+                            when HRDET_STATE_IDLE =>
+                                n_dma <= '1';
+                                n_game <= '1';
+                                n_exrom <= '1';
 
-                        when HRDET_STATE_DMA =>
-                            n_dma <= '0';
-                            n_game <= '0';
-                            n_exrom <= '0';
+                            when HRDET_STATE_DMA =>
+                                n_dma <= '0';
+                                n_game <= '0';
+                                n_exrom <= '0';
 
-                        when HRDET_STATE_READ =>
-                            -- Ultimax mode
-                            n_dma <= '1';
-                            n_exrom <= '1';
+                            when HRDET_STATE_READ =>
+                                -- Ultimax mode
+                                n_dma <= '1';
+                                n_exrom <= '1';
 
-                        when others => null;
-                    end case;
+                            when others => null;
+                        end case;
+                    end if;
 
                 when MODE_FC3 =>
                     if bus_next_state = BUS_WRITE_VALID and io_dfff_addressed = '1' then
@@ -425,7 +455,7 @@ begin
     prepare_mem_address: process(clk)
     begin
         if rising_edge(clk) then
-            
+
             if cart_mode = MODE_KERNAL then
                 if hrdet_next_state = HRDET_STATE_DMA then
                     -- Prepare read address, no matter if it will be 
@@ -504,7 +534,7 @@ begin
             n_mem_oe_i  <= '1';
             n_mem_wr    <= '1';
             n_led       <= '1';
-        
+
         elsif rising_edge(clk) then
 
             case cart_mode is
@@ -516,14 +546,14 @@ begin
                             n_ram_cs    <= '1';
                             n_mem_oe_i  <= '1';
                             n_mem_wr    <= '1';
-                            
+
                         when BUS_READ_VALID =>
                             if n_io1 = '0' then
                                 -- Read RAM at $de00
                                 n_ram_cs   <= '0';
                                 n_mem_oe_i <= '0';
                             end if;
-            
+
                         when BUS_WRITE_VALID =>
                             if n_io1 = '0' then
                                 -- Write RAM at $de00
@@ -546,7 +576,7 @@ begin
                             n_ram_cs    <= '1';
                             n_mem_oe_i  <= '1';
                             n_mem_wr    <= '1';
-                            
+
                         when BUS_READ_VALID =>
                             if n_io2 = '0' then
                                 -- Read RAM at $df00
@@ -566,7 +596,7 @@ begin
                                 -- Write FLASH at ROML/ROMH
                                 n_flash_cs <= '0';
                             end if;
-            
+
                         when BUS_WRITE_ENABLE =>
                             if n_io2 = '0' or n_roml = '0' or n_romh = '0' then
                                 -- Write RAM at $df00 or FLASH at ROML/ROMH
@@ -615,7 +645,7 @@ begin
                                 n_ram_cs    <= '1';
                                 n_mem_oe_i  <= '1';
                                 n_mem_wr    <= '1';
-            
+
                             when BUS_WRITE_VALID =>
                                 if kernal_space_cpu_write = '1' then
                                     n_ram_cs <= '0';
@@ -666,7 +696,7 @@ begin
                                 ram_bank(10 downto 6) <= data(4 downto 0);
                             end if;
                         end if;
-                
+
                     when others => null;
                 end case;
             end if;
