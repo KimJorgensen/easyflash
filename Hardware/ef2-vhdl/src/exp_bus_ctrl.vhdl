@@ -115,7 +115,7 @@ entity exp_bus_ctrl is
             bus_current_state:  out bus_state_type;
             bus_out_enable:     out std_logic;
             hrdet_next_state:   out hiram_det_state_type;
-            hrdet_current_state: out hiram_det_state_type            
+            hrdet_current_state: out hiram_det_state_type
     );
 end exp_bus_ctrl;
 
@@ -287,32 +287,32 @@ begin
     --        -   -   -   -   -   -   -   -   -   -   -   -
     -- clk:  /6\ /7\ /8\ /9\ /A\ /B\ /C\ /D\ /E\ /F\ /0\ /1\ 
     --          -   -   -   -   -   -   -   -   -   -   -   
-    --           .       .   .   .   .   .       .       .
+    --           .       .   .   .   .   .               .
     --                --------------------------------
     -- phi2:         /XX/              CPU           \\
     --        ----------                              -----
-    --           .       .   .       .   .       .       .
-    --           .       .   .       .   .       .       .
+    --           .       .   .       .   .               .
+    --           .       .   .       .   .               .
     --           if RW is 1 and kernal addressed by CPU:
     --        ---------------             -----------------
     -- /DMA:                 \           /
-    --           .       .   .-----------        .       .
-    --           .       .   .       .   .       .       .
+    --           .       .   .-----------                .
+    --           .       .   .       .   .               .
     --        -----------------------     -----------------
     --  A14:  XXXXXXXXXXXXXXXXXXXXXXX\   /XXXXXXXXXXXXXXXXX
     --        ---------------------------------------------
-    --           .       .   .       .   .       .       .
+    --           .       .   .       .   .               .
     --        ---------------                             -
     -- /GAME:                \                           /                 
     --           .       .   .---------------------------
-    --           .       .   .       .   .       .       .
+    --           .       .   .       .   .               .
     --        ---------------             -----------------
     -- /EXROM:               \           /
     --           .       .   .-----------
-    --           .       .   .       .   .       .       .
-    --        ------------------------- --- ---------------
-    -- /ROMH:                          X   X
-    --                       .       .  ---              .
+    --           .       .   .       .   .               .
+    --        ------------------------- --- ---
+    -- /ROMH:                          X   X   \           /
+    --                       .       .  ---     -----------
     --                       .       .   .               .
     --                       .       .   .               .
     --                       x ====> X > X ==============>
@@ -325,7 +325,7 @@ begin
     begin
         case hrdet_current_state_i is
             when HRDET_STATE_IDLE =>
-                if clk_cnt = x"9" and kernal_space_cpu_read = '1' then                    
+                if clk_cnt = x"9" and kernal_space_cpu_read = '1' then
                     hrdet_next_state_i <= HRDET_STATE_DMA;
                 else
                     hrdet_next_state_i <= HRDET_STATE_IDLE;
