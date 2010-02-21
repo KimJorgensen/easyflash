@@ -44,7 +44,7 @@ main:
             sta EASYFLASH_BANK
             lda $8000
             ldx $a000
-            ; and put them to the screen, we should see "A" and "B" there
+            ; and put them to the screen, we should see "C" and "D" there
             sta $0400 + 40
             stx $0401 + 40
 
@@ -54,7 +54,7 @@ lp2:
             jmp lp2
         }
 
-        ; fill the whole bank with value $00
+        ; fill the whole bank with value $ff
         !align $ffff, $a000, $ff
     }
 
