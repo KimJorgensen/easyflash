@@ -75,8 +75,7 @@ coldStart:
         lda #8
         sta $d016
 
-        ; Wait to make sure RESET is deasserted on all chips and write
-        ; to RAM to make sure it started up correctly (=> RAM datasheets)
+        ; write to RAM to make sure it starts up correctly (=> RAM datasheets)
 startWait:
         sta $0100, x
         dex
@@ -123,7 +122,7 @@ startUpCode:
             cmp #$e0
             bne kill    ; branch if one of these keys is pressed
 
-            ; same init stuff the kernel calls after reset
+            ; same init stuff the kernel calls after reset normally
             ldx #0
             stx $d016
             jsr $ff84   ; Initialise I/O
@@ -139,6 +138,14 @@ startUpCode:
 kill:
             lda #EASYFLASH_KILL
             sta EASYFLASH_CONTROL
+
+            ; Restore CIA registers to the state after (hard) reset
+            lda #0
+            sta $dc02       ; DDRA input again
+            sta $dc00       ; No row pulled down
+
+            sta $d015       ; disable sprites
+
             jmp ($fffc) ; reset
         }
 startUpEnd:
