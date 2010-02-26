@@ -1,28 +1,20 @@
 ;
 ; Startup code for cc65 (C64 16k CRT)
+; No IRQ support at the moment
 ;
 
         .export         _exit
         .export         __STARTUP__ : absolute = 1      ; Mark as startup
 
-        .import	        _main
+        .import _main
 
-;        .import         initlib, donelib, copydata
-;        .import         zerobss
-;	.import	   __INTERRUPTOR_COUNT__
-;	.import		__RAM_START__, __RAM_SIZE__	; Linker generated
+        .import initlib, donelib, copydata
+        .import zerobss
+        .import BSOUT
+        .import __RAM_START__, __RAM_SIZE__     ; Linker generated
 
-;	.include "zeropage.inc"
-;	.include "c64.inc"
-
-;	.export	_sv_irq_timer_counter, _sv_irq_dma_counter
-;	.export	_sv_nmi_counter
-
-.bss
-
-_sv_irq_dma_counter:    .byte 0
-_sv_irq_timer_counter:  .byte 0
-_sv_nmi_counter:        .byte 0
+        .include "zeropage.inc"
+        .include "c64.inc"
 
 ; ------------------------------------------------------------------------
 ; Place the startup code in a special segment.
@@ -45,7 +37,7 @@ _sv_nmi_counter:        .byte 0
 
 cold_start:
 reset:
-        ; same init stuff the kernel calls after reset normally
+        ; same init stuff the kernel calls after reset
         ldx #0
         stx $d016
         jsr $ff84   ; Initialise I/O
@@ -55,58 +47,24 @@ reset:
         jsr $ff8a   ; Restore Kernal Vectors
         jsr $ff81   ; Initialize screen editor
 
-;	jsr	zerobss
+        ; Switch to second charset
+        lda #14
+        jsr BSOUT
 
-	; initialize data
-;	jsr	copydata
+        jsr zerobss
+        jsr copydata
 
-;	lda	#>(__RAM_START__ + __RAM_SIZE__)
-;	sta	sp+1   		; Set argument stack ptr
-;	stz	sp              ; #<(__RAM_START__ + __RAM_SIZE__)
-;	jsr	initlib
-        jsr     _main
+        ; and here
+        ; Set argument stack ptr
+        lda #<(__RAM_START__ + __RAM_SIZE__)
+        sta sp
+        lda #>(__RAM_START__ + __RAM_SIZE__)
+        sta sp + 1
+
+        jsr initlib
+        jsr _main
 
 _exit:
-;        jsr     donelib
+        jsr donelib
 exit:
-        jmp     exit
-
-
-;.proc   irq
-;	pha
-;	lda	sv_irq_source
-;	and	#SV_IRQ_REQUEST_TIMER
-;	beq	not_timer
-;	lda	sv_timer_quit
-;	inc	_sv_irq_timer_counter
-;not_timer:
-;	lda	sv_irq_source
-;	and	#SV_IRQ_REQUEST_DMA
-;	beq	not_dma
-;	lda	sv_dma_quit
-;	inc	_sv_irq_dma_counter
-;not_dma:
-;	pla
-;	rti
-;.endproc
-
-;.proc   nmi
-;	inc	_sv_nmi_counter
-;	rti
-;.endproc
-
-; removing this segment gives only a warning
-;        .segment "FFF0"
-;.proc reset32kcode
-;        lda     #(6<<5)
-;        sta     sv_bank
-; now the 32kbyte image can reside in the top of 64kbyte, 128kbyte roms
-;        jmp     reset
-;.endproc
-
-;        .segment "VECTOR"
-
-;.word   nmi
-;.word   reset32kcode
-;.word   irq
-
+        jmp ($fffc) ; reset, mhhh
