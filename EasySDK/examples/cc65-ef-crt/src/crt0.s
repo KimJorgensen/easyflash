@@ -1,34 +1,26 @@
 ;
 ; Startup code for cc65 (C64 EasyFlash CRT)
+; No IRQ support at the moment
 ;
 
-        .export         _exit
-        .export         __STARTUP__ : absolute = 1      ; Mark as startup
+        .export _exit
+        .export __STARTUP__ : absolute = 1      ; Mark as startup
 
-        .import	        _main
+        .import _main
 
-;        .import         initlib, donelib, copydata
-;        .import         zerobss
-;	.import	   __INTERRUPTOR_COUNT__
-;	.import		__RAM_START__, __RAM_SIZE__	; Linker generated
+        .import initlib, donelib, copydata
+        .import zerobss
+        .import BSOUT
+        .import __RAM_START__, __RAM_SIZE__     ; Linker generated
 
-;	.include "zeropage.inc"
-;	.include "c64.inc"
-
-;	.export	_sv_irq_timer_counter, _sv_irq_dma_counter
-;	.export	_sv_nmi_counter
+        .include "zeropage.inc"
+        .include "c64.inc"
 
 EASYFLASH_BANK    = $DE00
 EASYFLASH_CONTROL = $DE02
 EASYFLASH_LED     = $80
 EASYFLASH_16K     = $07
 EASYFLASH_KILL    = $04
-
-.bss
-
-;_sv_irq_dma_counter:    .byte 0
-;_sv_irq_timer_counter:  .byte 0
-;_sv_nmi_counter:        .byte 0
 
 ; ------------------------------------------------------------------------
 ; Place the startup code in a special segment.
@@ -51,7 +43,7 @@ EASYFLASH_KILL    = $04
 
 cold_start:
 reset:
-        ; same init stuff the kernel calls after reset normally
+        ; same init stuff the kernel calls after reset
         ldx #0
         stx $d016
         jsr $ff84   ; Initialise I/O
@@ -61,45 +53,27 @@ reset:
         jsr $ff8a   ; Restore Kernal Vectors
         jsr $ff81   ; Initialize screen editor
 
-;	jsr	zerobss
+        ; Switch to second charset
+        lda #14
+        jsr BSOUT
 
-	; initialize data
-;	jsr	copydata
+        jsr zerobss
+        jsr copydata
 
-;	lda	#>(__RAM_START__ + __RAM_SIZE__)
-;	sta	sp+1   		; Set argument stack ptr
-;	stz	sp              ; #<(__RAM_START__ + __RAM_SIZE__)
-;	jsr	initlib
-        jsr     _main
+        ; and here
+        ; Set argument stack ptr
+        lda #<(__RAM_START__ + __RAM_SIZE__)
+        sta sp
+        lda #>(__RAM_START__ + __RAM_SIZE__)
+        sta sp + 1
+
+        jsr initlib
+        jsr _main
 
 _exit:
-;        jsr     donelib
+        jsr donelib
 exit:
-        jmp     exit
-
-
-;.proc   irq
-;	pha
-;	lda	sv_irq_source
-;	and	#SV_IRQ_REQUEST_TIMER
-;	beq	not_timer
-;	lda	sv_timer_quit
-;	inc	_sv_irq_timer_counter
-;not_timer:
-;	lda	sv_irq_source
-;	and	#SV_IRQ_REQUEST_DMA
-;	beq	not_dma
-;	lda	sv_dma_quit
-;	inc	_sv_irq_dma_counter
-;not_dma:
-;	pla
-;	rti
-;.endproc
-
-;.proc   nmi
-;	inc	_sv_nmi_counter
-;	rti
-;.endproc
+        jmp (reset_vector) ; reset, mhhh
 
 ; ------------------------------------------------------------------------
 ; This code is executed in Ultimax mode. It is called directly from the
@@ -166,27 +140,18 @@ trampoline:
         cmp #$e0
         bne kill    ; branch if one of these keys is pressed
 
-        ; same init stuff the kernel calls after reset
-        ldx #0
-        stx $d016
-        jsr $ff84   ; Initialise I/O
-
-        ; These may not be needed - depending on what you'll do
-        jsr $ff87   ; Initialise System Constants
-        jsr $ff8a   ; Restore Kernal Vectors
-        jsr $ff81   ; Initialize screen editor
-
         ; Branch to the normal start-up code
         jmp cold_start
 
 kill:
         lda #EASYFLASH_KILL
         sta EASYFLASH_CONTROL
-        jmp ($fffc) ; reset
+        jmp (reset_vector) ; reset
 trampoline_end:
 .endproc
 
         .segment "VECTORS"
-.word   0 ;nmi
+.word   0
+reset_vector:
 .word   ultimax_reset
 .word   0 ;irq
