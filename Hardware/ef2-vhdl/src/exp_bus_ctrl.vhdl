@@ -106,7 +106,7 @@ entity exp_bus_ctrl is
             n_io1:              in std_logic;
             n_io2:              in std_logic;
             n_wr:               in std_logic;
-            n_reset:            inout std_logic;
+            n_reset:            in std_logic;
             clk:                in std_logic;
             phi2:               in std_logic;
             ba:                 in std_logic;

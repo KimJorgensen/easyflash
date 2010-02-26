@@ -66,7 +66,7 @@ entity ef2 is
            n_wr:        in std_logic;
            n_irq:       in std_logic;
            n_nmi:       inout std_logic;
-           n_reset:     inout std_logic;
+           n_reset_io:  inout std_logic;
            n_dotclk:    in std_logic;
            phi2:        in std_logic;
            n_exrom:     out std_logic;
@@ -94,6 +94,9 @@ architecture ef2_arc of ef2 is
 
     -- This clock is about 16 MHz, double frequency of dotclock
     signal clk:                     std_logic;
+
+    -- This is a synchronized reset (in)
+    signal n_reset:                 std_logic;
     
     -- next state of the bus, detected combinatorically
     signal bus_next_state:          bus_state_type;
@@ -131,10 +134,6 @@ architecture ef2_arc of ef2 is
 
     signal buttons_enabled:     std_logic := '0';
 
-    -- will be set to '1' as soon as romh went '0' after n_reset has been
-    -- released. This shows us that is is a C64 (or C64 mode of C128)
-    signal romh_seen:           std_logic;
-    
     -- at least one of the lines n_io1, n_io2, n_roml, n_romh is active
     signal cart_addressed: std_logic;
 
@@ -162,7 +161,7 @@ architecture ef2_arc of ef2 is
             n_io1:      in std_logic;
             n_io2:      in std_logic;
             n_wr:       in std_logic;
-            n_reset:    inout std_logic;
+            n_reset:    in std_logic;
             clk:        in std_logic;
             phi2:       in std_logic;
             ba:         in std_logic;            
@@ -197,7 +196,6 @@ begin
     -- The stuff we don't use currently
     ---------------------------------------------------------------------------
     n_dma <= 'Z';
-    n_reset <= 'Z';
     n_mem_reset <= '1'; 
     pad2 <= '1';
     pad3 <= '1';
@@ -217,6 +215,16 @@ begin
         n_io2 = '0' and addr(7 downto 0) = x"ff" else '0';
 
     cart_addressed <= not (n_io1 and n_io2 and n_roml and n_romh);
+
+    ---------------------------------------------------------------------------
+    -- Synchronize reset
+    ---------------------------------------------------------------------------
+    synchronize_reset: process(clk)
+    begin
+        if rising_edge(clk) then
+            n_reset <= n_reset_io;
+        end if;
+    end process synchronize_reset;
 
     ---------------------------------------------------------------------------
     -- The buttons will be enabled after all buttons have been released one
@@ -240,30 +248,30 @@ begin
     switch_cartmode: process(clk)
     begin
         if rising_edge(clk) then
-            n_reset <= 'Z';
+            n_reset_io <= 'Z';
             freezer <= '0';
             
             if buttons_enabled = '1' then
                 if button_a = '1' then
                     cart_mode <= MODE_GEORAM;
-                    n_reset <= '0';
+                    n_reset_io <= '0';
 
                 elsif button_b = '1' then
                     cart_mode <= MODE_EASYFLASH;
                     easyflash_boot <= '1';
-                    n_reset <= '0';
+                    n_reset_io <= '0';
 
                 elsif button_c = '1' then
                     cart_mode <= MODE_KERNAL;
                     -- cart_mode <= MODE_FC3;
-                    n_reset <= '0';
+                    n_reset_io <= '0';
 
                 elsif button_d = '1' then
                     -- This button has a special function depending from mode
                     case cart_mode is
                         when MODE_EASYFLASH =>
                             easyflash_boot <= '0';
-                            n_reset <= '0';
+                            n_reset_io <= '0';
 
                         when MODE_FC3 =>
                             if ba = '1' then
@@ -289,24 +297,6 @@ begin
   --      end if;
     --end process set_led;
 
-    ---------------------------------------------------------------------------
-    -- When the C128 starts, it must be kicked to the C64 mode by us. To do 
-    -- this, we pull down GAME (=> Ultimax mode) until it wants to read the
-    -- reset vector and therefore pulls down ROMH. This also works on the C64,
-    -- but there the first bus access leads to this behaviour already.
-    -- 
-    -- Here we remember if n_romh has been low after reset.
-    ---------------------------------------------------------------------------
-    check_romh_seen: process(clk, n_reset)
-    begin
-        if n_reset = '0' then
-            romh_seen <= '0';
-        elsif rising_edge(clk) then
-            if n_romh = '0' and bus_next_state = BUS_READ_VALID then
-                romh_seen <= '1';
-            end if;
-        end if;
-    end process check_romh_seen;
 
     ---------------------------------------------------------------------------
     -- Control the data bus of the expansion port. But it in high impedance
@@ -363,33 +353,26 @@ begin
                     end if;
 
                 when MODE_KERNAL =>
-                    if romh_seen = '0' then
-                        -- keep n_game low until C128 went to C64 mode
-                        n_dma <= '1';
-                        n_exrom <= '1';
-                        n_game <= '0';
-                    else
-                       -- HIRAM detection needed to distinguish RAM and ROM read
-                        -- refer to hrdet state machine comments
-                        case hrdet_next_state is
-                            when HRDET_STATE_IDLE =>
-                                n_dma <= '1';
-                                n_game <= '1';
-                                n_exrom <= '1';
+                    -- HIRAM detection needed to distinguish RAM and ROM read
+                    -- refer to hrdet state machine comments
+                    case hrdet_next_state is
+                        when HRDET_STATE_IDLE =>
+                            n_dma <= '1';
+                            n_game <= '1';
+                            n_exrom <= '1';
 
-                            when HRDET_STATE_DMA =>
-                                n_dma <= '0';
-                                n_game <= '0';
-                                n_exrom <= '0';
+                        when HRDET_STATE_DMA =>
+                            n_dma <= '0';
+                            n_game <= '0';
+                            n_exrom <= '0';
 
-                            when HRDET_STATE_READ =>
-                                -- Ultimax mode
-                                n_dma <= '1';
-                                n_exrom <= '1';
+                        when HRDET_STATE_READ =>
+                            -- Ultimax mode
+                            n_dma <= '1';
+                            n_exrom <= '1';
 
-                            when others => null;
-                        end case;
-                    end if;
+                        when others => null;
+                    end case;
 
                 when MODE_FC3 =>
                     if bus_next_state = BUS_WRITE_VALID and io_dfff_addressed = '1' then

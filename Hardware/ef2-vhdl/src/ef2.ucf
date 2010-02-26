@@ -94,5 +94,5 @@ NET "n_nmi"         LOC = "P95";
 NET "n_io1"         LOC = "P96";
 NET "n_game"        LOC = "P97";
 
-NET "n_reset"       LOC = "P99";
+NET "n_reset_io"    LOC = "P99";
 
