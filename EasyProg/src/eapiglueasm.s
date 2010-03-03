@@ -12,17 +12,10 @@ EAPIWriteFlash      = $dfe0 + 0
 EAPIEraseSector     = $dfe0 + 3
 EAPISetBank         = $dfe0 + 6
 EAPIGetBank         = $dfe0 + 9
-EAPINumBanks        = $dfd8         ; 2 bytes lo/hi
 
 ; =============================================================================
 ;
-; Read Manufacturer ID and Device ID from the flash chip(s)
-; and check if this chip is supported by this driver.
-; Prepare our private RAM for the other functions of the driver.
-; When this function returns, EasyFlash will be configured to bank in the ROM
-; area at $8000..$bfff.
-;
-; This function calls SEI/CLI.
+; (refer to EasyAPI documentation)
 ;
 ; uint16_t __fastcall__ eapiInit(uint8_t* pManufacturerId, uint8_t* pDeviceId)
 ;
@@ -44,6 +37,7 @@ _eapiInit:
 
         jsr EAPIInit
 
+        sty tmp1
         ldy #0
         sta (ptr2),y    ; Device ID
         txa
@@ -54,8 +48,8 @@ _eapiInit:
         tax
         rts
 eiOK:
-        lda EAPINumBanks
-        ldx EAPINumBanks + 1
+        lda tmp1
+        ldx #0
         rts
 
 
@@ -69,17 +63,13 @@ eiOK:
 ;       -
 ;
 ; return:
-;       bank in AX (A = low, 0..63)
+;       bank in AX (A = low)
 ;
 ; =============================================================================
 .export _eapiGetBank
 _eapiGetBank:
-        jsr EAPIGetBank ; XY registers are 16 bit bank
-        txa
-        pha
-        tya
-        tax
-        pla
+        jsr EAPIGetBank
+        ldx #0
         rts
 
 ; =============================================================================
@@ -90,7 +80,7 @@ _eapiGetBank:
 ; void __fastcall__ eapiSetBank(uint8_t nBank);
 ;
 ; parameters:
-;       bank in A (0..63)
+;       bank in A
 ;
 ; return:
 ;       -
@@ -98,8 +88,6 @@ _eapiGetBank:
 ; =============================================================================
 .export _eapiSetBank
 _eapiSetBank:
-        tax
-        ldy #0      ; XY registers are 16 bit bank
         jmp EAPISetBank
 
 ; =============================================================================
@@ -117,7 +105,13 @@ _eapiSetBank:
 ; =============================================================================
 .export _eapiSectorErase
 _eapiSectorErase:
-        jsr axtoxy
+        ; ax to xy
+        pha
+        txa
+        tay
+        pla
+        tax
+
         jsr EAPIEraseSector
         lda #0
         tax
@@ -148,7 +142,12 @@ _eapiWriteFlash:
 
         ; get address
         jsr popax
-        jsr axtoxy
+        ; ax to xy
+        pha
+        txa
+        tay
+        pla
+        tax
 
         pla
 
@@ -182,7 +181,12 @@ _eapiGlueWriteBlock:
 
         ; get address
         jsr popax
-        jsr axtoxy
+        ; ax to xy
+        pha
+        txa
+        tay
+        pla
+        tax
 
 wbNext:
         lda $1000, x        ; will be modified
@@ -206,19 +210,6 @@ wbError:
         txa
         ldx #0
         rts
-
-
-; =============================================================================
-; Helper: Move register pair AX to XY
-; =============================================================================
-axtoxy:
-        pha
-        txa
-        tay
-        pla
-        tax
-        rts
-
 
 ; =============================================================================
 ;
