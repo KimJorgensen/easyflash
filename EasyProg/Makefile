@@ -64,7 +64,13 @@ obj/%.o: obj/%.s obj
 obj/%.o: src/%.s obj $(bin_acme) $(eapi)
 	ca65 -t c64 -o $@ $<
 
-$(eapi): obj
+###############################################################################
+# Always build eapi and copy it here
+#
+.PHONY: always
+always:
+
+$(eapi): always
 	make -C $(eapi_dir)
 	cp $(eapi_src) obj
 
