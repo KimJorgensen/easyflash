@@ -1,7 +1,7 @@
 ;
 ; EasyFlash
 ;
-; (c) 2009 Thomas 'skoe' Giesel
+; (c) 2009-2010 Thomas 'skoe' Giesel
 ;
 ; This software is provided 'as-is', without any express or implied
 ; warranty.  In no event will the authors be held liable for any damages
@@ -41,10 +41,10 @@ EASYFLASH_IO_BIT_LED    = $80
 FLASH_ALG_ERROR_BIT     = $20
 
 ; There's a pointer to our code base
-EAPI_ZP_REAL_CODE_BASE  = $4b
+EAPI_ZP_INIT_CODE_BASE  = $4b
 
 ; hardware dependend values
-M29W160ET_NUM_BANKS     = 64 ; fixme
+M29W160ET_NUM_BANKS     = 128
 M29W160ET_MFR_ID        = $20
 M29W160ET_DEV_ID        = $c4
 
@@ -53,8 +53,7 @@ EAPI_RAM_CODE           = $df80 ; 80 bytes
 EAPI_TMP_VAL1           = $dfd0
 EAPI_TMP_VAL2           = $dfd1
 EAPI_TMP_VAL3           = $dfd2
-EAPI_SHADOW_BANK        = $dfd6 ; copy of bank number set by the user, 2 bytes
-EAPI_NUM_BANKS          = $dfd8 ; total number of banks, 2 bytes
+EAPI_SHADOW_BANK        = $dfd3 ; copy of bank number set by the user, 2 bytes
 
 ; space for 4 * JMP xxxx = 12 bytes
 EAPI_NUM_FNS            = 4
@@ -63,15 +62,17 @@ EAPI_JUMP_TABLE         = $dfe0
 * = $c000 - 2
 
         ; PRG start address
-        !byte $00, $c0
+        !word $c000
 EAPICodeBase:
 
         !byte $65, $61, $70, $69        ; signature "EAPI"
 
-        !pet "M29F160ET V0.1"
+        !pet "M29F160ET V0.2"
         !byte 0, 0                      ; 16 bytes, must be 0-terminated
 
 ; =============================================================================
+;
+; EAPIInit: User API: To be called with JSR <load_address> + 20
 ;
 ; Read Manufacturer ID and Device ID from the flash chip(s) and check if this
 ; chip is supported by this driver. Prepare our private RAM for the other
@@ -79,7 +80,8 @@ EAPICodeBase:
 ; When this function returns, EasyFlash will be configured to bank in the ROM
 ; area at $8000..$bfff.
 ;
-; This function calls SEI/CLI.
+; This function calls SEI and restores all Flags except C before it returns.
+; Do not call it with D-flag set. $01 must enable both ROM areas.
 ;
 ; parameters:
 ;       -
@@ -89,73 +91,161 @@ EAPICodeBase:
 ;       If C ist clear:
 ;       A   Device ID
 ;       X   Manufacturer ID
-;       EAPI_NUM_BANKS = Number of banks (currently 64)
+;       Y   Number of physical banks (64 for Am29F040)
 ; changes:
 ;       all registers are changed
 ;
 ; =============================================================================
 EAPIInit:
+        php
+        sei
+        ; backup ZP space
+        lda EAPI_ZP_INIT_CODE_BASE
+        pha
+        lda EAPI_ZP_INIT_CODE_BASE + 1
+        pha
+
+        ; find out our memory address
+        lda #$60        ; rts
+        sta EAPI_RAM_CODE
+        jsr EAPI_RAM_CODE
+initCodeBase = * - 1
+        tsx
+        lda $100, x
+        sta EAPI_ZP_INIT_CODE_BASE + 1
+        dex
+        lda $100, x
+        sta EAPI_ZP_INIT_CODE_BASE
+        clc
+        bcc initContinue
+
+RAMCode:
+        ; This code will be copied to EasyFlash RAM at EAPI_RAM_CODE
+        !pseudopc EAPI_RAM_CODE {
+; =============================================================================
+;
+; Internal function
+;
+; 1. Turn on Ultimax mode and LED
+; 2. Write byte to address
+; 3. Turn off Ultimax mode and LED
+;    (show 16k of current bank at $8000..$BFFF)
+;
+; Remember that the address must be based on $8000 for LOROM or
+; $E000 for HIROM! Der caller may want to SEI.
+;
+; Parameters:
+;           A   Value
+;           XY  Address (X = low)
+; Changes:
+;           X
+;
+; =============================================================================
+ultimaxWrite:
+            stx uwDest
+            sty uwDest + 1
+            ; /GAME low, /EXROM high, LED on
+            ldx #EASYFLASH_IO_BIT_MEMCTRL | EASYFLASH_IO_BIT_GAME | EASYFLASH_IO_BIT_LED
+            stx EASYFLASH_IO_CONTROL
+uwDest = * + 1
+            sta $ffff           ; will be modified
+
+            ; /GAME low, /EXROM low, LED off
+            ldx #EASYFLASH_IO_BIT_MEMCTRL | EASYFLASH_IO_BIT_GAME | EASYFLASH_IO_BIT_EXROM
+            stx EASYFLASH_IO_CONTROL
+            rts
+
+; =============================================================================
+;
+; Internal function
+;
+; Set bank 0, send command cycles 1 and 2.
+;
+; =============================================================================
+prepareWrite:
+            ; select bank 0
+            lda #0
+            sta EASYFLASH_IO_BANK
+
+            ; cycle 1: write $AA to $AAA
+            ldx #<$8aaa
+            ldy #>$8aaa
+            lda #$aa
+            jsr ultimaxWrite
+
+            ; cycle 2: write $55 to $555
+            ldx #<$8555
+            ldy #>$8555
+            lda #$55
+            jmp ultimaxWrite
+        } ; end pseudopc
+RAMCodeEnd:
+
+!if RAMCodeEnd - RAMCode > 80 {
+    !error "Code too large"
+}
+
+initContinue:
         ; *** copy some code to EasyFlash private RAM ***
         ; length of data to be copied
-        ldx #CopyToRAMCodeEnd - CopyToRAMCode - 1
-        ; offset of last byte to be copied
-        ldy #CopyToRAMCodeEnd - EAPICodeBase - 1 - 256
-        ; this code is at the end of our code, add 256 bytes to the pointer
-        inc EAPI_ZP_REAL_CODE_BASE + 1
+        ldx #RAMCodeEnd - RAMCode - 1
+        ; offset behind initCodeBase of last byte to be copied
+        ldy #RAMCode - initCodeBase + RAMCodeEnd - RAMCode - 1
 cidCopyCode:
-        lda (EAPI_ZP_REAL_CODE_BASE),y
-        sta EAPI_RAM_CODE,x
-        cmp EAPI_RAM_CODE,x
+        lda (EAPI_ZP_INIT_CODE_BASE),y
+        sta EAPI_RAM_CODE, x
+        cmp EAPI_RAM_CODE, x
         bne ciNotSupportedNoReset   ; check if there's really RAM at this address
         dey
         dex
         bpl cidCopyCode
 
-        ; restore original value
-        dec EAPI_ZP_REAL_CODE_BASE + 1
-
         ; *** fill the jump table with the opcode of JMP ***
-        ldx #EAPI_NUM_FNS * 3
+        ldx #EAPI_NUM_FNS * 3 - 1
         lda #$4c
 cidFillJMP:
-        sta EAPI_JUMP_TABLE - 1, x
+        sta EAPI_JUMP_TABLE, x
         dex
-        bne cidFillJMP
+        bpl cidFillJMP
 
         ; *** calculate jump table ***
         clc
-        lda #<EAPIWriteFlash - EAPICodeBase
-        adc EAPI_ZP_REAL_CODE_BASE
+        lda #<EAPIWriteFlash - initCodeBase
+        adc EAPI_ZP_INIT_CODE_BASE
         sta EAPI_JUMP_TABLE + 1 + 0 * 3
-        lda #>EAPIWriteFlash - EAPICodeBase
-        adc EAPI_ZP_REAL_CODE_BASE + 1
+        lda #>EAPIWriteFlash - initCodeBase
+        adc EAPI_ZP_INIT_CODE_BASE + 1
         sta EAPI_JUMP_TABLE + 2 + 0 * 3
 
         ;clc
-        lda #<EAPIEraseSector - EAPICodeBase
-        adc EAPI_ZP_REAL_CODE_BASE
+        lda #<EAPIEraseSector - initCodeBase
+        adc EAPI_ZP_INIT_CODE_BASE
         sta EAPI_JUMP_TABLE + 1 + 1 * 3
-        lda #>EAPIEraseSector - EAPICodeBase
-        adc EAPI_ZP_REAL_CODE_BASE + 1
+        lda #>EAPIEraseSector - initCodeBase
+        adc EAPI_ZP_INIT_CODE_BASE + 1
         sta EAPI_JUMP_TABLE + 2 + 1 * 3
 
         ;clc
-        lda #<EAPISetBank - EAPICodeBase
-        adc EAPI_ZP_REAL_CODE_BASE
+        lda #<EAPISetBank - initCodeBase
+        adc EAPI_ZP_INIT_CODE_BASE
         sta EAPI_JUMP_TABLE + 1 + 2 * 3
-        lda #>EAPISetBank - EAPICodeBase
-        adc EAPI_ZP_REAL_CODE_BASE + 1
+        lda #>EAPISetBank - initCodeBase
+        adc EAPI_ZP_INIT_CODE_BASE + 1
         sta EAPI_JUMP_TABLE + 2 + 2 * 3
 
         ;clc
-        lda #<EAPIGetBank - EAPICodeBase
-        adc EAPI_ZP_REAL_CODE_BASE
+        lda #<EAPIGetBank - initCodeBase
+        adc EAPI_ZP_INIT_CODE_BASE
         sta EAPI_JUMP_TABLE + 1 + 3 * 3
-        lda #>EAPIGetBank - EAPICodeBase
-        adc EAPI_ZP_REAL_CODE_BASE + 1
+        lda #>EAPIGetBank - initCodeBase
+        adc EAPI_ZP_INIT_CODE_BASE + 1
         sta EAPI_JUMP_TABLE + 2 + 3 * 3
 
-        sei
+        ; restore the caller's ZP state
+        pla
+        sta EAPI_ZP_INIT_CODE_BASE + 1
+        pla
+        sta EAPI_ZP_INIT_CODE_BASE
 
         ;clc
         bcc ciSkip
@@ -168,7 +258,6 @@ ciNotSupported:
         bcs resetAndReturn
 
 ciSkip:
-
         ; check for M29F160ET
         jsr prepareWrite
 
@@ -197,28 +286,32 @@ ciSkip:
         cmp #M29W160ET_DEV_ID
         bne ciNotSupported
 
+        ; everything okay
         clc
 
 resetAndReturn:
+        ; reset flash chip: write $F0 to any address
         ; ldx #<$8000 - don't care
         ldy #>$8000
         lda #$f0
         jsr ultimaxWrite
 returnOnly:
-        cli
-
-        lda #M29W160ET_NUM_BANKS
-        sta EAPI_NUM_BANKS
-        lda #0
-        sta EAPI_NUM_BANKS + 1
-
         lda EAPI_TMP_VAL2       ; device in A
         ldx EAPI_TMP_VAL1       ; manufacturer in X
+        ldy #M29W160ET_NUM_BANKS ; number of banks in Y
 
+        bcs returnCSet
+        plp
+        clc
+        rts
+returnCSet:
+        plp
+        sec
         rts
 
-
 ; =============================================================================
+;
+; EAPIWriteFlash: User API: To be called with JSR EAPI_JUMP_TABLE
 ;
 ; Write a byte to the given address. The address must be as seen in Ultimax
 ; mode, i.e. do not use the base addresses $8000 or $a000 but $8000 or $e000.
@@ -227,8 +320,9 @@ returnOnly:
 ; contain a '0'. Trying to change memory bits from '0' to '1' will result in
 ; an error. You must erase a memory block to get '1' bits.
 ;
-; This function calls SEI/CLI. It can only be used after having called
-; EAPIInit.
+; This function calls SEI and restores all Flags except C before it returns.
+; Do not call it with D-flag set. $01 must enable the affected ROM area.
+; It can only be used after having called EAPIInit.
 ;
 ; parameters:
 ;       A   value
@@ -245,6 +339,7 @@ EAPIWriteFlash:
         sta EAPI_TMP_VAL1
         stx EAPI_TMP_VAL2
         sty EAPI_TMP_VAL3
+        php
         sei
 
         jsr prepareWrite
@@ -266,7 +361,6 @@ EAPIWriteFlash:
         jsr ultimaxWrite
 
         ; that's it
-        cli
 
 checkProgress:
         lda $8000
@@ -287,10 +381,12 @@ cpDifferent:
         lda #$f0
         jsr ultimaxWrite
 
+        plp
         sec ; error
         bcs ret
 
 retOk:
+        plp
         clc
 ret:
         lda EAPI_TMP_VAL1
@@ -306,9 +402,11 @@ ret:
 ; =============================================================================
 
 checkProgress2:
-        bcc checkProgress
+        beq checkProgress ; always
 
 ; =============================================================================
+;
+; EAPIEraseSector: User API: To be called with JSR EAPI_JUMP_TABLE + 3
 ;
 ; Erase the sector at the given address. The bank number currently set and the
 ; address together must point to the first byte of a 64 kByte sector.
@@ -321,8 +419,9 @@ checkProgress2:
 ; in the LOROM chip when $8000 is used or in the HIROM chip when $e000 is
 ; used.
 ;
-; This function calls SEI/CLI. It can only be used after having called
-; EAPIInit.
+; This function calls SEI and restores all flags except C before it returns.
+; Do not call it with D-flag set. $01 must enable the affected ROM area.
+; It can only be used after having called EAPIInit.
 ;
 ; parameters:
 ;       XY  base address (X = low), $8000 or $E000
@@ -339,6 +438,7 @@ EAPIEraseSector:
         sta EAPI_TMP_VAL1
         stx EAPI_TMP_VAL2
         sty EAPI_TMP_VAL3
+        php
         sei
 
         jsr prepareWrite
@@ -378,11 +478,11 @@ sewait:
         bne sewait
 
         ; (Y is unchanged after ldy)
-        cli
-        clc
-        bcc checkProgress2
+        beq checkProgress2 ; always
 
 ; =============================================================================
+;
+; EAPISetBank: User API: To be called with JSR EAPI_JUMP_TABLE + 6
 ;
 ; Set the bank. This will take effect immediately for read access and will be
 ; used for the next write and erase commands.
@@ -390,7 +490,7 @@ sewait:
 ; This function can only be used after having called EAPIInit.
 ;
 ; parameters:
-;       bank in XY (X = low, currently 0..63; Y = high, currently 0)
+;       bank in A
 ;
 ; return:
 ;       -
@@ -400,12 +500,14 @@ sewait:
 ;
 ; =============================================================================
 EAPISetBank:
-        stx EAPI_SHADOW_BANK
-        stx EASYFLASH_IO_BANK
+        sta EAPI_SHADOW_BANK
+        sta EASYFLASH_IO_BANK
         rts
 
 
 ; =============================================================================
+;
+; EAPIGetBank: User API: To be called with JSR EAPI_JUMP_TABLE + 9
 ;
 ; Get the selected bank which has been set with EAPISetBank.
 ; Note that the current bank number can not be read back using the hardware
@@ -417,74 +519,13 @@ EAPISetBank:
 ;       -
 ;
 ; return:
-;       bank in XY (X = low, currently 0..63; Y = high, currently 0)
+;       bank in A
 ;
 ; changes:
 ;       -
 ;
 ; =============================================================================
 EAPIGetBank:
-        ldx EAPI_SHADOW_BANK
-        ldy #0
+        lda EAPI_SHADOW_BANK
         rts
 
-; =============================================================================
-;
-; 1. Turn on Ultimax mode and LED
-; 2. Write byte to address
-; 3. Turn off Ultimax mode and LED
-;    (show 16k of current bank at $8000..$BFFF)
-;
-; Remember that the address must be based on $8000 for LOROM or
-; $E000 for HIROM! Der caller may want to SEI.
-;
-; Parameters:
-;           A   Value
-;           XY  Address (X = low)
-; Changes:
-;           X
-;
-; =============================================================================
-CopyToRAMCode:
-        !pseudopc EAPI_RAM_CODE {
-ultimaxWrite:
-            stx uwDest
-            sty uwDest + 1
-            ; /GAME low, /EXROM high, LED on
-            ldx #EASYFLASH_IO_BIT_MEMCTRL | EASYFLASH_IO_BIT_GAME | EASYFLASH_IO_BIT_LED
-            stx EASYFLASH_IO_CONTROL
-uwDest = * + 1
-            sta $ffff           ; will be modified
-
-            ; /GAME low, /EXROM low, LED off
-            ldx #EASYFLASH_IO_BIT_MEMCTRL | EASYFLASH_IO_BIT_GAME | EASYFLASH_IO_BIT_EXROM
-            stx EASYFLASH_IO_CONTROL
-            rts
-
-; =============================================================================
-;
-; Set bank 0, send command cycles 1 and 2.
-;
-; =============================================================================
-prepareWrite:
-            ; select bank 0
-            lda #0
-            sta EASYFLASH_IO_BANK
-
-            ; cycle 1: write $AA to $AAA
-            ldx #<$8aaa
-            ldy #>$8aaa
-            lda #$aa
-            jsr ultimaxWrite
-
-            ; cycle 2: write $55 to $555
-            ldx #<$8555
-            ldy #>$8555
-            lda #$55
-            jmp ultimaxWrite
-        } ; end pseudopc
-CopyToRAMCodeEnd:
-
-!if CopyToRAMCodeEnd - CopyToRAMCode > 80 {
-    !error "Code too large"
-}
