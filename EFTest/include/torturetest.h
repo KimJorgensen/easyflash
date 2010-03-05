@@ -6,17 +6,9 @@
 
 void __fastcall__ tortureTestFillBuffer(const uint8_t* pBuffer,
                                         const EasyFlashAddr* pAddr);
-uint16_t __fastcall__ tortureTestBanking(void);
-uint16_t __fastcall__ tortureTestCompare(const uint8_t* pBuffer,
-                                         const EasyFlashAddr* pAddr);
-uint8_t __fastcall__ tortureTestCheckRAM(void);
-uint8_t* __fastcall__ tortureTestVerifyFlash(uint8_t* pFlash, uint8_t* pRAM);
-void flashCodeRAMLoop(void);
-
-void tortureTest(void);
-uint8_t __fastcall__  flashCodeTestRead(void);
-void ultimaxWrite(void);
 
 void kernalRamTest(void);
+void kernalRamRead(void);
+void kernalRamWriteCompare(void);
 
 #endif /* TORTURETEST_H_ */

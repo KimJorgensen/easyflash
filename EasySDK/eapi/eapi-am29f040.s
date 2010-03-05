@@ -53,16 +53,18 @@ EAPI_RAM_CODE           = $df80 ; 80 bytes
 EAPI_TMP_VAL1           = $dfd0
 EAPI_TMP_VAL2           = $dfd1
 EAPI_TMP_VAL3           = $dfd2
-EAPI_SHADOW_BANK        = $dfd6 ; copy of current bank number set by the user
+EAPI_SHADOW_BANK        = $dfd3 ; copy of current bank number set by the user
 
 ; space for 4 * JMP xxxx = 12 bytes
 EAPI_NUM_FNS            = 4
 EAPI_JUMP_TABLE         = $dfe0
 
+
 * = $c000 - 2
 
         ; PRG start address
-        !byte $00, $c0
+        !word $c000
+
 EAPICodeBase:
 
         !byte $65, $61, $70, $69        ; signature "EAPI"
@@ -80,7 +82,8 @@ EAPICodeBase:
 ; When this function returns, EasyFlash will be configured to bank in the ROM
 ; area at $8000..$bfff.
 ;
-; This function calls SEI and restores the I-Flag before it returns.
+; This function calls SEI and restores all Flags except C before it returns.
+; Do not call it with D-flag set. $01 must enable both ROM areas.
 ;
 ; parameters:
 ;       -
@@ -140,6 +143,12 @@ RAMCode:
 ;           X
 ;
 ; =============================================================================
+ultimaxWrite55XXAA:
+            lda #$55
+            ldx #$aa
+            bne ultimaxWrite
+ultimaxWriteXX55:
+            ldx #$55
 ultimaxWrite:
             stx uwDest
             sty uwDest + 1
@@ -168,16 +177,13 @@ prepareWriteLow:
             sta EASYFLASH_IO_BANK
 
             ; cycle 1: write $AA to $555
-            ldx #<$8555
             ldy #>$8555
             lda #$aa
-            jsr ultimaxWrite
+            jsr ultimaxWriteXX55
 
             ; cycle 2: write $55 to $2AA
-            ldx #<$82aa
             ldy #>$82aa
-            lda #$55
-            jmp ultimaxWrite
+            jmp ultimaxWrite55XXAA
 
 
 ; =============================================================================
@@ -194,16 +200,13 @@ prepareWriteHigh:
             sta EASYFLASH_IO_BANK
 
             ; cycle 1: write $AA to $555
-            ldx #<$e555
             ldy #>$e555
             lda #$aa
-            jsr ultimaxWrite
+            jsr ultimaxWriteXX55
 
             ; cycle 2: write $55 to $2AA
-            ldx #<$e2aa
             ldy #>$e2aa
-            lda #$55
-            jmp ultimaxWrite
+            jmp ultimaxWrite55XXAA
         } ; end pseudopc
 RAMCodeEnd:
 
@@ -227,12 +230,12 @@ cidCopyCode:
         bpl cidCopyCode
 
         ; *** fill the jump table with the opcode of JMP ***
-        ldx #EAPI_NUM_FNS * 3
+        ldx #EAPI_NUM_FNS * 3 - 1
         lda #$4c
 cidFillJMP:
-        sta EAPI_JUMP_TABLE - 1, x
+        sta EAPI_JUMP_TABLE, x
         dex
-        bne cidFillJMP
+        bpl cidFillJMP
 
         ; *** calculate jump table ***
         clc
@@ -289,10 +292,9 @@ ciSkip:
         jsr prepareWriteHigh
 
         ; cycle 3: write $90 to $555
-        ldx #<$e555
         ldy #>$e555
         lda #$90
-        jsr ultimaxWrite
+        jsr ultimaxWriteXX55
 
         ; offset 0: Manufacturer ID (we're on bank 0)
         lda $a000
@@ -306,10 +308,9 @@ ciSkip:
         jsr prepareWriteLow
 
         ; cycle 3: write $90 to $555
-        ldx #<$8555
         ldy #>$8555
         lda #$90
-        jsr ultimaxWrite
+        jsr ultimaxWriteXX55
 
         ; offset 0: Manufacturer ID (we're on bank 0)
         ldx $8000
@@ -368,8 +369,9 @@ returnCSet:
 ; contain a '0'. Trying to change memory bits from '0' to '1' will result in
 ; an error. You must erase a memory block to get '1' bits.
 ;
-; This function calls SEI/CLI. It can only be used after having called
-; EAPIInit.
+; This function calls SEI and restores all Flags except C before it returns.
+; Do not call it with D-flag set. $01 must enable the affected ROM area.
+; It can only be used after having called EAPIInit.
 ;
 ; parameters:
 ;       A   value
@@ -396,7 +398,6 @@ EAPIWriteFlash:
         jsr prepareWriteHigh
 
         ; cycle 3: write $A0 to $555
-        ldx #<$e555
         ldy #>$e555
         bne write_common    ; always
 
@@ -404,12 +405,11 @@ writeLow:
         jsr prepareWriteLow
 
         ; cycle 3: write $A0 to $555
-        ldx #<$8555
         ldy #>$8555
 
 write_common:
         lda #$a0
-        jsr ultimaxWrite
+        jsr ultimaxWriteXX55
 
         ; now we have to activate the right bank
         lda EAPI_SHADOW_BANK
@@ -490,7 +490,7 @@ ret:
 ; =============================================================================
 
 checkProgress2:
-        bcc checkProgress
+        beq checkProgress ; always
 
 ; =============================================================================
 ;
@@ -507,8 +507,9 @@ checkProgress2:
 ; in the LOROM chip when $8000 is used or in the HIROM chip when $e000 is
 ; used.
 ;
-; This function calls SEI/CLI. It can only be used after having called
-; EAPIInit.
+; This function calls SEI and restores all flags except C before it returns.
+; Do not call it with D-flag set. $01 must enable the affected ROM area.
+; It can only be used after having called EAPIInit.
 ;
 ; parameters:
 ;       XY  base address (X = low), $8000 or $E000
@@ -535,19 +536,16 @@ EAPIEraseSector:
         jsr prepareWriteHigh
 
         ; cycle 3: write $80 to $555
-        ldx #<$e555
         ldy #>$e555
         lda #$80
-        jsr ultimaxWrite
+        jsr ultimaxWriteXX55
 
         ; cycle 4: write $AA to $555
-        ldx #<$e555
-        ldy #>$e555
+        ; ldy #>$e555 <= unchanged
         lda #$aa
-        jsr ultimaxWrite
+        jsr ultimaxWriteXX55
 
         ; cycle 5: write $55 to $2AA
-        ldx #<$e2aa
         ldy #>$e2aa
         bne secommon    ; always
 
@@ -555,24 +553,20 @@ selow:
         jsr prepareWriteLow
 
         ; cycle 3: write $80 to $555
-        ldx #<$8555
         ldy #>$8555
         lda #$80
-        jsr ultimaxWrite
+        jsr ultimaxWriteXX55
 
         ; cycle 4: write $AA to $555
-        ldx #<$8555
-        ldy #>$8555
+        ; ldy #>$8555 <= unchanged
         lda #$aa
-        jsr ultimaxWrite
+        jsr ultimaxWriteXX55
 
         ; cycle 5: write $55 to $2AA
-        ldx #<$82aa
         ldy #>$82aa
 
 secommon:
-        lda #$55
-        jsr ultimaxWrite
+        jsr ultimaxWrite55XXAA
 
         ; activate the right bank
         lda EAPI_SHADOW_BANK
@@ -591,8 +585,7 @@ sewait:
         bne sewait
 
         ; (Y is unchanged after ldy)
-        clc
-        bcc checkProgress2
+        beq checkProgress2 ; always
 
 ; =============================================================================
 ;
