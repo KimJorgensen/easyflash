@@ -1,5 +1,5 @@
 
-EAPI := eapi-am29f040-03 eapi-m29w160t-01
+EAPI := eapi-am29f040-03 eapi-m29w160t-02
 
 .PHONY: all
 all: test.prg $(EAPI)
@@ -8,7 +8,7 @@ all: test.prg $(EAPI)
 eapi-am29f040-03: eapi-am29f040.s
 	acme -o $@ $<
 
-eapi-m29w160t-01: eapi-m29w160t.s
+eapi-m29w160t-02: eapi-m29w160t.s
 	acme -o $@ $<
 
 ###############################################################################
