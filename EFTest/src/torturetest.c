@@ -25,42 +25,83 @@
 #include <conio.h>
 #include <string.h>
 #include <stdio.h>
+#include <string.h>
+#include <stdint.h>
+#include <6502.h>
 
 #include "screen.h"
 #include "texts.h"
 #include "eftest.h"
 #include "torturetest.h"
+#include "buffer.h"
 
-/*
- * The cartridge test works like this:
- * - Each bank (8 KiB) is filled with a special pattern:
- *   2k bank number
- *   2k 0xaa
- *   2k 0x55
- *   1k 0x00 - 0xff (repeated)
- *   1k 0xff - 0x00 (repeated)
- */
+#define KERNAL_ADDR ((uint8_t*)0xe000)
+#define KERNAL_SIZE 0x2000
 
-// static because my heap doesn't work yet
-// The buffer must always be 256 bytes long
-static uint8_t buffer[256];
+static char strDetails[41];
 
-void tortureTest(void)
+
+
+static void testKernalCreatePattern(uint8_t nTestLoop)
 {
-    uint16_t rv;
+    uint16_t offset;
+    for (offset = 0; offset < KERNAL_SIZE; ++offset)
+    {
+        BUFFER_TEST_PATTERN_ADDR[offset] =
+                offset + nTestLoop - (offset >> 8);
+    }
+}
 
-    screenPrintSimpleDialog(apStrTestEndless);
-    refreshMainScreen();
-    setStatus("Testing...");
+static uint8_t kernalCompare(uint8_t* p1, uint8_t* p2)
+{
+    uint16_t offset;
+    for (offset = 0; offset < KERNAL_SIZE; ++offset)
+    {
+        if (*p1 != *p2)
+        {
+            sprintf(strDetails, "at offset $%04x: 0x%02x != 0x%02x",
+                    offset, *p1, *p2);
+            return 1;
+        }
+        ++p1;
+        ++p2;
+    }
+    return 0;
+}
+
+
+void kernalRamTest(void)
+{
+    uint8_t nTestLoop;
+
+    strDetails[0] = '\0';
+    memcpy(BUFFER_KERNAL_COPY_ADDR, KERNAL_ADDR, KERNAL_SIZE);
+    nTestLoop = 0;
+    SEI();
 
     for (;;)
     {
-    	*(uint8_t*)0xd020 = COLOR_FOREGROUND;
-    	*(uint8_t*)0xd020 = COLOR_BACKGROUND;
-        if (!tortureTestCheckRAM())
-        {
-            screenPrintSimpleDialog(apStrBadRAM);
-            return;
-        }
+        bufferHideLowROM();
+        setStatusLine("Create test pattern");
+        testKernalCreatePattern(nTestLoop);
+
+        setStatusLine("Check real Kernal");
+        if (kernalCompare(BUFFER_KERNAL_COPY_ADDR, KERNAL_ADDR))
+            goto error;
+
+        setStatusLine("Copy test pattern");
+        memcpy(KERNAL_ADDR, BUFFER_TEST_PATTERN_ADDR, KERNAL_SIZE);
+
+        setStatusLine("Check test pattern");
+        bufferHideAllROMs();
+        if (kernalCompare(BUFFER_TEST_PATTERN_ADDR, KERNAL_ADDR))
+            goto error;
+
+        ++nTestLoop;
     }
+
+error:
+    bufferShowAllROMs();
+    CLI();
+    screenPrintTwoLinesDialog("Test failed", strDetails);
 }

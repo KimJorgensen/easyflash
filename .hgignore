@@ -13,6 +13,11 @@ a.out
 *.crt
 *.orig
 
+# Eclipse
+.csettings
+.cproject
+.project
+
 EasyProg/easyprog
 
 EasyLoader/build/*

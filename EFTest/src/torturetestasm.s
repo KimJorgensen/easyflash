@@ -45,259 +45,41 @@ EASYFLASH_ULTIMAX = $05
 EASYFLASH_8K      = $06
 EASYFLASH_16K     = $07
 
-
 ; =============================================================================
 ;
-; Check if the 256 bytes of RAM at $DF00 are okay.
-;
-; Return 1 for success, 0 for error
-; uint8_t __fastcall__ tortureTestCheckRAM(void);
-;
-; parameters:
-;       base in AX (A = low), $8000 or $A000
-;
-; return:
-;       result in AX (A = low), 1 = okay, 0 = error
-;
 ; =============================================================================
-.export _tortureTestCheckRAM
-.proc   _tortureTestCheckRAM
-_flashCodeCheckRAM:
-
-;		sei
-;		lda #EASYFLASH_ULTIMAX
-;		sta EASYFLASH_CONTROL
-
-        ; write 0..255
-        ldx #0
-l1:
-        txa
-        sta $df00, x
-        dex
-        bne l1
-        ; check 0..255
-l2:
-        txa
-        cmp $df00, x
-        bne ret_err
-        dex
-        bne l2
-
-        ; write $55
-        lda #$55
-l3:
-        sta $df00, x
-        dex
-        bne l3
-        ; check $55
-l4:
-        cmp $df00, x
-        bne ret_err
-        dex
-        bne l4
-
-        ; write $AA
-        lda #$AA
-l5:
-        sta $df00, x
-        dex
-        bne l5
-        ; check $AA
-l6:
-        cmp $df00, x
-        bne ret_err
-        dex
-        bne l6  ; x = 0
-
-		lda #EASYFLASH_KILL
-		sta EASYFLASH_CONTROL
-		cli
-        lda #1
-        rts
-ret_err:
-		lda #EASYFLASH_KILL
-		sta EASYFLASH_CONTROL
-		cli
-        lda #0
-        tax
-        rts
-.endproc
-
-.export _flashCodeRAMLoop
-.proc   _flashCodeRAMLoop
-_flashCodeRAMLoop:
-		sei
-		lda #0
-		sta $d011
-		lda #$55
-da:
-		sta $df00
-		sta $df00
-		sta $df00
-		sta $df00
-		sta $df00
-		sta $df00
-		sta $df00
-		sta $df00
-		sta $df00
-		sta $df00
-		sta $df00
-		sta $df00
-		sta $df00
-		sta $df00
-		sta $df00
-		sta $df00
-		sta $df00
-		sta $df00
-		sta $df00
-		sta $df00
-		sta $df00
-		sta $df00
-		sta $df00
-		sta $df00
-		sta $df00
-		sta $df00
-		sta $df00
-		sta $df00
-		sta $df00
-		sta $df00
-		sta $df00
-		sta $df00
-		sta $df00
-		sta $df00
-		sta $df00
-		sta $df00
-		sta $df00
-		sta $df00
-		sta $df00
-		sta $df00
-		sta $df00
-		sta $df00
-		sta $df00
-		sta $df00
-		sta $df00
-		jmp da
-.endproc
-
-
-
-.export _flashCodeTestRead
-.proc   _flashCodeTestRead
-_flashCodeTestRead:
-        ; write 0..255
-        ldx #0
-l1:
-        txa
-        sta $df00, x
-        dex
-        bne l1
-
-testRead:
-		dec $d020
-        ldx #0
-        ; check 0..255
-l2:
-        txa
-        cmp $df00, x
-        bne ret_err
-        dex
-        bne l2
-		beq testRead
-ret_err:
-		lda #EASYFLASH_KILL
-		sta EASYFLASH_CONTROL
-		cli
-        lda #0
-        tax
-        rts
-.endproc
-
-.export _ultimaxWrite
-.proc   _ultimaxWrite
-_ultimaxWrite:
-        sei
-
-        lda #EASYFLASH_ULTIMAX
-        sta EASYFLASH_CONTROL
-
-        lda #0
-        sta $d011
-        lda #$55
-        ldx #$aa
-uw1:
-        sta $8000
-        stx $8001
-        sta $8000
-        stx $8001
-        sta $8000
-        stx $8001
-        sta $8000
-        stx $8001
-        sta $8000
-        stx $8001
-        sta $8000
-        stx $8001
-        sta $8000
-        stx $8001
-        sta $8000
-        stx $8001
-        sta $8000
-        stx $8001
-        sta $8000
-        stx $8001
-        sta $8000
-        stx $8001
-        sta $8000
-        stx $8001
-        sta $8000
-        stx $8001
-        sta $8000
-        stx $8001
-        sta $8000
-        stx $8001
-        sta $8000
-        stx $8001
-        nop
-        jmp uw2     ; 8 cycles
-uw2:
-        jmp uw1
-.endproc
-
-
-
-.export _kernalRamTest
-.proc   _kernalRamTest
-_kernalRamTest:
+.export _kernalRamRead
+_kernalRamRead:
+    clc
     sei
-
-    lda $e00a
-    sta $0400 + 15 * 40 + 5
-    lda #$55
-    sta $0400 + 15 * 40 + 6
-    lda #$0f
-    sta $0400 + 15 * 40 + 7
-
-krt:
-    lda #$36
-    sta $01
-
-    lda $e00a
-    sta $0400 + 16 * 40 + 5
-
-    lda #$55
-    sta $e00a
-
     lda #$35
     sta $01
-
-    lda $e00a
-    sta $0400 + 16 * 40 + 6
-
-    lda #$0f
-    sta $e00a
-    lda $e00a
-    sta $0400 + 16 * 40 + 7
-
+    lda #$55
+    sta $e123
+krr:
+    lda $e123
+    cmp #$55
+    beq krr
     dec $d020
-    jmp krt
-.endproc
+    bcc krr
+
+.export _kernalRamWriteCompare
+_kernalRamWriteCompare:
+    clc
+    sei
+    lda #$35
+    sta $01
+rwc_start:
+    lda #$55
+    sta $e100
+    cmp $e100
+    bne rwc_err
+    lda #$aa
+    sta $e100
+    cmp $e100
+    bne rwc_err
+    jmp rwc_start
+rwc_err:
+    dec $d020
+    jmp rwc_start
+

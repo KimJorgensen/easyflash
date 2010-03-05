@@ -11,11 +11,10 @@ endif
 obj :=
 obj += obj/texts.o
 obj += obj/torturetestasm.o
-
-optobj :=
-optobj += obj/eftest.o
-optobj += obj/screen.o
-optobj += obj/torturetest.o
+obj += obj/eftest.o
+obj += obj/screen.o
+obj += obj/torturetest.o
+obj += obj/buffer.o
 
 bin_acme :=
 
@@ -23,18 +22,6 @@ INCLUDE := include
 
 DEFINE  := -DEFVERSION=\"${version}\"
 
-
-# GLOPT65 := $(shell which glopt65)
-# GCAT65  := $(shell which gcat65)
-
-ifeq "$(GLOPT65)" ""
-	obj += $(optobj)
-	optobj :=
-	optasm :=
-else
-	obj += obj/eftest.opt.o
-	optasm := $(optobj:.o=.s)
-endif
 
 .PHONY: all
 all: eftest.prg
@@ -50,14 +37,6 @@ obj/%.s: src/%.c obj $(headers)
 ###############################################################################
 obj/%.o: obj/%.s obj
 	ca65 -t c64 -o $@ $<
-
-###############################################################################
-obj/eftest.all.s: $(optasm)
-	gcat65 --add-removed -v -o $@ $^
-
-###############################################################################
-obj/%.opt.s: obj/%.all.s obj
-	glopt65 -o $@ $<
 
 ###############################################################################
 # the binaries created with acme are included in ca65 source code

@@ -43,6 +43,7 @@
 static void showAbout(void);
 static uint8_t returnTrue(void);
 static void uploadImage(void);
+static void writeD64(void);
 
 /******************************************************************************/
 
@@ -65,18 +66,33 @@ static const char* apStrUploadComplete[] =
         NULL
 };
 
+/* Numbers of sectors per track */
+static const uint8_t num_sectors[41] = {
+    0,                              // no track 0
+    21, 21, 21, 21, 21, 21, 21, 21, // 1..8
+    21, 21, 21, 21, 21, 21, 21, 21, // 9..16
+    21, 19, 19, 19, 19, 19, 19, 19, // 17..24
+    18, 18, 18, 18, 18, 18, 17, 17, // 25..32
+    17, 17, 17, 17, 17, 17, 17, 17  // 33..40
+};
+
 /******************************************************************************/
 
 ScreenMenuEntry aMainMenuEntries[] =
 {
         {
-            "Upload RAW image",
+            "RAW image => GeoRAM",
             uploadImage,
             returnTrue
         },
         {
-            "Upload EasySplit image",
+            "EasySplit image => GeoRAM",
             uploadImage,
+            returnTrue
+        },
+        {
+            "D64 => 1541",
+            writeD64,
             returnTrue
         },
         {
@@ -202,6 +218,53 @@ static void uploadImage(void)
     while (rv != OPEN_FILE_OK);
 
     refreshMainScreen();
+    setStatus("Uploading file");
+
+
+    nPage = 0;
+    for (;;)
+    {
+        BankLo = (nPage & 0x3f);
+        BankHi = (nPage >> 6) & 0xff;
+
+        nBytes = utilRead(RamPage, 0x100);
+        if (!nBytes)
+            break;
+
+        nPage++;
+        strcpy(utilStr, "Page ");
+        utilAppendDecimal(nPage);
+        strcpy(strStatus, utilStr);
+        refreshStatusLine();
+    }
+
+    utilCloseFile();
+    screenPrintSimpleDialog(apStrUploadComplete);
+}
+
+
+/******************************************************************************/
+/**
+ * Write a D64 file to 1541.
+ */
+static void writeD64(void)
+{
+    uint8_t  rv;
+
+
+    do
+    {
+        rv = fileDlg(strFileName, "D64");
+        if (!rv)
+            return;
+
+        rv = utilOpenFile(fileDlgGetDriveNumber(), strFileName);
+        if (rv == 1)
+            screenPrintSimpleDialog(apStrFileOpenError);
+    }
+    while (rv != OPEN_FILE_OK);
+
+    refreshMainScreen();
     setStatus("Checking file");
 
 
@@ -225,6 +288,7 @@ static void uploadImage(void)
     utilCloseFile();
     screenPrintSimpleDialog(apStrUploadComplete);
 }
+
 
 /******************************************************************************/
 /**

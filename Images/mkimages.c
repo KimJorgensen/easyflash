@@ -4,13 +4,16 @@
 #include <stdlib.h>
 #include "cart.h"
 
-static const char* ef2_crt_name = "ef2-multi-crt.crt";
+static const char* ef2_crt_name = "ef2-multi.crt";
 
+static unsigned char buff[1024 * 1024];
 static FILE*    fp;
 static size_t   crt_size;
 
-#define FC3_BASE_BANK           0x40
-#define EXOS_KERNAL_BASE_BANK   0x44
+#define MENU_BASE_BANK          0 
+// 0x3F
+#define FC3_BASE_BANK           0x38
+#define EXOS_KERNAL_BASE_BANK   0x3E
 
 /******************************************************************************/
 /*
@@ -86,7 +89,6 @@ static int writeChipHeader(unsigned nBank, unsigned nAddr,
 static int writeFC3(void)
 {
     FILE* fpIn;
-    char buff[64 * 1024];
     int bank;
 
     fpIn = fopen("fc3-1988.bin", "rb");
@@ -123,7 +125,6 @@ static int writeFC3(void)
 static int writeEXOS(void)
 {
     FILE* fpIn;
-    char buff[8 * 1024];
 
     fpIn = fopen("exos.bin", "rb");
     if (fpIn == NULL)
@@ -149,6 +150,38 @@ static int writeEXOS(void)
 }
 
 /******************************************************************************/
+/**
+ * Read the Menu binary image and write it to the CRT file.
+ * Return 1 on success, 0 on error.
+ */
+static int writeMenu(const char* filename, int size)
+{
+    FILE* fpIn;
+
+    fpIn = fopen(filename, "rb");
+    if (fpIn == NULL)
+    {
+        fprintf(stderr, "Cannot open %s\n", filename);
+        return 0;
+    }
+    if (fread(buff, size, 1, fpIn) != 1)
+    {
+        fprintf(stderr, "Cannot read %s\n", filename);
+        return 0;
+    }
+    fclose(fpIn);
+
+    writeChipHeader(MENU_BASE_BANK, 0x8000, size);
+    if (fwrite(buff, size, 1, fp) != 1)
+    {
+        fprintf(stderr, "Failed to write\n");
+        return 0;
+    }
+
+    return 1;
+}
+
+/******************************************************************************/
 int main(void)
 {
     fp = fopen(ef2_crt_name, "wb");
@@ -160,6 +193,9 @@ int main(void)
         goto error;
 
     if (!writeEXOS())
+        goto error;
+
+    if (!writeMenu("efmenu.bin", 0x4000))
         goto error;
 
     fclose(fp);

@@ -42,5 +42,6 @@ EasyFlashAddr;
 uint8_t checkFlashType(void);
 void __fastcall__ setStatus(const char* pStrStatus);
 void refreshMainScreen(void);
+void setStatusLine(const char* str);
 
 #endif /* EASYPROG_H_ */

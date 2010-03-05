@@ -69,6 +69,16 @@ ScreenMenuEntry aMainMenuEntries[] =
             kernalRamTest,
             returnTrue
         },
+        {
+            "4 Read RAM below kernal",
+            kernalRamRead,
+            returnTrue
+        },
+        {
+            "5 Write & compare RAM below kernal",
+            kernalRamWriteCompare,
+            returnTrue
+        },
         { NULL, NULL, 0 }
 };
 
@@ -95,6 +105,15 @@ static void refreshStatusLine(void)
     cclear(39 - wherex());
 }
 
+/******************************************************************************/
+/**
+ * Copy the given string to the status line.
+ */
+void setStatusLine(const char* str)
+{
+    strcpy(strStatus, str);
+    refreshStatusLine();
+}
 
 /******************************************************************************/
 /**
