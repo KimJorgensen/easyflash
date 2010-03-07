@@ -39,8 +39,8 @@ INCLUDE  := include
 DEFINE   := -DEFVERSION=\"${version}\"
 
 eapi_dir := ../EasySDK/eapi
-eapi_src := $(eapi_dir)/eapi-am29f040-02
-eapi     := obj/eapi-am29f040-02
+eapi_src := $(eapi_dir)/eapi-am29f040-03
+eapi     := obj/eapi-am29f040-03
 
 .PHONY: all
 all: easyprog.prg

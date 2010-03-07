@@ -8,10 +8,14 @@
 ; Entry points for EasyFlash driver (EAPI)
 EAPIBase            = $c000         ; <= Use any address here
 EAPIInit            = EAPIBase + 20
-EAPIWriteFlash      = $dfe0 + 0
-EAPIEraseSector     = $dfe0 + 3
-EAPISetBank         = $dfe0 + 6
-EAPIGetBank         = $dfe0 + 9
+EAPIWriteFlash      = $df80 +  0
+EAPIEraseSector     = $df80 +  3
+EAPISetBank         = $df80 +  6
+EAPIGetBank         = $df80 +  9
+EAPISetPtr          = $df80 + 12
+EAPISetLen          = $df80 + 15
+EAPIReadFlashInc    = $df80 + 18
+EAPIWriteFlashInc   = $df80 + 21
 
 ; =============================================================================
 ;
@@ -105,13 +109,11 @@ _eapiSetBank:
 ; =============================================================================
 .export _eapiSectorErase
 _eapiSectorErase:
-        ; ax to xy
-        pha
+        ; x to y (high byte of address)
         txa
         tay
-        pla
-        tax
 
+        jsr EAPIGetBank
         jsr EAPIEraseSector
         lda #0
         tax
@@ -226,5 +228,5 @@ _pFallbackDriverEnd:
         .word fallbackDriverEnd
 
 fallbackDriverStart = * + 2
-.incbin "obj/eapi-am29f040-02"
+.incbin "obj/eapi-am29f040-03"
 fallbackDriverEnd:

@@ -92,9 +92,9 @@ EAPIInit:
         sei
         ; backup ZP space
         lda EAPI_ZP_INIT_CODE_BASE
-        sta restoreZP0
+        pha
         lda EAPI_ZP_INIT_CODE_BASE + 1
-        sta restoreZP1
+        pha
 
         ; find out our memory address
         lda #$60        ; rts
@@ -209,6 +209,7 @@ prepareWriteHigh:
             ; cycle 2: write $55 to $2AA
             ldy #>$e2aa
             jmp ultimaxWrite55XXAA
+
 ; =============================================================================
 ;
 ; Internal function
@@ -258,8 +259,8 @@ initContinue:
 cidCopyCode:
         lda (EAPI_ZP_INIT_CODE_BASE),y
         sta EAPI_RAM_CODE, x
-        cmp EAPI_RAM_CODE, x
-        bne ciNotSupportedNoReset   ; check if there's really RAM at this address
+        cmp EAPI_RAM_CODE, x    ; check if there's really RAM at this address
+        bne ciRamError
         dey
         dex
         bpl cidCopyCode
@@ -280,16 +281,18 @@ cidFillJMP:
         inx
         dey
         bne cidFillJMP
-        
-        ; restore the caller's ZP state
-restoreZP0 = * + 1
-        lda #0
-        sta EAPI_ZP_INIT_CODE_BASE
-restoreZP1 = * + 1
-        lda #0
-        sta EAPI_ZP_INIT_CODE_BASE + 1
 
-        ;clc
+ciRamError:
+        beq ciNoRamError    ; Z flag is clear when coming from cmp
+        sec                 ; do not branch to ciSkip below
+ciNoRamError:
+
+        ; restore the caller's ZP state
+        pla
+        sta EAPI_ZP_INIT_CODE_BASE + 1
+        pla
+        sta EAPI_ZP_INIT_CODE_BASE
+
         bcc ciSkip
 
 ciNotSupportedNoReset:
@@ -640,7 +643,7 @@ EAPISetBank:
 ; register $de00 directly, this function uses a mirror of that register in RAM.
 ;
 ; This function can only be used after having called EAPIInit.
-
+;
 ; parameters:
 ;       -
 ;
@@ -780,6 +783,7 @@ eof:
         sec ; EOF
         bcs return
 
+
 ; =============================================================================
 ;
 ; EAPIWriteFlashInc: User API: To be called with JSR jmpTable + 21
@@ -852,5 +856,3 @@ writeInc_error:
         ldx EAPI_TMP_VAL4
         lda EAPI_TMP_VAL1
         rts
-
-
