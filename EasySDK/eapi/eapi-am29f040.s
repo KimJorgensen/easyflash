@@ -267,7 +267,6 @@ cidCopyCode:
 
         ; *** calculate jump table ***
         ldx #0
-        ldy #(jmpTableEnd - jmpTable) / 3
 cidFillJMP:
         inx
         clc
@@ -279,7 +278,7 @@ cidFillJMP:
         adc EAPI_ZP_INIT_CODE_BASE + 1
         sta jmpTable, x
         inx
-        dey
+        cpx #jmpTableEnd - jmpTable
         bne cidFillJMP
 
 ciRamError:
@@ -376,7 +375,7 @@ returnCSet:
 
 ; =============================================================================
 ;
-; EAPIWriteFlash: User API: To be called with JSR jmpTable + 0
+; EAPIWriteFlash: User API: To be called with JSR jmpTable + 0 = $df80
 ;
 ; Write a byte to the given address. The address must be as seen in Ultimax
 ; mode, i.e. do not use the base addresses $8000 or $a000 but $8000 or $e000.
@@ -510,7 +509,7 @@ checkProgress2:
 
 ; =============================================================================
 ;
-; EAPIEraseSector: User API: To be called with JSR jmpTable + 3
+; EAPIEraseSector: User API: To be called with JSR jmpTable + 3 = $df83
 ;
 ; Erase the sector at the given address. The bank number currently set and the
 ; address together must point to the first byte of a 64 kByte sector.
@@ -533,7 +532,7 @@ checkProgress2:
 ;           clear: Okay
 ;
 ; change:
-;       -
+;       Z,N <- bank
 ;
 ; =============================================================================
 EAPIEraseSector:
@@ -543,8 +542,8 @@ EAPIEraseSector:
         php
         sei
 
-        ; address lower than $E000?
-        cpy #$e0
+        ; address lower than $A000?
+        cpy #$a0
         bcc selow
 
         jsr prepareWriteHigh
@@ -589,9 +588,9 @@ secommon:
         ; cycle 6: write $30 to base + SA
         ldx #$00
         ldy EAPI_TMP_VAL3
-        cpy #$a0
-        bne seskip
-        ldy #$e0
+        cpy #$80
+        beq seskip
+        ldy #$e0 ; $a0 => $e0
 seskip:
         lda #$30
         jsr ultimaxWrite
@@ -611,7 +610,7 @@ sewait:
 
 ; =============================================================================
 ;
-; EAPISetBank: User API: To be called with JSR jmpTable + 6
+; EAPISetBank: User API: To be called with JSR jmpTable + 6 = $df86
 ;
 ; Set the bank. This will take effect immediately for read access and will be
 ; used for the next write and erase commands.
@@ -625,7 +624,7 @@ sewait:
 ;       -
 ;
 ; changes:
-;       -
+;       Z,N <- bank
 ;
 ; =============================================================================
 EAPISetBank:
@@ -636,7 +635,7 @@ EAPISetBank:
 
 ; =============================================================================
 ;
-; EAPIGetBank: User API: To be called with JSR jmpTable + 9
+; EAPIGetBank: User API: To be called with JSR jmpTable + 9 = $df89
 ;
 ; Get the selected bank which has been set with EAPISetBank.
 ; Note that the current bank number can not be read back using the hardware
@@ -661,7 +660,7 @@ EAPIGetBank:
 
 ; =============================================================================
 ;
-; EAPISetPtr: User API: To be called with JSR jmpTable + 12
+; EAPISetPtr: User API: To be called with JSR jmpTable + 12 = $df8c
 ;
 ; Set the pointer for EAPIReadFlashInc/EAPIWriteFlashInc
 ;
@@ -690,14 +689,14 @@ EAPISetPtr:
 
 ; =============================================================================
 ;
-; EAPISetLen: User API: To be called with JSR jmpTable + 15
+; EAPISetLen: User API: To be called with JSR jmpTable + 15 = $df8f
 ;
 ; - sets the length for EAPIReadFlashInc
 ;
 ; This function can only be used after having called EAPIInit.
 ;
 ; parameters:
-;       AXY length (X = low, Y = med, A = high)
+;       XYA length (X = low, Y = med, A = high)
 ;
 ; return:
 ;       -
@@ -707,15 +706,15 @@ EAPISetPtr:
 ;
 ; =============================================================================
 EAPISetLen:
-        sta EAPI_LENGTH_HI
         stx EAPI_LENGTH_LO
         sty EAPI_LENGTH_MED
+        sta EAPI_LENGTH_HI
         rts
 
 
 ; =============================================================================
 ;
-; EAPIReadFlashInc: User API: To be called with JSR jmpTable + 18
+; EAPIReadFlashInc: User API: To be called with JSR jmpTable + 18 = $df92
 ;
 ; Read a byte from the current pointer from EasyFlash flash memory.
 ; Increment the pointer according to the current bank wrap strategy.
@@ -742,10 +741,6 @@ EAPIReadFlashInc:
         lda EAPI_SHADOW_BANK
         sta EASYFLASH_IO_BANK
 
-        ; make sure that the write routine jumps back to us
-        lda #$00
-        sta EAPI_TMP_VAL3
-
         ; call the read-routine
         jsr readByteForInc
         
@@ -754,39 +749,36 @@ EAPIReadFlashInc:
         stx EAPI_TMP_VAL4
         sty EAPI_TMP_VAL5
         
-        ; inc address
-        clc
-        bcc readInc_inc
+        ; make sure that the increment subroutine of the
+        ; write routine jumps back to us, and call it
+        lda #$00
+        sta EAPI_TMP_VAL3
+        beq rwInc_inc
 
 readInc_Length:
         ; decrement length
         lda EAPI_LENGTH_LO
-        bne nomed
+        bne readInc_nomed
         lda EAPI_LENGTH_MED
-        bne nohi
+        bne readInc_nohi
         lda EAPI_LENGTH_HI
-        beq eof
+        beq readInc_eof
         dec EAPI_LENGTH_HI
-nohi:
+readInc_nohi:
         dec EAPI_LENGTH_MED
-nomed:
+readInc_nomed:
         dec EAPI_LENGTH_LO
-        clc ; no EOF
+        ;clc ; no EOF - already set by rwInc_noInc
+        bcc rwInc_return
 
-return:
-        ldy EAPI_TMP_VAL5
-        ldx EAPI_TMP_VAL4
-        lda EAPI_TMP_VAL1
-        rts
-
-eof:
+readInc_eof:
         sec ; EOF
-        bcs return
+        bcs rwInc_return
 
 
 ; =============================================================================
 ;
-; EAPIWriteFlashInc: User API: To be called with JSR jmpTable + 21
+; EAPIWriteFlashInc: User API: To be called with JSR jmpTable + 21 = $df95
 ;
 ; Write a byte to the current pointer to EasyFlash flash memory.
 ; Increment the pointer according to the current bank wrap strategy.
@@ -814,19 +806,18 @@ EAPIWriteFlashInc:
         ldx EAPI_INC_ADDR_LO
         lda EAPI_INC_ADDR_HI
         cmp #$a0
-        bcs writeInc_skip
-        ; clc
-        adc #$40 ; ora #$40 would do so, but adc is more intuitive
+        bcc writeInc_skip
+        ora #$40 ; $a0 => $e0
 writeInc_skip:
         tay
         lda EAPI_TMP_VAL1
 
         ; write to flash
         jsr jmpTable + 0
-        bcs writeInc_error
+        bcs rwInc_return
         
         ; the increment code is used by both functions
-readInc_inc:
+rwInc_inc:
         ; inc to next position
         inc EAPI_INC_ADDR_LO
         bne rwInc_noInc
@@ -846,12 +837,13 @@ readInc_inc:
         inc EAPI_SHADOW_BANK
         
 rwInc_noInc:
+        ; no errors here, clear carry
         clc
-        ; jump back to the read-routine, it has set EAPI_TMP_VAL3 to zero
-        ; for write: EAPI_TMP_VAL3 ist set by EAPIWriteFlash to the hi-address (never zero)
+        ; readInc: EAPI_TMP_VAL3 has be set to zero, so jump back
+        ; writeInc: EAPI_TMP_VAL3 ist set by EAPIWriteFlash to the HI address (never zero)
         lda EAPI_TMP_VAL3
         beq readInc_Length
-writeInc_error:
+rwInc_return:
         ldy EAPI_TMP_VAL5
         ldx EAPI_TMP_VAL4
         lda EAPI_TMP_VAL1
