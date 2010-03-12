@@ -280,9 +280,9 @@ cidFillJMP:
         inx
         cpx #jmpTableEnd - jmpTable
         bne cidFillJMP
-
+        clc
+        bcc ciNoRamError
 ciRamError:
-        beq ciNoRamError    ; Z flag is clear when coming from cmp
         sec                 ; do not branch to ciSkip below
 ciNoRamError:
 
