@@ -225,3 +225,29 @@ void tortureTestRead(void)
 {
 	tortureTest(0);
 }
+
+/******************************************************************************/
+/**
+ */
+void tortureTestRAM(void)
+{
+    uint16_t nLoop;
+
+    screenPrintSimpleDialog(apStrTestEndless);
+
+    for (nLoop = 0; ; ++nLoop)
+    {
+        strcpy(utilStr, "RAM test loop ");
+        utilAppendDecimal(nLoop);
+        setStatus(utilStr);
+
+        if (!tortureTestCheckRAM())
+        {
+            screenPrintSimpleDialog(apStrBadRAM);
+            refreshMainScreen();
+        }
+
+        if (kbhit() && cgetc() == CH_STOP)
+            return;
+    }
+}
