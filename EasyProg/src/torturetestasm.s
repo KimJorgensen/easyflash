@@ -271,7 +271,7 @@ different:
 ; uint8_t __fastcall__ tortureTestCheckRAM(void);
 ;
 ; parameters:
-;       base in AX (A = low), $8000 or $A000
+;       -
 ;
 ; return:
 ;       result in AX (A = low), 1 = okay, 0 = error

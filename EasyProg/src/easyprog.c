@@ -127,6 +127,11 @@ ScreenMenuEntry aExpertMenuEntries[] =
             ifHaveValidFlash
         },
         {
+            "RAM test",
+            tortureTestRAM,
+            returnTrue
+        },
+        {
             "Hex viewer",
             hexViewer,
             ifHaveValidFlash
