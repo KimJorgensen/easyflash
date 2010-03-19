@@ -41,4 +41,14 @@ package ef2_types is
         HRDET_STATE_READ
     );
 
+    type cartridge_mode_type is 
+    (
+        MODE_MENU,
+        MODE_EASYFLASH,
+        MODE_GEORAM, 
+        MODE_KERNAL, 
+        MODE_FC3,
+        MODE_UNCHANGED
+    );
+
 end ef2_types;
