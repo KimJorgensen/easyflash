@@ -1,3 +1,4 @@
 vhdl work src/ef2.vhdl
 vhdl work src/ef2_types.vhdl
 vhdl work src/exp_bus_ctrl.vhdl
+vhdl work src/reset_generator.vhdl

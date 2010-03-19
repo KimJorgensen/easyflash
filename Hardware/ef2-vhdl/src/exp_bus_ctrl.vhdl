@@ -32,9 +32,7 @@
 --   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -
 --  / \ /0\ /1\ /2\ /3\ /4\ /5\ /6\ /7\ /8\ /9\ /A\ /B\ /C\ /D\ /E\ /F\ /0\ /1\ 
 --     -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   
---  .       .       .       .       .       .       .   .   .   .   .   .   .
 -- phi2:    .       .       .       .       .       .   .   .   .   .   .   .
---  .       .       .       .       .       .       .   .   .   .   .   .   .
 -- ~40..~90ns       .       .     ~60..~90ns        .   .   .   .   .   .   .
 --  .==>    .       .       .       .=====> .       .   .   .   .   .   .   .
 -- ------                                --------------------------------
@@ -82,11 +80,32 @@
 -- asynchronously when one of /IO1, /IO2, /ROML or /ROMH is low.
 --
 
---
--- Registers used:
+-- dotclk: T ~ 125 ns
+--       ---     ---     ---     ---     ---     ---     ---     ---     ---
+--  \ 0 /   \ 1 /   \ 2 /   \ 3 /   \ 4 /   \ 5 /   \ 6 /   \ 7 /   \ 0 /   \
+--   ---     ---     ---     ---     ---     ---     ---     ---     ---     -
+-- clk:
+--   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -
+--  / \ /0\ /1\ /2\ /3\ /4\ /5\ /6\ /7\ /8\ /9\ /A\ /B\ /C\ /D\ /E\ /F\ /0\ /1\ 
+--     -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   
+-- phi2:    .   .   .       .       .       .       .   .   .   .   .   .   .
+-- ~40..~90ns   .   .       .     ~60..~90ns        .   .   .   .   .   .   .
+--  .==>    .   .   .       .       .=====> .       .   .   .   .   .   .   .
+-- ------                                --------------------------------
+--      \\             VIC              /XX/              CPU           \\
+--       ----------------------------------                              -----
+--          .   .
+-- phi2_cycle_start:
+--           --
+--          /  \
+-- ---------    --------------------------------------------------------------
+
+
+-- Minimal number of Macrocells used:
 -- 
 -- component exp_bus_ctrl (u0):
---  2 FDCPE_u0/bus_current_state_i
+--  3 FDCPE_u0/bus_current_state_i
+--
 --  3 FTCPE_u0/dotclk_cnt
 --  1 FDCPE_u0/prev_phi2
 -- ==
@@ -111,6 +130,7 @@ entity exp_bus_ctrl is
             phi2:               in std_logic;
             ba:                 in std_logic;
             addr:               in std_logic_vector(15 downto 12);
+            phi2_cycle_start:   out std_logic;
             bus_next_state:     out bus_state_type;
             bus_current_state:  out bus_state_type;
             bus_out_enable:     out std_logic;
@@ -166,7 +186,7 @@ begin
     ---------------------------------------------------------------------------
     clk_counter: process(clk, prev_phi2, phi2, clk_cnt)
     begin
-        if prev_phi2 = '1' and phi2 = '0' and clk_cnt /= "000" then
+        if prev_phi2 = '1' and phi2 = '0' and clk_cnt /= x"0" then
             clk_cnt <= (others => '0');
         elsif rising_edge(clk) then
             clk_cnt <= clk_cnt + 1;
@@ -184,6 +204,23 @@ begin
         end if;
     end process save_prev_phi2;
     
+
+    ---------------------------------------------------------------------------
+    -- Set phi2_cycle_start to '1' during clk_cnt = 1 for one cycle, then turn
+    -- it low again.
+    ---------------------------------------------------------------------------
+    check_phi2_cycle_start: process(clk)
+    begin
+        if rising_edge(clk) then
+            if clk_cnt = x"0" then
+                phi2_cycle_start <= '1';
+            else
+                phi2_cycle_start <= '0';
+            end if;
+        end if;
+    end process check_phi2_cycle_start;
+
+     
     ---------------------------------------------------------------------------
     -- Find out which state the expansion port bus will have on the *next*
     -- clk edge. This is combinatoric logic.
