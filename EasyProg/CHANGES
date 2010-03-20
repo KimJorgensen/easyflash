@@ -1,0 +1,29 @@
+
+Version 1.4.0
+- Support files split and compressed with EasySplit
+- Support for xbank format
+- Sort directory entries case-insensitive
+- Allow 255 entries in directory dialog
+
+Version 1.3.5
+- Workarounds for 1541U SD-IF bugs
+- Fix hex viewer, it got broken in 1.3
+
+Version 1.3 - 08.10.2009
+- Add flash driver infrastructure EasyAPI
+  - Makes it easy to support different flash memory types
+- Add "reset and start crt" and "reset and kill"
+- Add BING! sound
+- Show all file types in directory list
+- Show directories first, followed by files
+- Internal directory parser tolerates some malformed directories
+  - Still problems with 1541U
+- Show message when directory is too long
+- Torture test is more verbose now
+
+Version 1.2 - 06.09.2009
+- Add flashing BIN files
+- Add sprite logo to main screen
+- Improved menu structure
+- Add text "write complete"
+- Tiny splash screen for non-native CRTs

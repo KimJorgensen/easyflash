@@ -1,0 +1,132 @@
+diff -ru vice-2.1-orig/src/arch/riscos/uiconfig.c vice-2.1-ef40/src/arch/riscos/uiconfig.c
+--- vice-2.1-orig/src/arch/riscos/uiconfig.c	2008-10-10 21:08:26.000000000 +0200
++++ vice-2.1-ef40/src/arch/riscos/uiconfig.c	2009-05-18 21:46:47.000000000 +0200
+@@ -1238,7 +1238,7 @@
+    CARTRIDGE_FINAL_III, CARTRIDGE_SIMONS_BASIC, CARTRIDGE_OCEAN, CARTRIDGE_EXPERT,
+    CARTRIDGE_FUNPLAY, CARTRIDGE_SUPER_GAMES, CARTRIDGE_ATOMIC_POWER, CARTRIDGE_EPYX_FASTLOAD,
+    CARTRIDGE_WESTERMANN, CARTRIDGE_REX, CARTRIDGE_FINAL_I, CARTRIDGE_MAGIC_FORMEL,
+-   CARTRIDGE_GS, CARTRIDGE_WARPSPEED, CARTRIDGE_DINAMIC, CARTRIDGE_ZAXXON}
++   CARTRIDGE_GS, CARTRIDGE_WARPSPEED, CARTRIDGE_DINAMIC, CARTRIDGE_ZAXXON, CARTRIDGE_EASYFLASH}
+ };
+ 
+ static struct MenuDisplayPALDepth {
+diff -ru vice-2.1-orig/src/c64/cart/c64cart.c vice-2.1-ef40/src/c64/cart/c64cart.c
+--- vice-2.1-orig/src/c64/cart/c64cart.c	2008-11-24 19:42:52.000000000 +0100
++++ vice-2.1-ef40/src/c64/cart/c64cart.c	2009-05-18 21:46:47.000000000 +0200
+@@ -309,7 +309,7 @@
+     }
+ 
+     /* allocate temporary array */
+-    rawcart = lib_malloc(0x88000);
++    rawcart = lib_malloc(0x100000);
+ 
+ /*  cart should always be detached. there is no reason for doing fancy checks
+     here, and it will cause problems incase a cart MUST be detached before
+diff -ru vice-2.1-orig/src/c64/cart/c64cartmem.c vice-2.1-ef40/src/c64/cart/c64cartmem.c
+--- vice-2.1-orig/src/c64/cart/c64cartmem.c	2008-11-21 19:29:58.000000000 +0100
++++ vice-2.1-ef40/src/c64/cart/c64cartmem.c	2009-05-29 08:41:11.000000000 +0200
+@@ -79,7 +79,7 @@
+ export_t export;
+ 
+ /* Expansion port ROML/ROMH images.  */
+-BYTE roml_banks[0x80000], romh_banks[0x20000];
++BYTE roml_banks[0x80000], romh_banks[0x80000];
+ 
+ /* Expansion port RAM images.  */
+ BYTE export_ram0[C64CART_RAM_LIMIT];
+@@ -242,6 +242,17 @@
+         cart_ultimax_phi1 = 0;
+         cart_ultimax_phi2 = 0;
+         break;
++      case CARTRIDGE_EASYFLASH:
++        cartridge_config_changed((value>>6)^1, (value>>6)^1, CMODE_READ);
++
++        cartridge_romhbank_set(value & 0x3f);
++        cartridge_romlbank_set(value & 0x3f);
++//        export.game = (value & 0x40) ? 0 : 1;
++//        export.exrom = (value & 0x80) ? 0 : 1;
++        mem_pla_config_changed();
++//        cart_ultimax_phi1 = 0;
++//        cart_ultimax_phi2 = 0;
++        break;
+       case CARTRIDGE_GS:
+         cartridge_romlbank_set(addr & 0x3f);
+         export.game = 0;
+@@ -460,6 +471,9 @@
+       case CARTRIDGE_MAGIC_FORMEL:
+         magicformel_roml_store(addr, value);
+         return;
++      case CARTRIDGE_EASYFLASH:
++      	mem_store_without_romlh(addr, value);
++      	return;
+     }
+ 
+     if (export_ram)
+@@ -496,6 +510,9 @@
+       case CARTRIDGE_MAGIC_FORMEL:
+         magicformel_romh_store(addr, value);
+         return;
++      case CARTRIDGE_EASYFLASH:
++      	mem_store_without_romlh(addr, value);
++      	return;
+     }
+     if (isepic_enabled && isepic_switch)
+     {
+@@ -713,6 +730,7 @@
+         break;
+       case CARTRIDGE_OCEAN:
+       case CARTRIDGE_FUNPLAY:
++      case CARTRIDGE_EASYFLASH:
+         cartridge_config_changed(1, 1, CMODE_READ);
+         cartridge_store_io1((WORD)0xde00, 0);
+         break;
+@@ -849,6 +867,11 @@
+         /* Hack: using 16kB configuration, but some carts are 8kB only */
+         cartridge_config_changed(1, 1, CMODE_READ);
+         break;
++      case CARTRIDGE_EASYFLASH:
++        memcpy(roml_banks, rawcart, 0x2000 * 64);
++        memcpy(romh_banks, &rawcart[0x2000 * 64], 0x2000 * 64);
++        cartridge_config_changed(1, 1, CMODE_READ);
++        break;
+       case CARTRIDGE_ULTIMAX:
+         generic_ultimax_config_setup(rawcart);
+         break;
+diff -ru vice-2.1-orig/src/c64/cart/crt.c vice-2.1-ef40/src/c64/cart/crt.c
+--- vice-2.1-orig/src/c64/cart/crt.c	2008-07-07 20:20:43.000000000 +0200
++++ vice-2.1-ef40/src/c64/cart/crt.c	2009-05-18 21:46:47.000000000 +0200
+@@ -190,6 +190,23 @@
+             }
+         }
+         break;
++      case CARTRIDGE_EASYFLASH:
++        while (1) {
++            if (fread(chipheader, 0x10, 1, fd) < 1) {
++                fclose(fd);
++                break;
++            }
++            if (chipheader[0xb] >= 64 || (chipheader[0xc] != 0x80
++                && chipheader[0xc] != 0xa0)) {
++                fclose(fd);
++                return -1;
++            }
++            if (fread(&rawcart[(chipheader[0xb] << 13) | (chipheader[0xc] == 0x80 ? 0 : 1<<19)], 0x2000, 1, fd) < 1) {
++                fclose(fd);
++                return -1;
++            }
++        }
++        break;
+       case CARTRIDGE_FUNPLAY:
+         while (1) {
+             if (fread(chipheader, 0x10, 1, fd) < 1) {
+diff -ru vice-2.1-orig/src/cartridge.h vice-2.1-ef40/src/cartridge.h
+--- vice-2.1-orig/src/cartridge.h	2008-07-07 20:23:21.000000000 +0200
++++ vice-2.1-ef40/src/cartridge.h	2009-05-18 21:46:47.000000000 +0200
+@@ -92,6 +92,7 @@
+    to become fc2 */
+ #define CARTRIDGE_ACTION_REPLAY4     30
+ #define CARTRIDGE_STARDOS            31
++#define CARTRIDGE_EASYFLASH          40
+ 
+ /* Expert cartridge has three modes: */
+ #define CARTRIDGE_MODE_OFF                      0
