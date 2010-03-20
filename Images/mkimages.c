@@ -1,19 +1,17 @@
-
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <errno.h>
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include "cart.h"
-
-static const char* ef2_crt_name = "ef2-multi.crt";
 
 static unsigned char buff[1024 * 1024];
 static FILE*    fp;
 static size_t   crt_size;
 
-#define MENU_BASE_BANK          0 
-// 0x3F
-#define FC3_BASE_BANK           0x38
-#define EXOS_KERNAL_BASE_BANK   0x3E
+#define MAX_BANK 0x7f
 
 /******************************************************************************/
 /*
@@ -83,33 +81,53 @@ static int writeChipHeader(unsigned nBank, unsigned nAddr,
 
 /******************************************************************************/
 /**
- * Read the fc3 binary image and write it to the CRT file.
+ * Read a binary image and write it to the CRT file.
  * Return 1 on success, 0 on error.
  */
-static int writeFC3(void)
+static int writeBin(char *filename, int bank)
 {
-    FILE* fpIn;
-    int bank;
+    FILE *fpIn;
+    int curBank;
+    struct stat st;
 
-    fpIn = fopen("fc3-1988.bin", "rb");
-    if (fpIn == NULL)
+    if (stat(filename, &st))
     {
-        fprintf(stderr, "Cannot open fc3-1988.bin\n");
+        fprintf(stderr, "Cannot stat %s: %s\n", filename, strerror(errno));
         return 0;
     }
-    if (fread(buff, 64 * 1024, 1, fpIn) != 1)
+    if (st.st_size > sizeof(buff))
     {
-        fprintf(stderr, "Cannot read FC-III binary\n");
+        fprintf(stderr, "File %s is too large!\n", filename);
+        return 0;
+    }
+    fpIn = fopen(filename, "rb");
+    if (fpIn == NULL)
+    {
+        fprintf(stderr, "Cannot open %s: %s\n", filename, strerror(errno));
+        return 0;
+    }
+    if (fread(buff, st.st_size, 1, fpIn) != 1)
+    {
+        fprintf(stderr, "Cannot read %s: %s\n", filename, strerror(errno));
         return 0;
     }
     fclose(fpIn);
 
-    for (bank = 0; bank < 4; ++bank)
+    for (curBank = 0; curBank < (st.st_size + 0x4000 - 1)/0x4000; ++curBank)
     {
-        writeChipHeader(FC3_BASE_BANK + bank, 0x8000, 0x4000);
-        if (fwrite(buff + 0x4000 * bank, 0x4000, 1, fp) != 1)
+        int bankSize;
+
+        if (st.st_size - curBank * 0x4000 < 0x4000)
+            bankSize = st.st_size % 0x4000;
+        else
+            bankSize = 0x4000;
+
+        writeChipHeader(bank + curBank, 0x8000, bankSize);
+
+        if (fwrite(buff + 0x4000 * curBank, bankSize, 1, fp) != 1)
         {
-            fprintf(stderr, "Failed to write\n");
+            fprintf(stderr, "Failed to write bank %d of %s: %s\n",
+                    curBank, filename, strerror(errno));
             return 0;
         }
     }
@@ -118,89 +136,47 @@ static int writeFC3(void)
 }
 
 /******************************************************************************/
-/**
- * Read the EXOS binary image and write it to the CRT file.
- * Return 1 on success, 0 on error.
- */
-static int writeEXOS(void)
+int main(int argc, char *argv[])
 {
-    FILE* fpIn;
+    int i;
+    long bank;
 
-    fpIn = fopen("exos.bin", "rb");
-    if (fpIn == NULL)
+    if (argc < 3 || (argc % 2) != 0)
     {
-        fprintf(stderr, "Cannot open exos.bin\n");
-        return 0;
-    }
-    if (fread(buff, 8 * 1024, 1, fpIn) != 1)
-    {
-        fprintf(stderr, "Cannot read exos.bin\n");
-        return 0;
-    }
-    fclose(fpIn);
-
-    writeChipHeader(EXOS_KERNAL_BASE_BANK, 0x8000, 0x2000);
-    if (fwrite(buff, 0x2000, 1, fp) != 1)
-    {
-        fprintf(stderr, "Failed to write\n");
-        return 0;
+        fprintf(stderr, "Syntax: %s binfile bankno [binfile bankno...] crtfile\n", argv[0]);
+        return 1;
     }
 
-    return 1;
-}
+    fp = fopen(argv[argc-1], "wb");
 
-/******************************************************************************/
-/**
- * Read the Menu binary image and write it to the CRT file.
- * Return 1 on success, 0 on error.
- */
-static int writeMenu(const char* filename, int size)
-{
-    FILE* fpIn;
-
-    fpIn = fopen(filename, "rb");
-    if (fpIn == NULL)
+    if (fp == NULL)
     {
-        fprintf(stderr, "Cannot open %s\n", filename);
-        return 0;
+        fprintf(stderr, "Cannot open %s: %s\n", argv[argc-1], strerror(errno));
+        return 1;
     }
-    if (fread(buff, size, 1, fpIn) != 1)
-    {
-        fprintf(stderr, "Cannot read %s\n", filename);
-        return 0;
-    }
-    fclose(fpIn);
-
-    writeChipHeader(MENU_BASE_BANK, 0x8000, size);
-    if (fwrite(buff, size, 1, fp) != 1)
-    {
-        fprintf(stderr, "Failed to write\n");
-        return 0;
-    }
-
-    return 1;
-}
-
-/******************************************************************************/
-int main(void)
-{
-    fp = fopen(ef2_crt_name, "wb");
 
     if (!writeCRTHeader())
         goto error;
 
-    if (!writeFC3())
-        goto error;
+    for (i = 1; i < argc-1; i += 2)
+    {
+        char *endptr;
 
-    if (!writeEXOS())
-        goto error;
+        bank = strtol(argv[i+1], &endptr, 0);
+        if (*endptr != 0 || bank < 0 || bank > MAX_BANK)
+        {
+            fprintf(stderr, "Invalid bank: %s\n", argv[i+1]);
+            goto error;
+        }
 
-    if (!writeMenu("efmenu.bin", 0x4000))
-        goto error;
+        writeBin(argv[i], bank);
+    }
 
     fclose(fp);
     return 0;
+
 error:
-    remove(ef2_crt_name);
+    fclose(fp);
+    remove(argv[argc-1]);
     return 1;
 }
