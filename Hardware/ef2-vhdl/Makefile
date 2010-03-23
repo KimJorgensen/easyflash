@@ -6,6 +6,7 @@ src_dir		:= $(here)/src
 # this file list is for dependencies only, keep in sync with ef2.prj
 src 		:= $(src_dir)/ef2.vhdl
 src 		+= $(src_dir)/exp_bus_ctrl.vhdl
+src 		+= $(src_dir)/reset_generator.vhdl
 
 uc  := $(src_dir)/ef2.ucf
 
@@ -26,7 +27,7 @@ dev_speed  := 10
 device     := $(dev_type)-$(dev_pkg)-$(dev_speed)
 device_fit := $(dev_type)-$(dev_speed)-$(dev_pkg)
 
-fit_flags  := -p $(device_fit) -ofmt vhdl -log fitter.log -optimize density
+fit_flags  := -p $(device_fit) -ofmt abel -log fitter.log -optimize density
 fit_flags  += -power low -slew slow
 fit_filter_output := "^CS: block property:\|^$$"
 
