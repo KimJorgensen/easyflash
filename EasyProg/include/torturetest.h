@@ -14,5 +14,6 @@ uint8_t* __fastcall__ tortureTestVerifyFlash(uint8_t* pFlash, uint8_t* pRAM);
 
 void tortureTestComplete(void);
 void tortureTestRead(void);
+void tortureTestRAM(void);
 
 #endif /* TORTURETEST_H_ */
