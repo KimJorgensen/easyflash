@@ -1,9 +1,28 @@
-
-###############################################################################
-# Common rules
 #
-# variables used here must be set in the including Makefile
+# rules.mk - various Makefile rules (version 1)
+#
+# (c) 2003-2010 Thomas Giesel
+#
+# This software is provided 'as-is', without any express or implied
+# warranty.  In no event will the authors be held liable for any damages
+# arising from the use of this software.
+#
+# Permission is granted to anyone to use this software for any purpose,
+# including commercial applications, and to alter it and redistribute it
+# freely, subject to the following restrictions:
+#
+# 1. The origin of this software must not be misrepresented; you must not
+#    claim that you wrote the original software. If you use this software
+#    in a product, an acknowledgment in the product documentation would be
+#    appreciated but is not required.
+# 2. Altered source versions must be plainly marked as such, and must not be
+#    misrepresented as being the original software.
+# 3. This notice may not be removed or altered from any source distribution.
+#
+# Thomas Giesel skoe@directbox.com
+#
 
+# variables used here must be set in the including Makefile
 INCLUDE   += -I$(objdir)
 
 cflags    += -DVERSION=\"$(version)\"
@@ -11,6 +30,24 @@ cxxflags  += -DVERSION=\"$(version)\"
 
 # don't delete intermediate files
 .SECONDARY:
+
+###############################################################################
+# Main targets
+#
+.PHONY: all
+all: $(outbase)/$(app_name)$(version_suffix).tar.bz2
+
+$(outbase)/$(app_name)$(version_suffix).tar.bz2: \
+		$(outdir)/$(app_name) $(outres) $(outdoc)
+	rm -f $@
+	cd $(dir $@) && tar cjf $(notdir $@) $(app_name)
+
+###############################################################################
+# Link the app
+# 
+$(outdir)/$(app_name): $(obj) | $(outdir) check-environment
+	$(cxx) $(ldflags) $(obj) -o $@ \
+		`wx-config --libs`
 
 ###############################################################################
 # This rule can copy files from <base>/res/* to <outdir>/res/*
@@ -45,13 +82,13 @@ $(objdir)/%.xpm: $(srcdir)/../res/%.png | $(objdir) check-environment
 	cat $@.tmp.xpm | sed "s/static char/static const char/;s/_tmp//" > $@
 
 ###############################################################################
-# This rule can copy * to <here>/out/EasySplit/*
+# This rule can copy * to $(outdir)/*
 # 
 $(outdir)/%: $(srcdir)/../%
 	cp $< $@
 
 ###############################################################################
-# This rule can convert * to <here>/out/EasySplit/*.txt using unix2dos
+# This rule can convert * to $(outdir)/*.txt using unix2dos
 # 
 $(outdir)/%.txt: $(srcdir)/../%
 	cat $< | unix2dos > $@

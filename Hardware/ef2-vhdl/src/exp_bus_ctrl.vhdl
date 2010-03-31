@@ -370,6 +370,7 @@ begin
 
     hrdet_next_state <= hrdet_next_state_i;
 
+
     ---------------------------------------------------------------------------
     -- Make the next state of hiram detection to the current state
     ---------------------------------------------------------------------------
