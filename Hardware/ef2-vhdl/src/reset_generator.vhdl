@@ -54,7 +54,9 @@ begin
                 cycle_cnt <= "111";
                 n_generated_reset <= '0';
             elsif cycle_cnt /= "000" then
-                cycle_cnt <= cycle_cnt - 1;
+                if phi2_cycle_start = '1' then
+                    cycle_cnt <= cycle_cnt - 1;
+                end if;
                 n_generated_reset <= '0';
             else
                 n_generated_reset <= '1';

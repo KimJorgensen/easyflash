@@ -170,9 +170,9 @@ architecture ef2_arc of ef2 is
     -- Internal state of NMI line
     signal n_nmi_i:             std_logic;
 
-    -- When the freezer button is pressed and BA is low, this is '1'
-    signal freezer:             std_logic;
-    
+    -- When the freezer button is pressed, start the freezer
+    signal freeze_start:        std_logic;
+
     component exp_bus_ctrl is
         port 
         (  
@@ -201,6 +201,7 @@ architecture ef2_arc of ef2 is
         port 
         (
             clk:                    in std_logic;
+            phi2_cycle_start:       in std_logic;
             start_reset_generator:  in std_logic;
             n_generated_reset:      out std_logic
         );
@@ -214,7 +215,8 @@ begin
     (
         n_roml, n_romh, n_io1, n_io2, n_wr, n_reset_in, clk, phi2,
         ba, addr(15 downto 12), phi2_cycle_start,
-        bus_out_enable, hrdet_next_state, hrdet_current_state, 
+        bus_out_enable, 
+        hrdet_next_state, hrdet_current_state, 
         bus_read_start, bus_wr_start, bus_we_start, bus_to_idle
     );
 
@@ -223,7 +225,7 @@ begin
     ---------------------------------------------------------------------------
     u1: reset_generator port map 
     (
-        clk, start_reset_generator, n_generated_reset
+        clk, phi2_cycle_start, start_reset_generator, n_generated_reset
     );
 
     ---------------------------------------------------------------------------
@@ -257,11 +259,10 @@ begin
 
     cart_addressed <= not (n_io1 and n_io2 and n_roml and n_romh);
 
-    start_reset_generator <=
-        start_reset_from_key or start_reset_from_sw;
+    start_reset_generator <= start_reset_from_key or start_reset_from_sw;
     
-    n_reset_io <= n_generated_reset;
-    
+    n_reset_io <= 'Z' when n_generated_reset = '1' else '0';
+
     ---------------------------------------------------------------------------
     -- Synchronize reset
     ---------------------------------------------------------------------------
@@ -295,9 +296,9 @@ begin
     begin
         if rising_edge(clk) then
             start_reset_from_key <= '0';
-            freezer             <= '0';
-            select_ef_mode      <= '0';
-            select_menu_mode    <= '0';
+            freeze_start         <= '0';
+            select_ef_mode       <= '0';
+            select_menu_mode     <= '0';
 
             if buttons_enabled = '1' then
                 if button_a = '1' then
@@ -317,7 +318,7 @@ begin
 
                         when MODE_FC3 =>
                             if ba = '1' then
-                                freezer <= '1'; -- todo: Counter?
+                                freeze_start <= '1';
                             end if;
                         when others => null;
                     end case;
@@ -332,18 +333,19 @@ begin
         end if;
     end process check_buttons;
 
+
     ---------------------------------------------------------------------------
     -- Set the state of the LED.
     ---------------------------------------------------------------------------
---    set_led: process(clk)
-  --  begin
-    --    if rising_edge(clk) then
-      --      n_led <= '1';
-        --    if cart_mode = MODE_GEORAM then
-          --      n_led <= '0';
---            end if;
-  --      end if;
-    --end process set_led;
+    set_led: process(clk)
+    begin
+        if rising_edge(clk) then
+            n_led <= '1';
+            if cart_mode = MODE_GEORAM then
+                n_led <= '0';
+            end if;
+        end if;
+    end process set_led;
 
 
     ---------------------------------------------------------------------------
@@ -363,10 +365,12 @@ begin
         end if;
     end process data_to_port;
 
+
+-- todo: 'Z' benutzen!
     ---------------------------------------------------------------------------
     --
     ---------------------------------------------------------------------------
-    set_game_exrom_dma: process(clk, n_reset_in, cart_mode)
+    set_game_exrom_dma: process(clk, n_reset_in, easyflash_boot, cart_mode)
     begin
         if n_reset_in = '0' then
             n_exrom  <= '1';
@@ -390,7 +394,7 @@ begin
 
                 when MODE_EASYFLASH | MODE_MENU =>
                     if bus_wr_start = '1' and 
-                          n_io1 = '0' and addr(1) = '1' then
+                        n_io1 = '0' and addr(1) = '1' then
                         -- $de02 (only addr(1) is checked in the original EF)
                         n_exrom <= not data(1);
                         if data(2) = '0' then
@@ -427,10 +431,9 @@ begin
                         -- $dfff
                         n_exrom <= data(4);
                         n_game  <= data(5);
-                    elsif freezer = '1' then
-                        n_game <= '0';
+--                    elsif freezer = '1' then
+  --                      n_game <= '0';
                     end if;
-
                 when others => null;
             end case;
         end if;
@@ -461,7 +464,7 @@ begin
         end if;
     end process set_nmi;
 
-    n_nmi <= 'Z' when n_nmi_i = '1' and freezer = '0' else '0';
+--    n_nmi <= 'Z' when n_nmi_i = '1' and freezer = '0' else '0';
 
     ---------------------------------------------------------------------------
     -- Pull down A14 for Kernal mode (HIRAM detection)
@@ -485,7 +488,6 @@ begin
     prepare_mem_address: process(clk)
     begin
         if rising_edge(clk) then
-
             if cart_mode = MODE_KERNAL then
                 if hrdet_next_state = HRDET_STATE_DMA then
                     -- Prepare read address, no matter if it will be 
@@ -563,13 +565,13 @@ begin
             n_ram_cs    <= '1';
             n_mem_oe_i  <= '1';
             n_mem_wr    <= '1';
-            n_led       <= '1';
 
         elsif rising_edge(clk) then
 
             case cart_mode is
 
                 when MODE_EASYFLASH | MODE_MENU =>
+
                     if bus_to_idle = '1' then
                         n_flash_cs  <= '1';
                         n_ram_cs    <= '1';
@@ -655,11 +657,9 @@ begin
                         if n_romh = '0' then
                             -- read rom
                             n_flash_cs <= '0';
-                            n_led <= '1';
                         else
                             -- read ram below rom
                             n_ram_cs <= '0';
-                            n_led <= '0';
                         end if;
                         n_mem_oe_i <= '0';
                     else
