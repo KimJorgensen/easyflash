@@ -207,6 +207,18 @@ architecture ef2_arc of ef2 is
         );
     end component;
 
+    component freezer is
+        port 
+        (
+            clk:                    in std_logic;
+            bus_wr_start:           in std_logic;
+            bus_read_start:         in std_logic;
+            n_reset:                in std_logic;
+            start_freezer:          in std_logic;
+            n_generated_irq:        out std_logic
+        );
+    end component;
+
 begin
     ---------------------------------------------------------------------------
     -- Component: Expansion Port Bus Control
@@ -226,6 +238,14 @@ begin
     u1: reset_generator port map 
     (
         clk, phi2_cycle_start, start_reset_generator, n_generated_reset
+    );
+
+    ---------------------------------------------------------------------------
+    -- Component: Freezer
+    ---------------------------------------------------------------------------
+    u2: freezer port map 
+    (
+        clk, bus_wr_start, bus_read_start, n_reset_in, freeze_start, n_led
     );
 
     ---------------------------------------------------------------------------
@@ -337,6 +357,7 @@ begin
     ---------------------------------------------------------------------------
     -- Set the state of the LED.
     ---------------------------------------------------------------------------
+-- pragma synthesis off
     set_led: process(clk)
     begin
         if rising_edge(clk) then
@@ -346,7 +367,7 @@ begin
             end if;
         end if;
     end process set_led;
-
+-- pragma synthesis on
 
     ---------------------------------------------------------------------------
     -- Control the data bus of the expansion port. But it in high impedance

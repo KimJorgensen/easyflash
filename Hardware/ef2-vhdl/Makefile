@@ -7,6 +7,7 @@ src_dir		:= $(here)/src
 src 		:= $(src_dir)/ef2.vhdl
 src 		+= $(src_dir)/exp_bus_ctrl.vhdl
 src 		+= $(src_dir)/reset_generator.vhdl
+src 		+= $(src_dir)/freezer.vhdl
 
 uc  := $(src_dir)/ef2.ucf
 
