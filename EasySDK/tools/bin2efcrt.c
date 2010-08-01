@@ -119,7 +119,7 @@ static size_t readInputFile(uint8_t* pBuffer, const char* pStrFileName)
     FILE* pFile;
     size_t size;
 
-    pFile = fopen(pStrFileName, "r");
+    pFile = fopen(pStrFileName, "rb");
     if (pFile == NULL)
     {
         fprintf(stderr, "Cannot open \"%s\" for reading\n", pStrFileName);
@@ -234,7 +234,7 @@ static void writeCRTLinearLayout(const char* pStrFileName,
     int nBank;
     int nChip;
 
-    pFile = fopen(pStrFileName, "w");
+    pFile = fopen(pStrFileName, "wb");
     if (pFile == NULL)
     {
         fprintf(stderr, "Cannot open \"%s\" for writing\n", pStrFileName);
