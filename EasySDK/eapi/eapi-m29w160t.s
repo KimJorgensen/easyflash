@@ -71,8 +71,8 @@ EAPICodeBase:
 ; When this function returns, EasyFlash will be configured to bank in the ROM
 ; area at $8000..$bfff.
 ;
-; This function calls SEI and restores all Flags except C before it returns.
-; Do not call it with D-flag set. $01 must enable both ROM areas.
+; This function uses SEI, it restores all flags except C before it returns.
+; Do not call it with D-flag set. $01 must enable the affected ROM area.
 ;
 ; parameters:
 ;       -
@@ -338,7 +338,7 @@ returnCSet:
 ; contain a '0'. Trying to change memory bits from '0' to '1' will result in
 ; an error. You must erase a memory block to get '1' bits.
 ;
-; This function calls SEI and restores all Flags except C before it returns.
+; This function uses SEI, it restores all flags except C before it returns.
 ; Do not call it with D-flag set. $01 must enable the affected ROM area.
 ; It can only be used after having called EAPIInit.
 ;
@@ -434,7 +434,7 @@ checkProgress2:
 ; in the LOROM chip when $8000 is used or in the HIROM chip when $e000 is
 ; used.
 ;
-; This function calls SEI and restores all flags except C before it returns.
+; This function uses SEI, it restores all flags except C before it returns.
 ; Do not call it with D-flag set. $01 must enable the affected ROM area.
 ; It can only be used after having called EAPIInit.
 ;
@@ -508,8 +508,8 @@ sewait:
 ;
 ; EAPISetBank: User API: To be called with JSR jmpTable + 6 = $df86
 ;
-; Set the bank. This will take effect immediately for read access and will be
-; used for the next write and erase commands.
+; Set the bank. This will take effect immediately for cartridge read access
+; and will be used for the next flash write or read command.
 ;
 ; This function can only be used after having called EAPIInit.
 ;
@@ -558,7 +558,7 @@ EAPIGetBank:
 ;
 ; EAPISetPtr: User API: To be called with JSR jmpTable + 12 = $df8c
 ;
-; Set the pointer for EAPIReadFlashInc/EAPIWriteFlashInc
+; Set the pointer for EAPIReadFlashInc/EAPIWriteFlashInc.
 ;
 ; This function can only be used after having called EAPIInit.
 ;
@@ -587,12 +587,12 @@ EAPISetPtr:
 ;
 ; EAPISetLen: User API: To be called with JSR jmpTable + 15 = $df8f
 ;
-; - sets the length for EAPIReadFlashInc
+; Set the number of bytes to be read with EAPIReadFlashInc.
 ;
 ; This function can only be used after having called EAPIInit.
 ;
 ; parameters:
-;       XYA length (X = low, Y = med, A = high)
+;       XYA length, 24 bits (X = low, Y = med, A = high)
 ;
 ; return:
 ;       -
@@ -620,6 +620,8 @@ EAPISetLen:
 ; EOF will be set if the length is zero, otherwise it will be decremented.
 ; Even when EOF is delivered a new byte has been read and the pointer 
 ; incremented. This means the use of EAPISetLen is optional.
+;
+; This function can only be used after having called EAPIInit.
 ;
 ; parameters:
 ;       -
@@ -681,6 +683,8 @@ readInc_eof:
 ; Pointer and wrap strategy have been set by a call to EAPISetPtr.
 ;
 ; In case of an error the position is not inc'ed.
+;
+; This function can only be used after having called EAPIInit.
 ;
 ; parameters:
 ;       A   value
