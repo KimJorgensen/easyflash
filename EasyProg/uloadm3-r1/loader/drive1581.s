@@ -26,9 +26,13 @@ job3	= $05
 trk3	= $11
 sct3	= $12
 zptmp	= $45
+track	= $5b
+sector	= $5c
+stack	= $5d
 
 bufptr	= $5e
 
+	.include "xfer_drive_2mhz_2bit.i"
 
 drv_get_dir_ts:
 	lda $022b
@@ -90,5 +94,13 @@ success:
 	sta ledctl
 	rts
 
+; set track (from x) and sector (from a) for read/write sector
+drv_set_ts:
+	stx track
+	sta sector
+	rts
 
-	.include "xfer_drive_2mhz_2bit.i"
+; set the stack pointer (from x) to be restored upon exit
+drv_set_exit_sp:
+	stx stack
+	rts

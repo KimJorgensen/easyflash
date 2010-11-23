@@ -1,6 +1,9 @@
 ; loader_open is used to open a file for reading or writing
 	.export loader_open
 
+; loader_exit is used to cancel the drive code
+	.export loader_exit
+
 ; loader_read and loader_write are used for loading from or saving to a file
 	.export loader_read
  .ifdef UL3_SAVE
@@ -57,6 +60,19 @@ loader_open:
 
 ; buffer counter
 loader_ctr:	.res 1
+
+
+; cancel drive code
+loader_exit:
+	lda $dd00
+	ora #$08
+	sta $dd00
+	ldx #0
+:	dex
+	bne :-
+	and #$07
+	sta $dd00
+	rts
 
 
 ; read a byte from a file, sec on eof or error

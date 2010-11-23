@@ -79,8 +79,8 @@ loader_init:
 	lda #8
 	sta $ba
 :
-	lda #1				; prepare detection messages
-	sta $0286
+	;lda #1				; prepare detection messages
+	;sta $0286
 	ldx #24
 	ldy #0
 	clc

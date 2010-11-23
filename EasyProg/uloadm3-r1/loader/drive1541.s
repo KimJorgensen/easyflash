@@ -15,7 +15,6 @@ drive1541	= __DRIVE1541_LOAD__
 
 	.include "drivecodejumptable.i"
 
-
 serport		= $1800
 
 retries	= 5			; number of retries when reading a sector
@@ -25,6 +24,9 @@ job3	= $03
 trk3	= $0c
 sct3	= $0d
 zptmp		= $1b
+track	= $8b
+sector	= $8c
+stack	= $8d
 
 iddrv0	= $12			; disk drive id
 id	= $16			; disk id
@@ -35,6 +37,7 @@ waitsync        = $f556         ; wait for sync
 decode          = $f7e8         ; decode 5 GCR bytes, bufferindex in Y
 bufptr		= $30
 
+	.include "xfer_drive_1mhz_2bit.i"
 
 drv_get_dir_ts:
 	lda #18
@@ -103,4 +106,13 @@ blink:
 	rts
 
 
-	.include "xfer_drive_1mhz_2bit.i"
+; set track (from x) and sector (from a) for read/write sector
+drv_set_ts:
+	stx track
+	sta sector
+	rts
+
+; set the stack pointer (from x) to be restored upon exit
+drv_set_exit_sp:
+	stx stack
+	rts

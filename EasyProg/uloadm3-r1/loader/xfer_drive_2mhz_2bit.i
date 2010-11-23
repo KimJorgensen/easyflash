@@ -1,4 +1,7 @@
 drv_send:
+	bit serport     ; check for ATN
+	bmi drv_exit
+
 	ldy #$02		; set DATA low to signal that we're sending
 	sty serport
 
@@ -68,8 +71,11 @@ drv_sendtbl_end:
 
 
 drv_exit:
+	lda #0			; release IEC bus
+	sta serport
 	ldx stack
 	txs
+	cli
 delay18:
 	cmp ($ea,x)
 delay14 = * - 1
