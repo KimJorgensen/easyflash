@@ -263,9 +263,6 @@ static uint8_t writeBinImage(uint8_t nChip)
     nBank = 0;
     do
     {
-        strcpy(strStatus, "Reading from file");
-        setStatus(strStatus);
-
         nBytes = utilRead(pBuffer, 0x100);
 
         if (nBytes >= 0)
@@ -309,16 +306,18 @@ static void checkWriteImage(uint8_t imageType)
     uint8_t  oldState;
 
     checkFlashType();
+    oldState = spritesOn(0);
 
     do
     {
-        rv = fileDlg(strFileName, imageType == IMAGE_TYPE_CRT ? "CRT" : "BIN");
+        rv = fileDlg(imageType == IMAGE_TYPE_CRT ? "CRT" : "BIN");
         if (!rv)
+        {
+            spritesOn(oldState);
             return;
+        }
 
-        oldState = spritesOn(0);
-        rv = utilOpenFile(fileDlgGetDriveNumber(), strFileName);
-        spritesOn(oldState);
+        rv = utilOpenFile(0);
         if (rv == 1)
             screenPrintSimpleDialog(apStrFileOpenError);
     }
@@ -327,6 +326,7 @@ static void checkWriteImage(uint8_t imageType)
     if (screenAskEraseDialog() != BUTTON_ENTER)
     {
     	utilCloseFile();
+        spritesOn(oldState);
         return;
     }
 
@@ -338,7 +338,6 @@ static void checkWriteImage(uint8_t imageType)
     progressInit();
 
     t = clock();
-    oldState = spritesOn(0);
 
     if (imageType == IMAGE_TYPE_CRT)
         rv = writeCrtImage();

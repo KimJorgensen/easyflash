@@ -74,79 +74,103 @@ static char strStatus[41];
 
 /******************************************************************************/
 
-ScreenMenuEntry aMainMenuEntries[] =
+// forward declarations
+extern ScreenMenu menuMain;
+extern ScreenMenu menuExpert;
+extern ScreenMenu menuHelp;
+
+
+ScreenMenu menuMain =
 {
+    1, 2,
+    0,
+    &menuHelp,
+    &menuExpert,
+    {
         {
-            "Write CRT to flash",
+            "&Write CRT to flash",
             checkWriteCRTImage,
             ifHaveValidFlash
         },
         {
-            "Check flash type",
+            "&Check flash type",
             (void (*)(void)) checkFlashType,
             returnTrue
         },
         {
-            "Erase all",
+            "&Erase all",
             checkEraseAll,
             ifHaveValidFlash
         },
         {
-            "Start cartridge",
+            "&Start cartridge",
             utilResetStartCartridge,
             returnTrue
         },
         {
-            "Reset, cartridge off",
+            "&Reset, cartridge off",
             utilResetKillCartridge,
             returnTrue
         },
         { NULL, NULL, 0 }
+    }
 };
 
-ScreenMenuEntry aExpertMenuEntries[] =
+ScreenMenu menuExpert =
 {
+    7, 2,
+    0,
+    &menuMain,
+    &menuHelp,
+    {
         {
-            "Write BIN to LOROM",
+            "Write BIN to &LOROM",
             checkWriteLOROMImage,
             ifHaveValidFlash
         },
         {
-            "Write BIN to HIROM",
+            "Write BIN to &HIROM",
             checkWriteHIROMImage,
             ifHaveValidFlash
         },
         {
-            "Torture test",
+            "&Torture test",
             tortureTestComplete,
             ifHaveValidFlash
         },
         {
-            "Read torture test",
+            "&Read torture test",
             tortureTestRead,
             ifHaveValidFlash
         },
         {
-            "RAM test",
+            "R&AM test",
             tortureTestRAM,
             returnTrue
         },
         {
-            "Hex viewer",
+            "&Hex viewer",
             hexViewer,
             ifHaveValidFlash
         },
         { NULL, NULL, 0 }
+    }
 };
 
-ScreenMenuEntry aHelpMenuEntries[] =
+ScreenMenu menuHelp =
 {
+    15, 2,
+    0,
+    &menuExpert,
+    &menuMain,
+    {
         {
-            "About",
+            "&About",
             showAbout,
             returnTrue
         },
         { NULL, NULL, 0 }
+    }
 };
 
 
@@ -168,7 +192,7 @@ static void refreshStatusLine(void)
  */
 void refreshMainScreen(void)
 {
-	const char* str;
+    const char* str;
 
     screenPrintFrame();
 
@@ -197,7 +221,7 @@ void refreshMainScreen(void)
     gotoxy(6, 5);
     cputs("File name:");
     gotox(17);
-    cputs(strFileName);
+    cputs(g_strFileName);
 
     gotoxy(7, 8);
     cputs("CRT Type:");
@@ -220,15 +244,15 @@ void refreshMainScreen(void)
     switch ((nManufacturerId << 8) | nDeviceId)
     {
     case FLASH_TYPE_AMD_AM29F040:
-    	str = " (Am29F040)";
-    	break;
+        str = " (Am29F040)";
+        break;
 
     case FLASH_TYPE_AMD_M29W160ET:
-    	str = " (M29W160ET)";
-    	break;
+        str = " (M29W160ET)";
+        break;
 
     default:
-    	str = " (unknown)";
+        str = " (unknown)";
     }
     cputs(str);
 
@@ -324,7 +348,7 @@ static void checkEraseAll(void)
         eraseAll();
 
         // remove the name, it's not valid anymore
-        strFileName[0] = '\0';
+        g_strFileName[0] = '\0';
         internalCartType = INTERNAL_CART_TYPE_NONE;
     }
 }
@@ -346,10 +370,9 @@ void __fastcall__ setStatus(const char* pStrStatus)
 /**
  * Execute an action according to the given menu ID.
  */
-static void __fastcall__ execMenu(uint8_t x, uint8_t y,
-                                  const ScreenMenuEntry* pMenuEntries)
+static void __fastcall__ execMenu(ScreenMenu* pMenu)
 {
-    screenDoMenu(x, y, pMenuEntries);
+    screenDoMenu(pMenu);
     refreshMainScreen();
 }
 
@@ -360,55 +383,9 @@ static void __fastcall__ execMenu(uint8_t x, uint8_t y,
  */
 static void loadEAPI(void)
 {
-    uint8_t useInternal;
-    uint8_t oldState;
-    int nBytes;
-
-    useInternal = 1;
-
-    setStatus("Loading EasyAPI driver...");
-    oldState = spritesOn(0);
-    if (cbm_open(2, fileDlgGetDriveNumber(), CBM_READ, "eapi-????????-??") ||
-        cbm_k_chkin(2))
-    {
-        screenPrintSimpleDialog(apStrEAPINotFound);
-    }
-    else
-    {
-        // skip start address
-        nBytes = utilReadNormalFile(EAPI_LOAD_TO, 2);
-        if (nBytes > 0)
-        {
-            // load up to 1024 bytes to $c000
-            nBytes = utilReadNormalFile(EAPI_LOAD_TO, 1024);
-        }
-
-        if (nBytes <= 0)
-        {
-            screenPrintSimpleDialog(apStrEAPINotFound);
-        }
-        else if (memcmp(EAPI_LOAD_TO, pStrEAPISignature, 4))
-        {
-            screenPrintSimpleDialog(apStrEAPIInvalid);
-        }
-        else
-        {
-            // correctly loaded
-            strcpy(strDriverName, EAPI_LOAD_TO + 4);
-            useInternal = 0;
-        }
-    }
-
-    if (useInternal)
-    {
-        memcpy(EAPI_LOAD_TO, pFallbackDriverStart,
-               pFallbackDriverEnd - pFallbackDriverStart);
-    }
+    memcpy(EAPI_LOAD_TO, pFallbackDriverStart,
+           pFallbackDriverEnd - pFallbackDriverStart);
     EAPI_ZP_REAL_CODE_BASE = EAPI_LOAD_TO;
-
-    cbm_close(2);
-    cbm_k_clrch();
-    spritesOn(oldState);
 }
 
 
@@ -419,22 +396,19 @@ static void loadEAPI(void)
 int main(void)
 {
     char key;
-    uint8_t nDrive;
 
     screenInit();
     progressInit();
     spritesShow();
 
-    strFileName[0] = '\0';
+    g_strFileName[0] = '\0';
+    g_nDrive = *(uint8_t*)0xba;
+    if (g_nDrive < 8)
+        g_nDrive = 8;
+
     internalCartType = INTERNAL_CART_TYPE_NONE;
 
     refreshMainScreen();
-
-    nDrive = *(uint8_t*)0xba;
-    if (nDrive < 8)
-        nDrive = 8;
-    fileDlgSetDriveNumber(nDrive);
-
     loadEAPI();
     screenBing();
 
@@ -451,15 +425,15 @@ int main(void)
         switch (key)
         {
         case 'm':
-            execMenu(1, 2, aMainMenuEntries);
+            execMenu(&menuMain);
             break;
 
         case 'e':
-            execMenu(7, 2, aExpertMenuEntries);
+            execMenu(&menuExpert);
             break;
 
         case 'h':
-            execMenu(15, 2, aHelpMenuEntries);
+            execMenu(&menuHelp);
             break;
         }
     }

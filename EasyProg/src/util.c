@@ -33,15 +33,31 @@
 #include "screen.h"
 #include "texts.h"
 #include "easyprog.h"
+#include "uload.h"
+
 
 // globally visible string buffer for functions used here
 char utilStr[80];
 
-// File name of last CRT image
-char strFileName[FILENAME_MAX];
-
 // points to utilRead function to be used to read bytes from file
 int __fastcall__ (*utilRead)(void* buffer, unsigned int size);
+
+// points to getCrunchedByte function for the decruncher
+void (*getCrunchedByte)(void);
+
+extern void getCrunchedByteKernal(void);
+extern void uloadGetCrunchedByte(void);
+
+/******************************************************************************/
+/** Local data: Put here to reduce code size */
+
+// This header is read by utilCheckFileHeader which is called by utilOpenFile.
+// It can be used to identify the file type.
+static union
+{
+    char            data[16];
+    EasySplitHeader easySplitHeader;
+} m_uFileHeader;
 
 // Number of current split file (0...)
 static uint8_t nCurrentPart;
@@ -49,120 +65,67 @@ static uint8_t nCurrentPart;
 // ID of current split file
 static uint16_t nCurrentFileId;
 
+// Set by utilOpenInternal
+static uint8_t bHaveULoad;
+
+static const char aEasySplitSignature[8] =
+{
+        0x65, 0x61, 0x73, 0x79, 0x73, 0x70, 0x6c, 0x74
+};
 
 /******************************************************************************/
 /* prototypes */
-static uint8_t __fastcall__ utilOpenEasySplitFile(uint8_t nDrive,
-                                                  const char* pStrFileName,
-                                                  uint8_t nPart);
+static uint8_t utilCheckFileHeader(void);
+static uint8_t __fastcall__ utilOpenEasySplitFile(uint8_t nPart);
+static uint8_t utilOpenULoadFile(void);
+static void utilComplainWrongPart(uint8_t nPart);
+static uint8_t utilOpenInternal(void);
 
 
 /******************************************************************************/
 /**
- * Open the file for read access. Check if the file is compressed. If yes,
- * select utilReadExomizerFile as current input method. If not, select
- * utilReadSelectNormalFile. Select this file as current input.
+ * Open the file for read access. Check if the file is compressed and select
+ * the right read functions.
+ *
+ * nPart is the part number for split files. If this is 0 the file may be not
+ * split or it may be the first part of a split file. Otherwise it must be the
+ * right split file > 0.
  *
  * OPEN_FILE_OK, OPEN_FILE_ERR, OPEN_FILE_WRONG
  */
-uint8_t __fastcall__ utilOpenFile(uint8_t nDrive, const char* pStrFileName)
+uint8_t utilOpenFile(uint8_t nPart)
 {
-    uint8_t rv;
+    uint8_t rv, type;
 
-    utilRead = utilReadNormalFile;
-
-    // try to open it as EasySplit file
-    rv = utilOpenEasySplitFile(nDrive, pStrFileName, 0);
-
-    // return if it is opened or if it is a wrong EasySplit part
-    if (rv != OPEN_FILE_ERR)
-        return rv;
-
-    // that's not an EasySplit file: try to open it as normal file
-    if (cbm_open(UTIL_GLOBAL_READ_LFN, nDrive, CBM_READ, pStrFileName) ||
-        cbm_k_chkin(UTIL_GLOBAL_READ_LFN))
-    {
-        return OPEN_FILE_ERR;
-    }
-
-    return OPEN_FILE_OK;
-}
-
-
-/******************************************************************************/
-/**
- * Try to open an EasySplit file. The header will be read here and the file
- * position will be directly behind the header in case of success.
- *
- * return:
- * OPEN_FILE_OK     for OK
- * OPEN_FILE_ERR    for an error or if it is not an EasySplit file
- * OPEN_FILE_WRONG  if it is an EasySplit file, but the wrong part
- */
-static uint8_t __fastcall__ utilOpenEasySplitFile(uint8_t nDrive,
-                                                  const char* pStrFileName,
-                                                  uint8_t nPart)
-{
-    const char strEasySplitSignature[8] = { 0x65, 0x61, 0x73, 0x79, 0x73, 0x70, 0x6c, 0x74 };
-    const char* apStr[3];
-    EasySplitHeader header;
-
-    if (cbm_open(UTIL_GLOBAL_READ_LFN, nDrive, CBM_READ, pStrFileName))
-        return OPEN_FILE_ERR;
-
-    if (cbm_k_chkin(UTIL_GLOBAL_READ_LFN))
-        goto closeErr;
-
-    if (utilReadNormalFile(&header, sizeof(header)) != sizeof(header))
-        goto closeErr;
-
-    // give up if we don't find the magic string
-    if (memcmp(strEasySplitSignature, header.magic, sizeof(header.magic)))
-        goto closeErr;
-
-    if (nPart != header.part)
-    {
-        strcpy(utilStr, "This is not part ");
-        utilAppendHex2(nPart + 1);
-        utilAppendChar('.');
-        apStr[0] = utilStr;
-        apStr[1] = "Select the right part.";
-        apStr[2] = NULL;
-
-        screenPrintDialog(apStr, BUTTON_ENTER);
-        utilCloseFile();
-        return OPEN_FILE_WRONG;
-    }
+    // this reads m_uFileHeader and returns the type detected
+    type = utilCheckFileHeader();
+    if (type == OPEN_FILE_ERR)
+        return type;
 
     if (nPart == 0)
     {
-        nUtilExoBytesRemaining = *(uint32_t*)(header.len);
-
-        // the read function expects the two's complement - 1
-        nUtilExoBytesRemaining = -nUtilExoBytesRemaining - 1;
-        utilRead = utilReadEasySplitFile;
-        utilInitDecruncher();
-        nCurrentFileId = *(uint16_t*)(header.id);
+        // it may be a split file part 1 or a plain file
+        if (type == OPEN_FILE_TYPE_ESPLIT)
+        {
+            return utilOpenEasySplitFile(nPart);
+        }
+        else
+        {
+            // plain file
+            return utilOpenInternal();
+        }
     }
     else
     {
-        if (nCurrentFileId != *(uint16_t*)(header.id))
-        {
-            screenPrintDialog(apStrDifferentFile, BUTTON_ENTER);
-            utilCloseFile();
-            return OPEN_FILE_WRONG;
-        }
+         if (type != OPEN_FILE_TYPE_ESPLIT)
+         {
+             screenPrintSimpleDialog(apStrFileNoEasySplit);
+             return OPEN_FILE_WRONG;
+         }
+         return utilOpenEasySplitFile(nPart);
     }
 
-    nCurrentPart = nPart;
     return OPEN_FILE_OK;
-
-closeErr:
-    if (nPart)
-        screenPrintSimpleDialog(apStrFileNoEasySplit);
-
-    utilCloseFile();
-    return OPEN_FILE_ERR;
 }
 
 
@@ -172,8 +135,17 @@ closeErr:
  */
 void utilCloseFile(void)
 {
-    cbm_k_clrch();
-    cbm_close(UTIL_GLOBAL_READ_LFN);
+    int val;
+
+    if (!bHaveULoad)
+    {
+        cbm_k_clrch();
+        cbm_close(UTIL_GLOBAL_READ_LFN);
+    }
+    else
+    {
+        uloadExit();
+    }
 }
 
 
@@ -200,7 +172,7 @@ uint8_t utilAskForNextFile(void)
         {
         	screenBing();
             refreshMainScreen();
-            ret = fileDlg(strFileName, str);
+            ret = fileDlg(str);
 
             if (!ret)
             {
@@ -212,8 +184,7 @@ uint8_t utilAskForNextFile(void)
         }
         while (!ret);
 
-        ret = utilOpenEasySplitFile(fileDlgGetDriveNumber(), strFileName,
-                                    nCurrentPart);
+        ret = utilOpenFile(nCurrentPart);
     }
     while (ret != OPEN_FILE_OK);
 
@@ -268,3 +239,217 @@ void __fastcall__ utilAppendDecimal(uint16_t n)
         utilAppendChar('0');
 }
 
+
+/******************************************************************************/
+/**
+ *
+ * Open a file, take the name from g_strFileName. The directory is parsed
+ * here to find out track and sector.
+ *
+ * return: OPEN_FILE_OK, OPEN_FILE_ERR
+ */
+static uint8_t utilOpenULoadFile(void)
+{
+    uint8_t i;
+    uint8_t nEntry;
+    uint8_t nameLen;
+    int     val;
+    uint8_t dirEntry[0x20];
+
+    *(uint8_t*)0xba = g_nDrive;
+    nameLen = strlen(g_strFileName);
+
+    if (!uloadOpenDir())
+    {
+        return OPEN_FILE_ERR;
+    }
+
+    for (;;)
+    {
+        // the first entry comes w/o link pointers
+        i = 2;
+        // 8 entries per sector
+        for (nEntry = 0; nEntry < 8; ++nEntry)
+        {
+            // read 30/32 bytes of an entry
+            for (; i < 0x20; ++i)
+            {
+                val = uloadReadByte();
+                if (val == -1)
+                    return OPEN_FILE_ERR;
+                dirEntry[i] = val;
+            }
+
+            if ((dirEntry[0x02] & 0x07) == 0x02) // PRG
+            {
+                for (i = 0; i < nameLen; ++i)
+                {
+                    if (g_strFileName[i] != dirEntry[5 + i])
+                        break; // mismatch
+                }
+                // compared all 16 chars or entry name is padded?
+                if (i == 0x10 || dirEntry[5 + i] == 0xa0)
+                    goto found;
+            }
+            // 1st to 8th entry has two dummy bytes at the beginning
+            i = 0;
+        } // for nEntry
+    }
+found:
+    // must read to EOF before we open the file
+    while (uloadReadByte() != -1)
+    {}
+
+    if (uloadOpenFile((dirEntry[0x03] << 8) | dirEntry[0x04]))
+        return OPEN_FILE_OK;
+    else
+        return OPEN_FILE_ERR;
+}
+
+
+
+/******************************************************************************/
+/**
+ * Open an EasySplit file. Only called from utilOpenFile! The caller checked
+ * already that it has the right file type and filled m_uFileHeader.
+ * The file will be re-opened here, possibly using a speeder. Therefore we
+ * have to skip the header again.
+ *
+ * return:
+ *      OPEN_FILE_OK     for OK
+ *      OPEN_FILE_ERR    for an error or if it is not an EasySplit file
+ *      OPEN_FILE_WRONG  if it is an EasySplit file, but the wrong part
+ */
+static uint8_t __fastcall__ utilOpenEasySplitFile(uint8_t nPart)
+{
+    uint8_t i;
+    uint8_t rv;
+
+    if (nPart != m_uFileHeader.easySplitHeader.part)
+    {
+        utilComplainWrongPart(nPart);
+        return OPEN_FILE_WRONG;
+    }
+    if ((nPart != 0) &&
+        (nCurrentFileId != *(uint16_t*)(m_uFileHeader.easySplitHeader.id)))
+    {
+        screenPrintDialog(apStrDifferentFile, BUTTON_ENTER);
+        return OPEN_FILE_WRONG;
+    }
+
+    rv = utilOpenInternal();
+    if (rv != OPEN_FILE_OK)
+        return rv;
+
+    // correct the read function pointer
+    utilRead = utilReadEasySplitFile;
+    // skip the header again
+    for (i = 0; i < sizeof(EasySplitHeader); ++i)
+        getCrunchedByte();
+
+    if (nPart == 0)
+    {
+        nUtilExoBytesRemaining =
+                *(uint32_t*)(m_uFileHeader.easySplitHeader.len);
+
+        // the read function expects the two's complement - 1
+        nUtilExoBytesRemaining = -nUtilExoBytesRemaining - 1;
+        utilInitDecruncher();
+        nCurrentFileId = *(uint16_t*)(m_uFileHeader.easySplitHeader.id);
+    }
+
+    nCurrentPart = nPart;
+    return OPEN_FILE_OK;
+}
+
+
+/******************************************************************************/
+/**
+ * return:
+ *          OPEN_FILE_ERR    file couldn't be opened
+ *          OPEN_FILE_WRONG  unknown file type
+ *          OPEN_FILE_TYPE_  file type detected
+ */
+static uint8_t utilCheckFileHeader(void)
+{
+    uint8_t len;
+
+    if (cbm_open(UTIL_GLOBAL_READ_LFN, g_nDrive, CBM_READ, g_strFileName))
+        return OPEN_FILE_ERR;
+
+    if (cbm_k_chkin(UTIL_GLOBAL_READ_LFN))
+    {
+        cbm_close(UTIL_GLOBAL_READ_LFN);
+        return OPEN_FILE_ERR;
+    }
+
+    len = utilKernalRead(&m_uFileHeader, sizeof(m_uFileHeader));
+    bHaveULoad = 0;
+    utilCloseFile();
+
+    if (len != sizeof(m_uFileHeader))
+        return OPEN_FILE_WRONG;
+
+    if (memcmp(m_uFileHeader.easySplitHeader.magic,
+               aEasySplitSignature, sizeof(aEasySplitSignature)) == 0)
+        return OPEN_FILE_TYPE_ESPLIT;
+
+    return OPEN_FILE_WRONG;
+}
+
+
+/******************************************************************************/
+/**
+ */
+static void utilComplainWrongPart(uint8_t nPart)
+{
+    const char* apStr[3];
+
+    strcpy(utilStr, "This is not part ");
+    utilAppendHex2(nPart + 1);
+    utilAppendChar('.');
+    apStr[0] = utilStr;
+    apStr[1] = "Select the right part.";
+    apStr[2] = NULL;
+
+    screenPrintDialog(apStr, BUTTON_ENTER);
+}
+
+
+/******************************************************************************/
+/**
+ * The file has been checked already, it has the right type and the right part,
+ * now we can really open it with the fast loader if possible and without if
+ * not.
+ */
+static uint8_t utilOpenInternal(void)
+{
+    uint8_t rv;
+
+    bHaveULoad = uloadInit();
+
+    if (bHaveULoad)
+    {
+        if (utilOpenULoadFile() == OPEN_FILE_ERR)
+            return OPEN_FILE_ERR;
+
+        utilRead        = uloadRead;
+        getCrunchedByte = uloadGetCrunchedByte;
+    }
+    else
+    {
+        // that's not an EasySplit file: try to open it as normal file
+        if (cbm_open(UTIL_GLOBAL_READ_LFN, g_nDrive, CBM_READ, g_strFileName))
+            return OPEN_FILE_ERR;
+
+        if (cbm_k_chkin(UTIL_GLOBAL_READ_LFN))
+        {
+            cbm_close(UTIL_GLOBAL_READ_LFN);
+            return OPEN_FILE_ERR;
+        }
+
+        utilRead        = utilKernalRead;
+        getCrunchedByte = getCrunchedByteKernal;
+    }
+    return OPEN_FILE_OK;
+}

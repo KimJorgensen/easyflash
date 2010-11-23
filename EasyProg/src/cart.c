@@ -54,8 +54,8 @@ const char* aStrInternalCartTypeName[] =
 };
 
 
-static const char strCartSignature[16] = CART_SIGNATURE;
-static const char strChipSignature[4] = CHIP_SIGNATURE;
+const char strCartSignature[16] = CART_SIGNATURE;
+const char strChipSignature[4] = CHIP_SIGNATURE;
 
 
 uint8_t readCartHeader()
@@ -124,10 +124,6 @@ uint8_t readCartHeader()
     }
 
     return 1;
-}
-
-void eraseFlash()
-{
 }
 
 

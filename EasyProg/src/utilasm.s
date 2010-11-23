@@ -28,10 +28,11 @@
 .import         get_decrunched_byte
 .import         _utilStr
 .import         _utilAskForNextFile
+.import         _getCrunchedByte
 
 .export buffer_start_hi: absolute
 .export buffer_len_hi: absolute
-buffer_start_hi   = $68             ; see buffer.h
+buffer_start_hi   = $6e             ; see buffer.h
 buffer_len_hi     = 16              ; see EASY_SPLIT_MAX_EXO_OFFSET and buffer.h
 
 ; Kernal I/O Status Word ST
@@ -95,15 +96,15 @@ _nUtilExoBytesRemaining:
 ; Like cbm_read, but without calling CHKIN/CLRCH. The caller must have
 ; redirected the input already.
 ;
-; int __fastcall__ utilReadNormalFile(void* buffer, unsigned int size);
+; int __fastcall__ utilKernalRead(void* buffer, unsigned int size);
 ;
 ; Reads up to "size" bytes from a file to "buffer".
-; Returns the number of actually read bytes, 0 if there are no bytes left
+; Returns the number of bytes actually read, 0 if there are no bytes left
 ; (EOF).
 ;
 ; =============================================================================
-.export _utilReadNormalFile
-_utilReadNormalFile:
+.export _utilKernalRead
+_utilKernalRead:
         eor     #$FF
         sta     ptr1
         txa
@@ -158,7 +159,6 @@ utilRead4:
 
         rts
 
-
 ; =============================================================================
 ;
 ; The decruncher jsr:s to the get_crunched_byte address when it wants to
@@ -169,6 +169,13 @@ utilRead4:
 
         .export get_crunched_byte
 get_crunched_byte:
+        jmp (_getCrunchedByte)
+
+
+; =============================================================================
+; =============================================================================
+        .export _getCrunchedByteKernal
+_getCrunchedByteKernal:
         ; save X, Y, C
         txa
         pha
@@ -199,26 +206,8 @@ get_crunched_byte2:
         rts
 
 gcbNextFile:
-        ; backup cc65 ZP area
-        ldx #$1a        ; see ld.conf
-gcbE1:
-        lda $02, x      ; see ld.conf
-        sta $7900, x    ; BUFFER_ZP_BACKUP_ADDR
-        dex
-        bpl gcbE1
-
-        jsr _utilAskForNextFile
-        cmp #0
-        beq gcbCancel
-
-        ; restore cc65 ZP area
-        ldx #$1a        ; see ld.conf
-gcbE2:
-        lda $7900, x    ; BUFFER_ZP_BACKUP_ADDR
-        sta $02, x      ; see ld.conf
-        dex
-        bpl gcbE2
-
+        jsr utilAskForNextCrunchedFile
+        bcs gcbCancel
         jmp get_crunched_byte2
 
 gcbCancel:
@@ -242,6 +231,44 @@ gcbCancel:
 _utilInitDecruncher:
         jmp init_decruncher
 
+
+; =============================================================================
+;
+; Backup the zero page (why???), ask for the next split file and restore the
+; zero page.
+;
+; Return C = 1 if the user cancelled.
+;
+; =============================================================================
+.export utilAskForNextCrunchedFile
+utilAskForNextCrunchedFile:
+        ; backup cc65 ZP area
+        ldx #$1a        ; see ld.conf
+uafE1:
+        lda $02, x      ; see ld.conf
+        sta $7900, x    ; BUFFER_ZP_BACKUP_ADDR
+        dex
+        bpl uafE1
+
+        jsr _utilAskForNextFile
+
+        cmp #0
+        beq uafCancel
+
+        ; restore cc65 ZP area
+        ldx #$1a        ; see ld.conf
+uafE2:
+        lda $7900, x    ; BUFFER_ZP_BACKUP_ADDR
+        sta $02, x      ; see ld.conf
+        dex
+        bpl uafE2
+        clc
+        rts
+
+        ; todo: xxx mit Stack-Rollback implementieren
+uafCancel:
+        sec
+        rts
 
 ; =============================================================================
 ;
@@ -272,7 +299,7 @@ _utilReadEasySplitFile:
         sta     ptr2
         stx     ptr2 + 1        ; Save buffer
 
-        ; rememeber the stack pointer at this point
+        ; remember the stack pointer at this point
         ; so we are able to cancel the whole call chain later
         tsx
         stx utilReadEasySplitFileEntrySP

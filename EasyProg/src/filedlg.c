@@ -53,13 +53,16 @@ static void fileDlgPrintFrame(void);
 
 
 /******************************************************************************/
+// Current drive
+uint8_t g_nDrive;
+
+// File name of current file
+char g_strFileName[FILENAME_MAX];
+
+/******************************************************************************/
 
 // change directory up one level
 static const char strUp[] = { 95, 0 }; // arrow left
-
-// current drive
-static uint8_t nDriveNumber;
-
 
 /******************************************************************************/
 /** Local data: Put here to reduce code size */
@@ -190,7 +193,7 @@ static void fileDlgReadDir(void)
     pEntry = aDirEntries;
 
     oldState = spritesOn(0);
-    if (dirOpen(FILEDLG_LFN, nDriveNumber))
+    if (dirOpen(FILEDLG_LFN, g_nDrive))
     {
         dirClose(FILEDLG_LFN);
         spritesOn(oldState);
@@ -255,7 +258,7 @@ static void __fastcall__ fileDlgHeadline(const char* pStrType)
     strcpy(utilStr, "Select ");
     strcat(utilStr, pStrType);
     strcat(utilStr, " file - drive ");
-    utilAppendDecimal(nDriveNumber);
+    utilAppendDecimal(g_nDrive);
     utilAppendChar(' ');
     cputsxy(FILEDLG_X + 1, FILEDLG_Y + 1, utilStr);
 }
@@ -325,7 +328,7 @@ void __fastcall__ fileDlgChangeDir(const char* pStrDir)
     strcpy(strCmd + 3, pStrDir);
 
     oldState = spritesOn(0);
-    cbm_open(15, nDriveNumber, 15, strCmd);
+    cbm_open(15, g_nDrive, 15, strCmd);
     cbm_close(15);
     spritesOn(oldState);
 }
@@ -333,34 +336,14 @@ void __fastcall__ fileDlgChangeDir(const char* pStrDir)
 
 /******************************************************************************/
 /**
- * Set the drive number to be used for the file browser.
- */
-void fileDlgSetDriveNumber(uint8_t n)
-{
-    nDriveNumber = n;
-}
-
-
-/******************************************************************************/
-/**
- * Set the drive number to be used for the file browser.
- */
-uint8_t fileDlgGetDriveNumber(void)
-{
-    return nDriveNumber;
-}
-
-
-/******************************************************************************/
-/**
  * Show a file open dialog. If the user selects a file, copy the name to
- * pStrName. The three letter file type in pStrType is shown in the
+ * g_strFileName. The three letter file type in pStrType is shown in the
  * headline.
  *
  * return 1 if the user has selected a file, 0 if he canceled
  * the dialog.
  */
-uint8_t __fastcall__ fileDlg(char* pStrName, const char* pStrType)
+uint8_t __fastcall__ fileDlg(const char* pStrType)
 {
     uint8_t nTopLine;
     unsigned char n, nEntry, nOldSelection;
@@ -455,7 +438,7 @@ uint8_t __fastcall__ fileDlg(char* pStrName, const char* pStrType)
             }
             else
             {
-                strcpy(pStrName, pEntry->name);
+                strcpy(g_strFileName, pEntry->name);
                 rv = 1;
                 goto end; // yeah!
             }
@@ -472,9 +455,9 @@ uint8_t __fastcall__ fileDlg(char* pStrName, const char* pStrType)
             if (key >= '0' && key <= '9')
             {
                 if (key >= '8')
-                    nDriveNumber = key - '0';
+                    g_nDrive = key - '0';
                 else
-                    nDriveNumber = 10 + key - '0';
+                    g_nDrive = 10 + key - '0';
 
                 fileDlgHeadline(pStrType);
                 bReload = 1;
