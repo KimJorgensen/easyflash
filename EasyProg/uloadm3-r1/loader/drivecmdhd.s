@@ -21,8 +21,12 @@ execjob	= $ff4e			; execute job
 job3	= $23
 trk3	= $2806
 sct3	= $2807
-zptmp	= $ff			; FIXME!
+zptmp	= $ff
+track	= $f8
+sector	= $f9
+stack	= $fa
 
+	.include "xfer_drive_2mhz_2bit.i"
 
 drv_get_dir_ts:
 	lda $2ba7
@@ -84,5 +88,13 @@ blink:
 	sta ledctl
 	rts
 
+; set track (from x) and sector (from a) for read/write sector
+drv_set_ts:
+	stx track
+	sta sector
+	rts
 
-	.include "xfer_drive_2mhz_2bit.i"
+; set the stack pointer (from x) to be restored upon exit
+drv_set_exit_sp:
+	stx stack
+	rts

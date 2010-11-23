@@ -106,7 +106,7 @@ drive code needs a few symbols:
 
   SYMBOLS {
     DCOMN_START:	value = $0300;
-    DCOMN_SIZE:		value = $00cd;
+    DCOMN_SIZE:		value = $00cb;
     DBUFR_START:	value = $0600;
     DBUFR_SIZE:		value = $0100;
     DSPEC_START:	value = DCOMN_START + DCOMN_SIZE;

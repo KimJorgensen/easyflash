@@ -1,4 +1,7 @@
 drv_send:
+	bit serport     ; check for ATN
+	bmi drv_exit
+
 	ldy #$02		; set DATA low to signal that we're sending
 	sty serport
 
@@ -58,19 +61,22 @@ drv_sendtbl_end:
 
 
 drv_exit:
+	lda #0			; release IEC bus
+	sta serport
 	ldx stack
 	txs
+	cli
 	rts
 
 drv_recv:
 	lda #$08		; CLK low to signal that we're receiving
 	sta serport
 
-;	lda serport		; get EOR mask for data
-;	asl
-;	eor serport
-;	and #$e0
-;	sta @eor
+	lda serport		; get EOR mask for data
+	asl
+	eor serport
+	and #$e0
+	sta @eor
 
 	lda #$01
 :	bit serport		; wait for DATA low
@@ -106,7 +112,7 @@ drv_recv:
 	nop
 	eor serport		; finally get 2 and 0
 
-;@eor = * + 1
-;	eor #$5e
+@eor = * + 1
+	eor #$5e
 
 	rts

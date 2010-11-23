@@ -3,15 +3,8 @@
 
 	.export drv_start
 
-	.exportzp track, sector, stack
-
 	.export drivebuffer
 	.export track_list, sector_list
-
-
-track	= $7a
-sector	= $7b
-stack	= $7c
 
 
 	.segment "DRIVEBUFFER"
@@ -66,8 +59,7 @@ loadchain:
 
 drv_start:
 	tsx
-	stx stack
-
+	jsr drv_set_exit_sp
 
 drv_main:
 	.ifdef LOADERTEST
@@ -174,19 +166,16 @@ sendflag:	.res 1
 ; receive track and sector args
 recvts:
 	jsr drv_recv
-	sta track
+	tax
 	jsr drv_recv
-	sta sector
-	rts
+	jmp drv_set_ts
 
 
 ; next t/s in chain
 nextts:
 	sec
-	lda drivebuffer
+	ldx drivebuffer
 	beq :+
-	sta track
 	lda drivebuffer + 1
-	sta sector
 	clc
-:	rts
+:	jmp drv_set_ts
