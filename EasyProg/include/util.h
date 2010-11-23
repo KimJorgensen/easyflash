@@ -10,6 +10,11 @@
 #define OPEN_FILE_OK    0
 #define OPEN_FILE_ERR   1
 #define OPEN_FILE_WRONG 2
+// used internally:
+#define OPEN_FILE_TYPE_ESPLIT  8
+#define OPEN_FILE_TYPE_CRT     9
+#define OPEN_FILE_TYPE_PRG    10
+
 
 
 void utilResetStartCartridge(void);
@@ -23,11 +28,11 @@ void __fastcall__ utilAppendFlashAddr(uint8_t nBank,
 void __fastcall__ utilAppendDecimal(uint16_t n);
 
 
-uint8_t __fastcall__ utilOpenFile(uint8_t nDrive, const char* pStrFileName);
+uint8_t utilOpenFile(uint8_t nPart);
 void utilCloseFile(void);
 
 void utilReadSelectNormalFile(void);
-int __fastcall__ utilReadNormalFile(void* buffer, unsigned int size);
+int __fastcall__ utilKernalRead(void* buffer, unsigned int size);
 
 
 /* private */ void utilInitDecruncher(void);
@@ -41,7 +46,6 @@ extern const uint8_t* pFallbackDriverStart;
 extern const uint8_t* pFallbackDriverEnd;
 
 extern char utilStr[];
-extern char strFileName[];
 
 typedef struct EasySplitHeader_s
 {

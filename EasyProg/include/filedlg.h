@@ -3,9 +3,14 @@
 #define FILEDLG_H
 
 #include <stdint.h>
+#include <stdio.h>
 
-void fileDlgSetDriveNumber(uint8_t n);
-uint8_t fileDlgGetDriveNumber(void);
-uint8_t __fastcall__ fileDlg(char* pStrName, const char* pStrType);
+// Current drive
+extern uint8_t g_nDrive;
+
+// File name of current file
+extern char g_strFileName[FILENAME_MAX];
+
+uint8_t __fastcall__ fileDlg(const char* pStrType);
 
 #endif // FILEDLG_H

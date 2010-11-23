@@ -101,10 +101,11 @@ extern CartHeader   cartHeader;
 extern uint8_t      nChips;
 extern uint32_t     nCartBytes;
 extern uint8_t      nXbankConfig;
-extern const char* aStrInternalCartTypeName[];
+extern const char*  aStrInternalCartTypeName[];
+extern const char   strCartSignature[16];
+extern const char   strChipSignature[4];
 
 uint8_t readCartHeader();
-void eraseFlash(void);
 void printCartInfo(void);
 uint8_t __fastcall__ readNextBankHeader(BankHeader* pBankHeader);
 
