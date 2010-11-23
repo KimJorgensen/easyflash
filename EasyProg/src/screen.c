@@ -34,7 +34,115 @@
 #include "sprites.h"
 #include "util.h"
 
+#include "easyprog.h"
+
 static const char* pStrHexDigits = "0123456789ABCDEF";
+
+
+/******************************************************************************/
+/**
+ * Return 1 if the menu entry has the shortcut 'key', 0 otherwise.
+ */
+static uint8_t screenMenuEntryHasShortcut(const ScreenMenuEntry* pEntry, char key)
+{
+    const char* p;
+    char c, next;
+
+    p = pEntry->pStrLabel;
+    c = *p;
+    while (c)
+    {
+        ++p;
+        next = *p;
+        if (c == '&' && key == tolower(next))
+            return 1;
+        c = next;
+    }
+    return 0;
+}
+
+
+/******************************************************************************/
+/**
+ * Show or update the menu.
+ *
+ * If bPrintFrame is set, also draw the frame.
+ */
+static void __fastcall__ screenPrintMenu(const ScreenMenu* pMenu)
+{
+    uint8_t nEntry, nEntries;
+    uint8_t tmp;
+    uint8_t len;
+    uint8_t x, y;
+    char    c;
+    const ScreenMenuEntry* pEntry;
+    const char* pStr;
+    const char* p;
+
+    // calculate length of longest entry
+    len = 2;
+    nEntries = 0;
+    pEntry = pMenu->entries;
+    while ((pStr = pEntry->pStrLabel) != NULL)
+    {
+        tmp = strlen(pStr);
+        if (tmp > len)
+            len = tmp;
+        ++nEntries;
+        ++pEntry;
+    }
+
+    /* hack: only 1 more instead of 2 because of the '&' in each entry */
+    len += 1;
+
+    x = pMenu->x;
+    y = pMenu->y;
+
+    screenPrintBorder(x, y, len + 2, nEntries + 2);
+
+    ++x;
+
+    pEntry = pMenu->entries;
+    for (nEntry = 0; nEntry != nEntries; ++nEntry)
+    {
+        gotoxy(x, ++y);
+
+        pStr = pEntry->pStrLabel;
+
+        if (nEntry == pMenu->nSelected)
+            revers(1);
+
+        cputc(' ');
+        if (pEntry->pCheckFunction())
+        {
+            p = pStr;
+            while ((c = *p) != 0)
+            {
+                if (c == '&')
+                {
+                    textcolor(COLOR_EXTRA);
+                }
+                else
+                {
+                    cputc(c);
+                    textcolor(COLOR_FOREGROUND);
+                }
+                ++p;
+            }
+        }
+        else
+        {
+            textcolor(COLOR_GRAY1);
+            cputs(pStr);
+        }
+        cclear(len + x - wherex());
+
+        revers(0);
+        ++pEntry;
+    }
+    textcolor(COLOR_FOREGROUND);
+}
+
 
 /******************************************************************************/
 /**
@@ -42,7 +150,7 @@ static const char* pStrHexDigits = "0123456789ABCDEF";
  */
 void screenInit(void)
 {
-	bgcolor(COLOR_BACKGROUND);
+    bgcolor(COLOR_BACKGROUND);
     bordercolor(COLOR_BACKGROUND);
     textcolor(COLOR_FOREGROUND);
     clrscr();
@@ -226,7 +334,36 @@ void screenPrintFrame(void)
 
 /******************************************************************************/
 /**
- * Draw a box.
+ * Draw an empty box.
+ *
+ * The size is incl. border
+ */
+void screenPrintBorder(uint8_t x, uint8_t y, uint8_t w, uint8_t h)
+{
+    uint8_t i, x_end;
+
+    --w;
+    x_end = x + w;
+
+    // Top line
+    screenPrintTopLine(x, x_end, y);
+
+    for (i = h - 2; i; --i)
+    {
+        ++y;
+        cputcxy(x,     y, 0x7d);
+        gotox(x_end);
+        cputc(0x7d);
+    }
+
+    // Bottom line
+    screenPrintBottomLine(x, x_end, ++y);
+}
+
+
+/******************************************************************************/
+/**
+ * Draw a filled empty box.
  *
  * The size is incl. border
  */
@@ -234,19 +371,16 @@ void screenPrintBox(uint8_t x, uint8_t y, uint8_t w, uint8_t h)
 {
     uint8_t i;
 
-    --w;
+    screenPrintBorder(x, y, w, h);
 
-    // Top line
-    screenPrintTopLine(x, x + w, y);
+    w -= 2;
+    ++x;
 
     for (i = h - 2; i; --i)
     {
-        // text line
-        screenPrintFreeLine(x, x + w, ++y);
+        gotoxy(x, ++y);
+        cclear(w);
     }
-
-    // Bottom line
-    screenPrintBottomLine(x, x + w, ++y);
 }
 
 
@@ -274,91 +408,28 @@ void screenPrintButton(uint8_t x, uint8_t y, const char* pStrLabel)
 
 /******************************************************************************/
 /**
- * Show or update the menu.
- *
- * If bPrintFrame is set, also draw the frame.
- */
-void __fastcall__ screenPrintMenu(uint8_t x, uint8_t y,
-                                  const ScreenMenuEntry* pMenuEntries,
-                                  uint8_t nSelected, uint8_t bPrintFrame)
-{
-    uint8_t nEntry, nEntries;
-    uint8_t tmp;
-    uint8_t len;
-    const ScreenMenuEntry* pEntry;
-    const char* pStr;
-
-    // calculate length of longest entry
-    len = 2;
-    for (nEntry = 0; (pStr = pMenuEntries[nEntry].pStrLabel); ++nEntry)
-    {
-        tmp = strlen(pStr);
-        if (tmp > len)
-            len = tmp;
-    }
-    len += 2;
-    nEntries = nEntry;
-
-    if (bPrintFrame)
-    {
-        screenPrintBox(x, y, len + 2, nEntries + 2);
-    }
-
-    pEntry = pMenuEntries;
-    for (nEntry = 0; nEntry != nEntries; ++nEntry)
-    {
-        gotoxy(x + 1, ++y);
-
-        pStr = pEntry->pStrLabel;
-
-        if (nEntry == nSelected)
-            revers(1);
-
-        cputc(' ');
-        if (pEntry->pCheckFunction())
-        {
-            textcolor(COLOR_EXTRA);
-            cputc(*pStr);
-            textcolor(COLOR_FOREGROUND);
-            cputs(pStr + 1);
-        }
-        else
-        {
-            textcolor(COLOR_GRAY1);
-            cputs(pStr);
-        }
-        cclear(len + x - wherex() + 1);
-
-        revers(0);
-        ++pEntry;
-    }
-    textcolor(COLOR_FOREGROUND);
-}
-
-
-/******************************************************************************/
-/**
  * Show and handle the menu and execute the menu item is one was selected.
  */
-void __fastcall__ screenDoMenu(uint8_t x, uint8_t y,
-                               const ScreenMenuEntry* pMenuEntries)
+void __fastcall__ screenDoMenu(ScreenMenu* pMenu)
 {
     uint8_t nEntry, nEntries;
     uint8_t nSelected;
     char key;
+    ScreenMenuEntry* pEntries;
 
-    screenPrintMenu(x, y, pMenuEntries, nSelected, 1);
-
-    // count the entries
-    nEntries = 0;
-    for (nEntry = 0; pMenuEntries[nEntry].pStrLabel; ++nEntry)
-        ++nEntries;
+    pEntries = pMenu->entries;
 
     nSelected = 0;
 
+    // count the entries
+    nEntries = 0;
+    for (nEntry = 0; pEntries[nEntry].pStrLabel; ++nEntry)
+        ++nEntries;
+
     do
     {
-        screenPrintMenu(x, y, pMenuEntries, nSelected, 0);
+        pMenu->nSelected = nSelected;
+        screenPrintMenu(pMenu);
         key = cgetc();
 
         switch (key)
@@ -375,10 +446,28 @@ void __fastcall__ screenDoMenu(uint8_t x, uint8_t y,
                 nSelected = 0;
             break;
 
-        case CH_ENTER:
-            if (pMenuEntries[nSelected].pCheckFunction())
+        case CH_CURS_RIGHT:
+            if (pMenu->pNextMenu)
             {
-                pMenuEntries[nSelected].pFunction();
+                pMenu = pMenu->pNextMenu;
+                refreshMainScreen();
+                screenPrintMenu(pMenu);
+            }
+            break;
+
+        case CH_CURS_LEFT:
+            if (pMenu->pPrevMenu)
+            {
+                pMenu = pMenu->pPrevMenu;
+                refreshMainScreen();
+                screenPrintMenu(pMenu);
+            }
+            break;
+
+        case CH_ENTER:
+            if (pEntries[nSelected].pCheckFunction())
+            {
+                pEntries[nSelected].pFunction();
                 return;
             }
             break;
@@ -386,11 +475,12 @@ void __fastcall__ screenDoMenu(uint8_t x, uint8_t y,
         default:
             for (nEntry = 0; nEntry != nEntries; ++nEntry)
             {
-                if (key == tolower(pMenuEntries[nEntry].pStrLabel[0]) &&
-                        pMenuEntries[nEntry].pCheckFunction())
+                if (screenMenuEntryHasShortcut(pMenu->entries + nEntry, key) &&
+                        pEntries[nEntry].pCheckFunction())
                 {
-                    screenPrintMenu(x, y, pMenuEntries, nEntry, 0);
-                    pMenuEntries[nEntry].pFunction();
+                    pMenu->nSelected = nEntry;
+                    screenPrintMenu(pMenu);
+                    pEntries[nEntry].pFunction();
                     return;
                 }
             }
