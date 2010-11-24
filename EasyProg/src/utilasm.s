@@ -192,7 +192,7 @@ get_crunched_byte2:
 
         lda ST
         and #(~$40)
-        bne gcbCancel
+        bne utilGetCrunchedByteCancel
 
         ; restore X, Y, C
         plp
@@ -207,10 +207,11 @@ get_crunched_byte2:
 
 gcbNextFile:
         jsr utilAskForNextCrunchedFile
-        bcs gcbCancel
-        jmp get_crunched_byte2
+        bcs utilGetCrunchedByteCancel
+        bcc get_crunched_byte2
 
-gcbCancel:
+        .export utilGetCrunchedByteCancel
+utilGetCrunchedByteCancel:
         ; skip the whole call chain and return from _utilReadEasySplitFile
         ldx utilReadEasySplitFileEntrySP
         txs

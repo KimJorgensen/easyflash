@@ -10,6 +10,7 @@
     .import         loader_open
     .import         loader_read
     .import         utilAskForNextCrunchedFile
+    .import         utilGetCrunchedByteCancel
 
 .bss
 uloadEOFSeen:
@@ -154,6 +155,7 @@ _uloadRead:
 ; bytesread = 0;
 
         lda     #$00
+        tay
         sta     ptr3
         sta     ptr3 + 1
         beq     @Read3          ; Branch always
@@ -165,7 +167,6 @@ _uloadRead:
         jsr     loader_read     ; Read next char from file
         bcs     @EOF            ; EOF?
 
-        ldy     #0              ; todo: move up?
         sta     (ptr2),y        ; Save read byte
 
         inc     ptr2
@@ -226,4 +227,8 @@ ugcbCont:
         tay
         pla
         tax
-        jmp ugcbCont
+        bcs @cancel
+        bcc ugcbCont
+@cancel:
+        ; skip the whole call chain and return from _utilReadEasySplitFile
+        jmp utilGetCrunchedByteCancel
