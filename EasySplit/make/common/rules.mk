@@ -79,7 +79,10 @@ $(objdir)/%.o: $(srcdir)/%.c $(headers) | $(objdir) check-environment
 #
 $(objdir)/%.xpm: $(srcdir)/../res/%.png | $(objdir) check-environment
 	convert $< $@.tmp.xpm
-	cat $@.tmp.xpm | sed "s/static char/static const char/;s/_tmp//" > $@
+	cat $@.tmp.xpm | sed "\
+			s/static char/static const char/;\
+			s/[\._]tmp//;\
+			s/\.xpm/_xpm/" > $@
 
 ###############################################################################
 # This rule can copy * to $(outdir)/*
