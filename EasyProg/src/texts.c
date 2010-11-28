@@ -40,10 +40,10 @@ const char* apStrAbout[] =
         "",
         "Version " EFVERSION,
         "",
-        "(compiled: " __DATE__ " " __TIME__ ")",
-        "",
         "(C) 2009 Thomas 'skoe' Giesel",
         "under zlib license",
+        "",
+        "(compiled: " __DATE__ " " __TIME__ ")",
         NULL
 };
 
