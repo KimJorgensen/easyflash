@@ -426,7 +426,10 @@ static uint8_t utilOpenInternal(void)
 {
     uint8_t rv;
 
-    bHaveULoad = uloadInit();
+    if (!bFastLoaderEnabled)
+        bHaveULoad = 0;
+    else
+        bHaveULoad = uloadInit();
 
     if (bHaveULoad)
     {

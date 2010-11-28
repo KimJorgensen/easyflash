@@ -46,9 +46,11 @@
 
 /******************************************************************************/
 static void showAbout(void);
+static void toggleFastLoader(void);
 static void checkEraseAll(void);
 static uint8_t returnTrue(void);
 static uint8_t ifHaveValidFlash(void);
+static void updateFastLoaderText();
 
 /******************************************************************************/
 
@@ -66,16 +68,23 @@ static const unsigned char pStrEAPISignature[] =
         0x65, 0x61, 0x70, 0x69 /* "EAPI" */
 };
 
+
+uint8_t bFastLoaderEnabled;
+
+
 /******************************************************************************/
 /* Static variables */
 
 // String describes the current action
 static char strStatus[41];
 
+static char strFastLoader[30];
+
 /******************************************************************************/
 
 // forward declarations
 extern ScreenMenu menuMain;
+extern ScreenMenu menuOptions;
 extern ScreenMenu menuExpert;
 extern ScreenMenu menuHelp;
 
@@ -85,7 +94,7 @@ ScreenMenu menuMain =
     1, 2,
     0,
     &menuHelp,
-    &menuExpert,
+    &menuOptions,
     {
         {
             "&Write CRT to flash",
@@ -116,11 +125,29 @@ ScreenMenu menuMain =
     }
 };
 
-ScreenMenu menuExpert =
+
+ScreenMenu menuOptions =
 {
     7, 2,
     0,
     &menuMain,
+    &menuExpert,
+    {
+        {
+            strFastLoader,
+            toggleFastLoader,
+            returnTrue
+        },
+        { NULL, NULL, 0 }
+    }
+};
+
+
+ScreenMenu menuExpert =
+{
+    16, 2,
+    0,
+    &menuOptions,
     &menuHelp,
     {
         {
@@ -159,7 +186,7 @@ ScreenMenu menuExpert =
 
 ScreenMenu menuHelp =
 {
-    15, 2,
+    24, 2,
     0,
     &menuExpert,
     &menuMain,
@@ -202,6 +229,11 @@ void refreshMainScreen(void)
     cputc('M');
     textcolor(COLOR_FOREGROUND);
     cputs("enu  ");
+
+    textcolor(COLOR_EXTRA);
+    cputc('O');
+    textcolor(COLOR_FOREGROUND);
+    cputs("ptions  ");
 
     textcolor(COLOR_EXTRA);
     cputc('E');
@@ -340,6 +372,17 @@ static void showAbout(void)
 
 /******************************************************************************/
 /**
+ * Toggle the fast loader setting.
+ */
+static void toggleFastLoader(void)
+{
+    bFastLoaderEnabled = !bFastLoaderEnabled;
+    updateFastLoaderText();
+}
+
+
+/******************************************************************************/
+/**
  * Ask the user if it is okay to erase all and do so if yes.
  */
 static void checkEraseAll(void)
@@ -393,6 +436,20 @@ static void loadEAPI(void)
 
 /******************************************************************************/
 /**
+ * Update the "Fast loader enabled:    " text.
+ */
+static void updateFastLoaderText()
+{
+    char* pStr;
+
+    strcpy(strFastLoader, "&Fastloader enabled: ");
+    pStr = bFastLoaderEnabled ? "Yes" : "No";
+    strcat(strFastLoader, pStr);
+}
+
+
+/******************************************************************************/
+/**
  *
  */
 int main(void)
@@ -408,6 +465,9 @@ int main(void)
         g_nDrive = 8;
 
     internalCartType = INTERNAL_CART_TYPE_NONE;
+
+    bFastLoaderEnabled = 1;
+    updateFastLoaderText();
 
     refreshMainScreen();
     showAbout();
@@ -428,6 +488,10 @@ int main(void)
         {
         case 'm':
             execMenu(&menuMain);
+            break;
+
+        case 'o':
+            execMenu(&menuOptions);
             break;
 
         case 'e':
