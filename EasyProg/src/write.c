@@ -303,19 +303,14 @@ static void checkWriteImage(uint8_t imageType)
 {
     unsigned t;
     uint8_t  rv;
-    uint8_t  oldState;
 
     checkFlashType();
-    oldState = spritesOn(0);
 
     do
     {
         rv = fileDlg(imageType == IMAGE_TYPE_CRT ? "CRT" : "BIN");
         if (!rv)
-        {
-            spritesOn(oldState);
             return;
-        }
 
         rv = utilOpenFile(0);
         if (rv == 1)
@@ -326,7 +321,6 @@ static void checkWriteImage(uint8_t imageType)
     if (screenAskEraseDialog() != BUTTON_ENTER)
     {
     	utilCloseFile();
-        spritesOn(oldState);
         return;
     }
 
@@ -345,7 +339,6 @@ static void checkWriteImage(uint8_t imageType)
         rv = writeBinImage(imageType == IMAGE_TYPE_HIROM);
     utilCloseFile();
 
-    spritesOn(oldState);
     t = clock() - t;
 
     if (rv == CART_RV_OK)

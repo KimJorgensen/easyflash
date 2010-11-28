@@ -332,7 +332,9 @@ static void checkRAM(void)
  */
 static void showAbout(void)
 {
+    spritesShow();
     screenPrintSimpleDialog(apStrAbout);
+    spritesOn(0);
 }
 
 
@@ -399,7 +401,6 @@ int main(void)
 
     screenInit();
     progressInit();
-    spritesShow();
 
     g_strFileName[0] = '\0';
     g_nDrive = *(uint8_t*)0xba;
@@ -409,6 +410,7 @@ int main(void)
     internalCartType = INTERNAL_CART_TYPE_NONE;
 
     refreshMainScreen();
+    showAbout();
     loadEAPI();
     screenBing();
 

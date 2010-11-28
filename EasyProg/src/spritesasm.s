@@ -89,9 +89,8 @@ sh3:
         adc #1
         sta $07fb       ; "OG"
 
-        ldy #$ff
-        sty $d010               ; sprite X MSB on
-        iny
+        ldy #0
+        sty $d010               ; sprite X MSB off
         sty $d017               ; sprite expand Y off
         sty $d01d               ; sprite expand X off
         sty $d01c               ; sprite MCM off
@@ -109,11 +108,11 @@ spSet:
         rts
 
 spritePos:
-    .byte 0 * 24, 56
-    .byte 1 * 24, 56
-    .byte 2 * 24, 56
-    .byte 3 * 24, 56
-    .byte     36, 56
+    .byte 145 + 0 * 24, 110
+    .byte 145 + 1 * 24, 110
+    .byte 145 + 2 * 24, 110
+    .byte 145 + 3 * 24, 110
+    .byte 145 +     36, 110
 
 spriteCol:
     .byte 0, 0, 0, 0, 8

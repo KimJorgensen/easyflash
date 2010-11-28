@@ -312,16 +312,11 @@ void screenPrintFrame(void)
     screenPrintTopLine(0, 39, 0);
     // 1 text line
     screenPrintFreeLine(0, 39, 1);
-    // separation line with "step"
-    screenPrintSepLine(0, 28, 2);
-    screenPrintFreeLine(28, 39, 2);
-    screenPrintFreeLine(0, 28, 3);
-    screenPrintSepLine(28, 39, 3);
-    cputcxy(28, 2, 0xae);
-    cputcxy(28, 3, 0xad);
+    // separation line
+    screenPrintSepLine(0, 39, 2);
 
     // some free lines
-    for (y = 4; y < 22; ++y)
+    for (y = 3; y < 22; ++y)
         screenPrintFreeLine(0, 39, y);
     // separation line
     screenPrintSepLine(0, 39, 22);
@@ -517,8 +512,8 @@ uint8_t __fastcall__ screenPrintDialog(const char* apStrLines[], uint8_t flags)
     nLongestLength += 2;
     xStart = 20 - nLongestLength / 2;
     xEnd = 20 + nLongestLength / 2;
-    yStart = 8 - nLines / 2;
-    yEnd = 8 + nLines / 2 + 9;
+    yStart = 7 - nLines / 2;
+    yEnd = 7 + nLines / 2 + 9;
 
     // Top line
     y = yStart;

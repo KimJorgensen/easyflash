@@ -35,6 +35,9 @@ const char* apStrLowHigh[] =
 
 const char* apStrAbout[] =
 {
+        "",
+        "",
+        "",
         "Version " EFVERSION,
         "",
         "(compiled: " __DATE__ " " __TIME__ ")",
