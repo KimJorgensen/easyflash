@@ -28,7 +28,6 @@
 #include <conio.h>
 #include <string.h>
 #include <cbm.h>
-#include <sprites.h>
 
 #include "easyprog.h"
 #include "buffer.h"
@@ -187,16 +186,13 @@ static void fileDlgReadDir(void)
 {
     DirEntry* pEntry;
     uint8_t c;
-    uint8_t oldState;
 
     nDirEntries = 0;
     pEntry = aDirEntries;
 
-    oldState = spritesOn(0);
     if (dirOpen(FILEDLG_LFN, g_nDrive))
     {
         dirClose(FILEDLG_LFN);
-        spritesOn(oldState);
         return;
     }
 
@@ -244,8 +240,6 @@ static void fileDlgReadDir(void)
         refreshMainScreen();
         fileDlgPrintFrame();
     }
-
-    spritesOn(oldState);
 }
 
 
@@ -320,17 +314,13 @@ static void __fastcall__ fileDlgPrintEntry(uint8_t nLine, uint8_t nEntry)
  */
 void __fastcall__ fileDlgChangeDir(const char* pStrDir)
 {
-    uint8_t oldState;
-
     char strCmd[3 + FILENAME_MAX];
 
     strcpy(strCmd, "cd:");
     strcpy(strCmd + 3, pStrDir);
 
-    oldState = spritesOn(0);
     cbm_open(15, g_nDrive, 15, strCmd);
     cbm_close(15);
-    spritesOn(oldState);
 }
 
 
