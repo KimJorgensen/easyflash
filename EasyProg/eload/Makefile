@@ -9,7 +9,6 @@ obj/%.o: src/%.s
 	$(AS) $(AFLAGS) -o $@ $<
 
 INC :=
-INC += src/drivecode.i
 INC += src/drivetype.i
 INC += src/kernal.i
 INC += src/macro.i
