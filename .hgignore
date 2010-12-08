@@ -19,6 +19,7 @@ a.out
 .project
 
 EasyProg/easyprog
+eload.lib
 
 EasyLoader/build/*
 EasyLoader/.deps/*
