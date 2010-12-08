@@ -7,3 +7,4 @@ drivetype_fd		= 5	; CMD FD
 drivetype_hd		= 6	; CMD HD
 drivetype_rl		= 7	; CMD RamLink
 drivetype_rd		= 8	; CMD RAMDrive
+drivetype_sd2iec	= 9	; sd2iec or uIEC

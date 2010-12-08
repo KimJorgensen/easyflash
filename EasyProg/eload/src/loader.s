@@ -1,3 +1,12 @@
+
+        .include "kernal.i"
+
+        .importzp       sp, sreg, regsave
+        .importzp       ptr1, ptr2, ptr3, ptr4
+        .importzp       tmp1, tmp2, tmp3, tmp4
+
+        .import loader_init
+
 ; loader_open is used to open a file for reading or writing
 	.export loader_open
 
@@ -6,28 +15,12 @@
 
 ; loader_read and loader_write are used for loading from or saving to a file
 	.export loader_read
- .ifdef UL3_SAVE
-	.export loader_write
- .endif
 
 ; loader_send and loader_recv are for communicating with the drive
 	.export loader_send, loader_recv
 
-; these exports are used by loader_init to adjust the code for SuperCPU, DTV2,
-; and NTSC
- .ifdef UL3_SUPERCPUFIX
-	.export supercpu_send, supercpu_recv
- .endif
- .ifdef UL3_DTV2FIX
-	.export dtv2_send, dtv2_recv
-	.export dtv2_fast, dtv2_slow
-	.export loader_send_waitbadline, loader_recv_waitbadline
-	.export loader_send_nobadline, loader_recv_nobadline
- .endif
+; this export is used by loader_init to adjust the code for NTSC
 	.export loader_recv_palntsc
-
-
-	.segment "LOADER"
 
 
 ; A = $01 for load, X = track, Y = sector, sec on error
@@ -37,17 +30,33 @@
 ; A = $24 for load directory, X/Y = don't care, sec on error
 ;    after open, call loader_read until sec as a normal file
 loader_open:
-	jsr loader_send
-	cmp #$24
-	beq @get_status
+        sta ptr1
+        stx ptr1 + 1
+        lda $ba                         ; set drive to listen
+        jsr LISTEN
+        lda #$60                        ; channel 0
+        jsr SECOND
+        lda #0
+        sta tmp1
+@send_name:
+        ldy tmp1
+        lda (ptr1),y
+        beq @end_name                   ; 0-termination
+        jsr CIOUT
+        inc tmp1
+        bne @send_name                  ; branch always (usually)
+@end_name:
+        jsr UNLSN
 
-	txa
-	jsr loader_send
-	tya
-	jsr loader_send
-	
-@get_status:
-	jsr loader_recv
+        ; todo: Fehler checken!
+
+        jsr loader_init
+
+        lda #1                          ; load
+        jsr loader_send
+
+        jsr loader_recv
+
 	cmp #$ff
 	bne @ok
 	sec
@@ -94,35 +103,6 @@ loader_read:
 	beq @error
 	sta loader_ctr
 	jmp @return
-
-
- .ifdef UL3_SAVE
-
-; write a byte to a file, sec on eof
-loader_write:
-	pha
-	lda loader_ctr
-	beq @nextblock
-@return:
-	dec loader_ctr
-	pla
-	jsr loader_send
-	clc
-	rts
-@nextblock:
-	jsr loader_recv
-	beq @eof
-	cmp #$ff
-	beq @error
-	sta loader_ctr
-	jmp @return
-@error:
-@eof:
-	pla
-	sec
-	rts
-
- .endif
 
 
 ; send a byte to the drive
@@ -266,72 +246,9 @@ loader_recv_palntsc:
 @eor:
 	eor #$00
 	eor $dd00
-
 	cli
 	rts
 
+	.import sendcode
+        jsr sendcode
 
-; SuperCPU fixes
-
- .ifdef UL3_SUPERCPUFIX
-
-supercpu_send:
-	sta loader_send_savea
-	sta $d07a		; switch to 1 MHz
-	jsr loader_send_do
-	sta $d07b		; switch back to 20 MHz
-	rts
-
-
-supercpu_recv:
-:	bit $dd00		; wait for drive
-	bmi :-
-
-	sta $d07a		; switch to 1 MHz
-	jsr loader_recv_do
-	sta $d07b		; switch back to 20 MHz
-	rts
-
- .endif
-
-
-; DTV2 fixes
-
- .ifdef UL3_DTV2FIX
-
-dtv2_send:
-	sta loader_send_savea
-	jsr dtv2_slow		; disable speedup
-	jsr loader_send_do
-	jmp dtv2_fast		; reenable speedup
-
-
-dtv2_recv:
-:	bit $dd00		; wait for drive
-	bmi :-
-
-	jsr dtv2_slow		; disable speedup
-	jsr loader_recv_do
-	jmp dtv2_fast		; reenable speedup
-
-
-dtv2_fast:
-	php
-	sei
-	.byte $32, $99		; map cpu control reg into A
-	lda #3			; enable burst and skip cycle
-	.byte $32, $00		; return default A
-	plp
-	rts
-
-
-dtv2_slow:
-	php
-	sei
-	.byte $32, $99		; map cpu control reg into A
-	lda #0			; disable burst and skip cycle
-	.byte $32, $00		; return default A
-	plp
-	rts
-
- .endif

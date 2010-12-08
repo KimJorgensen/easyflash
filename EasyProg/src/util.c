@@ -250,57 +250,9 @@ void __fastcall__ utilAppendDecimal(uint16_t n)
  */
 static uint8_t utilOpenULoadFile(void)
 {
-    uint8_t i;
-    uint8_t nEntry;
-    uint8_t nameLen;
-    int     val;
-    uint8_t dirEntry[0x20];
-
     *(uint8_t*)0xba = g_nDrive;
-    nameLen = strlen(g_strFileName);
 
-    if (!uloadOpenDir())
-    {
-        return OPEN_FILE_ERR;
-    }
-
-    for (;;)
-    {
-        // the first entry comes w/o link pointers
-        i = 2;
-        // 8 entries per sector
-        for (nEntry = 0; nEntry < 8; ++nEntry)
-        {
-            // read 30/32 bytes of an entry
-            for (; i < 0x20; ++i)
-            {
-                val = uloadReadByte();
-                if (val == -1)
-                    return OPEN_FILE_ERR;
-                dirEntry[i] = val;
-            }
-
-            if ((dirEntry[0x02] & 0x07) == 0x02) // PRG
-            {
-                for (i = 0; i < nameLen; ++i)
-                {
-                    if (g_strFileName[i] != dirEntry[5 + i])
-                        break; // mismatch
-                }
-                // compared all 16 chars or entry name is padded?
-                if (i == 0x10 || dirEntry[5 + i] == 0xa0)
-                    goto found;
-            }
-            // 1st to 8th entry has two dummy bytes at the beginning
-            i = 0;
-        } // for nEntry
-    }
-found:
-    // must read to EOF before we open the file
-    while (uloadReadByte() != -1)
-    {}
-
-    if (uloadOpenFile((dirEntry[0x03] << 8) | dirEntry[0x04]))
+    if (uloadOpenFile(g_strFileName))
         return OPEN_FILE_OK;
     else
         return OPEN_FILE_ERR;
