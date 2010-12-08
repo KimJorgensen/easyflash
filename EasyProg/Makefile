@@ -29,6 +29,7 @@ obj += obj/buffer.o
 obj += obj/torturetest.o
 obj += obj/write.o
 obj += obj/util.o
+obj += obj/uloadglue.o
 
 bin_acme :=
 bin_acme += obj/startup.bin
@@ -41,6 +42,8 @@ DEFINE   := -DEFVERSION=\"${version}\"
 eapi_dir := ../EasySDK/eapi
 eapi_src := $(eapi_dir)/eapi-am29f040-03
 eapi     := obj/eapi-am29f040-03
+
+eload    := eload/eload.lib
 
 .PHONY: all
 all: easyprog.prg
@@ -82,8 +85,10 @@ obj/%.bin: src/%.s obj
 obj:
 	mkdir -p $@
 
-easyprog: $(obj) src/ld.cfg
-	ld65 -o $@ -m $@.map -C src/ld.cfg $(obj) -L /usr/local/lib/cc65/lib --lib c64.lib
+easyprog: $(obj) src/ld.cfg $(eload)
+	ld65 -o $@ -m $@.map -C src/ld.cfg $(obj) -L /usr/local/lib/cc65/lib \
+		--lib c64.lib --lib $(eload)
+	cat easyprog.map | grep -e "^Name\|^CODE\|^DATA\|^BSS"
 
 easyprog.prg: easyprog
 	exomizer sfx 0x080d -o $@ -q $^
@@ -91,7 +96,14 @@ ifeq "$(release)" "yes"
 	cp $@ easyprog-$(version).prg
 endif
 
+$(eload): force
+	$(MAKE) -C $(dir $@)
+
+.PHONY: force
+force:
+
 .PHONY: clean
 clean:
 	rm -f easyprog easyprog.map easyprog.prg
 	rm -rf obj
+	$(MAKE) -C $(dir $(eload)) clean

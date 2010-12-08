@@ -32,30 +32,13 @@ uloadEOFSeen:
 ; =============================================================================
 .export _uloadInit
 _uloadInit:
-        jsr loader_init
-        jsr checkOpenReturn     ; this will reset uloadEOFSeen upon success
+        ;jsr loader_init
+        ;jsr checkOpenReturn     ; this will reset uloadEOFSeen upon success
                                 ; and create the return code in A
         ldy #1
         sty uloadEOFSeen        ; overwrite EOFSeen: always EOF after Init
         rts
 
-; =============================================================================
-;
-; Open the directory.
-;
-; uint8_t uloadOpenDir(void);
-;
-; parameters:
-;       -
-;
-; return:
-;       result in AX (A = low), 1 = okay, 0 = error
-;
-; =============================================================================
-.export _uloadOpenDir
-_uloadOpenDir:
-        lda #'$'            ; read directory
-        jsr loader_open
 checkOpenReturn:
         ldx #0
         stx uloadEOFSeen
@@ -63,8 +46,8 @@ checkOpenReturn:
         bcc :+
         txa
         inc uloadEOFSeen
-:
         rts
+
 
 ; =============================================================================
 ;
@@ -114,10 +97,10 @@ _uloadExit:
 ;
 ; Open the file for reading.
 ;
-; uint8_t __fastcall__ uloadOpenFile(uint16_t ts);
+; uint8_t __fastcall__ uloadOpenFile(const char* name);
 ;
 ; parameters:
-;       track/sector in AX (A = low): A = sector, X = track
+;       pointer to name in AX (A = low)
 ;
 ; return:
 ;       result in AX (A = low), 1 = okay, 0 = error
@@ -125,8 +108,7 @@ _uloadExit:
 ; =============================================================================
 .export _uloadOpenFile
 _uloadOpenFile:
-        tay
-        lda #1
+        ldy #1
         jsr loader_open
         jmp checkOpenReturn
 
@@ -165,6 +147,7 @@ _uloadRead:
         bne     @End            ; Did we see EOF before?
 
         jsr     loader_read     ; Read next char from file
+
         bcs     @EOF            ; EOF?
 
         sta     (ptr2),y        ; Save read byte
@@ -215,7 +198,7 @@ ugcbCont:
 @EOF:
         inc uloadEOFSeen
 @EOF2:
-        ; save X, Y, C
+        ; save X, Y
         txa
         pha
         tya

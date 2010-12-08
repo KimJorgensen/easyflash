@@ -151,14 +151,6 @@ const char* apStrWriteComplete[] =
         NULL
 };
 
-const char* apStrEAPINotFound[] =
-{
-        "Failed to load EasyAPI driver",
-        "(\"eapi-????????-??\").",
-        "Using internal flash driver.",
-        NULL
-};
-
 const char* apStrEAPIInvalid[] =
 {
         "The EasyAPI driver on",
