@@ -79,7 +79,6 @@ loader_detect:
 	jsr getbyte
 	bcs @not_sd2iec
 	ldx tmp1
-	sta $0400, x
 	cmp str_d2iec, x
 	bne @sd2iec_start
 	inx
