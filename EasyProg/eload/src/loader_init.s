@@ -3,132 +3,112 @@
 	.include "drivetype.i"
 
 
-	.export loader_init
+.export loader_upload_code
 
-	.import loader_detect
+.import loader_detect
+.import loader_send, loader_recv
 
-	.import loader_send, loader_recv
-	.import loader_recv_palntsc
+.import drive_code_1541
+;.import drive1571
+;.import drive1581
+;.import drivesd2iec
 
-        .import drive_code_1541
-	;.import drive1571
-	;.import drive1581
-	;.import drivesd2iec
-
-        .import drive_code_size_1541
+.import drive_code_size_1541
 
 
-cmdbytes	= 32			; number of bytes in one M-W command
+cmdbytes        = 32   ; number of bytes in one M-W command
 
 
 	.bss
 
 code_len:		.res 2
 cmd_data:		.res 1
+
+        .export loader_drivetype
 loader_drivetype:	.res 1
 
 
-	.data
+.data
 
-cmd:		.byte "M-"
-cmd_type:	.byte "W"
-cmd_addr:	.addr $ffff
-cmd_len:	.byte 0
+cmd:            .byte "M-"
+cmd_type:       .byte "W"
+cmd_addr:       .addr $ffff
+cmd_len:        .byte 0
 
-	.rodata
+.rodata
 
 drive_codes:
         .addr 0
         .addr drive_code_1541
         .addr drive_code_1541           ; 1570
-	.addr 0;drive1571
-	.addr 0;drive1581
-	.addr 0
-	.addr 0
-	.addr 0
-	.addr 0
-	.addr 0;drivesd2iec	; sd2iec
+        .addr 0;drive1571
+        .addr 0;drive1581
+        .addr 0
+        .addr 0
+        .addr 0
+        .addr 0
+        .addr 0;drivesd2iec	; sd2iec
+
+.code
+
+; =============================================================================
+;
+; Set the device number for the drive to be used and check its type.
+; The drive number is stored in $BA. Return the drive type.
+;
+; int eload_prepare_drive(unsigned char dev);
+;
+; parameters:
+;       drive number in A (X is ignored)
+;
+; return:
+;       drive type in AX (A = low)
+;
+; =============================================================================
+.export _eload_prepare_drive
+_eload_prepare_drive:
+        sta $ba
+        jsr loader_detect
+        ldx #0
+        sta loader_drivetype
+        rts
 
 
-	.code
+; =============================================================================
+;
+; Check if the current drive is accelerated.
+;
+; int eload_drive_is_fast(void);
+;
+; Return:
+;       Result in AX.
+;       0       Drive not accelerated (eload uses Kernal calls)
+;       >0      Drive has a fast loader
+;       Zero flag is set according to the result.
+;
+; Changes:
+;       A, X, flags
+;
+; =============================================================================
+.export _eload_drive_is_fast
+_eload_drive_is_fast:
+        ldx loader_drivetype
+        lda drive_codes + 1,x
+        tax
+        rts
 
-; initialize loader by sending over drive code
-loader_init:
-	lda $ba				; default to device 8
-	bne :+
-	lda #8
-	sta $ba
-:
-	;lda #1				; prepare detection messages
-	;sta $0286
-	ldx #24
-	ldy #0
-	clc
-	jsr PLOT
 
-	ldax #str_uload
-	jsr strout
-	
-	sei				; detect PAL or NTSC
-
-	lda #$ff			; wait for line 255
-:	cmp $d012
-	bne :-
-
-	lda #8				; wait for line 263
-:	cmp $d012			; ntsc hits line 8 instead
-	bne :-
-
-	bit $d011			; msb set = pal
-	bmi @pal
-@ntsc:
-	lda #$d0			; BNE = 3 cycles
-	sta loader_recv_palntsc
-	ldax #str_ntsc
-	jmp @pal_ntsc_set
-@pal:
-	;lda #$f0			; BEQ = 2 cycles
-	;sta loader_recv_palntsc
-	ldax #str_pal
-@pal_ntsc_set:
-	cli
-
-	jsr strout
-
-	ldax #str_dev			; print device number
-	jsr strout
-
-	ldx #$ff
-	lda $ba
-:	inx
-	sec
-	sbc #10
-	bcs :-
-	clc
-	adc #10
-	pha
-	txa
-	beq :+
-	ora #$30
-	jsr $ffd2
-:	pla
-	ora #$30
-	jsr $ffd2	
-
-	lda #' '
-	jsr $ffd2
-
-	jsr loader_detect		; detect what kind of drive we loaded from
-	bcc :+
-	rts
-:	sta loader_drivetype
-	asl
-	tay
-	lda str_drive + 1,y
-	tax
-	lda str_drive,y
-	jsr strout
-
+; =============================================================================
+;
+; Upload the drive code if this drive is supported.
+;
+; Return:
+;       C clear if the drive code has been uploaded
+;       C set if the drive is not supported (i.e. must use Kernal)
+;
+; =============================================================================
+.export loader_upload_code
+loader_upload_code:
         lda loader_drivetype
         asl
         tay
@@ -141,29 +121,32 @@ loader_init:
         lda drive_codes,y
         sta code_ptr
 @codeptrset:
-
         ldax #drive_code_size_1541      ; todo: be more specific
         stax code_len
 
         ldax #$0300                     ; where to upload the code to
-	stax cmd_addr
+        stax cmd_addr
 
         jsr sendcode                    ; upload code
 
-        lda #'E'                       ; execute
+        lda #'E'                        ; execute
         sta cmd_type
-        ldax #$0300                    ; where the drivecode starts
+        ldax #$0300                     ; where the drivecode starts
         stax cmd_addr
         jsr send_cmd
 
-        ldx #0                         ; delay
+        ldx #0                          ; delay
 :       dex
         bne :-
 
         clc
         rts
 
+; =============================================================================
+;
 ; send code, 32 bytes at a time
+;
+; =============================================================================
 .export sendcode
 sendcode:
 	lda #'W'			; M-W
@@ -246,72 +229,3 @@ send_cmd_done:
 	jmp UNLSN			; unlisten executes the command
 
 
-strout:
-	stax @ptr
-@ptr = * + 1
-:	lda $5e1f
-	beq @done
-	jsr $ffd2
-	inc @ptr
-	bne :-
-	inc @ptr + 1
-	bne :-
-@done:
-	rts
-
-
-	.rodata
-
-str_uload:
-	.byte "ULOAD M3 ", 0
-
-str_pal:
-	.byte "PAL", 0
-
-str_ntsc:
-	.byte "NTSC", 0
-
-str_dev:
-	.byte " #", 0
-
-str_drive:
-	.addr str_unknown
-	.addr str_1541
-	.addr str_1570
-	.addr str_1571
-	.addr str_1581
-	.addr str_cmdfd
-	.addr str_cmdhd
-	.addr str_ramlink
-	.addr str_ramdrive
-	.addr str_sd2iec
-
-str_unknown:
-	.byte "UNKNOWN DRIVE!", 0
-
-str_1541:
-	.byte "1541", 0
-
-str_1570:
-	.byte "1570", 0
-
-str_1571:
-	.byte "1571", 0
-
-str_1581:
-	.byte "1581", 0
-
-str_cmdfd:
-	.byte "CMD FD - UNSUPPORTED!", 0
-
-str_cmdhd:
-	.byte "CMD HD - UNSUPPORTED!", 0
-
-str_ramlink:
-	.byte "RAMLINK - UNSUPPORTED!", 0
-
-str_ramdrive:
-	.byte "RAMDRIVE - UNSUPPORTED!", 0
-
-str_sd2iec:
-	.byte "SD2IEC/UIEC", 0

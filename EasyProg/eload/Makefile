@@ -12,12 +12,18 @@ INC :=
 INC += src/drivetype.i
 INC += src/kernal.i
 INC += src/macro.i
+INC += src/xfer_drive_1mhz_2bit.s
+INC += src/xfer_drive_2mhz_2bit.s
+INC += src/drivecode.s
 
 SRC := 
 SRC += src/drive1541.s
 SRC += src/loader_init.s
 SRC += src/loader_detect.s
-SRC += src/loader.s
+SRC += src/eload.s
+SRC += src/eload_read.s
+SRC += src/eload_read_byte.s
+SRC += src/eload_close.s
 
 OBJ := $(patsubst src/%.s,obj/%.o,$(SRC))
 

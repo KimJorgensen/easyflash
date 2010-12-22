@@ -30,19 +30,13 @@ stack           = $8d
 iddrv0          = $12           ; disk drive id
 id              = $16           ; disk id
 
-secpertrk       = $f24b         ; get number of sectors in track
-jobok           = $f505
-waitsync        = $f556         ; wait for sync
-decode          = $f7e8         ; decode 5 GCR bytes, bufferindex in Y
-bufptr          = $30
-
 drivebuffer     = $0600
 track_list      = drivebuffer + $80
 sector_list     = drivebuffer + $c0
 
         jmp drv_start
 
-        .include "xfer_drive_1mhz_2bit.i"
+        .include "xfer_drive_1mhz_2bit.s"
         .include "drivecode.s"
 
 

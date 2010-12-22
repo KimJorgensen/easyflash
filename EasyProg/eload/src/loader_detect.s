@@ -87,7 +87,6 @@ loader_detect:
 	; match!
 	jsr close_command
 	lda #drivetype_sd2iec
-	clc
 	rts
 
 @not_sd2iec:
@@ -112,10 +111,9 @@ loader_detect:
 	beq foundfamily
 	dex
 	bpl :-
-	sec
-
 fail:
-	rts
+        lda #drivetype_unknown  ; unknown or no drive present
+        rts
 
 
 foundfamily:
@@ -158,7 +156,6 @@ foundfamily:
 	;stx $042c
 
 	txa			; return model in A
-	clc
 	rts
 
 
