@@ -39,6 +39,7 @@
 #include "sprites.h"
 #include "progress.h"
 #include "util.h"
+#include "eload.h"
 
 /******************************************************************************/
 /* Static variables */
@@ -320,7 +321,7 @@ static void checkWriteImage(uint8_t imageType)
 
     if (screenAskEraseDialog() != BUTTON_ENTER)
     {
-    	utilCloseFile();
+        eload_close();
         return;
     }
 
@@ -337,7 +338,7 @@ static void checkWriteImage(uint8_t imageType)
         rv = writeCrtImage();
     else
         rv = writeBinImage(imageType == IMAGE_TYPE_HIROM);
-    utilCloseFile();
+    eload_close();
 
     t = clock() - t;
 

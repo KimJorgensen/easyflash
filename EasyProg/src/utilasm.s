@@ -21,11 +21,12 @@
 ;
 
 .import         BASIN
-.importzp       ptr1, ptr2, ptr3, tmp1
+.importzp       ptr1, ptr2, ptr3, tmp1, tmp2
 .import         popax, popa
 
 .import         init_decruncher
 .import         get_decrunched_byte
+.import         _eload_read_byte
 .import         _utilStr
 .import         _utilAskForNextFile
 .import         _getCrunchedByte
@@ -91,73 +92,7 @@ _nUtilExoBytesRemaining:
 
 .code
 
-; =============================================================================
-;
-; Like cbm_read, but without calling CHKIN/CLRCH. The caller must have
-; redirected the input already.
-;
-; int __fastcall__ utilKernalRead(void* buffer, unsigned int size);
-;
-; Reads up to "size" bytes from a file to "buffer".
-; Returns the number of bytes actually read, 0 if there are no bytes left
-; (EOF).
-;
-; =============================================================================
-.export _utilKernalRead
-_utilKernalRead:
-        eor     #$FF
-        sta     ptr1
-        txa
-        eor     #$FF
-        sta     ptr1 + 1        ; Save -size-1
 
-        jsr     popax
-        sta     ptr2
-        stx     ptr2 + 1        ; Save buffer
-
-; bytesread = 0;
-
-        lda     #$00
-        sta     ptr3
-        sta     ptr3 + 1
-        beq     utilRead3       ; Branch always
-
-; Loop
-
-utilRead1:
-        lda     ST              ; Status ok?
-        bne     utilRead4
-
-        jsr     BASIN           ; Read next char from file
-        sta     tmp1            ; Save it for later
-
-        lda     ST
-        and     #$BF
-        bne     utilRead4
-
-        lda     tmp1
-        ldy     #0
-        sta     (ptr2),y        ; Save read byte
-
-        inc     ptr2
-        bne     utilRead2
-        inc     ptr2+1          ; ++buffer;
-
-utilRead2:
-        inc     ptr3
-        bne     utilRead3
-        inc     ptr3 + 1        ; ++bytesread;
-utilRead3:
-        inc     ptr1
-        bne     utilRead1
-        inc     ptr1 + 1
-        bne     utilRead1
-
-utilRead4:
-        lda     ptr3
-        ldx     ptr3 + 1        ; return bytesread;
-
-        rts
 
 ; =============================================================================
 ;
@@ -166,52 +101,27 @@ utilRead4:
 ; and must not modify the state of the carry flag.
 ;
 ; =============================================================================
-
         .export get_crunched_byte
 get_crunched_byte:
-        jmp (_getCrunchedByte)
-
-
-; =============================================================================
-; =============================================================================
-        .export _getCrunchedByteKernal
-_getCrunchedByteKernal:
-        ; save X, Y, C
-        txa
-        pha
-        tya
-        pha
         php
+        stx tmp1
+ugcbCont:
+        jsr _eload_read_byte
+        cpx #0
+        bne @EOF
 
-        lda ST          ; Status ok?
-        bne gcbNextFile
-
-get_crunched_byte2:
-        jsr BASIN
-        sta tmp1
-
-        lda ST
-        and #(~$40)
-        bne utilGetCrunchedByteCancel
-
-        ; restore X, Y, C
+        ldx tmp1
         plp
-        pla
-        tay
-        pla
-        tax
-
-        ; get result
-        lda tmp1
         rts
 
-gcbNextFile:
-        jsr utilAskForNextCrunchedFile
-        bcs utilGetCrunchedByteCancel
-        bcc get_crunched_byte2
+@EOF:
+        sty tmp2        ; save Y
 
-        .export utilGetCrunchedByteCancel
-utilGetCrunchedByteCancel:
+        jsr utilAskForNextCrunchedFile
+        ldy tmp2        ; restore Y
+        bcs @cancel
+        bcc ugcbCont
+@cancel:
         ; skip the whole call chain and return from _utilReadEasySplitFile
         ldx utilReadEasySplitFileEntrySP
         txs
@@ -235,13 +145,12 @@ _utilInitDecruncher:
 
 ; =============================================================================
 ;
-; Backup the zero page (why???), ask for the next split file and restore the
-; zero page.
+; Backup the zero page (because we use cc65 tmp* and ptr*) for our storage),
+; ask for the next split file and restore the zero page.
 ;
 ; Return C = 1 if the user cancelled.
 ;
 ; =============================================================================
-.export utilAskForNextCrunchedFile
 utilAskForNextCrunchedFile:
         ; backup cc65 ZP area
         ldx #$1a        ; see ld.conf
@@ -273,10 +182,8 @@ uafCancel:
 
 ; =============================================================================
 ;
-; Like cbm_read, but without calling CHKIN/CLRCH. The caller must have
-; redirected the input already.
-;
-; int __fastcall__ utilReadEasySplitFile(void* buffer, unsigned int size);
+; unsigned int __fastcall__ utilReadEasySplitFile(void* buffer,
+;                                                 unsigned int size);
 ;
 ; Reads up to "size" bytes from a file to "buffer".
 ; Returns the number of actually read bytes, 0 if there are no bytes left
@@ -326,7 +233,7 @@ urs1:
         beq ursEnd
 
 ursNoEOF:
-        ; don't forget: this may call the disk change dialoge
+        ; don't forget: this may call the disk change dialog
         ; so before calling utilAskNextFile we must save the ptr1..ptr3
         jsr get_decrunched_byte
         sta     (ptr2),y        ; Save read byte
@@ -486,22 +393,22 @@ _utilGetStringEnd:
         stx ptr1 + 1
 
         ldy #0
-gseNext:
+@next:
         lda (ptr1), y
-        beq gseEnd
+        beq @end
 
         iny
-        bne gseNoHi
+        bne @noHi
         inc ptr1 + 1
         inx
-gseNoHi:
-        bne gseNext         ; always (as long as the string doesn't wrap to ZP)
+@noHi:
+        bne @next       ; always (as long as the string doesn't wrap to ZP)
 
-gseEnd:
+@end:
         clc
-        tya                 ; update low-byte
+        tya             ; update low-byte
         adc ptr1
-        bcc gseEndNoHi
+        bcc @endNoHi
         inx
-gseEndNoHi:
+@endNoHi:
         rts

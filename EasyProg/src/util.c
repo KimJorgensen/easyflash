@@ -34,19 +34,15 @@
 #include "texts.h"
 #include "easyprog.h"
 #include "uload.h"
+#include "eload.h"
 
 
 // globally visible string buffer for functions used here
 char utilStr[80];
 
 // points to utilRead function to be used to read bytes from file
-int __fastcall__ (*utilRead)(void* buffer, unsigned int size);
+unsigned int __fastcall__ (*utilRead)(void* buffer, unsigned int size);
 
-// points to getCrunchedByte function for the decruncher
-void (*getCrunchedByte)(void);
-
-extern void getCrunchedByteKernal(void);
-extern void uloadGetCrunchedByte(void);
 
 /******************************************************************************/
 /** Local data: Put here to reduce code size */
@@ -77,7 +73,7 @@ static const char aEasySplitSignature[8] =
 /* prototypes */
 static uint8_t utilCheckFileHeader(void);
 static uint8_t __fastcall__ utilOpenEasySplitFile(uint8_t nPart);
-static uint8_t utilOpenULoadFile(void);
+static uint8_t utilOpenELoadFile(void);
 static void utilComplainWrongPart(uint8_t nPart);
 static uint8_t utilOpenInternal(void);
 
@@ -96,6 +92,8 @@ static uint8_t utilOpenInternal(void);
 uint8_t utilOpenFile(uint8_t nPart)
 {
     uint8_t rv, type;
+
+    eload_prepare_drive(g_nDrive);
 
     // this reads m_uFileHeader and returns the type detected
     type = utilCheckFileHeader();
@@ -131,26 +129,6 @@ uint8_t utilOpenFile(uint8_t nPart)
 
 /******************************************************************************/
 /**
- *
- */
-void utilCloseFile(void)
-{
-    int val;
-
-    if (!bHaveULoad)
-    {
-        cbm_k_clrch();
-        cbm_close(UTIL_GLOBAL_READ_LFN);
-    }
-    else
-    {
-        uloadExit();
-    }
-}
-
-
-/******************************************************************************/
-/**
  * Return 1 if a good file has been selected, 0 otherwise.
  */
 uint8_t utilAskForNextFile(void)
@@ -158,7 +136,7 @@ uint8_t utilAskForNextFile(void)
     static char str[3];
     uint8_t     ret;
 
-    utilCloseFile();
+    eload_close();
 
     ++nCurrentPart;
     utilStr[0] = '\0';
@@ -170,7 +148,7 @@ uint8_t utilAskForNextFile(void)
     {
         do
         {
-        	screenBing();
+            screenBing();
             refreshMainScreen();
             ret = fileDlg(str);
 
@@ -248,11 +226,11 @@ void __fastcall__ utilAppendDecimal(uint16_t n)
  *
  * return: OPEN_FILE_OK, OPEN_FILE_ERR
  */
-static uint8_t utilOpenULoadFile(void)
+static uint8_t utilOpenELoadFile(void)
 {
     *(uint8_t*)0xba = g_nDrive;
 
-    if (uloadOpenFile(g_strFileName))
+    if (eload_open_read(g_strFileName) == 0)
         return OPEN_FILE_OK;
     else
         return OPEN_FILE_ERR;
@@ -262,7 +240,7 @@ static uint8_t utilOpenULoadFile(void)
 
 /******************************************************************************/
 /**
- * Open an EasySplit file. Only called from utilOpenFile! The caller checked
+ * Open an EasySplit file. Only called from utilOpenFile. The caller checked
  * already that it has the right file type and filled m_uFileHeader.
  * The file will be re-opened here, possibly using a speeder. Therefore we
  * have to skip the header again.
@@ -296,8 +274,10 @@ static uint8_t __fastcall__ utilOpenEasySplitFile(uint8_t nPart)
     // correct the read function pointer
     utilRead = utilReadEasySplitFile;
     // skip the header again
+
+    // ok, funktioniert: die richtigen Bytes werden gelesen
     for (i = 0; i < sizeof(EasySplitHeader); ++i)
-        getCrunchedByte();
+        eload_read_byte();
 
     if (nPart == 0)
     {
@@ -318,35 +298,28 @@ static uint8_t __fastcall__ utilOpenEasySplitFile(uint8_t nPart)
 /******************************************************************************/
 /**
  * return:
- *          OPEN_FILE_ERR    file couldn't be opened
- *          OPEN_FILE_WRONG  unknown file type
- *          OPEN_FILE_TYPE_  file type detected
+ *          OPEN_FILE_ERR       file couldn't be opened
+ *          OPEN_FILE_UNKNOWN   unknown file type
+ *          OPEN_FILE_TYPE_     file type detected
  */
 static uint8_t utilCheckFileHeader(void)
 {
     uint8_t len;
 
-    if (cbm_open(UTIL_GLOBAL_READ_LFN, g_nDrive, CBM_READ, g_strFileName))
+    if (eload_open_read(g_strFileName) != 0)
         return OPEN_FILE_ERR;
 
-    if (cbm_k_chkin(UTIL_GLOBAL_READ_LFN))
-    {
-        cbm_close(UTIL_GLOBAL_READ_LFN);
-        return OPEN_FILE_ERR;
-    }
-
-    len = utilKernalRead(&m_uFileHeader, sizeof(m_uFileHeader));
-    bHaveULoad = 0;
-    utilCloseFile();
+    len = eload_read(&m_uFileHeader, sizeof(m_uFileHeader));
+    eload_close();
 
     if (len != sizeof(m_uFileHeader))
-        return OPEN_FILE_WRONG;
+        return OPEN_FILE_UNKNOWN;
 
     if (memcmp(m_uFileHeader.easySplitHeader.magic,
                aEasySplitSignature, sizeof(aEasySplitSignature)) == 0)
         return OPEN_FILE_TYPE_ESPLIT;
 
-    return OPEN_FILE_WRONG;
+    return OPEN_FILE_UNKNOWN;
 }
 
 
@@ -381,30 +354,14 @@ static uint8_t utilOpenInternal(void)
     if (!bFastLoaderEnabled)
         bHaveULoad = 0;
     else
-        bHaveULoad = uloadInit();
+        bHaveULoad = 1;
 
-    if (bHaveULoad)
+    // todo: if (bHaveULoad)
     {
-        if (utilOpenULoadFile() == OPEN_FILE_ERR)
+        if (utilOpenELoadFile() == OPEN_FILE_ERR)
             return OPEN_FILE_ERR;
 
-        utilRead        = uloadRead;
-        getCrunchedByte = uloadGetCrunchedByte;
-    }
-    else
-    {
-        // that's not an EasySplit file: try to open it as normal file
-        if (cbm_open(UTIL_GLOBAL_READ_LFN, g_nDrive, CBM_READ, g_strFileName))
-            return OPEN_FILE_ERR;
-
-        if (cbm_k_chkin(UTIL_GLOBAL_READ_LFN))
-        {
-            cbm_close(UTIL_GLOBAL_READ_LFN);
-            return OPEN_FILE_ERR;
-        }
-
-        utilRead        = utilKernalRead;
-        getCrunchedByte = getCrunchedByteKernal;
+        utilRead        = eload_read;
     }
     return OPEN_FILE_OK;
 }
