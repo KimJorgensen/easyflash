@@ -30,6 +30,9 @@ eload_buffered_byte:
 ; return:
 ;       result in AX (A = low), 0 = okay, -1 = error
 ;
+; changes:
+;       flags
+;
 ; =============================================================================
 .export _eload_read_byte
 _eload_read_byte:
@@ -77,13 +80,9 @@ eload_read_byte_from_buffer:
 ; =============================================================================
 .export eload_read_byte_kernal
 eload_read_byte_kernal:
-        jsr ACPTR
         ldx ST
-        beq @rts
-        lda #$ff
-        tax
-@rts:
-        rts
+        bne ret_err
+        jmp ACPTR
 
 
 ; =============================================================================
@@ -94,20 +93,31 @@ eload_read_byte_kernal:
 ; =============================================================================
 .export eload_read_byte_fast
 eload_read_byte_fast:
+        ldx ST          ; x = 0 will be used as high byte below
+        bne ret_err
         lda eload_ctr
         beq @nextblock
 @return:
         dec eload_ctr
-        jsr eload_recv
-        ldx #0
-        rts
+        ; return value x = 0 from ST above
+        jmp eload_recv
 @nextblock:
         jsr eload_recv
-        beq @eof
+        beq set_eof
         sta eload_ctr
         cmp #$ff        ; error flag
         bne @return
-@eof:
+
+set_error:
+        lda ST
+        ora #$02        ; Read error
+        sta ST
+        bne ret_err     ; branch always
+set_eof:
+        lda ST
+        ora #$40        ; EOF flag
+        sta ST
+ret_err:
         lda #$ff
         tax
         rts
