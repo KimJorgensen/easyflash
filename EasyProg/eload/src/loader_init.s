@@ -56,7 +56,7 @@ drive_codes:
 ; Set the device number for the drive to be used and check its type.
 ; The drive number is stored in $BA. Return the drive type.
 ;
-; int eload_prepare_drive(unsigned char dev);
+; int __fastcall__ eload_prepare_drive(uint8_t dev);
 ;
 ; parameters:
 ;       drive number in A (X is ignored)

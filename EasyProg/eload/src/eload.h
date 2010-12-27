@@ -8,7 +8,9 @@
 #ifndef ELOAD_H_
 #define ELOAD_H_
 
-int eload_prepare_drive(unsigned char dev);
+#include <stdint.h>
+
+int __fastcall__ eload_prepare_drive(uint8_t dev);
 int eload_drive_is_fast(void);
 
 int __fastcall__ eload_open_read(const char* name);
