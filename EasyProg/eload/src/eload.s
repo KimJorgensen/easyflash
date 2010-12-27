@@ -3,7 +3,6 @@
 
 .importzp       sp, sreg, regsave
 .importzp       ptr1, ptr2, ptr3, ptr4
-.importzp       tmp1, tmp2, tmp3, tmp4
 
 .import eload_set_read_byte_fn
 .import eload_read_byte_from_buffer
@@ -232,7 +231,10 @@ loader_send_savey:  .res 1
 ;       -
 ;
 ; return:
-;       Byte in A
+;       Byte in A, Z-flag according to A
+;
+; changes:
+;       flags
 ;
 ; =============================================================================
 .export eload_recv

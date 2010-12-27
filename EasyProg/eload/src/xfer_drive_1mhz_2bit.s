@@ -14,7 +14,6 @@
 ;       A, Y, zptmp
 ;
 ; =============================================================================
-
         ; serport: | A_in | DEV | DEV | ACK_out || C_out | C_in | D_out | D_in |
 drv_send:
         bit serport             ; check for ATN which means cancel
@@ -25,7 +24,7 @@ drv_send:
         lsr
         lsr
         lsr
-        tay
+        tay                     ; get high nibble into Y
 
         ; Handshake Step 1: Drive signals byte ready with DATA low
         lda #$02
@@ -33,10 +32,10 @@ drv_send:
 
         ; I moved this after Step 1 because the C64
         ; makes SEI and the badline test now
-        lda drv_sendtbl,y       ; get the CLK, DATA pairs for high nybble
+        lda drv_sendtbl,y       ; get the CLK, DATA pairs for high nibble
         pha
         lda zptmp
-        and #$0f                ; prepare low nibble
+        and #$0f                ; get low nibble into Y
         tay
 
         ; Handshake Step 2: Host sets CLK low to acknowledge
@@ -47,12 +46,12 @@ drv_send:
         ; between the last cycle of these two "bit serport" are 6..12 cycles
 
         ; Handshake Step 3: Host releases CLK - Timing base
-        ; if CLK is high (that's 0!) already, be 3 cycles faster
+        ; if CLK is high (that's 0!) already, skip 3 cycles
         bit serport
         beq @reduce_jitter
         nop                     ; 6 cycles vs. 3 cycles
         nop
-@reduce_jitter:                 ; 3..6 (only 3 us jitter)
+@reduce_jitter:                 ; t = 3..6 (only 3 us jitter)
 
         ; 1 MHz code
         ; get the CLK, DATA pairs for high nybble
@@ -87,6 +86,9 @@ drv_sendtbl_end:
         .assert (>drv_sendtbl) = (>drv_sendtbl_end), error, "drv_sendtbl crosses page boundary"
 
 
+; =============================================================================
+;
+; =============================================================================
 drv_exit:
         lda #0                        ; release IEC bus
         sta serport
@@ -95,6 +97,9 @@ drv_exit:
         cli
         rts
 
+; =============================================================================
+;
+; =============================================================================
 drv_recv:
         lda #$08                ; CLK low to signal that we're receiving
         sta serport
