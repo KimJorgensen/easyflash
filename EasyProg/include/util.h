@@ -7,9 +7,10 @@
 #define UTIL_GLOBAL_READ_LFN 2
 
 // return values for utilOpenFile
-#define OPEN_FILE_OK    0
-#define OPEN_FILE_ERR   1
-#define OPEN_FILE_WRONG 2
+#define OPEN_FILE_OK        0
+#define OPEN_FILE_ERR       1
+#define OPEN_FILE_WRONG     2
+#define OPEN_FILE_UNKNOWN   3
 // used internally:
 #define OPEN_FILE_TYPE_ESPLIT  8
 #define OPEN_FILE_TYPE_CRT     9
@@ -29,17 +30,18 @@ void __fastcall__ utilAppendDecimal(uint16_t n);
 
 
 uint8_t utilOpenFile(uint8_t nPart);
-void utilCloseFile(void);
 
 void utilReadSelectNormalFile(void);
-int __fastcall__ utilKernalRead(void* buffer, unsigned int size);
+unsigned int __fastcall__ utilKernalRead(void* buffer,
+                                         unsigned int size);
 
 
 /* private */ void utilInitDecruncher(void);
-/* private */ int __fastcall__ utilReadEasySplitFile(void* buffer, unsigned int size);
+/* private */ unsigned int __fastcall__ utilReadEasySplitFile(void* buffer, unsigned int size);
 
 
-extern int __fastcall__ (*utilRead)(void* buffer, unsigned int size);
+extern unsigned int __fastcall__ (*utilRead)(void* buffer,
+                                             unsigned int size);
 extern int32_t nUtilExoBytesRemaining;
 
 extern const uint8_t* pFallbackDriverStart;

@@ -33,7 +33,6 @@
 #include "screen.h"
 #include "texts.h"
 #include "easyprog.h"
-#include "uload.h"
 #include "eload.h"
 
 
@@ -91,7 +90,7 @@ static uint8_t utilOpenInternal(void);
  */
 uint8_t utilOpenFile(uint8_t nPart)
 {
-    uint8_t rv, type;
+    uint8_t type;
 
     eload_prepare_drive(g_nDrive);
 
@@ -349,8 +348,6 @@ static void utilComplainWrongPart(uint8_t nPart)
  */
 static uint8_t utilOpenInternal(void)
 {
-    uint8_t rv;
-
     if (!bFastLoaderEnabled)
         bHaveULoad = 0;
     else
