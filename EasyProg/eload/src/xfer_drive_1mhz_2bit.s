@@ -2,7 +2,7 @@
 
 ; =============================================================================
 ;
-; Receive a byte from the drive over the fast protocol. Used internally only.
+; Send a byte to the host.
 ;
 ; parameters:
 ;       Byte in A
@@ -16,8 +16,8 @@
 ; =============================================================================
         ; serport: | A_in | DEV | DEV | ACK_out || C_out | C_in | D_out | D_in |
 drv_send:
-        bit serport             ; check for ATN which means cancel
-        bmi drv_exit
+        bit serport             ; check for ATN
+        bmi drv_exit            ; leave the drive code if it is active
 
         sta zptmp
         lsr
@@ -51,28 +51,28 @@ drv_send:
         beq @reduce_jitter
         nop                     ; 6 cycles vs. 3 cycles
         nop
-@reduce_jitter:                 ; t = 3..6 (only 3 us jitter)
+@reduce_jitter:                 ; t = 4..7 (only 3 us jitter)
 
         ; 1 MHz code
-        ; get the CLK, DATA pairs for high nybble
-        lda drv_sendtbl,y       ;  7..
-        sta serport             ; 11..14 - b0 b1 (CLK DATA)
+        ; get CLK, DATA pairs for low nibble
+        lda drv_sendtbl,y       ;  8..
+        sta serport             ; 12..15 - b0 b1 (CLK DATA)
 
-        asl                     ; 13..
-        and #$0f                ; 15..
-        sta serport             ; 19..22 - b2 b3
+        asl                     ; 14..
+        and #$0f                ; 16..
+        sta serport             ; 20..23 - b2 b3
 
-        pla                     ; 23
-        sta serport             ; 27..30 - b4 b5
+        pla                     ; 24
+        sta serport             ; 28..31 - b4 b5
 
-        asl                     ; 29..
-        and #$0f                ; 31..
-        sta serport             ; 35..38 - b6 b7
+        asl                     ; 30..
+        and #$0f                ; 32..
+        sta serport             ; 36..39 - b6 b7
 
-        nop                     ; 37..
-        nop                     ; 39..
-        lda #$00                ; 41..
-        sta serport             ; 47..50  set CLK and DATA high
+        nop                     ; 38..
+        nop                     ; 40..
+        lda #$00                ; 42..
+        sta serport             ; 48..51  set CLK and DATA high
 
         rts
 
