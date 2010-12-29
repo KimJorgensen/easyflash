@@ -16,8 +16,8 @@ retries         = 5             ; number of retries when reading a sector
 ledctl          = $1c00         ; LED control
 ledbit          = $08
 
-header_track    = $18
-header_sector   = $19
+prev_file_track = $7e
+prev_file_sect  = $026f
 
 job3            = $03
 trk3            = $0c
@@ -31,8 +31,6 @@ iddrv0          = $12           ; disk drive id
 id              = $16           ; disk id
 
 drivebuffer     = $0600
-track_list      = drivebuffer + $80
-sector_list     = drivebuffer + $c0
 
         jmp drv_start
 
@@ -42,48 +40,49 @@ sector_list     = drivebuffer + $c0
 
 ; sector read subroutine. Returns clc if successful, sec if error
 drv_readsector:
-	lda #$80		; read sector job code
+        lda #$80                ; read sector job code
 job:
-	sta zptmp
-	lda track
-	sta trk3
-	lda sector
-	sta sct3
+        sta zptmp
+        lda track
+        sta trk3
+        lda sector
+        sta sct3
 
-	ldy #retries		; retry counter
-	jsr blink		; turn on led
+        ldy #retries            ; retry counter
+        jsr blink               ; turn on led
 
 retry:
-	lda zptmp
-	sta job3
+        lda zptmp
+        sta job3
 
-	cli
+        cli
 @wait:
-	lda job3
-	bmi @wait
+        lda job3
+        bmi @wait
 
-	sei
+        sei
 
-	cmp #2			; check status
-	bcc success
+        cmp #2                  ; check status
+        bcc success
 
-	lda id			; check for disk ID change
-	sta iddrv0
-	lda id + 1
-	sta iddrv0 + 1
+        ; ???
+        lda id                  ; check for disk ID change
+        sta iddrv0
+        lda id + 1
+        sta iddrv0 + 1
 
-	dey			; decrease retry counter
-	bne retry
+        dey                    ; decrease retry counter
+        bne retry
 failure:
-	;sec
-	rts
+        ;sec
+        rts
 success:
-	clc
+        clc
 blink:
-	lda ledctl		; blink LED
-	eor #ledbit
-	sta ledctl
-	rts
+        lda ledctl		; blink LED
+        eor #ledbit
+        sta ledctl
+        rts
 
 .reloc
 
