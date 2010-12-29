@@ -38,9 +38,9 @@ drv_send:
         beq @wait2
 
         ; Handshake Step 3: Host releases CLK - Timing base
-@wait2:
+@wait3:
         bit serport             ; wait for CLK high (that's 0!)
-        bne @wait2              ; t = 3..9 * 0.5 us = 1.5..4.5 us
+        bne @wait3              ; t = 3..9 * 0.5 us = 1.5..4.5 us
 
         ; 2 MHz code
         ; get CLK, DATA pairs for low nibble

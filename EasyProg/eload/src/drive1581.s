@@ -1,110 +1,80 @@
 
 
-	.export drive1581
-	.import __DRIVE1581_LOAD__
-	
-drive1581	= __DRIVE1581_LOAD__
+.export drive_code_1581
+drive_code_1581 = *
 
+; =============================================================================
+;
+; Drive code assembled to fixed address $0300 follows
+;
+; =============================================================================
+.org $0300
 
-	.import drivebuffer
-	.import track_list, sector_list
+serport         = $4001
 
+retries         = 5             ; number of retries when reading a sector
+ledctl          = $4000         ; LED control
+ledbit          = $40
 
-	.segment "DRIVE1581"
+prev_file_track = $4c
+prev_file_sect  = $028b
 
+job3            = $05
+trk3            = $11
+sct3            = $12
+zptmp           = $45
+track           = $5b
+sector          = $5c
+stack           = $5d
 
-	.include "drivecodejumptable.i"
+drivebuffer     = $0600
 
+        jmp drv_start
 
-serport		= $4001
-
-retries	= 5			; number of retries when reading a sector
-ledctl	= $4000			; LED control
-ledbit	= $40
-execjob	= $ff54			; execute job
-job3	= $05
-trk3	= $11
-sct3	= $12
-zptmp	= $45
-track	= $5b
-sector	= $5c
-stack	= $5d
-
-bufptr	= $5e
-
-	.include "xfer_drive_2mhz_2bit.i"
-
-drv_get_dir_ts:
-	lda $022b
-	sta track
-	lda #3
-	sta sector
-	clc
-	rts
-
+        .include "xfer_drive_2mhz_2bit.s"
+        .include "drivecode.s"
 
 ; sector read subroutine. Returns clc if successful, sec if error
 drv_readsector:
-	lda #$80		; read sector job code
-	bne job
-
-
-; sector write subroutine. Returns clc if successful, sec if error
-drv_writesector:
-	lda #$90
-	bne job
-
-
-; flush, perform after writing sectors
-drv_flush:
-	lda #$a2
-
+        lda #$80                ; read sector job code
 job:
-	sta zptmp
-	lda track
-	sta trk3
-	lda sector
-	sta sct3
+        sta zptmp
+        lda track
+        sta trk3
+        lda sector
+        sta sct3
 
-	ldy #retries		; retry counter
-	lda ledctl		; turn on led
-	ora #ledbit
-	sta ledctl
+        ldy #retries		; retry counter
+        jsr blink               ; turn on led
 
 retry:
-	lda zptmp
-	sta job3
+        lda zptmp
+        sta job3
 
-	cli
+        cli
 @wait:
-	lda job3
-	bmi @wait
+        lda job3
+        bmi @wait
 
-	sei
+        sei
 
-	cmp #2			; check status
-	bcc success
+        cmp #2                  ; check status
+        bcc success
 
-	dey			; decrease retry counter
-	bne retry
+        dey                    ; decrease retry counter
+        bne retry
 failure:
-	;sec
-	rts
+        ;sec
+        rts
 success:
-	clc
+        clc
+blink:
+        lda ledctl              ; blink LED
+        eor #ledbit
+        sta ledctl
+        rts
 
-	lda ledctl		; blink LED
-	and #~ledbit
-	sta ledctl
-	rts
+.reloc
 
-; set track (from x) and sector (from a) for read/write sector
-drv_set_ts:
-	stx track
-	sta sector
-	rts
-
-; set the stack pointer (from x) to be restored upon exit
-drv_set_exit_sp:
-	stx stack
-	rts
+.export drive_code_size_1581
+drive_code_size_1581  = * - drive_code_1581

@@ -9,11 +9,10 @@
 .import loader_send, loader_recv
 
 .import drive_code_1541
-;.import drive1571
-;.import drive1581
-;.import drivesd2iec
+.import drive_code_1581
 
 .import drive_code_size_1541
+.import drive_code_size_1581
 
 
 cmdbytes        = 32   ; number of bytes in one M-W command
@@ -42,12 +41,24 @@ drive_codes:
         .addr drive_code_1541
         .addr drive_code_1541           ; 1570
         .addr 0;drive1571
-        .addr 0;drive1581
+        .addr drive_code_1581
         .addr 0
         .addr 0
         .addr 0
         .addr 0
         .addr 0;drivesd2iec	; sd2iec
+
+drive_code_sizes:
+        .addr 0
+        .addr drive_code_size_1541
+        .addr drive_code_size_1541      ; 1570
+        .addr 0;drive1571
+        .addr drive_code_size_1581
+        .addr 0
+        .addr 0
+        .addr 0
+        .addr 0
+        .addr 0;drivesd2iec     ; sd2iec
 
 .code
 
@@ -112,17 +123,19 @@ loader_upload_code:
         lda loader_drivetype
         asl
         tay
-        lda drive_codes + 1,y           ; send code for detected drive
+        lda drive_codes + 1, y          ; send code for detected drive
         sta code_ptr + 1
         bne :+
         sec                             ; fail if there's no code
         rts
 :
-        lda drive_codes,y
+        lda drive_codes, y
         sta code_ptr
-@codeptrset:
-        ldax #drive_code_size_1541      ; todo: be more specific
-        stax code_len
+
+        lda drive_code_sizes + 1, y
+        sta code_len + 1
+        lda drive_code_sizes, y
+        sta code_len
 
         ldax #$0300                     ; where to upload the code to
         stax cmd_addr

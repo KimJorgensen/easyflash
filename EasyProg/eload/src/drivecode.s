@@ -5,8 +5,8 @@
 ; args: start track, start sector
 ; returns: $00 for EOF, $ff for error, $01-$fe for each data block
 load:
-        ldx header_track
-        lda header_sector
+        ldx prev_file_track
+        lda prev_file_sect
         jsr set_ts
 
 loadchain:

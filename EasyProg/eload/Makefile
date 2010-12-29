@@ -18,6 +18,7 @@ INC += src/drivecode.s
 
 SRC := 
 SRC += src/drive1541.s
+SRC += src/drive1581.s
 SRC += src/loader_init.s
 SRC += src/loader_detect.s
 SRC += src/eload.s
