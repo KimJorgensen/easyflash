@@ -102,6 +102,11 @@ _eload_open_read:
         ldx #>eload_read_byte_fast
         jsr eload_set_read_byte_fn
 
+        ldx #0
+@delay:
+        dex
+        bne @delay
+
         lda #1                  ; command: load
         jsr loader_send
         jsr eload_recv         ; status / number of bytes
@@ -163,7 +168,7 @@ loader_send_do:
     sta $dd02
 
 @waitdrv:
-    bit $dd00       ; wait for drive to signal ready to receive
+    bit $dd00           ; wait for drive to signal ready to receive
     bvs @waitdrv        ; with CLK low
 
     lda $dd00       ; pull DATA low to acknowledge
@@ -177,53 +182,56 @@ loader_send_do:
     sei
 
 loader_send_waitbadline:
-    lda $d011       ; wait until a badline won't screw up
-    clc         ; the timing
-    sbc $d012
-    and #7
-    beq loader_send_waitbadline
+        lda $d011       ; wait until a badline won't screw up
+        clc             ; the timing
+        sbc $d012
+        and #7
+        beq loader_send_waitbadline
 loader_send_nobadline:
 
-    lda $dd00       ; release DATA to signal that data is coming
-    ;ora #$20
-    and #$df
-    sta $dd00
+        lda $dd00       ; release DATA to signal that data is coming
+        ;ora #$20
+        and #$df
+        sta $dd00
 
-    lda sendtab,y       ; send the first two bits
-    sta $dd00
+        lda sendtab,y   ; send the first two bits
+        sta $dd00
 
-    lsr
-    lsr
-    and #%00110000      ; send the next two
-    sta $dd00
+        lsr
+        lsr
+        and #%00110000  ; send the next two
+        sta $dd00
 
-    pla         ; get the next nybble
-    and #$0f
-    tay
-    lda sendtab,y
-    sta $dd00
+        pla             ; get the next nibble
+        and #$0f
+        tay
+        lda sendtab,y
+        sta $dd00
 
-    lsr         ; send the last two bits
-    lsr
-    and #%00110000
-    sta $dd00
+        lsr             ; send the last two bits
+        lsr
+        and #%00110000
+        sta $dd00
 
-    nop         ; slight delay, and...
-    nop
-    lda savedd00        ; restore $dd00 and $dd02
-    sta $dd00
-    lda #$3f
-    sta $dd02
+        nop             ; slight delay, and...
+        nop
+        lda savedd00    ; restore $dd00 and $dd02
+        sta $dd00
+        lda #$3f
+        sta $dd02
 
-    ldy loader_send_savey
-    lda loader_send_savea
+        ldy loader_send_savey
+        lda loader_send_savea
 
-    cli
-    rts
+        cli
+        rts
 
-savedd00:       .res 1
-loader_send_savea:  .res 1
-loader_send_savey:  .res 1
+savedd00:
+        .res 1
+loader_send_savea:
+        .res 1
+loader_send_savey:
+        .res 1
 
 
 ; =============================================================================
