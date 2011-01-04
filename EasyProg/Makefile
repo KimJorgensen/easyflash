@@ -29,13 +29,15 @@ obj += obj/buffer.o
 obj += obj/torturetest.o
 obj += obj/write.o
 obj += obj/util.o
-obj += obj/uloadglue.o
 
 bin_acme :=
 bin_acme += obj/startup.bin
 bin_acme += obj/sprites.bin
 
-INCLUDE  := include
+inc      := include
+inc      += eload/src
+
+INCLUDE  := $(addprefix -I,$(inc))
 
 DEFINE   := -DEFVERSION=\"${version}\"
 
@@ -51,10 +53,10 @@ all: easyprog.prg
 ###############################################################################
 # Poor men's dependencies: Let all files depend from all header files
 #
-headers := $(wildcard $(INCLUDE)/*.h)
+headers := $(wildcard $(inc)/*.h)
 
 obj/%.s: src/%.c obj $(headers)
-	cc65 -t c64 -T -O --static-locals -I $(INCLUDE) $(DEFINE) -o $@ $<
+	cc65 -t c64 -T -O --static-locals $(INCLUDE) $(DEFINE) -o $@ $<
 
 ###############################################################################
 obj/%.o: obj/%.s obj
@@ -92,9 +94,9 @@ easyprog: $(obj) src/ld.cfg $(eload)
 
 easyprog.prg: easyprog
 	exomizer sfx 0x080d -o $@ -q $^
-ifeq "$(release)" "yes"
+#ifeq "$(release)" "yes"
 	cp $@ easyprog-$(version).prg
-endif
+#endif
 
 $(eload): force
 	$(MAKE) -C $(dir $@)
