@@ -10,9 +10,11 @@
 
 .import drive_code_1541
 .import drive_code_1581
+.import drive_code_sd2iec
 
 .import drive_code_size_1541
 .import drive_code_size_1581
+.import drive_code_size_sd2iec
 
 
 cmdbytes        = 32   ; number of bytes in one M-W command
@@ -46,7 +48,7 @@ drive_codes:
         .addr 0
         .addr 0
         .addr 0
-        .addr 0;drivesd2iec	; sd2iec
+        .addr drive_code_sd2iec         ; sd2iec
 
 drive_code_sizes:
         .addr 0
@@ -58,7 +60,7 @@ drive_code_sizes:
         .addr 0
         .addr 0
         .addr 0
-        .addr 0;drivesd2iec     ; sd2iec
+        .addr drive_code_size_sd2iec    ; sd2iec
 
 .code
 
