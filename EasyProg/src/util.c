@@ -60,9 +60,6 @@ static uint8_t nCurrentPart;
 // ID of current split file
 static uint16_t nCurrentFileId;
 
-// Set by utilOpenInternal
-static uint8_t bHaveULoad;
-
 static const char aEasySplitSignature[8] =
 {
         0x65, 0x61, 0x73, 0x79, 0x73, 0x70, 0x6c, 0x74
@@ -74,7 +71,6 @@ static uint8_t utilCheckFileHeader(void);
 static uint8_t __fastcall__ utilOpenEasySplitFile(uint8_t nPart);
 static uint8_t utilOpenELoadFile(void);
 static void utilComplainWrongPart(uint8_t nPart);
-static uint8_t utilOpenInternal(void);
 
 
 /******************************************************************************/
@@ -112,7 +108,8 @@ uint8_t utilOpenFile(uint8_t nPart)
         else
         {
             // plain file
-            return utilOpenInternal();
+            utilRead = eload_read;
+            return utilOpenELoadFile();
         }
     }
     else
@@ -230,8 +227,6 @@ void __fastcall__ utilAppendDecimal(uint16_t n)
  */
 static uint8_t utilOpenELoadFile(void)
 {
-    *(uint8_t*)0xba = g_nDrive;
-
     if (eload_open_read(g_strFileName) == 0)
         return OPEN_FILE_OK;
     else
@@ -269,15 +264,12 @@ static uint8_t __fastcall__ utilOpenEasySplitFile(uint8_t nPart)
         return OPEN_FILE_WRONG;
     }
 
-    rv = utilOpenInternal();
+    utilRead = utilReadEasySplitFile;
+    rv = utilOpenELoadFile();
     if (rv != OPEN_FILE_OK)
         return rv;
 
-    // correct the read function pointer
-    utilRead = utilReadEasySplitFile;
     // skip the header again
-
-    // ok, funktioniert: die richtigen Bytes werden gelesen
     for (i = 0; i < sizeof(EasySplitHeader); ++i)
         eload_read_byte();
 
@@ -342,18 +334,3 @@ static void utilComplainWrongPart(uint8_t nPart)
     screenPrintDialog(apStr, BUTTON_ENTER);
 }
 
-
-/******************************************************************************/
-/**
- * The file has been checked already, it has the right type and the right part,
- * now we can really open it with the fast loader if possible and without if
- * not.
- */
-static uint8_t utilOpenInternal(void)
-{
-    if (utilOpenELoadFile() == OPEN_FILE_ERR)
-        return OPEN_FILE_ERR;
-
-    utilRead = eload_read; // todo: ???
-    return OPEN_FILE_OK;
-}
