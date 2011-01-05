@@ -5,7 +5,7 @@
 
 .export loader_upload_code
 
-.import loader_detect
+.import drive_detect
 .import loader_send, loader_recv
 
 .import drive_code_1541
@@ -42,25 +42,23 @@ drive_codes:
         .addr 0
         .addr drive_code_1541
         .addr drive_code_1541           ; 1570
-        .addr 0;drive1571
+        .addr 0 ;drive1571
         .addr drive_code_1581
         .addr 0
         .addr 0
-        .addr 0
-        .addr 0
         .addr drive_code_sd2iec         ; sd2iec
+        .addr 0
 
 drive_code_sizes:
         .addr 0
         .addr drive_code_size_1541
         .addr drive_code_size_1541      ; 1570
-        .addr 0;drive1571
+        .addr 0 ;drive1571
         .addr drive_code_size_1581
         .addr 0
         .addr 0
-        .addr 0
-        .addr 0
         .addr drive_code_size_sd2iec    ; sd2iec
+        .addr 0
 
 .code
 
@@ -69,7 +67,7 @@ drive_code_sizes:
 ; Set the device number for the drive to be used and check its type.
 ; The drive number is stored in $BA. Return the drive type.
 ;
-; int __fastcall__ eload_prepare_drive(uint8_t dev);
+; int __fastcall__ eload_set_drive_check_fastload(uint8_t dev);
 ;
 ; parameters:
 ;       drive number in A (X is ignored)
@@ -78,14 +76,34 @@ drive_code_sizes:
 ;       drive type in AX (A = low)
 ;
 ; =============================================================================
-.export _eload_prepare_drive
-_eload_prepare_drive:
+.export _eload_set_drive_check_fastload
+_eload_set_drive_check_fastload:
         sta $ba
-        jsr loader_detect
-        ldx #0
+        jsr drive_detect
         sta loader_drivetype
+        ldx #0
         rts
 
+; =============================================================================
+;
+; Set the device number for the drive to be used and set its type to "unknown".
+; This disables the fast loader. The drive number is stored in $BA.
+;
+; void __fastcall__ eload_set_drive_disable_fastload(uint8_t dev);
+;
+; parameters:
+;       drive number in A (X is ignored)
+;
+; return:
+;       -
+;
+; =============================================================================
+.export _eload_set_drive_disable_fastload
+_eload_set_drive_disable_fastload:
+        sta $ba
+        lda #drivetype_unknown
+        sta loader_drivetype
+        rts
 
 ; =============================================================================
 ;
@@ -200,11 +218,12 @@ sendcode:
 
 
 addlen:
-	clc
-	adc cmd_len
-	bcc :+
-	inx
-:	rts
+        clc
+        adc cmd_len
+        bcc :+
+        inx
+:
+        rts
 
 
 send_cmd:
