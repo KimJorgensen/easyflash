@@ -16,6 +16,9 @@
 /** Maximal number of menu entries, including termination entry */
 #define SCREEN_MAX_MENU_ENTRIES 8
 
+/** Update the screen but don't close the menu entry if this has been selected */
+#define SCREEN_MENU_ENTRY_FLAG_KEEP 1
+
 /**
  * This type describes an entry in a menu.
  */
@@ -24,6 +27,7 @@ typedef struct ScreenMenuEntry_s
     const char* pStrLabel;
     void (*pFunction)(void);
     uint8_t (*pCheckFunction)(void);
+    uint8_t flags;
 }
 ScreenMenuEntry;
 
