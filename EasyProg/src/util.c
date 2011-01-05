@@ -92,7 +92,10 @@ uint8_t utilOpenFile(uint8_t nPart)
 {
     uint8_t type;
 
-    eload_prepare_drive(g_nDrive);
+    if (g_bFastLoaderEnabled)
+        eload_set_drive_check_fastload(g_nDrive);
+    else
+        eload_set_drive_disable_fastload(g_nDrive);
 
     // this reads m_uFileHeader and returns the type detected
     type = utilCheckFileHeader();
@@ -348,17 +351,9 @@ static void utilComplainWrongPart(uint8_t nPart)
  */
 static uint8_t utilOpenInternal(void)
 {
-    if (!bFastLoaderEnabled)
-        bHaveULoad = 0;
-    else
-        bHaveULoad = 1;
+    if (utilOpenELoadFile() == OPEN_FILE_ERR)
+        return OPEN_FILE_ERR;
 
-    // todo: if (bHaveULoad)
-    {
-        if (utilOpenELoadFile() == OPEN_FILE_ERR)
-            return OPEN_FILE_ERR;
-
-        utilRead        = eload_read;
-    }
+    utilRead = eload_read; // todo: ???
     return OPEN_FILE_OK;
 }
