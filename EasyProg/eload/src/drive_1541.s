@@ -13,8 +13,6 @@ drive_code_1541  = *
 serport         = $1800
 
 retries         = 5             ; number of retries when reading a sector
-ledctl          = $1c00         ; LED control
-ledbit          = $08
 
 prev_file_track = $7e
 prev_file_sect  = $026f
@@ -49,8 +47,6 @@ job:
         sta sct3
 
         ldy #retries            ; retry counter
-        jsr blink               ; turn on led
-
 retry:
         lda zptmp
         sta job3
@@ -65,7 +61,6 @@ retry:
         cmp #2                  ; check status
         bcc success
 
-        ; ???
         lda id                  ; check for disk ID change
         sta iddrv0
         lda id + 1
@@ -78,10 +73,6 @@ failure:
         rts
 success:
         clc
-blink:
-        lda ledctl		; blink LED
-        eor #ledbit
-        sta ledctl
         rts
 
 .reloc
