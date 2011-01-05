@@ -38,6 +38,11 @@
 
 static const char* pStrHexDigits = "0123456789ABCDEF";
 
+/* Menu currently shown or NULL */
+static ScreenMenu* pCurrentMenu;
+
+/* Number of entries in the current menu. No meaning if there is no current menu. */
+static uint8_t nCurrentMenuEntries;
 
 /******************************************************************************/
 /**
@@ -64,16 +69,16 @@ static uint8_t screenMenuEntryHasShortcut(const ScreenMenuEntry* pEntry, char ke
 
 /******************************************************************************/
 /**
- * Show or update the menu.
+ * Show or update pCurrentMenu.
  *
- * If bPrintFrame is set, also draw the frame.
+ * Return the number of entries in the menu.
  */
-static void __fastcall__ screenPrintMenu(const ScreenMenu* pMenu)
+static uint8_t screenPrintCurrentMenu(void)
 {
     uint8_t nEntry, nEntries;
     uint8_t tmp;
     uint8_t len;
-    uint8_t x, y;
+    uint8_t x, y, textColor;
     char    c;
     const ScreenMenuEntry* pEntry;
     const char* pStr;
@@ -82,7 +87,7 @@ static void __fastcall__ screenPrintMenu(const ScreenMenu* pMenu)
     // calculate length of longest entry
     len = 2;
     nEntries = 0;
-    pEntry = pMenu->entries;
+    pEntry = pCurrentMenu->entries;
     while ((pStr = pEntry->pStrLabel) != NULL)
     {
         tmp = strlen(pStr);
@@ -95,45 +100,40 @@ static void __fastcall__ screenPrintMenu(const ScreenMenu* pMenu)
     /* hack: only 1 more instead of 2 because of the '&' in each entry */
     len += 1;
 
-    x = pMenu->x;
-    y = pMenu->y;
+    x = pCurrentMenu->x;
+    y = pCurrentMenu->y;
 
     screenPrintBorder(x, y, len + 2, nEntries + 2);
 
     ++x;
 
-    pEntry = pMenu->entries;
+    pEntry = pCurrentMenu->entries;
     for (nEntry = 0; nEntry != nEntries; ++nEntry)
     {
         gotoxy(x, ++y);
 
-        pStr = pEntry->pStrLabel;
+        pStr      = pEntry->pStrLabel;
+        textColor = pEntry->pCheckFunction() ?
+            COLOR_FOREGROUND : COLOR_GRAY1;
 
-        if (nEntry == pMenu->nSelected)
+        if (nEntry == pCurrentMenu->nSelected)
             revers(1);
 
         cputc(' ');
-        if (pEntry->pCheckFunction())
+
+        p = pStr;
+        while ((c = *p) != 0)
         {
-            p = pStr;
-            while ((c = *p) != 0)
+            if (c == '&')
             {
-                if (c == '&')
-                {
-                    textcolor(COLOR_EXTRA);
-                }
-                else
-                {
-                    cputc(c);
-                    textcolor(COLOR_FOREGROUND);
-                }
-                ++p;
+                textcolor(COLOR_EXTRA);
             }
-        }
-        else
-        {
-            textcolor(COLOR_GRAY1);
-            cputs(pStr);
+            else
+            {
+                cputc(c);
+                textcolor(textColor);
+            }
+            ++p;
         }
         cclear(len + x - wherex());
 
@@ -141,6 +141,7 @@ static void __fastcall__ screenPrintMenu(const ScreenMenu* pMenu)
         ++pEntry;
     }
     textcolor(COLOR_FOREGROUND);
+    return nEntries;
 }
 
 
@@ -179,6 +180,17 @@ void __fastcall__ screenPrintHex4(uint16_t n)
     screenPrintHex2(tmp);
     screenPrintHex2((uint8_t) n);
 }
+
+/******************************************************************************/
+/**
+ * Make a small delay proportional to t.
+ */
+void __fastcall__ screenDelay(unsigned t)
+{
+    while (t)
+        --t;
+}
+
 
 /******************************************************************************/
 /**
@@ -411,20 +423,16 @@ void __fastcall__ screenDoMenu(ScreenMenu* pMenu)
     uint8_t nSelected;
     char key;
     ScreenMenuEntry* pEntries;
+    ScreenMenuEntry* pEntry;
 
-    pEntries = pMenu->entries;
-
+    pCurrentMenu = pMenu;
     nSelected = 0;
-
-    // count the entries
-    nEntries = 0;
-    for (nEntry = 0; pEntries[nEntry].pStrLabel; ++nEntry)
-        ++nEntries;
 
     do
     {
-        pMenu->nSelected = nSelected;
-        screenPrintMenu(pMenu);
+        pCurrentMenu->nSelected = nSelected;
+        pEntries = pCurrentMenu->entries;
+        nEntries = screenPrintCurrentMenu();
         key = cgetc();
 
         switch (key)
@@ -442,45 +450,58 @@ void __fastcall__ screenDoMenu(ScreenMenu* pMenu)
             break;
 
         case CH_CURS_RIGHT:
-            if (pMenu->pNextMenu)
+            if (pCurrentMenu->pNextMenu)
             {
-                pMenu = pMenu->pNextMenu;
+                pCurrentMenu = pCurrentMenu->pNextMenu;
                 refreshMainScreen();
-                screenPrintMenu(pMenu);
+                nEntries = screenPrintCurrentMenu();
+                nSelected = 0;
             }
             break;
 
         case CH_CURS_LEFT:
-            if (pMenu->pPrevMenu)
+            if (pCurrentMenu->pPrevMenu)
             {
-                pMenu = pMenu->pPrevMenu;
+                pCurrentMenu = pCurrentMenu->pPrevMenu;
                 refreshMainScreen();
-                screenPrintMenu(pMenu);
+                nEntries = screenPrintCurrentMenu();
+                nSelected = 0;
             }
             break;
 
         case CH_ENTER:
-            if (pEntries[nSelected].pCheckFunction())
+        case ' ':
+            pEntry = pEntries + nSelected;
+            if (pEntry->pCheckFunction())
             {
-                pEntries[nSelected].pFunction();
-                return;
+                pEntry->pFunction();
+                if (pEntry->flags & SCREEN_MENU_ENTRY_FLAG_KEEP)
+                {
+                    // refresh, because the length may have changed
+                    refreshMainScreen();
+                    screenPrintCurrentMenu();
+                }
+                else
+                    return;
             }
             break;
 
         default:
+            /* all other keys may be shortcuts */
             for (nEntry = 0; nEntry != nEntries; ++nEntry)
             {
-                if (screenMenuEntryHasShortcut(pMenu->entries + nEntry, key) &&
+                if (screenMenuEntryHasShortcut(pCurrentMenu->entries + nEntry, key) &&
                         pEntries[nEntry].pCheckFunction())
                 {
-                    pMenu->nSelected = nEntry;
-                    screenPrintMenu(pMenu);
+                    pCurrentMenu->nSelected = nEntry;
+                    // update immediately to show the effect to the user
+                    screenPrintCurrentMenu();
                     pEntries[nEntry].pFunction();
                     return;
                 }
             }
         }
-    } while (key != CH_STOP);
+    } while (key != CH_STOP && key != CH_BTEE);
 }
 
 /******************************************************************************/
