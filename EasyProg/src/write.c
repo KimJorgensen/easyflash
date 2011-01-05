@@ -254,7 +254,6 @@ static uint8_t writeBinImage(uint8_t nChip)
     uint16_t nOffset;
     int      nBytes;
     uint8_t* pBuffer;
-    char strStatus[41];
 
     // this will show the cartridge type from the header
     refreshMainScreen();
