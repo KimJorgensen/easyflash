@@ -40,7 +40,7 @@ typedef struct EasyFlashAddr_s
 EasyFlashAddr;
 
 
-extern uint8_t bFastLoaderEnabled;
+extern uint8_t g_bFastLoaderEnabled;
 
 
 uint8_t checkFlashType(void);
