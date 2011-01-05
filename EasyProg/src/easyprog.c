@@ -69,7 +69,7 @@ static const unsigned char pStrEAPISignature[] =
 };
 
 
-uint8_t bFastLoaderEnabled;
+uint8_t g_bFastLoaderEnabled;
 
 
 /******************************************************************************/
@@ -99,29 +99,34 @@ ScreenMenu menuMain =
         {
             "&Write CRT to flash",
             checkWriteCRTImage,
-            ifHaveValidFlash
+            ifHaveValidFlash,
+            0
         },
         {
             "&Check flash type",
             (void (*)(void)) checkFlashType,
-            returnTrue
+            returnTrue,
+            0
         },
         {
             "&Erase all",
             checkEraseAll,
-            ifHaveValidFlash
+            ifHaveValidFlash,
+            0
         },
         {
             "&Start cartridge",
             utilResetStartCartridge,
-            returnTrue
+            returnTrue,
+            0
         },
         {
             "&Reset, cartridge off",
             utilResetKillCartridge,
-            returnTrue
+            returnTrue,
+            0
         },
-        { NULL, NULL, 0 }
+        { NULL, NULL, 0, 0 }
     }
 };
 
@@ -136,7 +141,8 @@ ScreenMenu menuOptions =
         {
             strFastLoader,
             toggleFastLoader,
-            returnTrue
+            returnTrue,
+            SCREEN_MENU_ENTRY_FLAG_KEEP
         },
         { NULL, NULL, 0 }
     }
@@ -153,34 +159,40 @@ ScreenMenu menuExpert =
         {
             "Write BIN to &LOROM",
             checkWriteLOROMImage,
-            ifHaveValidFlash
+            ifHaveValidFlash,
+            0
         },
         {
             "Write BIN to &HIROM",
             checkWriteHIROMImage,
-            ifHaveValidFlash
+            ifHaveValidFlash,
+            0
         },
         {
             "&Torture test",
             tortureTestComplete,
-            ifHaveValidFlash
+            ifHaveValidFlash,
+            0
         },
         {
             "&Read torture test",
             tortureTestRead,
-            ifHaveValidFlash
+            ifHaveValidFlash,
+            0
         },
         {
             "R&AM test",
             tortureTestRAM,
-            returnTrue
+            returnTrue,
+            0
         },
         {
             "&Hex viewer",
             hexViewer,
-            ifHaveValidFlash
+            ifHaveValidFlash,
+            0
         },
-        { NULL, NULL, 0 }
+        { NULL, NULL, 0, 0 }
     }
 };
 
@@ -194,9 +206,10 @@ ScreenMenu menuHelp =
         {
             "&About",
             showAbout,
-            returnTrue
+            returnTrue,
+            0
         },
-        { NULL, NULL, 0 }
+        { NULL, NULL, 0, 0 }
     }
 };
 
@@ -376,7 +389,7 @@ static void showAbout(void)
  */
 static void toggleFastLoader(void)
 {
-    bFastLoaderEnabled = !bFastLoaderEnabled;
+    g_bFastLoaderEnabled = !g_bFastLoaderEnabled;
     updateFastLoaderText();
 }
 
@@ -443,7 +456,7 @@ static void updateFastLoaderText()
     char* pStr;
 
     strcpy(strFastLoader, "&Fastloader enabled: ");
-    pStr = bFastLoaderEnabled ? "Yes" : "No";
+    pStr = g_bFastLoaderEnabled ? "Yes" : "No";
     strcat(strFastLoader, pStr);
 }
 
@@ -466,7 +479,7 @@ int main(void)
 
     internalCartType = INTERNAL_CART_TYPE_NONE;
 
-    bFastLoaderEnabled = 1;
+    g_bFastLoaderEnabled = 1;
     updateFastLoaderText();
 
     refreshMainScreen();
