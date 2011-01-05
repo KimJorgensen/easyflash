@@ -13,8 +13,6 @@ drive_code_1581 = *
 serport         = $4001
 
 retries         = 5             ; number of retries when reading a sector
-ledctl          = $4000         ; LED control
-ledbit          = $40
 
 prev_file_track = $4c
 prev_file_sect  = $028b
@@ -45,8 +43,6 @@ job:
         sta sct3
 
         ldy #retries		; retry counter
-        jsr blink               ; turn on led
-
 retry:
         lda zptmp
         sta job3
@@ -68,10 +64,6 @@ failure:
         rts
 success:
         clc
-blink:
-        lda ledctl              ; blink LED
-        eor #ledbit
-        sta ledctl
         rts
 
 .reloc
