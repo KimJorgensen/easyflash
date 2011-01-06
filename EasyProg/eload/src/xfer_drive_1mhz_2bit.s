@@ -15,9 +15,9 @@
 ;
 ; =============================================================================
         ; serport: | A_in | DEV | DEV | ACK_out || C_out | C_in | D_out | D_in |
-drv_send:
+drv_send_1mhz:
         bit serport             ; check for ATN
-        bmi drv_exit            ; leave the drive code if it is active
+        bmi drv_exit_1          ; leave the drive code if it is active
 
         sta zptmp
         lsr
@@ -76,73 +76,57 @@ drv_send:
 
         rts
 
-drv_sendtbl:
-        ; 0 0 0 0 b0 b2 b1 b3
-        .byte $0f, $07, $0d, $05
-        .byte $0b, $03, $09, $01
-        .byte $0e, $06, $0c, $04
-        .byte $0a, $02, $08, $00
-drv_sendtbl_end:
-        .assert (>drv_sendtbl) = (>drv_sendtbl_end), error, "drv_sendtbl crosses page boundary"
-
+drv_exit_1:
+        jmp drv_exit
 
 ; =============================================================================
 ;
 ; =============================================================================
-drv_exit:
-        lda #0                        ; release IEC bus
-        sta serport
-        ldx stack
-        txs
-        cli
-        rts
-
-; =============================================================================
-;
-; =============================================================================
-drv_recv:
+drv_recv_1mhz:
         lda #$08                ; CLK low to signal that we're receiving
         sta serport
 
-        lda serport                ; get EOR mask for data
+        lda serport             ; get EOR mask for data
         asl
         eor serport
         and #$e0
         sta @eor
 
         lda #$01
-:        bit serport                ; wait for DATA low
-        bmi drv_exit
+:
+        bit serport             ; wait for DATA low
+        bmi drv_exit_1
         beq :-
 
-        sei                        ; disable IRQs
+        sei
 
-        lda #0                        ; release CLK
+        lda #0                  ; release CLK
         sta serport
 
         lda #$01
-:        bit serport                ; wait for DATA high
-        bne :-
+:
+        bit serport             ; wait for DATA high
+        bne :-                  ; t = 3..9
 
         nop
-        nop
-        lda serport                ; get bits 7 and 5
-
-        asl
-        nop
-        nop
-        eor serport                ; get bits 6 and 4
-
-        asl
-        asl
-        asl
-        cmp ($00,x)
-        eor serport                ; get 3 and 1
+        nop                     ;  7..
+        lda serport             ; 11..17    get bits 7 and 5
 
         asl
         nop
+        nop                     ; 17..
+        eor serport             ; 21..27    get bits 6 and 4
+
+        asl
+        asl
+        asl                     ; 27..
+        cmp ($00,x)             ; 33..
+        eor serport             ; 37..43    get bits 3 and 1
+
+        asl
         nop
-        eor serport                ; finally get 2 and 0
+        nop                     ; 43..
+        eor serport             ; 47..53    get bits 2 and 0
 
 @eor = * + 1
         eor #$5e
