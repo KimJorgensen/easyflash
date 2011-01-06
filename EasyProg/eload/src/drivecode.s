@@ -72,3 +72,30 @@ set_ts:
         sta sector
 ts_ret:
         rts
+
+; =============================================================================
+;
+; Release the IEC bus, restore SP and leave the loader code.
+;
+; =============================================================================
+drv_exit:
+        lda #0                        ; release IEC bus
+        sta serport
+        ldx stack
+        txs
+        cli
+        rts
+
+; =============================================================================
+;
+; Used in all versions of the send function
+;
+; =============================================================================
+drv_sendtbl:
+        ; 0 0 0 0 b0 b2 b1 b3
+        .byte $0f, $07, $0d, $05
+        .byte $0b, $03, $09, $01
+        .byte $0e, $06, $0c, $04
+        .byte $0a, $02, $08, $00
+drv_sendtbl_end:
+        .assert (>drv_sendtbl) = (>drv_sendtbl_end), error, "drv_sendtbl crosses page boundary"

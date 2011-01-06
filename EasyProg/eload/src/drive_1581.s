@@ -29,8 +29,11 @@ drivebuffer     = $0600
 
         jmp drv_start
 
-        .include "xfer_drive_2mhz_2bit.s"
-        .include "drivecode.s"
+.include "drivecode.s"
+.include "xfer_drive_2mhz_2bit.s"
+
+drv_send = drv_send_2mhz
+drv_recv = drv_recv_2mhz
 
 ; sector read subroutine. Returns clc if successful, sec if error
 drv_readsector:

@@ -15,9 +15,9 @@
 ;
 ; =============================================================================
         ; serport: | A_in | DEV | DEV | ACK_out || C_out | C_in | D_out | D_in |
-drv_send:
+drv_send_2mhz:
         bit serport             ; check for ATN
-        bmi drv_exit            ; leave the drive code if it is active
+        bmi drv_exit_2          ; leave the drive code if it is active
 
         ; Handshake Step 1: Drive signals byte ready with DATA low
         ldy #$02
@@ -75,43 +75,30 @@ drv_send:
         nop                     ; 68..
         sta serport             ; 72..78 - b6 b7
 
-        jsr @delay12            ; 84
-        nop
-        nop
-        nop                     ; 90..
+        jsr delay18             ; 90..
         lda #$00                ; 92..
         sta serport             ; 96..102  set CLK and DATA high
-@delay12:
         rts
-
-drv_sendtbl:
-        .byte $0f, $07, $0d, $05
-        .byte $0b, $03, $09, $01
-        .byte $0e, $06, $0c, $04
-        .byte $0a, $02, $08, $00
-drv_sendtbl_end:
-        .assert (>drv_sendtbl) = (>drv_sendtbl_end), error, "drv_sendtbl crosses page boundary"
-
 
 ; =============================================================================
 ;
 ; =============================================================================
-drv_exit:
-        lda #0                  ; release IEC bus
-        sta serport
-        ldx stack
-        txs
-        cli
 delay18:
-        cmp ($ea,x)
-delay14 = * - 1
+        nop
+delay16:
+        nop
+delay14:
+        nop
 delay12:
         rts
 
+drv_exit_2:
+        jmp drv_exit
+
 ; =============================================================================
 ;
 ; =============================================================================
-drv_recv:
+drv_recv_2mhz:
         lda #$08                ; CLK low to signal that we're receiving
         sta serport
 
@@ -124,10 +111,10 @@ drv_recv:
         lda #$01
 :
         bit serport             ; wait for DATA low
-        bmi drv_exit
+        bmi drv_exit_2
         beq :-
 
-        sei                     ; disable IRQs
+        sei
 
         lda #0                  ; release CLK
         sta serport
@@ -135,33 +122,41 @@ drv_recv:
         lda #$01
 :
         bit serport             ; wait for DATA high
-        bne :-
+        bne :-                  ; t = 3..9
 
 ; 2 MHz code
-        jsr delay14             ; 14
+        jsr delay16             ; 19..
 
-        lda serport             ; get bits 7 and 5
-        asl
+        lda serport             ; 23..29 (11.5..14.5 us)    get bits 7 and 5
+        asl                     ; 25..
 
-        jsr delay14             ; 14
-
-        eor serport             ; get bits 6 and 4
-
-        asl
-        asl
-        asl
-
-        jsr @delay              ; 24
-        jsr @delay
-
-        eor serport             ; get 3 and 1
+                                ; 39..
+        jsr eor_serport_24cyc   ; 43..49 (21.5..24.5 us)    get bits 6 and 4
+                                ; 49..
 
         asl
+        asl
+        asl                     ; 55..
 
-        jsr delay18             ; 18
+        nop                     ; 57..
 
-        eor serport             ; finally get 2 and 0
+                                ; 71..
+        jsr eor_serport_24cyc   ; 75..81 (37.5..40.5 us)    get bits 3 and 1
+                                ; 81..
+
+        asl                     ; 83..
+
 @eor = * + 1
-        eor #$5e
-@delay:
-        rts
+        eor #$5e                ; 85..
+
+                                ; 93..
+        jmp eor_serport_18cyc   ; 97..103 (48.5..51.5 us)   get bits 2 and 0
+
+eor_serport_24cyc:              ;   /6 (jsr)
+        nop
+        nop
+        nop
+eor_serport_18cyc:              ;  6/  (jsr)
+        nop                     ;  8/14
+        eor serport             ; 12/18
+        rts                     ; 18/24
