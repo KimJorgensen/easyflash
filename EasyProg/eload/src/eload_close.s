@@ -30,6 +30,7 @@ _eload_close:
 
 @close_kernal:
         ; Close file
+        jsr UNTLK
         lda $ba                 ; set drive to listen
         jsr LISTEN
         lda #$e0                ; close + channel 0

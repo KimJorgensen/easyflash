@@ -9,10 +9,12 @@
 .import loader_send, loader_recv
 
 .import drive_code_1541
+.import drive_code_1571
 .import drive_code_1581
 .import drive_code_sd2iec
 
 .import drive_code_size_1541
+.import drive_code_size_1571
 .import drive_code_size_1581
 .import drive_code_size_sd2iec
 
@@ -42,7 +44,7 @@ drive_codes:
         .addr 0
         .addr drive_code_1541
         .addr drive_code_1541           ; 1570
-        .addr 0 ;drive1571
+        .addr drive_code_1571
         .addr drive_code_1581
         .addr 0
         .addr 0
@@ -53,7 +55,7 @@ drive_code_sizes:
         .addr 0
         .addr drive_code_size_1541
         .addr drive_code_size_1541      ; 1570
-        .addr 0 ;drive1571
+        .addr drive_code_size_1571
         .addr drive_code_size_1581
         .addr 0
         .addr 0

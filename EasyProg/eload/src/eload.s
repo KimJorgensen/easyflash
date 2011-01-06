@@ -194,29 +194,29 @@ loader_send_nobadline:
         and #$df
         sta $dd00
 
-        lda sendtab,y   ; send the first two bits
-        sta $dd00
+        lda sendtab,y   ; 4
+        sta $dd00       ; 8     send bits 7 and 5
 
-        lsr
-        lsr
-        and #%00110000  ; send the next two
-        sta $dd00
+        lsr             ; 10
+        lsr             ; 12
+        and #%00110000  ; 14
+        sta $dd00       ; 18    send bits 6 and 4
 
-        pla             ; get the next nibble
-        and #$0f
-        tay
-        lda sendtab,y
-        sta $dd00
+        pla             ; 22    get the next nibble
+        and #$0f        ; 24
+        tay             ; 26
+        lda sendtab,y   ; 30
+        sta $dd00       ; 34    send bits 3 and 1
 
-        lsr             ; send the last two bits
-        lsr
-        and #%00110000
-        sta $dd00
+        lsr             ; 36
+        lsr             ; 38
+        and #%00110000  ; 40
+        sta $dd00       ; 44    send bits 2 and 0
 
-        nop             ; slight delay, and...
-        nop
-        lda savedd00    ; restore $dd00 and $dd02
-        sta $dd00
+        nop             ; 46
+        nop             ; 48
+        lda savedd00    ; 52
+        sta $dd00       ; 56    restore $dd00 and $dd02
         lda #$3f
         sta $dd02
 
