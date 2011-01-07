@@ -1,4 +1,20 @@
 
+.import drv_sendtbl
+.import drive_common_start
+.import drive_code_common_len
+
+; =============================================================================
+;
+; =============================================================================
+load_common_code:
+        ldx #<drive_code_common_len
+@next_byte:
+        jsr recv
+        sta drive_common_start - 1, x
+        dex
+        bne @next_byte
+        rts
+
 
 ; =============================================================================
 ;
@@ -15,9 +31,9 @@
 ;
 ; =============================================================================
         ; serport: | A_in | DEV | DEV | ACK_out || C_out | C_in | D_out | D_in |
-drv_send_1mhz:
+send:
         bit serport             ; check for ATN
-        bmi drv_exit_1          ; leave the drive code if it is active
+        bmi exit_1              ; leave the drive code if it is active
 
         sta zptmp
         lsr
@@ -76,13 +92,13 @@ drv_send_1mhz:
 
         rts
 
-drv_exit_1:
-        jmp drv_exit
+exit_1:
+        jmp exit
 
 ; =============================================================================
 ;
 ; =============================================================================
-drv_recv_1mhz:
+recv:
         lda #$08                ; CLK low to signal that we're receiving
         sta serport
 
@@ -95,7 +111,7 @@ drv_recv_1mhz:
         lda #$01
 :
         bit serport             ; wait for DATA low
-        bmi drv_exit_1
+        bmi exit_1
         beq :-
 
         sei
@@ -124,11 +140,9 @@ drv_recv_1mhz:
         eor serport             ; 37..43    get bits 3 and 1
 
         asl
-        nop
-        nop                     ; 43..
-        eor serport             ; 47..53    get bits 2 and 0
-
 @eor = * + 1
         eor #$5e
+        nop                     ; 43..
+        eor serport             ; 47..53    get bits 2 and 0
 
         rts

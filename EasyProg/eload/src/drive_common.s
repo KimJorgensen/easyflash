@@ -1,14 +1,34 @@
 
-; ------------------------------------------------------------------------
+.import drv_get_start_ts
+.import drv_readsector
+.import drv_send
+.import drv_recv
+
+drivebuffer     = $0600
+
+
+.export drive_code_common_start
+drive_code_common_start:
+
+; =============================================================================
+;
+; Drive code assembled to fixed address $0400 follows
+;
+; =============================================================================
+.org $0400
+
+.export drive_common_start
+drive_common_start:
+
+; =============================================================================
 ;
 ; load file
 ; args: start track, start sector
 ; returns: $00 for EOF, $ff for error, $01-$fe for each data block
+;
+; =============================================================================
 load:
-        ldx prev_file_track
-        lda prev_file_sect
-        jsr set_ts
-
+        jsr drv_get_start_ts
 loadchain:
 @sendsector:
         jsr drv_readsector
@@ -28,25 +48,30 @@ loadchain:
 
         ldx #0                  ; send data
 @send:
+        txa
+        pha
         lda drivebuffer + 2,x
         jsr drv_send
+        pla
+        tax
         inx
 @buflen = * + 1
         cpx #$ff
         bne @send
 
-        jsr next_ts
-        bcc @sendsector
+        ; load next t/s in chain into x/a or exit loop if EOF
+        ldx drivebuffer
+        beq @done
+        lda drivebuffer + 1
+        jmp @sendsector
 @done:
         lda #0
         jmp senddone
 
-
-drv_start:
-        ; set the stack pointer (from x) to be restored upon exit
-        tsx
-        stx stack
-
+; =============================================================================
+;
+; =============================================================================
+.export drv_main
 drv_main:
         cli                     ; allow IRQs when waiting
         jsr drv_recv            ; get command byte, exit if ATN goes low
@@ -60,42 +85,25 @@ error:
         jsr drv_send
         jmp drv_main
 
-; next t/s in chain
-next_ts:
-        sec
-        ldx drivebuffer
-        beq ts_ret
-        lda drivebuffer + 1
-        clc
-set_ts:
-        stx track
-        sta sector
-ts_ret:
-        rts
-
-; =============================================================================
-;
-; Release the IEC bus, restore SP and leave the loader code.
-;
-; =============================================================================
-drv_exit:
-        lda #0                        ; release IEC bus
-        sta serport
-        ldx stack
-        txs
-        cli
-        rts
-
 ; =============================================================================
 ;
 ; Used in all versions of the send function
 ;
 ; =============================================================================
+.export drv_sendtbl
 drv_sendtbl:
         ; 0 0 0 0 b0 b2 b1 b3
         .byte $0f, $07, $0d, $05
         .byte $0b, $03, $09, $01
         .byte $0e, $06, $0c, $04
         .byte $0a, $02, $08, $00
-drv_sendtbl_end:
-        .assert (>drv_sendtbl) = (>drv_sendtbl_end), error, "drv_sendtbl crosses page boundary"
+
+.reloc
+
+.export drive_code_common_end
+drive_code_common_end:
+
+.export drive_code_common_len
+drive_code_common_len = drive_code_common_end - drive_code_common_start
+
+.assert drive_code_common_len < 256, error, "drive_code_common too long"

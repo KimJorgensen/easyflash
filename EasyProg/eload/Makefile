@@ -14,13 +14,13 @@ INC += src/kernal.i
 INC += src/macro.i
 INC += src/xfer_drive_1mhz_2bit.s
 INC += src/xfer_drive_2mhz_2bit.s
-INC += src/drivecode.s
 
 SRC := 
 SRC += src/drive_1541.s
 SRC += src/drive_1571.s
 SRC += src/drive_1581.s
 SRC += src/drive_sd2iec.s
+SRC += src/drive_common.s
 SRC += src/loader_init.s
 SRC += src/drive_detect.s
 SRC += src/eload.s
