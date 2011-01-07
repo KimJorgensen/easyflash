@@ -1,4 +1,5 @@
 
+.import drv_main
 
 .export drive_code_1581
 drive_code_1581 = *
@@ -27,26 +28,36 @@ stack           = $5d
 
 drivebuffer     = $0600
 
-        jmp drv_start
+; jmp table must be same as in 1541
+drv_start:
+        tsx
+        stx stack
+        jsr load_common_code
+        jmp drv_main
+drv_send:
+        jmp send
+drv_recv:
+        jmp recv
+drv_exit:
+        jmp exit
+drv_get_start_ts:
+        ldx prev_file_track
+        lda prev_file_sect
+        rts
 
-.include "drivecode.s"
 .include "xfer_drive_2mhz_2bit.s"
 
-drv_send = drv_send_2mhz
-drv_recv = drv_recv_2mhz
-
 ; sector read subroutine. Returns clc if successful, sec if error
+; X/A = T/S
+; X/A = T/S
 drv_readsector:
-        lda #$80                ; read sector job code
-job:
-        sta zptmp
-        lda track
-        sta trk3
-        lda sector
+        ldy #$80                ; read sector job code
+        sty zptmp
+        stx trk3
         sta sct3
 
         ldy #retries		; retry counter
-retry:
+@retry:
         lda zptmp
         sta job3
 
@@ -58,18 +69,33 @@ retry:
         sei
 
         cmp #2                  ; check status
-        bcc success
+        bcc @success
 
         dey                    ; decrease retry counter
-        bne retry
-failure:
+        bne @retry
+@failure:
         ;sec
         rts
-success:
+@success:
         clc
+        rts
+
+; =============================================================================
+;
+; Release the IEC bus, restore SP and leave the loader code.
+;
+; =============================================================================
+exit:
+        lda #0                        ; release IEC bus
+        sta serport
+        ldx stack
+        txs
+        cli
         rts
 
 .reloc
 
 .export drive_code_size_1581
 drive_code_size_1581  = * - drive_code_1581
+
+.assert drive_code_size_1581 < 256, error, "drive_code_size_1581"

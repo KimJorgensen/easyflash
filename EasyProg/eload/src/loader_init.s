@@ -18,6 +18,8 @@
 .import drive_code_size_1581
 .import drive_code_size_sd2iec
 
+.import drive_code_common_start
+.import drive_code_common_len
 
 cmdbytes        = 32   ; number of bytes in one M-W command
 
@@ -52,15 +54,15 @@ drive_codes:
         .addr 0
 
 drive_code_sizes:
-        .addr 0
-        .addr drive_code_size_1541
-        .addr drive_code_size_1541      ; 1570
-        .addr drive_code_size_1571
-        .addr drive_code_size_1581
-        .addr 0
-        .addr 0
-        .addr drive_code_size_sd2iec    ; sd2iec
-        .addr 0
+        .byte 0
+        .byte <drive_code_size_1541
+        .byte <drive_code_size_1541      ; 1570
+        .byte <drive_code_size_1571
+        .byte <drive_code_size_1581
+        .byte 0
+        .byte 0
+        .byte <drive_code_size_sd2iec    ; sd2iec
+        .byte 0
 
 .code
 
@@ -154,8 +156,7 @@ loader_upload_code:
         lda drive_codes, y
         sta code_ptr
 
-        lda drive_code_sizes + 1, y
-        sta code_len + 1
+        ldy loader_drivetype
         lda drive_code_sizes, y
         sta code_len
 
@@ -174,6 +175,20 @@ loader_upload_code:
 :       dex
         bne :-
 
+        ; common drive code not needed for sd2iec
+        lda loader_drivetype
+        cmp #drivetype_sd2iec
+        beq @no_common_code
+
+        ; upload common drive code using the fast protocol
+        ldx #<drive_code_common_len
+@boot:
+        lda drive_code_common_start - 1, x
+        jsr loader_send
+        dex
+        bne @boot
+
+@no_common_code:
         clc
         rts
 
@@ -189,8 +204,6 @@ sendcode:
 @next:
 	lda #cmdbytes			; at least 32 bytes left?
 	sta cmd_len
-	lda code_len + 1
-	bne @send
 	lda code_len
 	cmp #cmdbytes
 	bcs @send
@@ -211,9 +224,6 @@ sendcode:
 	sec
 	sbc cmd_len
 	sta code_len
-	bcs :+
-	dec code_len + 1
-:	ora code_len + 1
 	bne @next
 @done:
 	rts
@@ -221,7 +231,7 @@ sendcode:
 
 addlen:
         clc
-        adc cmd_len
+        adc #cmdbytes
         bcc :+
         inx
 :

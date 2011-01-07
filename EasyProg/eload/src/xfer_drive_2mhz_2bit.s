@@ -1,4 +1,19 @@
 
+.import drv_sendtbl
+.import drive_common_start
+.import drive_code_common_len
+
+; =============================================================================
+;
+; =============================================================================
+load_common_code:
+        ldx #<drive_code_common_len
+@next_byte:
+        jsr recv
+        sta drive_common_start - 1, x
+        dex
+        bne @next_byte
+        rts
 
 ; =============================================================================
 ;
@@ -15,9 +30,9 @@
 ;
 ; =============================================================================
         ; serport: | A_in | DEV | DEV | ACK_out || C_out | C_in | D_out | D_in |
-drv_send_2mhz:
+send:
         bit serport             ; check for ATN
-        bmi drv_exit_2          ; leave the drive code if it is active
+        bmi exit_2              ; leave the drive code if it is active
 
         ; Handshake Step 1: Drive signals byte ready with DATA low
         ldy #$02
@@ -92,13 +107,13 @@ delay14:
 delay12:
         rts
 
-drv_exit_2:
-        jmp drv_exit
+exit_2:
+        jmp exit
 
 ; =============================================================================
 ;
 ; =============================================================================
-drv_recv_2mhz:
+recv:
         lda #$08                ; CLK low to signal that we're receiving
         sta serport
 
@@ -111,7 +126,7 @@ drv_recv_2mhz:
         lda #$01
 :
         bit serport             ; wait for DATA low
-        bmi drv_exit_2
+        bmi exit_2
         beq :-
 
         sei
