@@ -157,6 +157,25 @@ void screenInit(void)
     clrscr();
 }
 
+
+/******************************************************************************/
+/**
+ * Configure key repeat.
+ *
+ * val      KEY_REPEAT_*
+ *
+ * return   previous setting
+ *
+ */
+uint8_t __fastcall__ screenSetKeyRepeat(uint8_t val)
+{
+    uint8_t old;
+    old = *(uint8_t*)0x028a;
+    *(uint8_t*)0x028a = val;
+    return old;
+}
+
+
 /******************************************************************************/
 /**
  */

@@ -117,12 +117,14 @@ static void hexPrevBank(uint16_t nToOffset)
 void hexViewer(void)
 {
     char key;
+    uint8_t  prevKeyRepeat;
 
     // we can discard the values => just use "key"
     if (!eapiInit(&key, &key))
         return;
 
     screenPrintFrame();
+    prevKeyRepeat = screenSetKeyRepeat(KEY_REPEAT_ALL);
     cputsxy(1, 1, "Hex Viewer");
     cputsxy(12, 23, "<Up>/<Down>/<+>/<->/<Stop>");
 
@@ -159,4 +161,6 @@ void hexViewer(void)
         }
     }
     while (key != CH_STOP);
+
+    screenSetKeyRepeat(prevKeyRepeat);
 }
