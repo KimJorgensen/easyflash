@@ -13,6 +13,10 @@
 #define BUTTON_ENTER     0x01
 #define BUTTON_STOP      0x02
 
+#define KEY_REPEAT_DEFAULT  0x00
+#define KEY_REPEAT_NONE     0x40
+#define KEY_REPEAT_ALL      0x80
+
 /** Maximal number of menu entries, including termination entry */
 #define SCREEN_MAX_MENU_ENTRIES 8
 
@@ -58,6 +62,7 @@ typedef struct ScreenMenu_s
 ScreenMenu;
 
 void screenInit(void);
+uint8_t __fastcall__ screenSetKeyRepeat(uint8_t val);
 void screenBing(void);
 void __fastcall__ screenPrintHex2(uint8_t n);
 void __fastcall__ screenPrintHex4(uint16_t n);
