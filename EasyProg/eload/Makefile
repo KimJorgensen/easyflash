@@ -2,7 +2,9 @@
 
 AS := ca65
 AR := ar65
+CC := cl65
 AFLAGS := -g -Isrc
+CFLAGS := -g -O -Isrc
 
 
 obj/%.o: src/%.s
@@ -30,7 +32,7 @@ SRC += src/eload_close.s
 
 OBJ := $(patsubst src/%.s,obj/%.o,$(SRC))
 
-all: eload.lib
+all: eload.lib eload_test.prg
 
 $(SRC): $(INC)
 
@@ -38,12 +40,17 @@ $(SRC): $(INC)
 eload.lib: obj $(OBJ)
 	$(AR) a $@ $(OBJ)
 
+eload_test.prg: src/eload_test.c eload.lib
+	$(CC) $(CFLAGS) -m $@.map -o $@ $^
+
 obj:
 	mkdir -p obj
 
 clean:
 	rm -rf obj
 	rm -f eload.lib
+	rm -f eload_test.prg
+	rm -f eload_test.prg.map
 
 distclean: clean
 	rm -f *~
