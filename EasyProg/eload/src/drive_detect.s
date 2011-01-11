@@ -53,15 +53,17 @@ drive_detect:
         bpl @clear
 
         ; ask the drive to send its ID
-        lda #str_ui_len     ; set name to M-R command string
+        lda #str_ui_len
         ldx #<str_ui
         ldy #>str_ui
         jsr send_command
-        bcs @fail
+        dec $d020
+        bcs @not_present
         jsr send_talk
         ldy #0
 @next_byte:
         lda ST
+        bmi @not_present
         bne @end_of_id
         jsr ACPTR
         sta drive_id_str, y
@@ -79,17 +81,17 @@ drive_detect:
 @check_next_pos:
         lda drive_id_str, y
         cmp drive_id_tab, x
-        bne @no_match
+        bne @mismatch
         lda drive_id_str + 1, y
         cmp drive_id_tab + 1, x
-        bne @no_match
+        bne @mismatch
         lda drive_id_str + 2, y
         cmp drive_id_tab + 2, x
-        bne @no_match
+        bne @mismatch
         lda drive_id_str + 3, y
         cmp drive_id_tab + 3, x
         beq @match
-@no_match:
+@mismatch:
         iny
         cpy #drive_id_str_size - 4
         bne @check_next_pos
@@ -100,8 +102,11 @@ drive_detect:
         inx
         lda drive_id_tab, x
         bne @check_next_entry
-@fail:
-        lda #drivetype_unknown  ; unknown or no drive present
+        ; no match
+        lda #drivetype_unknown
+        rts
+@not_present:
+        lda #drivetype_not_present
         rts
 @match:
         lda drive_id_tab + 4, x

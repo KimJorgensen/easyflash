@@ -44,6 +44,7 @@ cmd_len:        .byte 0
 
 drive_codes:
         .addr 0
+        .addr 0
         .addr drive_code_1541
         .addr drive_code_1541           ; 1570
         .addr drive_code_1571
@@ -54,6 +55,7 @@ drive_codes:
         .addr 0
 
 drive_code_sizes:
+        .byte 0
         .byte 0
         .byte <drive_code_size_1541
         .byte <drive_code_size_1541      ; 1570
