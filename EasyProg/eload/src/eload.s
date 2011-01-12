@@ -20,7 +20,8 @@
 
 .rodata
 
-        .align 16
+;        .align 16
+        .res 16
 sendtab:
         .byte $00, $80, $20, $a0
         .byte $40, $c0, $60, $e0

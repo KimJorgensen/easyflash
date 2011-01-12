@@ -1,5 +1,9 @@
 
 ST              = $90
+FNLEN           = $b7
+SA              = $b9
+FA              = $ba
+FNADR           = $bb
 NDX             = $c6
 
 COLOR           = $0286

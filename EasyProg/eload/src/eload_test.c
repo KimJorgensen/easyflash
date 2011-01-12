@@ -76,7 +76,7 @@ static void test_read(void)
 
     loop   = 0;
     errors = 0;
-    for (;;)
+    while (!kbhit() || cgetc() != CH_STOP)
     {
         clrscr();
         cputs("\r\nRead test data\r\n");
@@ -99,7 +99,7 @@ static void test_read(void)
         cputs("\r\n");
         if (type == 0)
         {
-            cputs("\r\nDrive not present");
+            cputs("\r\nDevice not present");
             bad = 1;
         }
         else
