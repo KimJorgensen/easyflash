@@ -1,4 +1,7 @@
 
+.import eload_dos_cmd_open
+.import eload_dos_send_data
+.import eload_dos_cmd_close
 
 .include "kernal.i"
 .include "drivetype.i"
@@ -53,11 +56,13 @@ drive_detect:
         bpl @clear
 
         ; ask the drive to send its ID
+        jsr eload_dos_cmd_open
+        bcs @not_present
         lda #str_ui_len
         ldx #<str_ui
         ldy #>str_ui
-        jsr send_command
-        dec $d020
+        jsr eload_dos_send_data
+        jsr UNLSN
         bcs @not_present
         jsr send_talk
         ldy #0
@@ -72,7 +77,7 @@ drive_detect:
         cpy #drive_id_str_size
         bne @next_byte
 @end_of_id:
-        jsr close_command
+        jsr eload_dos_cmd_close
 
         ; search for the substrings in this string
         ldx #0              ; points into drive_id_tab
@@ -111,30 +116,6 @@ drive_detect:
 @match:
         lda drive_id_tab + 4, x
         rts
-
-
-; =============================================================================
-;
-; =============================================================================
-send_command:
-        jsr SETNAM
-
-        ; set secondary address
-        lda #$6f
-        sta $b9
-
-        ; send secondary address and command, carry set on fail
-        ; clears $90 (ST) if there was no error
-        jmp $f3d5
-
-
-; =============================================================================
-;
-; =============================================================================
-close_command:
-        jsr UNTLK
-        jmp $f642           ; close
-
 
 ; =============================================================================
 ;

@@ -29,6 +29,7 @@ SRC += src/eload.s
 SRC += src/eload_read.s
 SRC += src/eload_read_byte.s
 SRC += src/eload_close.s
+SRC += src/eload_dos.s
 
 OBJ := $(patsubst src/%.s,obj/%.o,$(SRC))
 
