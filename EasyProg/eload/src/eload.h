@@ -1,8 +1,5 @@
 /*
  * eload.h
- *
- *  Created on: 12.12.2010
- *      Author: skoe
  */
 
 #ifndef ELOAD_H_

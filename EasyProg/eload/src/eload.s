@@ -1,9 +1,34 @@
+ ;
+ ; ELoad
+ ;
+ ; (c) 2011 Thomas Giesel
+ ; transfer code based on work by Per Olofsson
+ ;
+ ; This software is provided 'as-is', without any express or implied
+ ; warranty.  In no event will the authors be held liable for any damages
+ ; arising from the use of this software.
+ ;
+ ; Permission is granted to anyone to use this software for any purpose,
+ ; including commercial applications, and to alter it and redistribute it
+ ; freely, subject to the following restrictions:
+ ;
+ ; 1. The origin of this software must not be misrepresented; you must not
+ ;    claim that you wrote the original software. If you use this software
+ ;    in a product, an acknowledgment in the product documentation would be
+ ;    appreciated but is not required.
+ ; 2. Altered source versions must be plainly marked as such, and must not be
+ ;    misrepresented as being the original software.
+ ; 3. This notice may not be removed or altered from any source distribution.
+ ;
+ ; Thomas Giesel skoe@directbox.com
+ ;
 
-.include "kernal.i"
+.include "kernal.s"
 
 .importzp       sp, sreg, regsave
 .importzp       ptr1, ptr2, ptr3, ptr4
 
+.import eload_dos_close
 .import eload_set_read_byte_fn
 .import eload_read_byte_from_buffer
 .import eload_read_byte_kernal
@@ -35,10 +60,6 @@ sendtab_end:
 
 .bss
 
-; 0 if everything is okay, otherwise an error happened or EOF was reached
-eload_status:
-        .res 1
-
 ; remaining number of bytes in this sector
 .export eload_ctr
 eload_ctr:
@@ -48,7 +69,7 @@ eload_ctr:
 
 ; =============================================================================
 ;
-; Open the file for read access. Check _eload_status for the result.
+; Open the file for read access.
 ;
 ; int __fastcall__ eload_open_read(const char* name);
 ;
@@ -131,19 +152,15 @@ _eload_open_read:
 @ok:
         lda #0
         tax
-        sta eload_status
         rts
 
 @close_and_fail:
-        lda $ba                 ; set drive to listen
-        jsr LISTEN
-        lda #$e0                ; close + channel 0
-        jsr SECOND
-        jsr UNLSN
+        lda #0                  ; channel 0
+        sta SA
+        jsr eload_dos_close
 @fail:
         lda #$ff
         tax
-        sta eload_status
         rts
 
 

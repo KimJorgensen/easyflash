@@ -1,51 +1,39 @@
 
 
-AS := ca65
-AR := ar65
-CC := cl65
-AFLAGS := -g -Isrc
-CFLAGS := -g -O -Isrc
+inc :=
+inc += src/drivetype.s
+inc += src/kernal.s
+inc += src/xfer_drive_1mhz.s
+inc += src/xfer_drive_2mhz.s
 
-
-obj/%.o: src/%.s
-	$(AS) $(AFLAGS) -o $@ $<
-
-INC :=
-INC += src/drivetype.i
-INC += src/kernal.i
-INC += src/macro.i
-INC += src/xfer_drive_1mhz_2bit.s
-INC += src/xfer_drive_2mhz_2bit.s
-
-SRC := 
-SRC += src/drive_1541.s
-SRC += src/drive_1571.s
-SRC += src/drive_1581.s
-SRC += src/drive_sd2iec.s
-SRC += src/drive_common.s
-SRC += src/loader_init.s
-SRC += src/drive_detect.s
-SRC += src/eload.s
-SRC += src/eload_read.s
-SRC += src/eload_read_byte.s
-SRC += src/eload_close.s
-SRC += src/eload_dos.s
-
-OBJ := $(patsubst src/%.s,obj/%.o,$(SRC))
+obj := 
+obj += obj/drive_1541.o
+obj += obj/drive_1571.o
+obj += obj/drive_1581.o
+obj += obj/drive_sd2iec.o
+obj += obj/drive_common.o
+obj += obj/send_code.o
+obj += obj/drive_detect.o
+obj += obj/eload.o
+obj += obj/eload_read.o
+obj += obj/eload_read_byte.o
+obj += obj/eload_close.o
+obj += obj/eload_dos.o
 
 all: eload.lib eload_test.prg
 
-$(SRC): $(INC)
-
-
-eload.lib: obj $(OBJ)
-	$(AR) a $@ $(OBJ)
-
-eload_test.prg: src/eload_test.c eload.lib
-	$(CC) $(CFLAGS) -m $@.map -o $@ $^
+obj/%.o: src/%.s obj $(inc)
+	ca65 -I src -t c64 -o $@ $<
 
 obj:
 	mkdir -p obj
+
+eload.lib: $(obj)
+	rm -f $@
+	ar65 a $@ $(obj)
+
+eload_test.prg: src/eload_test.c eload.lib
+	cl65 -g -O -I src -m $@.map -o $@ $^
 
 clean:
 	rm -rf obj

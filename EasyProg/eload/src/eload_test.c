@@ -1,9 +1,27 @@
 /*
- * eload_test.c
+ * ELoad
  *
- *  Created on: 11.01.2011
- *      Author: skoe
+ * (c) 2011 Thomas Giesel
+ *
+ * This software is provided 'as-is', without any express or implied
+ * warranty.  In no event will the authors be held liable for any damages
+ * arising from the use of this software.
+ *
+ * Permission is granted to anyone to use this software for any purpose,
+ * including commercial applications, and to alter it and redistribute it
+ * freely, subject to the following restrictions:
+ *
+ * 1. The origin of this software must not be misrepresented; you must not
+ *    claim that you wrote the original software. If you use this software
+ *    in a product, an acknowledgment in the product documentation would be
+ *    appreciated but is not required.
+ * 2. Altered source versions must be plainly marked as such, and must not be
+ *    misrepresented as being the original software.
+ * 3. This notice may not be removed or altered from any source distribution.
+ *
+ * Thomas Giesel skoe@directbox.com
  */
+
 
 #include <string.h>
 #include <unistd.h>
@@ -12,7 +30,7 @@
 
 #include "eload.h"
 
-#define TEST_DATA_SIZE       4096
+#define TEST_DATA_SIZE       8192
 #define ELOAD_TEST_FILE_NAME "eload-test-file"
 
 static uint8_t test_data[TEST_DATA_SIZE];
@@ -45,7 +63,7 @@ static uint8_t get_drive_number(void)
 
 static void test_write(void)
 {
-    uint8_t drv, rv;
+    uint8_t drv;
 
     cputs("Write test data\r\n");
     drv = get_drive_number();
@@ -80,21 +98,21 @@ static void test_read(void)
     {
         clrscr();
         cputs("\r\nRead test data\r\n");
-        cputs("\r\nloop:      0x");
+        cputs("\r\npass:      $");
         cputhex16(loop);
-        cputs("\r\nerrors:    0x");
+        cputs("\r\nerrors:    $");
         cputhex16(errors);
-        cputs("\r\n\r\nreference: 0x");
-        cputhex16(test_data);
-        cputs("\r\nread to:   0x");
-        cputhex16(read_data);
-        cputs("\r\nsize:      0x");
+        cputs("\r\n\nreference: $");
+        cputhex16((unsigned)test_data);
+        cputs("\r\nread to:   $");
+        cputhex16((unsigned)read_data);
+        cputs("\r\nsize:      $");
         cputhex16(TEST_DATA_SIZE);
 
         bad = 0;
 
         type = eload_set_drive_check_fastload(drv);
-        cputs("\r\n\r\nDrive type found: 0x");
+        cputs("\r\n\nDrive type found: 0x");
         cputhex8(type);
         cputs("\r\n");
         if (type == 0)
@@ -121,6 +139,7 @@ static void test_read(void)
                 cputs("Verify error\r\n");
                 bad = 1;
             }
+            eload_close();
         }
 
         if (bad)
@@ -143,7 +162,7 @@ int main(void)
     do
     {
         clrscr();
-        cputs("ELoad test program\r\n");
+        cputs("\r\nELoad Test Program\r\n\n");
         cputs(" W : Write test file to disk\r\n");
         cputs(" R : Read and verify test file\r\n");
 

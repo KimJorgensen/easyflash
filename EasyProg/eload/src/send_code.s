@@ -1,12 +1,41 @@
-	.include "macro.i"
-	.include "kernal.i"
-	.include "drivetype.i"
+ ;
+ ; ELoad
+ ;
+ ; (c) 2011 Thomas Giesel
+ ;
+ ; This software is provided 'as-is', without any express or implied
+ ; warranty.  In no event will the authors be held liable for any damages
+ ; arising from the use of this software.
+ ;
+ ; Permission is granted to anyone to use this software for any purpose,
+ ; including commercial applications, and to alter it and redistribute it
+ ; freely, subject to the following restrictions:
+ ;
+ ; 1. The origin of this software must not be misrepresented; you must not
+ ;    claim that you wrote the original software. If you use this software
+ ;    in a product, an acknowledgment in the product documentation would be
+ ;    appreciated but is not required.
+ ; 2. Altered source versions must be plainly marked as such, and must not be
+ ;    misrepresented as being the original software.
+ ; 3. This notice may not be removed or altered from any source distribution.
+ ;
+ ; Thomas Giesel skoe@directbox.com
+ ;
+
+.include "kernal.s"
+.include "drivetype.s"
+
+.import eload_dos_open_listen_cmd
+.import eload_dos_send_data
+.import eload_dos_unlisten_close
 
 
 .export loader_upload_code
 
 .import drive_detect
 .import loader_send, loader_recv
+
+.import drv_start
 
 .import drive_code_1541
 .import drive_code_1571
@@ -24,23 +53,31 @@
 cmdbytes        = 32   ; number of bytes in one M-W command
 
 
-	.bss
+.bss
 
-code_len:		.res 2
-cmd_data:		.res 1
+.export loader_drivetype
+loader_drivetype:
+        .res 1
 
-        .export loader_drivetype
-loader_drivetype:	.res 1
-
-
-.data
-
-cmd:            .byte "M-"
-cmd_type:       .byte "W"
-cmd_addr:       .addr $ffff
-cmd_len:        .byte 0
+cmd_addr:
+        .res 2
+cmd_len:
+        .res 1
+code_ptr:
+        .res 2
+code_len:
+        .res 2
 
 .rodata
+
+str_mw:
+        .byte "m-w"
+str_mw_len = * - str_mw
+
+str_me:
+        .byte "m-e"
+        .word $0300
+str_me_len = * - str_me
 
 drive_codes:
         .addr 0
@@ -162,16 +199,14 @@ loader_upload_code:
         lda drive_code_sizes, y
         sta code_len
 
-        ldax #$0300                     ; where to upload the code to
-        stax cmd_addr
+        lda #<$0300                     ; where to upload the code to
+        sta cmd_addr
+        lda #>$0300
+        sta cmd_addr + 1
 
-        jsr sendcode                    ; upload code
+        jsr send_code
+        jsr start_code
 
-        lda #'E'                        ; execute
-        sta cmd_type
-        ldax #$0300                     ; where the drivecode starts
-        stax cmd_addr
-        jsr send_cmd
 
         ldx #0                          ; delay
 :       dex
@@ -196,39 +231,57 @@ loader_upload_code:
 
 ; =============================================================================
 ;
-; send code, 32 bytes at a time
+; Send code, 32 bytes at a time
 ;
 ; =============================================================================
-.export sendcode
-sendcode:
-	lda #'W'			; M-W
-	sta cmd_type
+send_code:
 @next:
-	lda #cmdbytes			; at least 32 bytes left?
-	sta cmd_len
-	lda code_len
-	cmp #cmdbytes
-	bcs @send
-	beq @done
-	sta cmd_len			; no, just send the rest
+        lda #cmdbytes       ; at least 32 bytes left?
+        sta cmd_len
+        lda code_len
+        cmp #cmdbytes
+        bcs @send
+        beq done
+        sta cmd_len         ; no, just send the rest
 @send:
-	jsr send_cmd			; send M-W command
+        jsr eload_dos_open_listen_cmd
+        bcs done
 
-	ldax cmd_addr
-	jsr addlen
-	stax cmd_addr
+        lda #str_mw_len
+        ldx #<str_mw
+        ldy #>str_mw
+        jsr eload_dos_send_data
 
-	ldax code_ptr
-	jsr addlen
-	stax code_ptr
+        lda #3
+        ldx #<cmd_addr
+        ldy #>cmd_addr
+        jsr eload_dos_send_data
 
-	lda code_len
-	sec
-	sbc cmd_len
-	sta code_len
-	bne @next
-@done:
-	rts
+        lda cmd_len
+        ldx code_ptr
+        ldy code_ptr + 1
+        jsr eload_dos_send_data
+        jsr UNLSN
+
+        lda cmd_addr
+        ldx cmd_addr + 1
+        jsr addlen
+        sta cmd_addr
+        stx cmd_addr + 1
+
+        lda code_ptr
+        ldx code_ptr + 1
+        jsr addlen
+        sta code_ptr
+        stx code_ptr + 1
+
+        lda code_len
+        sec
+        sbc cmd_len
+        sta code_len
+        bne @next
+done:
+        rts
 
 
 addlen:
@@ -239,41 +292,16 @@ addlen:
 :
         rts
 
-
-send_cmd:
-	lda $ba				; set drive to listen
-	jsr LISTEN
-	lda #$6f			; channel 15
-	jsr SECOND
-
-	ldx #0				; send M-W or M-E command and address
-:
-        lda cmd,x
-	jsr CIOUT
-	inx
-	cpx #5
-	bne :-
-
-	lda cmd_type			; exec
-	cmp #'E'
-	beq send_cmd_done
-
-	lda cmd_len			; length of data
-	jsr CIOUT
-
-	lda cmd_type			; read
-	cmp #'R'
-	beq send_cmd_done
-
-	ldy #0				; send the data
-code_ptr = * + 1
-:
-	lda $ffff,y
-	jsr CIOUT
-	iny
-	cpy cmd_len
-	bne :-
-send_cmd_done:
-	jmp UNLSN			; unlisten executes the command
-
-
+; =============================================================================
+;
+; Send M-E $0300
+;
+; =============================================================================
+start_code:
+        jsr eload_dos_open_listen_cmd
+        bcs done
+        lda #str_me_len
+        ldx #<str_me
+        ldy #>str_me
+        jsr eload_dos_send_data
+        jmp UNLSN
