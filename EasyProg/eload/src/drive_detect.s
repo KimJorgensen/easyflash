@@ -1,10 +1,34 @@
+ ;
+ ; ELoad
+ ;
+ ; (c) 2011 Thomas Giesel
+ ;
+ ; This software is provided 'as-is', without any express or implied
+ ; warranty.  In no event will the authors be held liable for any damages
+ ; arising from the use of this software.
+ ;
+ ; Permission is granted to anyone to use this software for any purpose,
+ ; including commercial applications, and to alter it and redistribute it
+ ; freely, subject to the following restrictions:
+ ;
+ ; 1. The origin of this software must not be misrepresented; you must not
+ ;    claim that you wrote the original software. If you use this software
+ ;    in a product, an acknowledgment in the product documentation would be
+ ;    appreciated but is not required.
+ ; 2. Altered source versions must be plainly marked as such, and must not be
+ ;    misrepresented as being the original software.
+ ; 3. This notice may not be removed or altered from any source distribution.
+ ;
+ ; Thomas Giesel skoe@directbox.com
+ ;
 
-.import eload_dos_cmd_open
+.import eload_dos_open_listen_cmd
 .import eload_dos_send_data
-.import eload_dos_cmd_close
+.import eload_dos_send_talk
+.import eload_dos_close
 
-.include "kernal.i"
-.include "drivetype.i"
+.include "kernal.s"
+.include "drivetype.s"
 
 
 ; =============================================================================
@@ -17,20 +41,20 @@
 ; - 4 bytes     Substring to be found, may end with '*'s as wildcard
 ; - 1 byte      Drive type ID (refer to drive_type.s)
 drive_id_tab:
-        .byte "SD2I", drivetype_sd2iec
-        .byte "UIEC", drivetype_sd2iec
+        .byte "sd2i", drivetype_sd2iec
+        .byte "uiec", drivetype_sd2iec
         .byte "1541", drivetype_1541
         .byte "1570", drivetype_1570
         .byte "1571", drivetype_1571
         .byte "1581", drivetype_1581
-        ;.byte "FD**", drivetype_fd
-        ;.byte "HD**", drivetype_hd
-        .byte "VICE", drivetype_vice
-        .byte "PARA", drivetype_1541 ; groepaz has a speeddos clone called parados
+        ;.byte "fd**", drivetype_fd
+        ;.byte "hd**", drivetype_hd
+        .byte "vice", drivetype_vice
+        .byte "para", drivetype_1541 ; groepaz has a speeddos clone called parados
         .byte 0 ; end marker
 
 str_ui:
-        .byte "UI"
+        .byte "ui"
 str_ui_len = * - str_ui
 
 .bss
@@ -56,19 +80,19 @@ drive_detect:
         bpl @clear
 
         ; ask the drive to send its ID
-        jsr eload_dos_cmd_open
+        jsr eload_dos_open_listen_cmd
         bcs @not_present
         lda #str_ui_len
         ldx #<str_ui
         ldy #>str_ui
         jsr eload_dos_send_data
-        jsr UNLSN
         bcs @not_present
-        jsr send_talk
+        jsr UNLSN
+        jsr eload_dos_send_talk
+        bcs @not_present
         ldy #0
 @next_byte:
         lda ST
-        bmi @not_present
         bne @end_of_id
         jsr ACPTR
         sta drive_id_str, y
@@ -77,7 +101,7 @@ drive_detect:
         cpy #drive_id_str_size
         bne @next_byte
 @end_of_id:
-        jsr eload_dos_cmd_close
+        jsr eload_dos_close
 
         ; search for the substrings in this string
         ldx #0              ; points into drive_id_tab
@@ -116,15 +140,4 @@ drive_detect:
 @match:
         lda drive_id_tab + 4, x
         rts
-
-; =============================================================================
-;
-; =============================================================================
-send_talk:
-        lda #0
-        sta ST
-        lda $ba
-        jsr TALK
-        lda #$6f
-        jmp TKSA
 
