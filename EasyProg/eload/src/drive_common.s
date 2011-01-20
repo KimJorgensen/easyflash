@@ -131,3 +131,4 @@ drive_code_common_end:
 drive_code_common_len = drive_code_common_end - drive_code_common_start
 
 .assert drive_code_common_len < 256, error, "drive_code_common too long"
+

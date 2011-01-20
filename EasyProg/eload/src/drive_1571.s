@@ -64,6 +64,8 @@ drv_send:
         jmp send
 drv_recv:
         jmp recv
+drv_readsector:
+        jmp readsector
 drv_exit:
         jmp exit
 drv_get_start_ts:
@@ -75,7 +77,7 @@ drv_get_start_ts:
 
 ; sector read subroutine. Returns clc if successful, sec if error
 ; X/A = T/S
-drv_readsector:
+readsector:
         ldy #$80                ; read sector job code
         sty zptmp
         stx trk3

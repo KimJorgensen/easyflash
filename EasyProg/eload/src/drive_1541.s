@@ -56,6 +56,7 @@ drivebuffer     = $0600
 .export drv_start
 .export drv_send
 .export drv_recv
+.export drv_readsector
 .export drv_exit
 .export drv_get_start_ts
 
@@ -69,6 +70,8 @@ drv_send:
         jmp send
 drv_recv:
         jmp recv
+drv_readsector:
+        jmp readsector
 drv_exit:
         jmp exit
 drv_get_start_ts:
@@ -80,8 +83,7 @@ drv_get_start_ts:
 
 ; sector read subroutine. Returns clc if successful, sec if error
 ; X/A = T/S
-.export drv_readsector
-drv_readsector:
+readsector:
         ldy #$80                ; read sector job code
         sty zptmp
         stx trk3
