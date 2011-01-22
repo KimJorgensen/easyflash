@@ -33,7 +33,8 @@ drive_code_sd2iec  = *
 ; =============================================================================
 .org $0300
 
-.byte "eload1"
+; This is ASCII (not PETSCI!) "eload1"
+.byte $65, $6c, $6f, $61, $64, $31
 
 .reloc
 
