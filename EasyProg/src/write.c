@@ -24,7 +24,6 @@
 
 #include <conio.h>
 #include <string.h>
-#include <time.h>
 
 #include "buffer.h"
 #include "cart.h"
@@ -38,6 +37,7 @@
 #include "filedlg.h"
 #include "sprites.h"
 #include "progress.h"
+#include "timer.h"
 #include "util.h"
 #include "eload.h"
 
@@ -301,7 +301,6 @@ static uint8_t writeBinImage(uint8_t nChip)
  */
 static void checkWriteImage(uint8_t imageType)
 {
-    unsigned t;
     uint8_t  rv;
 
     checkFlashType();
@@ -325,13 +324,11 @@ static void checkWriteImage(uint8_t imageType)
     }
 
     refreshMainScreen();
-
     setStatus("Checking file");
 
     // make sure the right areas of the chip are erased
     progressInit();
-
-    t = clock();
+    timerStart();
 
     if (imageType == IMAGE_TYPE_CRT)
         rv = writeCrtImage();
@@ -339,21 +336,10 @@ static void checkWriteImage(uint8_t imageType)
         rv = writeBinImage(imageType == IMAGE_TYPE_HIROM);
     eload_close();
 
-    t = clock() - t;
+    timerStop();
 
     if (rv == CART_RV_OK)
         screenPrintSimpleDialog(apStrWriteComplete);
-
-#if 0
-    {
-        strcpy(utilStr, "time: ");
-        utilAppendDecimal(t / CLK_TCK);
-        utilAppendChar('.');
-        utilAppendDecimal((t % CLK_TCK) / (CLK_TCK / 10));
-        cputsxy(0, 0, utilStr);
-    }
-    for (;;);
-#endif
 }
 
 

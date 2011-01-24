@@ -22,6 +22,7 @@ obj += obj/flash.o
 obj += obj/cart.o
 obj += obj/screen.o
 obj += obj/progress.o
+obj += obj/timerasm.o
 obj += obj/dir.o
 obj += obj/filedlg.o
 obj += obj/hex.o

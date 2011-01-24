@@ -226,6 +226,7 @@ uint8_t flashWriteBlockFromFile(uint8_t nBank, uint8_t nChip,
 
         nSize -= nBytes;
         nOffset += nBytes;
+        refreshElapsedTime();
     }
 
     return 1;

@@ -46,5 +46,6 @@ extern uint8_t g_bFastLoaderEnabled;
 uint8_t checkFlashType(void);
 void __fastcall__ setStatus(const char* pStrStatus);
 void refreshMainScreen(void);
+void refreshElapsedTime(void);
 
 #endif /* EASYPROG_H_ */
