@@ -26,7 +26,8 @@
 .include "kernal.s"
 
 .importzp       sp, sreg, regsave
-.importzp       ptr1, ptr2, ptr3, ptr4
+.importzp       tmp1, tmp2, tmp3
+.importzp       ptr1
 
 .import eload_dos_close
 .import eload_set_read_byte_fn
@@ -45,8 +46,7 @@
 
 .rodata
 
-;        .align 16
-        .res 16
+        .align 16
 sendtab:
         .byte $00, $80, $20, $a0
         .byte $40, $c0, $60, $e0
@@ -56,7 +56,6 @@ sendtab_end:
         .assert >(sendtab_end - 1) = >sendtab, error, "sendtab mustn't cross page boundary"
         ; If you get this error, you linker config may need something like this:
         ; RODATA:   load = RAM, type = ro, align = $10;
-
 
 .bss
 
@@ -166,38 +165,38 @@ _eload_open_read:
 
 ; send a byte to the drive
 loader_send:
-    sta loader_send_savea
+        sta tmp1
 loader_send_do:
-    sty loader_send_savey
+        sty tmp2
 
-    pha
-    lsr
-    lsr
-    lsr
-    lsr
-    tay
+        pha
+        lsr
+        lsr
+        lsr
+        lsr
+        tay
 
-    lda $dd00
-    and #7
-    sta $dd00
-    sta savedd00
-    eor #$07
-    ora #$38
-    sta $dd02
+        lda $dd00
+        and #7
+        sta $dd00
+        sta tmp3
+        eor #$07
+        ora #$38
+        sta $dd02
 
 @waitdrv:
-    bit $dd00           ; wait for drive to signal ready to receive
-    bvs @waitdrv        ; with CLK low
+        bit $dd00           ; wait for drive to signal ready to receive
+        bvs @waitdrv        ; with CLK low
 
-    lda $dd00       ; pull DATA low to acknowledge
-    ora #$20
-    sta $dd00
+        lda $dd00       ; pull DATA low to acknowledge
+        ora #$20
+        sta $dd00
 
 @wait2:
-    bit $dd00       ; wait for drive to release CLK
-    bvc @wait2
+        bit $dd00       ; wait for drive to release CLK
+        bvc @wait2
 
-    sei
+        sei
 
 loader_send_waitbadline:
         lda $d011       ; wait until a badline won't screw up
@@ -233,23 +232,16 @@ loader_send_nobadline:
 
         nop             ; 46
         nop             ; 48
-        lda savedd00    ; 52
-        sta $dd00       ; 56    restore $dd00 and $dd02
-        lda #$3f
-        sta $dd02
+        lda tmp3        ; 51
+        ldy #$3f        ; 53
+        sta $dd00       ; 57    restore $dd00 and $dd02
+        sty $dd02
 
-        ldy loader_send_savey
-        lda loader_send_savea
+        ldy tmp2
+        lda tmp1
 
         cli
         rts
-
-savedd00:
-        .res 1
-loader_send_savea:
-        .res 1
-loader_send_savey:
-        .res 1
 
 
 ; =============================================================================
