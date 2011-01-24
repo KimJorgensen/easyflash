@@ -34,6 +34,7 @@
 #include "texts.h"
 #include "easyprog.h"
 #include "eload.h"
+#include "timer.h"
 
 
 // globally visible string buffer for functions used here
@@ -136,6 +137,7 @@ uint8_t utilAskForNextFile(void)
     uint8_t     ret;
 
     eload_close();
+    timerPause();
 
     ++nCurrentPart;
     utilStr[0] = '\0';
@@ -165,6 +167,7 @@ uint8_t utilAskForNextFile(void)
     }
     while (ret != OPEN_FILE_OK);
 
+    timerCont();
     refreshMainScreen();
     return 1;
 }

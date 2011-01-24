@@ -38,6 +38,7 @@
 #include "buffer.h"
 #include "hex.h"
 #include "progress.h"
+#include "timer.h"
 #include "write.h"
 #include "torturetest.h"
 #include "filedlg.h"
@@ -58,9 +59,6 @@ static void updateFastLoaderText();
 // Low/High flash chip manufacturer/device ID
 uint8_t nManufacturerId;
 uint8_t nDeviceId;
-
-// Driver name
-char strDriverName[18 + 1] = "Internal Fallback";
 
 // EAPI signature
 static const unsigned char pStrEAPISignature[] =
@@ -306,13 +304,45 @@ void refreshMainScreen(void)
     textcolor(COLOR_FOREGROUND);
 
     gotoxy(3, 14);
-    cputs("Flash Driver:");
-    gotox(17);
-    cputs(strDriverName);
+    cputs("Time elapsed:");
 
+    refreshElapsedTime();
     progressShow();
-
     refreshStatusLine();
+}
+
+
+/******************************************************************************/
+/**
+ */
+static void leadingZero(uint16_t v)
+{
+    utilStr[0] = '\0';
+    if (v < 10)
+    {
+        utilStr[0] = '0';
+        utilStr[1] = '\0';
+    }
+}
+
+
+/******************************************************************************/
+/**
+ * Refresh the elapsed time value.
+ */
+void refreshElapsedTime(void)
+{
+    uint16_t t;
+
+    t = timerGet();
+    gotoxy(17, 14);
+    leadingZero(t >> 8);
+    utilAppendDecimal(t >> 8);
+    cputs(utilStr);
+    cputc(':');
+    leadingZero(t & 0xff);
+    utilAppendDecimal(t & 0xff);
+    cputs(utilStr);
 }
 
 
@@ -469,6 +499,7 @@ int main(void)
 {
     char key;
 
+    timerInitTOD();
     screenInit();
     progressInit();
 
