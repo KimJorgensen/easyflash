@@ -13,7 +13,6 @@
 void timerInitTOD(void);
 void timerStart(void);
 void timerStop(void);
-void timerPause(void);
 void timerCont(void);
 uint16_t timerGet(void);
 

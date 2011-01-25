@@ -85,7 +85,7 @@ _timerInitTOD:
 .export _timerStart
 _timerStart:
         lda #0
-        ldx #4
+        ldx #3
         stx timerRunning
         ; must set all values from hours to ds to unfreeze the counters
 @next:
@@ -103,7 +103,7 @@ _timerStop:
         sta timerRunning
 timerCopyToCurr:
         lda #0
-        ldx #4
+        ldx #3
         ; must read all values from hours to ds to unfreeze the counters
 @next:
         lda CIA1_TOD10, x
@@ -115,28 +115,13 @@ timerCopyToCurr:
 ; =============================================================================
 ;
 ; =============================================================================
-.export _timerPause
-_timerPause:
-        lda #0
-        ldx #4
-        ; must read all values from hours to ds to unfreeze the counters
-@next:
-        lda CIA1_TOD10, x
-        sta pauseTime, x
-        dex
-        bpl @next
-        rts
-
-; =============================================================================
-;
-; =============================================================================
 .export _timerCont
 _timerCont:
-        lda #0
-        ldx #4
+        ldx #3
+        stx timerRunning
         ; must set all values from hours to ds to unfreeze the counters
 @next:
-        lda pauseTime, x
+        lda currTime, x
         sta CIA1_TOD10, x
         dex
         bpl @next

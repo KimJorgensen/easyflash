@@ -137,7 +137,7 @@ uint8_t utilAskForNextFile(void)
     uint8_t     ret;
 
     eload_close();
-    timerPause();
+    timerStop();
 
     ++nCurrentPart;
     utilStr[0] = '\0';
