@@ -61,12 +61,6 @@ uint8_t nManufacturerId;
 uint8_t nDeviceId;
 const char* pStrFlashDriver;
 
-// EAPI signature
-static const unsigned char pStrEAPISignature[] =
-{
-        0x65, 0x61, 0x70, 0x69 /* "EAPI" */
-};
-
 
 uint8_t g_bFastLoaderEnabled;
 

@@ -27,6 +27,12 @@ static uint8_t* const apNormalRomBase[2] = { ROM0_BASE, ROM1_BASE };
 /// map chip index to Ultimax address
 static uint8_t* const apUltimaxRomBase[2] = { ROM0_BASE, ROM1_BASE_ULTIMAX };
 
+// EAPI signature
+static const unsigned char pStrEAPISignature[] =
+{
+        0x65, 0x61, 0x70, 0x69 /* "EAPI" */
+};
+
 #define FLASH_WRITE_SIZE 256
 static uint8_t buffer[FLASH_WRITE_SIZE];
 
@@ -201,10 +207,12 @@ uint8_t __fastcall__ flashVerifyBlock(uint8_t nBank, uint8_t nChip,
 uint8_t flashWriteBlockFromFile(uint8_t nBank, uint8_t nChip,
                                 uint16_t nSize)
 {
+    uint8_t  nEAPIBlock;
     uint16_t nOffset;
     uint16_t nBytes;
 
-    nOffset = 0;
+    nOffset    = 0;
+    nEAPIBlock = 0;
     while (nSize)
     {
         nBytes = (nSize > FLASH_WRITE_SIZE) ? FLASH_WRITE_SIZE : nSize;
@@ -216,6 +224,23 @@ uint8_t flashWriteBlockFromFile(uint8_t nBank, uint8_t nChip,
         {
             screenPrintSimpleDialog(apStrFileTooShort);
             return 0;
+        }
+
+        // Check if EAPI has to be replaced
+        if (nEAPIBlock ||
+            (nBank == 0 && nChip == 1 && nOffset == 0x1800 &&
+                    memcmp(buffer, pStrEAPISignature, 4) == 0))
+        {
+            if (nEAPIBlock == 0)
+            {
+                memcpy(buffer, EAPI_LOAD_TO, 0x100);
+                nEAPIBlock = 2;
+            }
+            else if (nEAPIBlock == 2)
+                memcpy(buffer, EAPI_LOAD_TO + 0x100, 0x100);
+            else
+                memcpy(buffer, EAPI_LOAD_TO + 0x200, 0x100);
+            --nEAPIBlock;
         }
 
         if (!flashWriteBlock(nBank, nChip, nOffset, buffer))
