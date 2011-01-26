@@ -215,18 +215,21 @@ wbError:
 
 ; =============================================================================
 ;
-; Include fallback EAPI driver.
+; Include EAPI drivers
 ;
 ; =============================================================================
 .segment    "RODATA"
-.export _pFallbackDriverStart
-_pFallbackDriverStart:
-        .word fallbackDriverStart
 
-.export _pFallbackDriverEnd
-_pFallbackDriverEnd:
-        .word fallbackDriverEnd
+.export _aEAPIDrivers
+_aEAPIDrivers:
 
-fallbackDriverStart = * + 2
-.incbin "obj/eapi-am29f040-03"
-fallbackDriverEnd:
+EAPICode1:
+.incbin "obj/eapi-m29w160t-03", 2
+.res $0300 - (* - EAPICode1), $ff
+
+EAPICode2:
+.incbin "obj/eapi-am29f040-03", 2
+.res $0300 - (* - EAPICode2), $ff
+
+EAPICode3:
+.byte 0

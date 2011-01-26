@@ -59,6 +59,7 @@ static void updateFastLoaderText();
 // Low/High flash chip manufacturer/device ID
 uint8_t nManufacturerId;
 uint8_t nDeviceId;
+const char* pStrFlashDriver;
 
 // EAPI signature
 static const unsigned char pStrEAPISignature[] =
@@ -275,29 +276,10 @@ void refreshMainScreen(void)
     screenPrintBox(16, 10, 23, 3);
     textcolor(COLOR_FOREGROUND);
 
-    gotoxy(7, 11);
-    cputs("Flash ID:");
+    gotoxy(3, 11);
+    cputs("Flash Driver:");
     gotox(17);
-
-    utilStr[0] = '\0';
-    utilAppendHex2(nManufacturerId);
-    utilAppendHex2(nDeviceId);
-    cputs(utilStr);
-
-    switch ((nManufacturerId << 8) | nDeviceId)
-    {
-    case FLASH_TYPE_AMD_AM29F040:
-        str = " (Am29F040)";
-        break;
-
-    case FLASH_TYPE_AMD_M29W160ET:
-        str = " (M29W160ET)";
-        break;
-
-    default:
-        str = " (unknown)";
-    }
-    cputs(str);
+    cputs(pStrFlashDriver);
 
     textcolor(COLOR_LIGHTFRAME);
     screenPrintBox(16, 13, 23, 3);
@@ -354,16 +336,36 @@ void refreshElapsedTime(void)
  */
 uint8_t checkFlashType(void)
 {
-    if (eapiInit(&nManufacturerId, &nDeviceId) == 0)
+    uint8_t* pDriver;
+    uint8_t  bDriverFound = 0;
+
+    pDriver = aEAPIDrivers[0];
+    while (*pDriver)
     {
+        memcpy(EAPI_LOAD_TO, pDriver, EAPI_SIZE);
+
+        if (eapiInit(&nManufacturerId, &nDeviceId) > 0)
+        {
+            bDriverFound = 1;
+            break;
+        }
+        pDriver += EAPI_SIZE;
+    }
+
+    if (bDriverFound)
+    {
+        pStrFlashDriver = EAPI_DRIVER_NAME;
+        refreshMainScreen();
+        return 1;
+    }
+    else
+    {
+        pStrFlashDriver = "(failed)";
         screenPrintSimpleDialog(apStrWrongFlash);
         refreshMainScreen();
         nManufacturerId = nDeviceId = 0;
         return 0;
     }
-
-    refreshMainScreen();
-    return 1;
 }
 
 
@@ -467,18 +469,6 @@ static void __fastcall__ execMenu(ScreenMenu* pMenu)
 
 /******************************************************************************/
 /**
- * Load EAPI driver.
- */
-static void loadEAPI(void)
-{
-    memcpy(EAPI_LOAD_TO, pFallbackDriverStart,
-           pFallbackDriverEnd - pFallbackDriverStart);
-    EAPI_ZP_REAL_CODE_BASE = EAPI_LOAD_TO;
-}
-
-
-/******************************************************************************/
-/**
  * Update the "Fast loader enabled:    " text.
  */
 static void updateFastLoaderText()
@@ -515,7 +505,6 @@ int main(void)
 
     refreshMainScreen();
     showAbout();
-    loadEAPI();
     screenBing();
 
     // this also makes visible 16kByte of flash memory
