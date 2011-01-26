@@ -35,16 +35,19 @@ bin_acme :=
 bin_acme += obj/startup.bin
 bin_acme += obj/sprites.bin
 
+eapi := eapi-am29f040-03
+eapi += eapi-m29w160t-03
+
+eapi_dir := ../EasySDK/eapi
+eapi_src := $(addprefix $(eapi_dir)/,$(eapi))
+eapi_obj := $(addprefix obj/,$(eapi))
+
 inc      := include
 inc      += eload/src
 
 INCLUDE  := $(addprefix -I,$(inc))
 
 DEFINE   := -DEFVERSION=\"${version}\"
-
-eapi_dir := ../EasySDK/eapi
-eapi_src := $(eapi_dir)/eapi-am29f040-03
-eapi     := obj/eapi-am29f040-03
 
 eload    := eload/eload.lib
 
@@ -67,7 +70,7 @@ obj/%.o: obj/%.s obj
 # the binaries created with acme are included in ca65 source code
 # therefore we need a dependency here, and we need the built-in eapi
 #
-obj/%.o: src/%.s obj $(bin_acme) $(eapi)
+obj/%.o: src/%.s obj $(bin_acme) $(eapi_obj)
 	ca65 -t c64 -o $@ $<
 
 ###############################################################################
@@ -76,7 +79,7 @@ obj/%.o: src/%.s obj $(bin_acme) $(eapi)
 .PHONY: always
 always:
 
-$(eapi): always
+$(eapi_obj): always
 	make -C $(eapi_dir)
 	cp $(eapi_src) obj
 
@@ -91,13 +94,13 @@ obj:
 easyprog: $(obj) src/ld.cfg $(eload)
 	ld65 -o $@ -m $@.map -C src/ld.cfg $(obj) -L /usr/local/lib/cc65/lib \
 		--lib c64.lib --lib $(eload)
-	cat easyprog.map | grep -e "^Name\|^CODE\|^DATA\|^BSS"
+	cat easyprog.map | grep -e "^Name\|^CODE\|^DATA\|^BSS\|^RODATA"
 
 easyprog.prg: easyprog
 	exomizer sfx 0x080d -o $@ -q $^
-#ifeq "$(release)" "yes"
+ifeq "$(release)" "yes"
 	cp $@ easyprog-$(version).prg
-#endif
+endif
 
 $(eload): force
 	$(MAKE) -C $(dir $@)
