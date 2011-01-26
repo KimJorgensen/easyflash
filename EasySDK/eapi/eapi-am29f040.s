@@ -853,3 +853,9 @@ rwInc_return:
         ldx EAPI_TMP_VAL4
         lda EAPI_TMP_VAL1
         rts
+
+; =============================================================================
+; We pad the file to the maximal driver size ($0300) to make sure nobody
+; has the idea to used the memory behind EAPI in a cartridge. EasyProg
+; replaces EAPI and would overwrite everything in this space.
+!fill $0300 - (* - EAPICodeBase), $ff
