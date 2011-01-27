@@ -204,15 +204,15 @@ uint8_t __fastcall__ flashVerifyBlock(uint8_t nBank, uint8_t nChip,
  *
  * return 1 for success, 0 for failure
  */
-uint8_t flashWriteBlockFromFile(uint8_t nBank, uint8_t nChip,
+uint8_t flashWriteBankFromFile(uint8_t nBank, uint8_t nChip,
                                 uint16_t nSize)
 {
-    uint8_t  nEAPIBlock;
+    uint8_t  bReplaceEAPI;
     uint16_t nOffset;
     uint16_t nBytes;
 
-    nOffset    = 0;
-    nEAPIBlock = 0;
+    nOffset      = 0;
+    bReplaceEAPI = 0;
     while (nSize)
     {
         nBytes = (nSize > FLASH_WRITE_SIZE) ? FLASH_WRITE_SIZE : nSize;
@@ -227,20 +227,18 @@ uint8_t flashWriteBlockFromFile(uint8_t nBank, uint8_t nChip,
         }
 
         // Check if EAPI has to be replaced
-        if (nEAPIBlock ||
-            (nBank == 0 && nChip == 1 && nOffset == 0x1800 &&
-                    memcmp(buffer, pStrEAPISignature, 4) == 0))
+        if (nBank == 0 && nChip == 1 && nOffset == 0x1800 &&
+                    memcmp(buffer, pStrEAPISignature, 4) == 0)
+            bReplaceEAPI = 1;
+
+        if (bReplaceEAPI)
         {
-            if (nEAPIBlock == 0)
-            {
+            if (nOffset == 0x1800)
                 memcpy(buffer, EAPI_LOAD_TO, 0x100);
-                nEAPIBlock = 2;
-            }
-            else if (nEAPIBlock == 2)
+            else if (nOffset == 0x1900)
                 memcpy(buffer, EAPI_LOAD_TO + 0x100, 0x100);
-            else
+            else if (nOffset == 0x1a00)
                 memcpy(buffer, EAPI_LOAD_TO + 0x200, 0x100);
-            --nEAPIBlock;
         }
 
         if (!flashWriteBlock(nBank, nChip, nOffset, buffer))
