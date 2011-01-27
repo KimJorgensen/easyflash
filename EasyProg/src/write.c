@@ -208,15 +208,15 @@ static uint8_t writeCrtImage(void)
             {
                 if (nSize > 0x2000)
                 {
-                    if (!flashWriteBlockFromFile(nBank, 0, 0x2000) ||
-                        !flashWriteBlockFromFile(nBank, 1, nSize - 0x2000))
+                    if (!flashWriteBankFromFile(nBank, 0, 0x2000) ||
+                        !flashWriteBankFromFile(nBank, 1, nSize - 0x2000))
                     {
                         return CART_RV_ERR;
                     }
                 }
                 else
                 {
-                    if (!flashWriteBlockFromFile(nBank, 0, nSize))
+                    if (!flashWriteBankFromFile(nBank, 0, nSize))
                         return CART_RV_ERR;
                 }
             }
@@ -224,7 +224,7 @@ static uint8_t writeCrtImage(void)
                       (nAddress == (uint16_t) ROM1_BASE_ULTIMAX)) &&
                      (nSize <= 0x2000))
             {
-                if (!flashWriteBlockFromFile(nBank, 1, nSize))
+                if (!flashWriteBankFromFile(nBank, 1, nSize))
                     return CART_RV_ERR;
             }
             else
