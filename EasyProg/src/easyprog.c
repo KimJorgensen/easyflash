@@ -343,6 +343,22 @@ uint8_t checkFlashType(void)
             bDriverFound = 1;
             break;
         }
+
+        /* if we are here, there is an error */
+        switch (nDeviceId)
+        {
+        case EAPI_ERR_RAM:
+            screenPrintSimpleDialog(apStrBadRAM);
+            goto failed;
+
+        case EAPI_ERR_ROML_PROTECTED:
+            screenPrintSimpleDialog(apStrROMLProtected);
+            goto failed;
+
+        case EAPI_ERR_ROMH_PROTECTED:
+            screenPrintSimpleDialog(apStrROMHProtected);
+            goto failed;
+        }
         pDriver += EAPI_SIZE;
     }
 
@@ -354,12 +370,14 @@ uint8_t checkFlashType(void)
     }
     else
     {
-        pStrFlashDriver = "(failed)";
         screenPrintSimpleDialog(apStrWrongFlash);
-        refreshMainScreen();
-        nManufacturerId = nDeviceId = 0;
-        return 0;
     }
+
+failed:
+    pStrFlashDriver = "(failed)";
+    refreshMainScreen();
+    nManufacturerId = nDeviceId = 0;
+    return 0;
 }
 
 
@@ -499,6 +517,7 @@ int main(void)
 
     refreshMainScreen();
     showAbout();
+    refreshMainScreen();
     screenBing();
 
     // this also makes visible 16kByte of flash memory

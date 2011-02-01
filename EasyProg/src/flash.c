@@ -51,23 +51,18 @@ uint8_t eraseSector(uint8_t nBank, uint8_t nChip)
     // we assume FLASH_BANKS_ERASE_AT_ONCE is a power of 2
     nBank &= ~(FLASH_BANKS_ERASE_AT_ONCE - 1);
 
-    progressSetMultipleBanksState(nBank, nChip,
-                                  FLASH_BANKS_ERASE_AT_ONCE,
-                                  PROGRESS_WORKING);
-
     pNormalBase  = apNormalRomBase[nChip];
     pUltimaxBase = apUltimaxRomBase[nChip];
 
     eapiSetBank(nBank);
 
-    strcpy(utilStr, "Erasing ");
-    utilAppendFlashAddr(nBank, nChip, 0);
-    setStatus(utilStr);
+    progressSetMultipleBanksState(nBank, nChip,
+                                  FLASH_BANKS_ERASE_AT_ONCE,
+                                  PROGRESS_ERASING);
 
     // send the erase command
     if (eapiSectorErase(pUltimaxBase))
     {
-        setStatus("OK");
         progressSetMultipleBanksState(nBank, nChip,
                                       FLASH_BANKS_ERASE_AT_ONCE,
                                       PROGRESS_ERASED);
@@ -75,9 +70,9 @@ uint8_t eraseSector(uint8_t nBank, uint8_t nChip)
     }
     else
     {
-        strcpy(utilStr, "Erase error at ");
-        utilAppendFlashAddr(nBank, nChip, 0);
-        setStatus(utilStr);
+        progressSetMultipleBanksState(nBank, nChip,
+                                      FLASH_BANKS_ERASE_AT_ONCE,
+                                      PROGRESS_UNTOUCHED);
         screenPrintSimpleDialog(apStrEraseFailed);
     }
     return 0;
@@ -125,6 +120,10 @@ uint8_t __fastcall__ flashWriteBlock(uint8_t nBank, uint8_t nChip,
     uint8_t* pDest;
     uint8_t* pNormalBase;
 
+    utilStr[0] = 0;
+    utilAppendFlashAddr(nBank, nChip, nOffset);
+    setStatus(utilStr);
+
     if (progressGetStateAt(nBank, nChip) == PROGRESS_UNTOUCHED)
     {
         if (!eraseSector(nBank, nChip))
@@ -134,21 +133,17 @@ uint8_t __fastcall__ flashWriteBlock(uint8_t nBank, uint8_t nChip,
         }
     }
 
-    strcpy(utilStr, "Writing to ");
-    utilAppendFlashAddr(nBank, nChip, nOffset);
-
-    setStatus(utilStr);
-
     eapiSetBank(nBank);
     pNormalBase = apNormalRomBase[nChip];
 
     // when we write, we have to use the Ultimax address space
     pDest = apUltimaxRomBase[nChip] + nOffset;
 
-    progressSetBankState(nBank, nChip, PROGRESS_WORKING);
+    progressSetBankState(nBank, nChip, PROGRESS_WRITING);
     rv = eapiGlueWriteBlock(pDest, pBlock);
     if (rv != 0x100)
     {
+         progressSetBankState(nBank, nChip, PROGRESS_UNTOUCHED);
          screenPrintSimpleDialog(apStrFlashWriteFailed);
          return 0;
     }
@@ -174,14 +169,11 @@ uint8_t __fastcall__ flashVerifyBlock(uint8_t nBank, uint8_t nChip,
     uint8_t* pNormalBase;
     uint8_t* pFlash;
 
-    strcpy(utilStr, "Verifying ");
-    utilAppendFlashAddr(nBank, nChip, nOffset);
-    setStatus(utilStr);
+    progressSetBankState(nBank, nChip, PROGRESS_VERIFYING);
 
     pNormalBase = apNormalRomBase[nChip];
     pFlash      = pNormalBase + nOffset;
 
-#ifndef EASYFLASH_FAKE
     pFlash = tortureTestVerifyFlash(pFlash, pBlock);
     if (pFlash)
     {
@@ -190,8 +182,8 @@ uint8_t __fastcall__ flashVerifyBlock(uint8_t nBank, uint8_t nChip,
                                pBlock[nOffset], *pFlash);
         return 0;
     }
-#endif
 
+    progressSetBankState(nBank, nChip, PROGRESS_PROGRAMMED);
     return 1;
 }
 
@@ -208,6 +200,7 @@ uint8_t flashWriteBankFromFile(uint8_t nBank, uint8_t nChip,
                                 uint16_t nSize)
 {
     uint8_t  bReplaceEAPI;
+    uint8_t  oldState;
     uint16_t nOffset;
     uint16_t nBytes;
 
@@ -217,14 +210,17 @@ uint8_t flashWriteBankFromFile(uint8_t nBank, uint8_t nChip,
     {
         nBytes = (nSize > FLASH_WRITE_SIZE) ? FLASH_WRITE_SIZE : nSize;
 
-        strcpy(utilStr, "Reading from file");
-        setStatus(utilStr);
+        oldState = progressGetStateAt(nBank, nChip);
+        progressSetBankState(nBank, nChip, PROGRESS_READING);
 
         if (utilRead(buffer, nBytes) != nBytes)
         {
             screenPrintSimpleDialog(apStrFileTooShort);
+            progressSetBankState(nBank, nChip, PROGRESS_UNTOUCHED);
             return 0;
         }
+
+        progressSetBankState(nBank, nChip, oldState);
 
         // Check if EAPI has to be replaced
         if (nBank == 0 && nChip == 1 && nOffset == 0x1800 &&

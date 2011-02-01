@@ -61,7 +61,6 @@ static uint8_t readNextHeader()
 {
     uint8_t rv;
 
-    setStatus("Reading header from file");
     rv = readNextBankHeader(&bankHeader);
 
     nBank = bankHeader.bank[1];
@@ -178,7 +177,7 @@ static uint8_t writeCrtImage(void)
     uint8_t rv;
     uint8_t nBankOffset;
 
-    setStatus("Reading CRT header");
+    setStatus("Reading CRT image");
     if (!readCartHeader())
     {
         screenPrintSimpleDialog(apStrHeaderReadError);
