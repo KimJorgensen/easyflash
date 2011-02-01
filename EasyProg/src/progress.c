@@ -94,8 +94,14 @@ void __fastcall__ progressDisplayBank(uint8_t nChip, uint8_t nBank)
     if (nBank >= FLASH_NUM_BANKS)
         return;
 
-    y = 17 + nChip * (FLASH_NUM_BANKS / PROGRESS_BANKS_PER_LINE) +
-        nBank / PROGRESS_BANKS_PER_LINE;
+    /* y = 17 + nChip * (FLASH_NUM_BANKS / PROGRESS_BANKS_PER_LINE) +
+        nBank / PROGRESS_BANKS_PER_LINE; */
+    y  = 17;
+    if (nChip)
+        y += (FLASH_NUM_BANKS / PROGRESS_BANKS_PER_LINE);
+    if (nBank >= PROGRESS_BANKS_PER_LINE)
+        ++y;
+
     x = 6 + nBank % PROGRESS_BANKS_PER_LINE;
 
     cputcxy(x, y, m_aBlockStates[nChip][nBank]);
