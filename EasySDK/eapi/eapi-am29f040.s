@@ -19,24 +19,7 @@
 ;    misrepresented as being the original software.
 ; 3. This notice may not be removed or altered from any source distribution.
 
-
-; I/O address used to select the bank
-EASYFLASH_IO_BANK    = $de00
-
-; I/O address for enabling memory configuration, /GAME and /EXROM states
-EASYFLASH_IO_CONTROL = $de02
-
-; Bit for Expansion Port /GAME line (1 = low)
-EASYFLASH_IO_BIT_GAME    = $01
-
-; Bit for Expansion Port /EXROM line (1 = low)
-EASYFLASH_IO_BIT_EXROM   = $02
-
-; Bit for memory control (1 = enabled)
-EASYFLASH_IO_BIT_MEMCTRL = $04
-
-; Bit for status LED (1 = on)
-EASYFLASH_IO_BIT_LED     = $80
+!source "eapi_defs.s"
 
 FLASH_ALG_ERROR_BIT      = $20
 
@@ -58,7 +41,7 @@ EAPI_RAM_SIZE           = 124
 EAPICodeBase:
         !byte $65, $61, $70, $69        ; signature "EAPI"
 
-        !pet "Am29F040 V0.3"
+        !pet "Am29F040 V1.0"
         !byte 0, 0, 0                   ; 16 bytes, must be 0-terminated
 
 ; =============================================================================
@@ -79,10 +62,12 @@ EAPICodeBase:
 ; return:
 ;       C   set: Flash chip not supported by this driver
 ;           clear: Flash chip supported by this driver
-;       If C ist clear:
+;       If C is clear:
 ;       A   Device ID
 ;       X   Manufacturer ID
 ;       Y   Number of physical banks (64 for Am29F040)
+;       If C is set:
+;       A   Error reason
 ; changes:
 ;       all registers are changed
 ;
@@ -283,26 +268,18 @@ cidFillJMP:
         clc
         bcc ciNoRamError
 ciRamError:
-        sec                 ; do not branch to ciSkip below
+        lda #EAPI_ERR_RAM
+        sta EAPI_TMP_VAL2
+        sec                     ; do not branch to ciSkip below
 ciNoRamError:
-
         ; restore the caller's ZP state
         pla
         sta EAPI_ZP_INIT_CODE_BASE + 1
         pla
         sta EAPI_ZP_INIT_CODE_BASE
-
-        bcc ciSkip
-
-ciNotSupportedNoReset:
-        sec
         bcs returnOnly
-ciNotSupported:
-        sec
-        bcs resetAndReturn
 
-ciSkip:
-        ; check for Am29F040 first, HIROM
+        ; check for Am29F040, HIROM
         jsr prepareWriteHigh
 
         ; cycle 3: write $90 to $555
@@ -313,12 +290,16 @@ ciSkip:
         ; offset 0: Manufacturer ID (we're on bank 0)
         lda $a000
         sta EAPI_TMP_VAL1
+        cmp #AM29F040_MFR_ID
+        bne ciROMHNotSupported
 
         ; offset 1: Device ID
         lda $a001
         sta EAPI_TMP_VAL2
+        cmp #AM29F040_DEV_ID
+        bne ciROMHNotSupported
 
-        ; check for Am29F040 first, LOROM
+        ; check for Am29F040, LOROM
         jsr prepareWriteLow
 
         ; cycle 3: write $90 to $555
@@ -327,49 +308,75 @@ ciSkip:
         jsr ultimaxWriteXX55
 
         ; offset 0: Manufacturer ID (we're on bank 0)
-        ldx $8000
-        ; must be the same as at HIROM
-        cpx EAPI_TMP_VAL1
-        bne ciNotSupported
+        lda $8000
+        cmp #AM29F040_MFR_ID
+        bne ciROMLNotSupported
 
         ; offset 1: Device ID
         lda $8001
-        ; must be the same as at HIROM
-        cmp EAPI_TMP_VAL2
-        bne ciNotSupported
-
-        ; check if it is an Am29F040
-        cpx #AM29F040_MFR_ID
-        bne ciNotSupported
         cmp #AM29F040_DEV_ID
-        bne ciNotSupported
+        bne ciROMLNotSupported
+
+        ; flashs were detected correctly, now check if any bank is write protected
+        lda #0
+ciCheckProt:
+        sta EASYFLASH_IO_BANK
+        ldx $8002
+        bne ciROMLProtected
+        ldx $a002
+        bne ciROMHProtected
+        clc
+        adc #8
+        cmp #64
+        bne ciCheckProt
 
         ; everything okay
         clc
+        bcc resetAndReturn
 
-resetAndReturn:
+ciROMLNotSupported:
+        lda #EAPI_ERR_ROML
+        bne ciSaveErrorAndReturn
+
+ciROMHNotSupported:
+        lda #EAPI_ERR_ROMH
+        bne ciSaveErrorAndReturn
+
+ciROMLProtected:
+        lda #EAPI_ERR_ROML_PROTECTED
+        bne ciSaveErrorAndReturn
+
+ciROMHProtected:
+        lda #EAPI_ERR_ROMH_PROTECTED
+
+ciSaveErrorAndReturn:
+        sta EAPI_TMP_VAL2       ; error code in A
+        sec
+
+resetAndReturn:                 ; C indicates error
+        lda #0                  ; Protection test has changed the bank
+        sta EASYFLASH_IO_BANK   ; restore it for compatibility to old versions
+
         ; reset flash chip: write $F0 to any address
-        ; ldx #<$e000 - don't care
         ldy #>$e000
         lda #$f0
         jsr ultimaxWrite
 
-        ; ldx #<$8000 - don't care
         ldy #>$8000
-        lda #$f0
         jsr ultimaxWrite
-returnOnly:
-        lda EAPI_TMP_VAL2       ; device in A
+
+returnOnly:                     ; C indicates error
+        lda EAPI_TMP_VAL2       ; device or error code in A
+        bcs returnCSet
         ldx EAPI_TMP_VAL1       ; manufacturer in X
         ldy #AM29F040_NUM_BANKS ; number of banks in Y
 
-        bcs returnCSet
         plp
-        clc
+        clc                     ; do this after plp :)
         rts
 returnCSet:
         plp
-        sec
+        sec                     ; do this after plp :)
         rts
 
 

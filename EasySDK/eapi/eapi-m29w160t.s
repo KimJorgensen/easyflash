@@ -19,24 +19,7 @@
 ;    misrepresented as being the original software.
 ; 3. This notice may not be removed or altered from any source distribution.
 
-
-; I/O address used to select the bank
-EASYFLASH_IO_BANK    = $de00
-
-; I/O address for enabling memory configuration, /GAME and /EXROM states
-EASYFLASH_IO_CONTROL = $de02
-
-; Bit for Expansion Port /GAME line (1 = low)
-EASYFLASH_IO_BIT_GAME    = $01
-
-; Bit for Expansion Port /EXROM line (1 = low)
-EASYFLASH_IO_BIT_EXROM   = $02
-
-; Bit for memory control (1 = enabled)
-EASYFLASH_IO_BIT_MEMCTRL = $04
-
-; Bit for status LED (1 = on)
-EASYFLASH_IO_BIT_LED     = $80
+!source "eapi_defs.s"
 
 FLASH_ALG_ERROR_BIT      = $20
 
@@ -325,6 +308,7 @@ returnOnly:
 returnCSet:
         plp
         sec
+        lda #EAPI_ERR_ROML ; todo: error codes!
         rts
 
 ; =============================================================================
