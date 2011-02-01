@@ -92,8 +92,27 @@ const char* apStrWrongFlash[] =
 
 const char* apStrBadRAM[] =
 {
-        "The cartridge RAM at $DF00",
-        "doesn't work correctly.",
+        "There is no EasyFlash attached",
+        "or the cartridge RAM at $DF00",
+        "does not work correctly.",
+        NULL
+};
+
+const char* apStrROMLProtected[] =
+{
+        "The ROML flash chip is",
+        "write protected. It can be",
+        "unlocked with programming",
+        "equipment only.",
+        NULL
+};
+
+const char* apStrROMHProtected[] =
+{
+        "The ROML flash chip is",
+        "write protected. It can be",
+        "unlocked with programming",
+        "equipment only.",
         NULL
 };
 

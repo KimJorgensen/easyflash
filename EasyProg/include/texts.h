@@ -18,6 +18,8 @@ extern const char* apStrFileTooShort[];
 extern const char* apStrFileNoEasySplit[];
 extern const char* apStrWrongFlash[];
 extern const char* apStrBadRAM[];
+extern const char* apStrROMLProtected[];
+extern const char* apStrROMHProtected[];
 extern const char* apStrAskErase[];
 extern const char* apStrEraseFailed[];
 extern const char* apStrFlashWriteFailed[];
