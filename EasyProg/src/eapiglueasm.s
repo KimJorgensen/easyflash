@@ -20,6 +20,7 @@ EAPIWriteFlashInc   = $df80 + 21
 ; =============================================================================
 ;
 ; (refer to EasyAPI documentation)
+; In case of an error, the error code is returned in *pDeviceId.
 ;
 ; uint16_t __fastcall__ eapiInit(uint8_t* pManufacturerId, uint8_t* pDeviceId)
 ;

@@ -27,7 +27,10 @@
 #define PROGRESS_H_
 
 #define PROGRESS_UNTOUCHED  '.'
-#define PROGRESS_WORKING    '*'
+#define PROGRESS_ERASING    'E'
+#define PROGRESS_READING    'R' /* from file */
+#define PROGRESS_WRITING    'W'
+#define PROGRESS_VERIFYING  'V'
 #define PROGRESS_ERASED     '-'
 #define PROGRESS_PROGRAMMED 'P'
 
