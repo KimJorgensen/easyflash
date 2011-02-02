@@ -84,7 +84,7 @@ drive_codes:
         .addr 0
         .addr drive_code_1541
         .addr drive_code_1541           ; 1570
-        .addr drive_code_1571
+        .addr drive_code_1541           ; for now
         .addr drive_code_1581
         .addr 0
         .addr 0
@@ -95,12 +95,12 @@ drive_code_sizes:
         .byte 0
         .byte 0
         .byte <drive_code_size_1541
-        .byte <drive_code_size_1541      ; 1570
-        .byte <drive_code_size_1571
+        .byte <drive_code_size_1541     ; 1570
+        .byte <drive_code_size_1541     ; for now
         .byte <drive_code_size_1581
         .byte 0
         .byte 0
-        .byte <drive_code_size_sd2iec    ; sd2iec
+        .byte <drive_code_size_sd2iec   ; sd2iec
         .byte 0
 
 .code

@@ -96,7 +96,6 @@ drive_detect:
         bne @end_of_id
         jsr ACPTR
         sta drive_id_str, y
-        sta $0400, y
         iny
         cpy #drive_id_str_size
         bne @next_byte
