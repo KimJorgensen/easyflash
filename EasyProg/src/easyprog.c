@@ -59,7 +59,7 @@ static void updateFastLoaderText();
 // Low/High flash chip manufacturer/device ID
 uint8_t nManufacturerId;
 uint8_t nDeviceId;
-const char* pStrFlashDriver;
+const char* pStrFlashDriver = "";
 
 
 uint8_t g_bFastLoaderEnabled;
@@ -180,7 +180,7 @@ ScreenMenu menuExpert =
             0
         },
         {
-            "&Hex viewer",
+            "He&x viewer",
             hexViewer,
             ifHaveValidFlash,
             0
