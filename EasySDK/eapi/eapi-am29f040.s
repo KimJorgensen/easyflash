@@ -270,7 +270,7 @@ cidFillJMP:
 ciRamError:
         lda #EAPI_ERR_RAM
         sta EAPI_TMP_VAL2
-        sec                     ; do not branch to ciSkip below
+        sec                     ; error
 ciNoRamError:
         ; restore the caller's ZP state
         pla

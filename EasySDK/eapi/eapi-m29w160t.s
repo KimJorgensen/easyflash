@@ -41,7 +41,7 @@ EAPI_RAM_SIZE           = 124
 EAPICodeBase:
         !byte $65, $61, $70, $69        ; signature "EAPI"
 
-        !pet "M29F160ET V0.3"
+        !pet "M29F160ET V1.0"
         !byte 0, 0                      ; 16 bytes, must be 0-terminated
 
 ; =============================================================================
@@ -54,18 +54,20 @@ EAPICodeBase:
 ; When this function returns, EasyFlash will be configured to bank in the ROM
 ; area at $8000..$bfff.
 ;
-; This function uses SEI, it restores all flags except C before it returns.
-; Do not call it with D-flag set. $01 must enable the affected ROM area.
+; This function calls SEI, it restores all Flags except C before it returns.
+; Do not call it with D-flag set. $01 must enable both ROM areas.
 ;
 ; parameters:
 ;       -
 ; return:
 ;       C   set: Flash chip not supported by this driver
 ;           clear: Flash chip supported by this driver
-;       If C ist clear:
+;       If C is clear:
 ;       A   Device ID
 ;       X   Manufacturer ID
 ;       Y   Number of physical banks (64 for Am29F040)
+;       If C is set:
+;       A   Error reason
 ; changes:
 ;       all registers are changed
 ;
@@ -240,32 +242,19 @@ cidFillJMP:
         clc
         bcc ciNoRamError
 ciRamError:
-        sec                 ; do not branch to ciSkip below
+        lda #EAPI_ERR_RAM
+        sta EAPI_TMP_VAL2
+        sec                     ; error
 ciNoRamError:
-
         ; restore the caller's ZP state
         pla
         sta EAPI_ZP_INIT_CODE_BASE + 1
         pla
         sta EAPI_ZP_INIT_CODE_BASE
-
-        bcc ciSkip
-
-ciNotSupportedNoReset:
-        sec
         bcs returnOnly
-ciNotSupported:
-        sec
-        bcs resetAndReturn
 
-ciSkip:
         ; check for M29F160ET
         jsr prepareWrite
-
-        lda #4
-        sta $8000   ; weg
-        lda #5
-        sta $8001   ; weg
 
         ; cycle 3: write $90 to $555
         ldx #<$8AAA
@@ -289,6 +278,12 @@ ciSkip:
 
         ; everything okay
         clc
+        bcc resetAndReturn
+
+ciNotSupported:
+        lda #EAPI_ERR_ROML
+        sta EAPI_TMP_VAL2       ; error code in A
+        sec
 
 resetAndReturn:
         ; reset flash chip: write $F0 to any address
@@ -296,19 +291,20 @@ resetAndReturn:
         ldy #>$8000
         lda #$f0
         jsr ultimaxWrite
-returnOnly:
-        lda EAPI_TMP_VAL2       ; device in A
+
+returnOnly:                     ; C indicates error
+        lda EAPI_TMP_VAL2       ; device or error code in A
+        bcs returnCSet
         ldx EAPI_TMP_VAL1       ; manufacturer in X
         ldy #M29W160ET_NUM_BANKS ; number of banks in Y
 
-        bcs returnCSet
         plp
-        clc
+        clc                     ; do this after plp :)
         rts
 returnCSet:
         plp
         sec
-        lda #EAPI_ERR_ROML ; todo: error codes!
+        sec                     ; do this after plp :)
         rts
 
 ; =============================================================================
