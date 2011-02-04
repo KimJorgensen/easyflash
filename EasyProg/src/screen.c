@@ -115,6 +115,7 @@ static uint8_t screenPrintCurrentMenu(void)
         pStr      = pEntry->pStrLabel;
         textColor = pEntry->pCheckFunction() ?
             COLOR_FOREGROUND : COLOR_GRAY1;
+        textcolor(textColor);
 
         if (nEntry == pCurrentMenu->nSelected)
             revers(1);
