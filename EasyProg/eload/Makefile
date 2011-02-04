@@ -8,7 +8,7 @@ inc += src/xfer_drive_2mhz.s
 
 obj := 
 obj += obj/drive_1541.o
-obj += obj/drive_1571.o
+#obj += obj/drive_1571.o
 obj += obj/drive_1581.o
 obj += obj/drive_sd2iec.o
 obj += obj/drive_common.o

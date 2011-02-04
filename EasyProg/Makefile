@@ -1,8 +1,8 @@
 
-ifneq "$(release)" "yes"
-	version := $(shell date +%y%m%d-%H%M)
+ifeq "$(release)" "yes"
+	version := 1.5.0
 else
-	version := 1.4.3
+	version := $(shell date +%y%m%d-%H%M)
 endif
 
 # do not remove intermediate targets
@@ -52,7 +52,11 @@ DEFINE   := -DEFVERSION=\"${version}\"
 eload    := eload/eload.lib
 
 .PHONY: all
+ifeq "$(release)" "yes"
+all: easyprog-$(version).zip
+else
 all: easyprog.prg
+endif
 
 ###############################################################################
 # Poor men's dependencies: Let all files depend from all header files
@@ -98,9 +102,15 @@ easyprog: $(obj) src/ld.cfg $(eload)
 
 easyprog.prg: easyprog
 	exomizer sfx 0x080d -o $@ -q $^
-ifeq "$(release)" "yes"
-	cp $@ easyprog-$(version).prg
-endif
+
+easyprog-$(version).zip: easyprog.prg CHANGES
+	rm -rf easyprog-$(version)
+	rm -f $@
+	mkdir easyprog-$(version)
+	cp easyprog.prg easyprog-$(version)/easyprog-$(version).prg
+	cp CHANGES easyprog-$(version)
+	cp IMPORTANT.txt easyprog-$(version)
+	zip -v -r $@ easyprog-$(version)
 
 $(eload): force
 	$(MAKE) -C $(dir $@)
