@@ -4,7 +4,7 @@ Version 1.5.0 - 02.02.2011
 - Some speed optimizations
 - EAPI code for all EasyFlash variants integrated
 - Minor UI improvements
-- Detailed error reports, e.g. when flashs memory is write protected
+- Detailed error reports, e.g. when flash memory is write protected
 
 Version 1.4.0 - 07.12.2009
 - Support files split and compressed with EasySplit
