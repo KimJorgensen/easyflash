@@ -109,7 +109,7 @@ const char* apStrROMLProtected[] =
 
 const char* apStrROMHProtected[] =
 {
-        "The ROML flash chip is",
+        "The ROMH flash chip is",
         "write protected. It can be",
         "unlocked with programming",
         "equipment only.",
