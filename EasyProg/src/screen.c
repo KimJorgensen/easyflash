@@ -36,7 +36,7 @@
 
 #include "easyprog.h"
 
-static const char* pStrHexDigits = "0123456789ABCDEF";
+const char* pStrHexDigits = "0123456789ABCDEF";
 
 /* Menu currently shown or NULL */
 static ScreenMenu* pCurrentMenu;
@@ -156,59 +156,6 @@ void screenInit(void)
     bordercolor(COLOR_BACKGROUND);
     textcolor(COLOR_FOREGROUND);
     clrscr();
-}
-
-
-/******************************************************************************/
-/**
- * Configure key repeat.
- *
- * val      KEY_REPEAT_*
- *
- * return   previous setting
- *
- */
-uint8_t __fastcall__ screenSetKeyRepeat(uint8_t val)
-{
-    uint8_t old;
-    old = *(uint8_t*)0x028a;
-    *(uint8_t*)0x028a = val;
-    return old;
-}
-
-
-/******************************************************************************/
-/**
- */
-void __fastcall__ screenPrintHex2(uint8_t n)
-{
-    uint8_t tmp;
-
-    tmp = n >> 4;
-    cputc(pStrHexDigits[tmp]);
-    cputc(pStrHexDigits[n & 0xf]);
-}
-
-/******************************************************************************/
-/**
- */
-void __fastcall__ screenPrintHex4(uint16_t n)
-{
-    uint8_t tmp;
-
-    tmp = n >> 8;
-    screenPrintHex2(tmp);
-    screenPrintHex2((uint8_t) n);
-}
-
-/******************************************************************************/
-/**
- * Make a small delay proportional to t.
- */
-void __fastcall__ screenDelay(unsigned t)
-{
-    while (t)
-        --t;
 }
 
 

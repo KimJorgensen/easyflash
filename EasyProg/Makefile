@@ -1,6 +1,6 @@
 
 ifeq "$(release)" "yes"
-	version := 1.5.0
+	version := 1.5.1
 else
 	version := $(shell date +%y%m%d-%H%M)
 endif
@@ -21,6 +21,7 @@ obj += obj/easyprog.o
 obj += obj/flash.o
 obj += obj/cart.o
 obj += obj/screen.o
+obj += obj/screenasm.o
 obj += obj/progress.o
 obj += obj/timerasm.o
 obj += obj/dir.o
@@ -35,7 +36,7 @@ bin_acme :=
 bin_acme += obj/startup.bin
 bin_acme += obj/sprites.bin
 
-eapi := eapi-am29f040-03
+eapi := eapi-am29f040-04
 eapi += eapi-m29w160t-03
 
 eapi_dir := ../EasySDK/eapi
