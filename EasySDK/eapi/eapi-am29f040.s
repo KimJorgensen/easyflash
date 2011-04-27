@@ -30,6 +30,8 @@ EAPI_ZP_INIT_CODE_BASE   = $4b
 AM29F040_NUM_BANKS      = 64
 AM29F040_MFR_ID         = $01
 AM29F040_DEV_ID         = $a4
+M29F040_MFR_ID          = $20
+M29F040_DEV_ID          = $e2
 
 EAPI_RAM_CODE           = $df80
 EAPI_RAM_SIZE           = 124
@@ -41,8 +43,8 @@ EAPI_RAM_SIZE           = 124
 EAPICodeBase:
         !byte $65, $61, $70, $69        ; signature "EAPI"
 
-        !pet "Am29F040 V1.0"
-        !byte 0, 0, 0                   ; 16 bytes, must be 0-terminated
+        !pet "Am/M29F040 V1.1"
+        !byte 0                   ; 16 bytes, must be 0-terminated
 
 ; =============================================================================
 ;
@@ -277,9 +279,9 @@ ciNoRamError:
         sta EAPI_ZP_INIT_CODE_BASE + 1
         pla
         sta EAPI_ZP_INIT_CODE_BASE
-        bcs returnOnly
+        bcs returnOnlyTrampoline ; branch on error from above
 
-        ; check for Am29F040, HIROM
+        ; check for Am/M29F040, HIROM
         jsr prepareWriteHigh
 
         ; cycle 3: write $90 to $555
@@ -288,18 +290,27 @@ ciNoRamError:
         jsr ultimaxWriteXX55
 
         ; offset 0: Manufacturer ID (we're on bank 0)
+        ; offset 1: Device ID
         lda $a000
         sta EAPI_TMP_VAL1
+        ldx $a001
+        stx EAPI_TMP_VAL2
+
         cmp #AM29F040_MFR_ID
-        bne ciROMHNotSupported
+        beq ciROMHIsAMD
 
-        ; offset 1: Device ID
-        lda $a001
-        sta EAPI_TMP_VAL2
-        cmp #AM29F040_DEV_ID
+        cmp #M29F040_MFR_ID
         bne ciROMHNotSupported
+        ; This may be M29F040
+        cpx #M29F040_DEV_ID
+        bne ciROMHNotSupported
+        beq ciCheckLow
 
-        ; check for Am29F040, LOROM
+ciROMHIsAMD:
+        cpx #AM29F040_DEV_ID
+        bne ciROMHNotSupported
+ciCheckLow:
+        ; check for Am/M29F040, LOROM
         jsr prepareWriteLow
 
         ; cycle 3: write $90 to $555
@@ -308,18 +319,26 @@ ciNoRamError:
         jsr ultimaxWriteXX55
 
         ; offset 0: Manufacturer ID (we're on bank 0)
-        lda $8000
-        cmp #AM29F040_MFR_ID
-        bne ciROMLNotSupported
-
         ; offset 1: Device ID
-        lda $8001
-        cmp #AM29F040_DEV_ID
-        bne ciROMLNotSupported
+        lda $8000
+        ldx $8001
 
+        cmp #AM29F040_MFR_ID
+        beq ciROMLIsAMD
+
+        cmp #M29F040_MFR_ID
+        bne ciROMLNotSupported
+        ; This may be M29F040
+        cpx #M29F040_DEV_ID
+        bne ciROMLNotSupported
+        beq ciCheckProt
+ciROMLIsAMD:
+        cpx #AM29F040_DEV_ID
+        bne ciROMLNotSupported
+ciCheckProt:
         ; flashs were detected correctly, now check if any bank is write protected
         lda #0
-ciCheckProt:
+ciCheckProtLoop:
         sta EASYFLASH_IO_BANK
         ldx $8002
         bne ciROMLProtected
@@ -328,11 +347,14 @@ ciCheckProt:
         clc
         adc #8
         cmp #64
-        bne ciCheckProt
+        bne ciCheckProtLoop
 
         ; everything okay
         clc
         bcc resetAndReturn
+
+returnOnlyTrampoline:
+        bcs returnOnly
 
 ciROMLNotSupported:
         lda #EAPI_ERR_ROML
@@ -607,10 +629,10 @@ seskip:
 sewait:
         dex
         bne sewait
-        
+
         lda EAPI_SHADOW_BANK
         sta EASYFLASH_IO_BANK
-        
+
         ; (Y is unchanged after ldy)
         clc
         bcc checkProgress2 ; always
@@ -729,7 +751,7 @@ EAPISetLen:
 ;
 ; The number of bytes to be read may be set by calling EAPISetLen.
 ; EOF will be set if the length is zero, otherwise it will be decremented.
-; Even when EOF is delivered a new byte has been read and the pointer 
+; Even when EOF is delivered a new byte has been read and the pointer
 ; incremented. This means the use of EAPISetLen is optional.
 ;
 ; This function can only be used after having called EAPIInit.
@@ -752,12 +774,12 @@ EAPIReadFlashInc:
 
         ; call the read-routine
         jsr readByteForInc
-        
+
         ; remember the result & x/y registers
         sta EAPI_TMP_VAL1
         stx EAPI_TMP_VAL4
         sty EAPI_TMP_VAL5
-        
+
         ; make sure that the increment subroutine of the
         ; write routine jumps back to us, and call it
         lda #$00
@@ -813,7 +835,7 @@ EAPIWriteFlashInc:
         sta EAPI_TMP_VAL1
         stx EAPI_TMP_VAL4
         sty EAPI_TMP_VAL5
-        
+
         ; load address to store to
         ldx EAPI_INC_ADDR_LO
         lda EAPI_INC_ADDR_HI
@@ -827,13 +849,13 @@ writeInc_skip:
         ; write to flash
         jsr jmpTable + 0
         bcs rwInc_return
-        
+
         ; the increment code is used by both functions
 rwInc_inc:
         ; inc to next position
         inc EAPI_INC_ADDR_LO
         bne rwInc_noInc
-        
+
         ; inc page
         inc EAPI_INC_ADDR_HI
         lda EAPI_INC_TYPE
@@ -847,7 +869,7 @@ rwInc_inc:
         asl
         sta EAPI_INC_ADDR_HI
         inc EAPI_SHADOW_BANK
-        
+
 rwInc_noInc:
         ; no errors here, clear carry
         clc
