@@ -229,7 +229,7 @@ EAPICode1:
 .res $0300 - (* - EAPICode1), $ff
 
 EAPICode2:
-.incbin "obj/eapi-am29f040-03", 2
+.incbin "obj/eapi-am29f040-04", 2
 .res $0300 - (* - EAPICode2), $ff
 
 EAPICode3:
