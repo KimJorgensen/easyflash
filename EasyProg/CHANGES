@@ -1,4 +1,8 @@
 
+Version 1.5.1 - 27.04.2011
+- Driver for AMD Am29F040 also supports ST M29F040
+- Changed color scheme to make it more readable
+
 Version 1.5.0 - 02.02.2011
 - Fast loader for 1541, 1581, sd2iec and uIEC and compatible drives
 - Some speed optimizations
