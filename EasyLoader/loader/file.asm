@@ -78,6 +78,19 @@ BACK_FROM_PARTIAL_RESET:
 	:mov16 #RESET_TRAP ; $324
 
 	/*
+	** DETECT A C64GS KERNAL, IF SO CREATE A SECOND TRAP (CHROUT VECTOR)
+	*/
+	
+	:if16 $e449 ; EQ ; #$f72e ; ENDIF ; !endif+
+		lda $326
+		sta SMC_RESTORE_CHROUT_LOWER+1
+		lda $327
+		sta SMC_RESTORE_CHROUT_UPPER+1
+		
+		:mov16 #CHROUT_TRAP ; $326
+	!endif:
+	
+	/*
 	** DO THE REST OF THE RESET
 	*/
 
@@ -244,6 +257,30 @@ loading_2_end:
 	GO_RESET:
 		:mov #MODE_RAM ; IO_MODE
 		jmp $fcfe
+
+	/*
+	** ONLY USED WITH C64GS KERNAL:
+	**		RESTORE CHROUT VECTOR
+	**		SET $302 VECTOR TO BASIC (INSTEAD OF ANIMATION LOOP)
+	**		REQUIRES 27 BYTES OF RAM
+	*/
+	
+	CHROUT_TRAP:
+		sei
+		pha
+		
+	SMC_RESTORE_CHROUT_LOWER:
+		lda #$00
+		sta $326
+	SMC_RESTORE_CHROUT_UPPER:
+		lda #$00
+		sta $327
+		
+		:mov16 #$a483 ; $0302
+		
+		pla
+		cli
+		jmp ($326)
 
 	/*
 	** RESET IS DONE

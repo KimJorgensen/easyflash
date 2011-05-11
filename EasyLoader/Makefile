@@ -39,6 +39,7 @@ build/%.prg: %.asm
 	@echo "$(B)Assembling $<$(N)"
 	$(PHP5) tools/mkdep.php $< > $(df).P build/ts.txt
 	@$(PHP5) -r ' \
+		@error_reporting(0); \
 		$$f = `LC_ALL=en_US.UTF-8 LANG=en_US.UTF-8 hg log .`; \
 		if(preg_match("/changeset:([ 0-9]+):/s", $$f, $$r)){$$v = (int) $$r[1];}else{$$v = "unk";} \
 		if(preg_match("/date:(.*? [+-][0-9]{4})/s", $$f, $$r)){$$t = time() - strtotime($$r[1]);}else{$$t = 0;} \
