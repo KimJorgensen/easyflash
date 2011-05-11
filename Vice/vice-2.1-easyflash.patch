@@ -1,0 +1,405 @@
+diff -ur vice-2.1-orig/src/c64/cart/Makefile.am vice-2.1-hw3/src/c64/cart/Makefile.am
+--- vice-2.1-orig/src/c64/cart/Makefile.am	2008-07-07 20:20:43.000000000 +0200
++++ vice-2.1-hw3/src/c64/cart/Makefile.am	2009-06-09 22:57:00.000000000 +0200
+@@ -29,6 +29,8 @@
+ 	delaep64.h \
+ 	delaep7x8.c \
+ 	delaep7x8.h \
++	easyflash.c \
++	easyflash.h \
+ 	epyxfastload.c \
+ 	epyxfastload.h \
+ 	expert.c \
+diff -ur vice-2.1-orig/src/c64/cart/Makefile.in vice-2.1-hw3/src/c64/cart/Makefile.in
+--- vice-2.1-orig/src/c64/cart/Makefile.in	2008-12-15 21:19:02.000000000 +0100
++++ vice-2.1-hw3/src/c64/cart/Makefile.in	2009-06-09 23:20:12.000000000 +0200
+@@ -54,12 +54,13 @@
+ 	actionreplay4.$(OBJEXT) actionreplay.$(OBJEXT) \
+ 	atomicpower.$(OBJEXT) c64cart.$(OBJEXT) c64cartmem.$(OBJEXT) \
+ 	comal80.$(OBJEXT) crt.$(OBJEXT) delaep256.$(OBJEXT) \
+-	delaep64.$(OBJEXT) delaep7x8.$(OBJEXT) epyxfastload.$(OBJEXT) \
+-	expert.$(OBJEXT) final.$(OBJEXT) generic.$(OBJEXT) \
+-	ide64.$(OBJEXT) kcs.$(OBJEXT) magicformel.$(OBJEXT) \
+-	mikroass.$(OBJEXT) retroreplay.$(OBJEXT) rexep256.$(OBJEXT) \
+-	ross.$(OBJEXT) stardos.$(OBJEXT) stb.$(OBJEXT) \
+-	supergames.$(OBJEXT) supersnapshot.$(OBJEXT) zaxxon.$(OBJEXT)
++	delaep64.$(OBJEXT) delaep7x8.$(OBJEXT) easyflash.$(OBJEXT) \
++	epyxfastload.$(OBJEXT) expert.$(OBJEXT) final.$(OBJEXT) \
++	generic.$(OBJEXT) ide64.$(OBJEXT) kcs.$(OBJEXT) \
++	magicformel.$(OBJEXT) mikroass.$(OBJEXT) retroreplay.$(OBJEXT) \
++	rexep256.$(OBJEXT) ross.$(OBJEXT) stardos.$(OBJEXT) \
++	stb.$(OBJEXT) supergames.$(OBJEXT) supersnapshot.$(OBJEXT) \
++	zaxxon.$(OBJEXT)
+ libc64cart_a_OBJECTS = $(am_libc64cart_a_OBJECTS)
+ DEFAULT_INCLUDES = -I. -I$(srcdir) -I$(top_builddir)/src
+ depcomp = $(SHELL) $(top_srcdir)/depcomp
+@@ -382,6 +383,8 @@
+ 	delaep64.h \
+ 	delaep7x8.c \
+ 	delaep7x8.h \
++	easyflash.c \
++	easyflash.h \
+ 	epyxfastload.c \
+ 	epyxfastload.h \
+ 	expert.c \
+@@ -473,6 +476,7 @@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/delaep256.Po@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/delaep64.Po@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/delaep7x8.Po@am__quote@
++@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/easyflash.Po@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/epyxfastload.Po@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/expert.Po@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/final.Po@am__quote@
+diff -ur vice-2.1-orig/src/c64/cart/c64cart.c vice-2.1-hw3/src/c64/cart/c64cart.c
+--- vice-2.1-orig/src/c64/cart/c64cart.c	2008-11-24 19:42:52.000000000 +0100
++++ vice-2.1-hw3/src/c64/cart/c64cart.c	2009-06-09 23:11:29.000000000 +0200
+@@ -309,7 +309,7 @@
+     }
+ 
+     /* allocate temporary array */
+-    rawcart = lib_malloc(0x88000);
++    rawcart = lib_malloc(0x100000);
+ 
+ /*  cart should always be detached. there is no reason for doing fancy checks
+     here, and it will cause problems incase a cart MUST be detached before
+diff -ur vice-2.1-orig/src/c64/cart/c64cartmem.c vice-2.1-hw3/src/c64/cart/c64cartmem.c
+--- vice-2.1-orig/src/c64/cart/c64cartmem.c	2008-11-21 19:29:58.000000000 +0100
++++ vice-2.1-hw3/src/c64/cart/c64cartmem.c	2009-06-11 20:10:51.000000000 +0200
+@@ -46,6 +46,7 @@
+ #include "delaep64.h"
+ #include "delaep7x8.h"
+ #include "dqbb.h"
++#include "easyflash.h"
+ #include "epyxfastload.h"
+ #include "expert.h"
+ #include "final.h"
+@@ -79,7 +80,7 @@
+ export_t export;
+ 
+ /* Expansion port ROML/ROMH images.  */
+-BYTE roml_banks[0x80000], romh_banks[0x20000];
++BYTE roml_banks[0x80000], romh_banks[0x80000];
+ 
+ /* Expansion port RAM images.  */
+ BYTE export_ram0[C64CART_RAM_LIMIT];
+@@ -172,6 +173,8 @@
+         return stb_io1_read(addr);
+       case CARTRIDGE_DELA_EP64:
+         return delaep64_io1_read(addr);
++      case CARTRIDGE_EASYFLASH:
++        return easyflash_io1_read(addr);
+     }
+     return vicii_read_phi1();
+ }
+@@ -274,6 +277,9 @@
+       case CARTRIDGE_DELA_EP256:
+         delaep256_io1_store(addr, value);
+         break;
++      case CARTRIDGE_EASYFLASH:
++        easyflash_io1_store(addr, value);
++        break;
+     }
+     return;
+ }
+@@ -328,6 +334,8 @@
+         return ross_io2_read(addr);
+       case CARTRIDGE_REX_EP256:
+         return rexep256_io2_read(addr);
++      case CARTRIDGE_EASYFLASH:
++        return easyflash_io2_read(addr);
+     }
+     return vicii_read_phi1();
+ }
+@@ -374,6 +382,9 @@
+       case CARTRIDGE_REX_EP256:
+         rexep256_io2_store(addr, value);
+         break;
++      case CARTRIDGE_EASYFLASH:
++        easyflash_io2_store(addr, value);
++        break;
+     }
+ }
+ 
+@@ -460,6 +471,9 @@
+       case CARTRIDGE_MAGIC_FORMEL:
+         magicformel_roml_store(addr, value);
+         return;
++      case CARTRIDGE_EASYFLASH:
++          mem_store_without_romlh(addr, value);
++          return;
+     }
+ 
+     if (export_ram)
+@@ -496,6 +510,9 @@
+       case CARTRIDGE_MAGIC_FORMEL:
+         magicformel_romh_store(addr, value);
+         return;
++      case CARTRIDGE_EASYFLASH:
++          mem_store_without_romlh(addr, value);
++          return;
+     }
+     if (isepic_enabled && isepic_switch)
+     {
+@@ -716,6 +733,9 @@
+         cartridge_config_changed(1, 1, CMODE_READ);
+         cartridge_store_io1((WORD)0xde00, 0);
+         break;
++      case CARTRIDGE_EASYFLASH:
++        easyflash_config_init();
++        break;
+       case CARTRIDGE_GS:
+         cartridge_config_changed(0, 0, CMODE_READ);
+         cartridge_store_io1((WORD)0xde00, 0);
+@@ -849,6 +869,9 @@
+         /* Hack: using 16kB configuration, but some carts are 8kB only */
+         cartridge_config_changed(1, 1, CMODE_READ);
+         break;
++      case CARTRIDGE_EASYFLASH:
++        easyflash_config_setup(rawcart);
++        break;
+       case CARTRIDGE_ULTIMAX:
+         generic_ultimax_config_setup(rawcart);
+         break;
+diff -ur vice-2.1-orig/src/c64/cart/crt.c vice-2.1-hw3/src/c64/cart/crt.c
+--- vice-2.1-orig/src/c64/cart/crt.c	2008-07-07 20:20:43.000000000 +0200
++++ vice-2.1-hw3/src/c64/cart/crt.c	2009-06-10 18:42:13.000000000 +0200
+@@ -41,6 +41,7 @@
+ #include "delaep256.h"
+ #include "delaep64.h"
+ #include "delaep7x8.h"
++#include "easyflash.h"
+ #include "epyxfastload.h"
+ #include "expert.h"
+ #include "final.h"
+@@ -190,6 +191,12 @@
+             }
+         }
+         break;
++      case CARTRIDGE_EASYFLASH:
++        rc = easyflash_crt_attach(fd, rawcart, header);
++        fclose(fd);
++        if (rc < 0)
++            return -1;
++        break;
+       case CARTRIDGE_FUNPLAY:
+         while (1) {
+             if (fread(chipheader, 0x10, 1, fd) < 1) {
+diff -ur vice-2.1-orig/src/c64/cart/easyflash.c vice-2.1-hw3/src/c64/cart/easyflash.c
+--- vice-2.1-orig/src/c64/cart/easyflash.c	2009-06-11 20:10:10.000000000 +0200
++++ vice-2.1-hw3/src/c64/cart/easyflash.c	2009-07-26 02:08:22.000000000 +0200
+@@ -0,0 +1,180 @@
++
++#define EASYFLASH_RAM
++#define EASYFLASH_DEBUG
++/*#define EASYFLASH_LED_USE*/
++/*#define EASYFLASH_LED_POSITION 0*/
++/*#define EASYFLASH_LED_OFF_COLOR 5*/
++/*#define EASYFLASH_LED_ON_COLOR 2*/
++
++#include "vice.h"
++
++#include <stdio.h>
++#include <string.h>
++
++#include "c64cart.h"
++#include "c64cartmem.h"
++#include "easyflash.h"
++#include "vicii-phi1.h"
++
++#include "c64mem.h"
++#include "c64io.h"
++
++#include "log.h"
++
++
++/* the jumper */
++BYTE easyflash_jumper;
++
++/* backup of the regsiters */
++BYTE easyflash_register_00, easyflash_register_02;
++
++/* decoding table of the modes */
++static const BYTE easyflash_memconfig[] = {
++    /* bit3 = jumper, bit2 = mode, bit1 = exrom, bit0 = game */
++    /* jumper off, mode 0, trough 00,01,10,11 in game/exrom bits */
++    4+3, /* exrom high, game = jumper = low */
++    8+3, /* Reserved, don't use this */
++    4+1, /* exrom high, game = jumper = high */
++    8+1, /* Reserved, don't use this */
++    /* jumper off, mode 1, trough 00,01,10,11 in game/exrom bits */
++    0+2, 0+3, 0+0, 0+1,
++    /* jumper on, mode 0, trough 00,01,10,11 in game/exrom bits */
++    4+2, /* exrom high, game = jumper = low */
++    8+3, /* Reserved, don't use this */
++    4+0, /* exrom low, game = jumper = low */
++    8+1, /* Reserved, don't use this */
++    /* jumper on, mode 1, trough 00,01,10,11 in game/exrom bits */
++    0+2, 0+3, 0+0, 0+1,
++};
++
++/*
++    info:
++        game=0, exrom=0 -> 16k
++        game=1, exrom=0 -> 8k
++        game=0, exrom=1 -> ultimax
++        game=1, exrom=1 -> off
++*/
++
++#ifdef EASYFLASH_RAM
++    /* geheimwaffe */
++    BYTE easyflash_ram[256];
++#endif
++
++/*
++** debugging stuff
++*/
++
++#ifdef EASYFLASH_DEBUG
++    /* already in vice (compat) mode */
++    static const char *easyflash_memconfig_txt[] = {
++        /* the programmed config */
++        "8k", "16k", "off", "ult",
++        /* configured by jumper */
++        "8k(J)", "16k(J)", "off(J)", "ult(J)",
++        /* reserved lines */
++        NULL, "Reserved:16k", NULL, "Reserved:ult",
++    };
++    BYTE easyflash_debug = 1;
++#endif
++
++
++BYTE REGPARM1 easyflash_io1_read(WORD addr){
++    return vicii_read_phi1();
++}
++
++void REGPARM2 easyflash_io1_store(WORD addr, BYTE value){
++    BYTE mem_mode;
++#ifdef EASYFLASH_DEBUG
++    BYTE last02;
++#endif
++    switch(addr & 3){
++    case 0: /* $de00 */
++    case 1: /* $de01 */
++        easyflash_register_00 = value & 0x3f; /* we only remember 6 bit */
++#ifdef EASYFLASH_DEBUG
++            if(easyflash_debug){
++                log_message(LOG_DEFAULT, "EasyFlash: mode: %s, bank: %d (addr $%04x, value $%02x)", easyflash_memconfig_txt[easyflash_memconfig[easyflash_jumper | (easyflash_register_02 & 0x07)]], easyflash_register_00, addr, value);
++            }
++#endif
++        break;
++    case 2: /* $de02 */
++    case 3: /* $de03 */
++#ifdef EASYFLASH_DEBUG
++        last02 = easyflash_register_02;
++#endif
++        easyflash_register_02 = value & 0x87; /* we only remember led, mode, exrom, game */
++        mem_mode = easyflash_memconfig[easyflash_jumper | (easyflash_register_02 & 0x07)];
++        cartridge_config_changed(mem_mode, mem_mode, CMODE_READ);
++#ifdef EASYFLASH_DEBUG
++            if(easyflash_debug && ((last02 & 0x0f) != (easyflash_register_02 & 0x0f))){
++                /* ignore changes in LED only! */
++                log_message(LOG_DEFAULT, "EasyFlash: mode: %s, bank: %d (addr $%04x, value $%02x)", easyflash_memconfig_txt[easyflash_memconfig[easyflash_jumper | (easyflash_register_02 & 0x07)]], easyflash_register_00, addr, value);
++            }
++#endif
++#ifdef EASYFLASH_LED_USE
++            colorram_store(0xd800 + EASYFLASH_LED_POSITION, (value & 0x80) ? EASYFLASH_LED_ON_COLOR : EASYFLASH_LED_OFF_COLOR);
++#endif
++        break;
++    }
++    cartridge_romhbank_set(easyflash_register_00);
++    cartridge_romlbank_set(easyflash_register_00);
++    mem_pla_config_changed();
++}
++
++BYTE REGPARM1 easyflash_io2_read(WORD addr){
++#ifdef EASYFLASH_RAM
++        io_source = IO_SOURCE_FINAL3;
++        return easyflash_ram[addr & 0xff];
++#else
++        return vicii_read_phi1();
++#endif
++}
++
++void REGPARM2 easyflash_io2_store(WORD addr, BYTE value){
++#ifdef EASYFLASH_RAM
++        easyflash_ram[addr & 0xff] = value;
++#endif
++}
++
++void easyflash_config_init(void){
++#ifdef EASYFLASH_DEBUG
++        BYTE debug = easyflash_debug;
++        easyflash_debug = 0;
++#endif
++    cartridge_store_io1((WORD)0xde00, 0);
++    cartridge_store_io1((WORD)0xde02, 0);
++#ifdef EASYFLASH_DEBUG
++        log_message(LOG_DEFAULT, "EasyFlash: mode: %s, bank: %d (reset)", easyflash_memconfig_txt[easyflash_memconfig[easyflash_jumper | (easyflash_register_02 & 0x07)]], easyflash_register_00);
++        easyflash_debug = debug;
++#endif
++}
++
++void easyflash_config_setup(BYTE *rawcart){
++    memcpy(roml_banks, rawcart, 0x2000 * 64);
++    memcpy(romh_banks, &rawcart[0x2000 * 64], 0x2000 * 64);
++}
++
++int easyflash_crt_attach(FILE *fd, BYTE *rawcart, BYTE *header){
++    BYTE chipheader[0x10];
++    
++    if(header[0x18] && (!header[0x19])){
++        /* .crt is a ultimax (EXROM=1 and GAME=0) */
++        easyflash_jumper = 0;
++    }else{
++        /* .crt is no ultimax, say the jumper is in "off" mode */
++        easyflash_jumper = 1 << 3;
++    }
++        
++    while (1) {
++        if (fread(chipheader, 0x10, 1, fd) < 1) {
++            break;
++        }
++        if (chipheader[0xb] >= 64 || (chipheader[0xc] != 0x80 && chipheader[0xc] != 0xa0)) {
++            return -1;
++        }
++        if (fread(&rawcart[(chipheader[0xb] << 13) | (chipheader[0xc] == 0x80 ? 0 : 1<<19)], 0x2000, 1, fd) < 1) {
++            return -1;
++        }
++    }
++    return 0;
++}
+diff -ur vice-2.1-orig/src/c64/cart/easyflash.h vice-2.1-hw3/src/c64/cart/easyflash.h
+--- vice-2.1-orig/src/c64/cart/easyflash.h	2009-06-11 20:10:12.000000000 +0200
++++ vice-2.1-hw3/src/c64/cart/easyflash.h	2009-06-10 00:21:22.000000000 +0200
+@@ -0,0 +1,19 @@
++#ifndef _EASYFLASH_H
++#define _EASYFLASH_H
++
++#include <stdio.h>
++
++#include "types.h"
++
++extern int easyflash_crt_attach(FILE *fd, BYTE *rawcart, BYTE *header);
++
++extern void easyflash_config_init(void);
++extern void easyflash_config_setup(BYTE *rawcart);
++
++extern BYTE REGPARM1 easyflash_io1_read(WORD addr);
++extern void REGPARM2 easyflash_io1_store(WORD addr, BYTE value);
++
++extern BYTE REGPARM1 easyflash_io2_read(WORD addr);
++extern void REGPARM2 easyflash_io2_store(WORD addr, BYTE value);
++
++#endif
+\ No newline at end of file
+diff -ur vice-2.1-orig/src/cartridge.h vice-2.1-hw3/src/cartridge.h
+--- vice-2.1-orig/src/cartridge.h	2008-07-07 20:23:21.000000000 +0200
++++ vice-2.1-hw3/src/cartridge.h	2009-07-26 02:14:14.000000000 +0200
+@@ -92,6 +92,7 @@
+    to become fc2 */
+ #define CARTRIDGE_ACTION_REPLAY4     30
+ #define CARTRIDGE_STARDOS            31
++#define CARTRIDGE_EASYFLASH          32
+ 
+ /* Expert cartridge has three modes: */
+ #define CARTRIDGE_MODE_OFF                      0
