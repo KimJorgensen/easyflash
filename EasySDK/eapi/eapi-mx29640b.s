@@ -417,6 +417,10 @@ checkProgress2:
 ; Do not call it with D-flag set. $01 must enable the affected ROM area.
 ; It can only be used after having called EAPIInit.
 ;
+; Special feature for this flash which has 8 * 8 KiByte boot sectors:
+; When bank 0 is erased, all of these 8 sectors are erased automatically.
+; The 8 KiByte sectors 1 to 7 can be erased independently too.
+;
 ; parameters:
 ;       A   bank
 ;       Y   base address (high byte), $80 for LOROM, $a0 or $e0 for HIROM
@@ -434,6 +438,23 @@ EAPIEraseSector:
         stx EAPI_TMP_VAL2
         sty EAPI_TMP_VAL3
         php
+        cmp #0          ; bank 0?
+        bne seNormal
+        cpy #$80        ; ROML?
+        bne seNormal
+        plp
+        ; when we are here they try to erase 00:0:0000
+        ; there are 8 * 8 kByte boot blocks there, we erase all of them
+        ldx #7
+seEraseBootBlocks:
+        txa
+        jsr jmpTable + 3 ; EAPIEraseSector
+        dex
+        bne seEraseBootBlocks
+        txa
+        sta EAPI_TMP_VAL1 ; restore original backup of A=0
+        php
+seNormal:
         sei
 
         jsr prepareWrite
