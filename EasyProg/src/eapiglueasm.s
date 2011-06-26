@@ -225,12 +225,19 @@ wbError:
 _aEAPIDrivers:
 
 EAPICode1:
+@CodeStart:
 .incbin "obj/eapi-m29w160t-03", 2
-.res $0300 - (* - EAPICode1), $ff
+.res $0300 - (* - @CodeStart), $ff
 
 EAPICode2:
+@CodeStart:
 .incbin "obj/eapi-am29f040-04", 2
-.res $0300 - (* - EAPICode2), $ff
+.res $0300 - (* - @CodeStart), $ff
 
 EAPICode3:
+@CodeStart:
+.incbin "obj/eapi-mx29640b-01", 2
+.res $0300 - (* - @CodeStart), $ff
+
+EAPICodeEnd:
 .byte 0
