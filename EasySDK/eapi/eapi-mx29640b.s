@@ -27,9 +27,9 @@ FLASH_ALG_ERROR_BIT      = $20
 EAPI_ZP_INIT_CODE_BASE   = $4b
 
 ; hardware dependend values
-M29W160ET_NUM_BANKS     = 128
-M29W160ET_MFR_ID        = $20
-M29W160ET_DEV_ID        = $c4
+MX29LV640EB_NUM_BANKS    = 64
+MX29LV640EB_MFR_ID       = $c2
+MX29LV640EB_DEV_ID       = $cb
 
 EAPI_RAM_CODE           = $df80
 EAPI_RAM_SIZE           = 124
@@ -41,8 +41,8 @@ EAPI_RAM_SIZE           = 124
 EAPICodeBase:
         !byte $65, $61, $70, $69        ; signature "EAPI"
 
-        !pet "M29F160ET V1.0"
-        !byte 0, 0                      ; 16 bytes, must be 0-terminated
+        !pet "MX29LV640EB 1.0"
+        !byte 0                         ; 16 bytes, must be 0-terminated
 
 ; =============================================================================
 ;
@@ -270,10 +270,10 @@ ciNoRamError:
         lda $8002
         sta EAPI_TMP_VAL2
 
-        ; check if it is an M29W160ET
-        cpx #M29W160ET_MFR_ID
+        ; check if it is an MX29LV640EB
+        cpx #MX29LV640EB_MFR_ID
         bne ciNotSupported
-        cmp #M29W160ET_DEV_ID
+        cmp #MX29LV640EB_DEV_ID
         bne ciNotSupported
 
         ; everything okay
@@ -296,7 +296,7 @@ returnOnly:                     ; C indicates error
         lda EAPI_TMP_VAL2       ; device or error code in A
         bcs returnCSet
         ldx EAPI_TMP_VAL1       ; manufacturer in X
-        ldy #M29W160ET_NUM_BANKS ; number of banks in Y
+        ldy #MX29LV640EB_NUM_BANKS ; number of banks in Y
 
         plp
         clc                     ; do this after plp :)
@@ -417,6 +417,10 @@ checkProgress2:
 ; Do not call it with D-flag set. $01 must enable the affected ROM area.
 ; It can only be used after having called EAPIInit.
 ;
+; Special feature for this flash which has 8 * 8 KiByte boot sectors:
+; When bank 0 is erased, all of these 8 sectors are erased automatically.
+; The 8 KiByte sectors 1 to 7 can be erased independently too.
+;
 ; parameters:
 ;       A   bank
 ;       Y   base address (high byte), $80 for LOROM, $a0 or $e0 for HIROM
@@ -434,6 +438,23 @@ EAPIEraseSector:
         stx EAPI_TMP_VAL2
         sty EAPI_TMP_VAL3
         php
+        cmp #0          ; bank 0?
+        bne seNormal
+        cpy #$80        ; ROML?
+        bne seNormal
+        plp
+        ; when we are here they try to erase 00:0:0000
+        ; there are 8 * 8 kByte boot blocks there, we erase all of them
+        ldx #7
+seEraseBootBlocks:
+        txa
+        jsr jmpTable + 3 ; EAPIEraseSector
+        dex
+        bne seEraseBootBlocks
+        txa
+        sta EAPI_TMP_VAL1 ; restore original backup of A=0
+        php
+seNormal:
         sei
 
         jsr prepareWrite
