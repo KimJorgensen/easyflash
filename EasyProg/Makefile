@@ -1,6 +1,6 @@
 
 ifeq "$(release)" "yes"
-	version := 1.5.1
+	version := 1.6.0
 else
 	version := $(shell date +%y%m%d-%H%M)
 endif
@@ -38,6 +38,7 @@ bin_acme += obj/sprites.bin
 
 eapi := eapi-am29f040-04
 eapi += eapi-m29w160t-03
+eapi += eapi-mx29640b-01
 
 eapi_dir := ../EasySDK/eapi
 eapi_src := $(addprefix $(eapi_dir)/,$(eapi))
