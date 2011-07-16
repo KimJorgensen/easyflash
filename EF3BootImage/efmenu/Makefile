@@ -73,5 +73,6 @@ endif
 
 .PHONY: clean
 clean:
-	rm -f $(name) $(name).map $(name).bin $(name).crt
+	rm -f $(name) $(name).bin $(name).bin.map $(name).bin.labels
+	rm -f $(name).crt
 	rm -rf obj
