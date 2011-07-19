@@ -12,7 +12,7 @@
         .import zerobss
         .import BSOUT
         .import __RAM_START__, __RAM_SIZE__
-        .import __LOWCODE_LOAD__, __LOWCODE_RUN__, __LOWCODE_SIZE__
+        .import __CODE_LOAD__, __CODE_RUN__, __CODE_SIZE__
 
         .include "zeropage.inc"
         .include "c64.inc"
@@ -26,7 +26,7 @@ EASYFLASH_KILL    = $04
 ; ------------------------------------------------------------------------
 ; Place the startup code in a special segment.
 
-.segment           "STARTUP"
+.segment "STARTUP"
 
 ; cold start vector
         .word cold_start
@@ -40,7 +40,7 @@ EASYFLASH_KILL    = $04
 ; ------------------------------------------------------------------------
 ; Actual code
 
-.code
+.segment "INIT"
 
 cold_start:
 reset:
@@ -49,18 +49,15 @@ reset:
         stx $d016
         jsr $ff84   ; Initialise I/O
 
-        ; These may not be needed - depending on what you'll do
-        jsr $ff87   ; Initialise System Constants
+        jsr init_system_constants_light ; faster replacement for $ff87
         jsr $ff8a   ; Restore Kernal Vectors
         jsr $ff81   ; Initialize screen editor
 
-        ; Switch to second charset
-        lda #14
-        jsr BSOUT
+        ; do this first, because some of the fns are in the code segment
+        jsr copycode
 
         jsr zerobss
         jsr copydata
-;        jsr copylowcode
 
         ; and here
         ; Set argument stack ptr
@@ -77,40 +74,73 @@ _exit:
 exit:
         jmp (reset_vector) ; reset, mhhh
 
-.if 0
-copylowcode:
-        lda #<__LOWCODE_LOAD__  ; Source pointer
-        sta	ptr1
-        lda	#>__LOWCODE_LOAD__
-        sta	ptr1 + 1
+; ------------------------------------------------------------------------
+; faster replacement for $ff87
+init_system_constants_light:
+        ; from KERNAL @ FD50:
+        lda #$00
+        tay
+:
+        sta $0002,y
+        sta $0200,y
+        sta $0300,y
+        iny
+        bne :-
+        ldx #$3c
+        ldy #$03
+        stx $b2
+        sty $b3
+        tay
 
-        lda	#<__LOWCODE_RUN__   ; Target pointer
-        sta	ptr2
-        lda	#>__LOWCODE_RUN__
-        sta	ptr2 + 1
+        ; result from loop KERNAL @ FD6C:
+        lda #$00
+        sta $c1
+        sta $0283
+        lda #$a0
+        sta $c2
+        sta $0284
 
-        ldx #<~__LOWCODE_SIZE__
-        lda #>~__LOWCODE_SIZE__    ; Use -(__DATASIZE__+1)
+        ; from KERNAL @ FD90:
+        lda #$08
+        sta $0282       ; pointer: bottom of memory for operating system
+        lda #$04
+        sta $0288       ; high byte of screen memory address
+        rts
+
+; ------------------------------------------------------------------------
+copycode:
+        lda #<__CODE_LOAD__  ; Source pointer
+        sta ptr1
+        lda #>__CODE_LOAD__
+        sta ptr1 + 1
+
+        lda #<__CODE_RUN__   ; Target pointer
+        sta ptr2
+        lda #>__CODE_RUN__
+        sta ptr2 + 1
+
+        ldx #<~__CODE_SIZE__
+        lda #>~__CODE_SIZE__    ; Use -(SIZE+1)
         sta tmp1
         ldy #$00
 
         ; Copy loop
-cll_cont:
+@cll_cont:
         inx
-        beq cll_hi
-cll2:
+        beq @cll_hi
+@cll2:
         lda (ptr1), y
-        sta	(ptr2), y
+        sta (ptr2), y
         iny
-        bne cll_cont
-        inc	ptr1 + 1
-        inc	ptr2 + 1    ; Bump pointers
-        bne	cll_cont    ; Branch always (hopefully)
-cll_hi:
+        bne @cll_cont
+        inc ptr1 + 1
+        inc ptr2 + 1    ; Bump pointers
+        bne @cll_cont   ; Branch always (hopefully)
+@cll_hi:
         inc tmp1
-        bne cll2
+        bne @cll2
         rts
-.endif
+
 
 ; ------------------------------------------------------------------------
 ; This code is executed in Ultimax mode. It is called directly from the
@@ -118,7 +148,7 @@ cll_hi:
 ; It also contains trampoline code which will switch to 16k cartridge mode
 ; and call the normal startup code.
 ;
-        .segment "ULTIMAX"
+.segment "ULTIMAX"
 .proc ultimax_reset
 ultimax_reset:
         ; === the reset vector points to here ===
@@ -192,7 +222,7 @@ kill:
 trampoline_end:
 .endproc
 
-        .segment "VECTORS"
+.segment "VECTORS"
 .word   0
 reset_vector:
 .word   ultimax_reset
