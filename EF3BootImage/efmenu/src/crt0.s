@@ -13,6 +13,7 @@
         .import BSOUT
         .import __RAM_START__, __RAM_SIZE__
         .import __CODE_LOAD__, __CODE_RUN__, __CODE_SIZE__
+        .import __RODATA_LOAD__, __RODATA_RUN__, __RODATA_SIZE__
 
         .include "zeropage.inc"
         .include "c64.inc"
@@ -54,9 +55,10 @@ reset:
         jsr $ff81   ; Initialize screen editor
 
         ; do this first, because some of the fns are in the code segment
-        jsr copycode
+        jsr copy_code
 
         jsr zerobss
+        jsr copy_rodata
         jsr copydata
 
         ; and here
@@ -108,7 +110,7 @@ init_system_constants_light:
         rts
 
 ; ------------------------------------------------------------------------
-copycode:
+copy_code:
         lda #<__CODE_LOAD__  ; Source pointer
         sta ptr1
         lda #>__CODE_LOAD__
@@ -120,10 +122,28 @@ copycode:
         sta ptr2 + 1
 
         ldx #<~__CODE_SIZE__
-        lda #>~__CODE_SIZE__    ; Use -(SIZE+1)
+        lda #>~__CODE_SIZE__
+        jmp copyloop
+
+copy_rodata:
+        lda #<__RODATA_LOAD__  ; Source pointer
+        sta ptr1
+        lda #>__RODATA_LOAD__
+        sta ptr1 + 1
+
+        lda #<__RODATA_RUN__   ; Target pointer
+        sta ptr2
+        lda #>__RODATA_RUN__
+        sta ptr2 + 1
+
+        ldx #<~__RODATA_SIZE__
+        lda #>~__RODATA_SIZE__
+        ; jmp copyloop - fall through
+
+        ; on entry: X = <~size, A = >~size that's -(SIZE + 1)
+copyloop:
         sta tmp1
         ldy #$00
-
         ; Copy loop
 @cll_cont:
         inx
