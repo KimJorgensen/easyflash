@@ -10,7 +10,13 @@ else
 	version := 1.0.0
 endif
 
-ld_config := src/ld.cfg
+ld65_version := $(shell [ `ld65 -V 2>&1 | sed -e 's/\(ld65 V\)\([0-9\.]*\)\( .*\)/\2/g; q'` \< "2.13.9" ] && echo old)
+
+ifeq "$(ld65_version)" "old"
+        ld_config := src/ld.cfg
+else
+        ld_config := src/ld2.cfg
+endif
 
 obj :=
 obj += obj/crt0.o
@@ -20,6 +26,7 @@ obj += obj/gfx.o
 obj += obj/charset.o
 obj += obj/text_plot.o
 obj += obj/text_plot_asm.o
+obj += obj/image_detect.o
 
 INCLUDE  := src
 

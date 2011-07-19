@@ -27,6 +27,8 @@
 
 #include "text_plot.h"
 #include "memcfg.h"
+#include "efmenu.h"
+
 
 // from gfx.s
 extern const uint8_t* bitmap;
@@ -43,38 +45,33 @@ void waitForNoKey(void);
 #define MODE_GEORAM 2
 #define MODE_KERNAL 3
 
-typedef struct mode_map_s
+static efmenu_entry_t kernal_menu[] =
 {
-    uint8_t     key;
-    uint8_t     bank;
-    uint8_t     mode;
-    const char* label;
-    const char* comment;
-} mode_map_t;
-
-static const mode_map_t mode_map[] =
-{
-        { CH_F1,    0x00,   MODE_EF,        "F1", "EasyFlash" },
-        { CH_F3,    0x70,   MODE_FC3,       "F3", "Final Cartridge III" },
-        { CH_F5,    0x00,   MODE_GEORAM,    "F5", "GeoRAM" },
-        { CH_F7,    0x74,   MODE_KERNAL,    "F7", "Exos V3 Kernal" },
-        { 0, 0, NULL, NULL }
+        { '1',    0x00,   MODE_KERNAL,    "1", "Empty" },
+        { '2',    0x01,   MODE_KERNAL,    "2", "Empty" },
+        { '3',    0x02,   MODE_KERNAL,    "3", "Empty" },
+        { '4',    0x03,   MODE_KERNAL,    "4", "Empty" },
+        { '5',    0x04,   MODE_KERNAL,    "5", "Empty" },
+        { '6',    0x05,   MODE_KERNAL,    "6", "Empty" },
+        { '7',    0x06,   MODE_KERNAL,    "7", "Empty" },
+        { '8',    0x07,   MODE_KERNAL,    "8", "Empty" },
+        { 0, 0, 0, "", "" }
 };
 
 
-static void showMenu(void)
+void showMenu(void)
 {
     uint8_t y;
-    const mode_map_t* entry;
+    const efmenu_entry_t* entry;
 
-    y = 13 * 8 + 2;
+    y = 2 * 8 + 4;
 
-    entry = mode_map;
+    entry = kernal_menu;
     while (entry->key)
     {
-        text_plot_puts(22 * 8 + 2, y, entry->label);
-        text_plot_puts(24 * 8 + 4, y, entry->comment);
-        y += 8;
+        text_plot_puts(2 * 8 + 4, y, entry->label);
+        text_plot_puts(4 * 8 + 4, y, entry->name);
+        y += 9;
         ++entry;
     }
 }
@@ -83,19 +80,15 @@ static void showMenu(void)
 static void waitForKey(void)
 {
     uint8_t key;
-    const mode_map_t* entry;
+    const efmenu_entry_t* entry;
 
     do
     {
-        // scan the keyboard
-        // we don't do this in IRQ, because of the sprite multiplexer
-        //__asm__("jsr $ff9f");
-
         if (kbhit())
         {
             key = cgetc();
 
-            entry = mode_map;
+            entry = kernal_menu;
             while (entry->key)
             {
                 if (entry->key == key)
@@ -140,14 +133,8 @@ int main(void)
     // copy colors to $8400
     memcpy(P_GFX_COLOR, colmap, 1000);
 
-//    memset(P_GFX_COLOR, 15 << 4, 1000);
-  //  memset(P_GFX_BITMAP, 0, 8000);
-
-    // copy attribs to $d800
-    //memcpy((char*)0xd800, attrib, 1000);
-
     VIC.bordercolor = COLOR_BLACK;
-    VIC.bgcolor0 = background;
+    //VIC.bgcolor0 = background;
 
     /* set VIC base address to $4000 */
     CIA2.pra = 0x14 + 2;
@@ -160,9 +147,6 @@ int main(void)
 
     /* Bitmap mode */
     VIC.ctrl1 = 0xbb;
-
-    /* MultiColor */
-    /* VIC.ctrl2 = 0x18; */
 
     prepare_background();
 

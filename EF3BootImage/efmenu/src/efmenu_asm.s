@@ -54,7 +54,6 @@ EASYFLASH2_IO_MODE   = $de03
 ; out:
 ;       Never returns
 ;
-.code
 _setBankChangeMode:
         sta tmp2    ; 2nd argument
         jsr popa    ; 1st argument
