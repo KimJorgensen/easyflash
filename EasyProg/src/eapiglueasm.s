@@ -231,7 +231,7 @@ EAPICode1:
 
 EAPICode2:
 @CodeStart:
-.incbin "obj/eapi-am29f040-04", 2
+.incbin "obj/eapi-am29f040-12", 2
 .res $0300 - (* - @CodeStart), $ff
 
 EAPICode3:
