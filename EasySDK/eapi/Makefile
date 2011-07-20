@@ -5,7 +5,7 @@ EAPI := eapi-am29f040-04 eapi-m29w160t-03 eapi-mx29640b-01
 all: test.prg $(EAPI)
 
 ###############################################################################
-eapi-am29f040-04: eapi-am29f040.s
+eapi-am29f040-12: eapi-am29f040.s
 	acme -o $@ $<
 
 eapi-m29w160t-03: eapi-m29w160t.s

@@ -43,7 +43,7 @@ EAPI_RAM_SIZE           = 124
 EAPICodeBase:
         !byte $65, $61, $70, $69        ; signature "EAPI"
 
-        !pet "Am/M29F040 V1.1"
+        !pet "Am/M29F040 V1.2"
         !byte 0                   ; 16 bytes, must be 0-terminated
 
 ; =============================================================================
@@ -625,7 +625,7 @@ seskip:
         jsr ultimaxWrite
 
         ; wait > 50 us before checking progress (=> datasheet)
-        ldx #10
+        ldx #20 ; > 100 us even
 sewait:
         dex
         bne sewait
