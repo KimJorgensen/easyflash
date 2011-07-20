@@ -104,7 +104,7 @@ ScreenMenu menuMain =
         {
             "&Erase all",
             checkEraseAll,
-            ifHaveValidFlash,
+            returnTrue, //ifHaveValidFlash,
             0
         },
         {
@@ -152,25 +152,25 @@ ScreenMenu menuExpert =
         {
             "Write BIN to &LOROM",
             checkWriteLOROMImage,
-            ifHaveValidFlash,
+            returnTrue, //ifHaveValidFlash,
             0
         },
         {
             "Write BIN to &HIROM",
             checkWriteHIROMImage,
-            ifHaveValidFlash,
+            returnTrue, //ifHaveValidFlash,
             0
         },
         {
             "&Torture test",
             tortureTestComplete,
-            ifHaveValidFlash,
+            returnTrue, //ifHaveValidFlash,
             0
         },
         {
             "&Read torture test",
             tortureTestRead,
-            ifHaveValidFlash,
+            returnTrue, //ifHaveValidFlash,
             0
         },
         {
@@ -182,7 +182,7 @@ ScreenMenu menuExpert =
         {
             "He&x viewer",
             hexViewer,
-            ifHaveValidFlash,
+            returnTrue, //ifHaveValidFlash,
             0
         },
         { NULL, NULL, 0, 0 }
