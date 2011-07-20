@@ -21,11 +21,13 @@
  */
 
 #include <stdint.h>
+#include <stddef.h>
 #include <string.h>
 #include <conio.h>
 #include <c64.h>
 
 #include "text_plot.h"
+#include "image_detect.h"
 #include "memcfg.h"
 #include "efmenu.h"
 
@@ -36,14 +38,12 @@ extern const uint8_t* colmap;
 extern const uint8_t* attrib;
 extern uint8_t background;
 
-// from efmenu_asm.s
-void __fastcall__ setBankChangeMode(uint8_t bank, uint8_t mode);
-void waitForNoKey(void);
 
 #define MODE_EF     0
 #define MODE_FC3    1
 #define MODE_GEORAM 2
 #define MODE_KERNAL 3
+
 
 static efmenu_entry_t kernal_menu[] =
 {
@@ -55,7 +55,7 @@ static efmenu_entry_t kernal_menu[] =
         { '6',    0x05,   MODE_KERNAL,    "6", "Empty" },
         { '7',    0x06,   MODE_KERNAL,    "7", "Empty" },
         { '8',    0x07,   MODE_KERNAL,    "8", "Empty" },
-        { 0, 0, 0, "", "" }
+        { 0, 0, 0, "", NULL }
 };
 
 
@@ -150,6 +150,7 @@ int main(void)
 
     prepare_background();
 
+    detect_images(kernal_menu);
     showMenu();
     waitForKey();
 
