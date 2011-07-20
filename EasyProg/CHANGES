@@ -2,7 +2,7 @@
 Version 1.5.2 - 20.07.2011
 - Fix an issue with Am29F040 sector erase which e.g. caused some games
   not to be able to save their game states
-- Allow operations when no known flash chips where found, this makes it
+- Allow operations when no known flash chips were found, this makes it
   possible to use this version of EasyProg for the AlienFlash too
 
 Version 1.5.1 - 27.04.2011
