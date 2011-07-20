@@ -1,6 +1,6 @@
 
 ifeq "$(release)" "yes"
-	version := 1.6.0
+	version := 1.5.2
 else
 	version := $(shell date +%y%m%d-%H%M)
 endif
@@ -36,7 +36,7 @@ bin_acme :=
 bin_acme += obj/startup.bin
 bin_acme += obj/sprites.bin
 
-eapi := eapi-am29f040-04
+eapi := eapi-am29f040-12
 eapi += eapi-m29w160t-03
 eapi += eapi-mx29640b-01
 
