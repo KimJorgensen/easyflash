@@ -27,6 +27,7 @@
 .importzp   tmp1, tmp2, tmp3, tmp4
 .import     popa
 
+.export _set_bank
 .export _setBankChangeMode
 .export _waitForNoKey
 
@@ -44,7 +45,22 @@ EASYFLASH2_IO_MODE   = $de03
 
 ; =============================================================================
 ;
-; Set a flash bank and change to the given cartridge mode.
+; Set the EF ROM bank.
+;
+; void __fastcall__ set_bank(uint8_t bank)
+;
+; in:
+;       bank    bank to be set
+; out:
+;       -
+;
+_set_bank:
+        sta EASYFLASH_IO_BANK
+        rts
+
+; =============================================================================
+;
+; Set the EF ROM bank and change to the given cartridge mode.
 ;
 ; void __fastcall__ setBankChangeMode(uint8_t bank, uint8_t mode)
 ;
