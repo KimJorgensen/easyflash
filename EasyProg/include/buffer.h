@@ -29,6 +29,10 @@
 #define BUFFER_EXOMIZER_ADDR ((void*) 0x6e00)
 #define BUFFER_EXOMIZER_SIZE ((void*) 0x1000)
 
+/* Buffer for slot directory (4k), see slots.c - Same as exomizer! */
+#define SLOT_DIR_ADDR ((void*) 0x6e00)
+#define SLOT_DIR_SIZE ((void*) 0x1000)
+
 /* Buffer for Flash write memory block */
 #define BUFFER_WRITE_ADDR ((void*) 0x7e00)
 #define BUFFER_WRITE_SIZE ((void*) 0x0100)

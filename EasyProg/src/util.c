@@ -219,6 +219,15 @@ void __fastcall__ utilAppendDecimal(uint16_t n)
         utilAppendChar('0');
 }
 
+/******************************************************************************/
+/**
+ *
+ */
+void __fastcall__ utilAppendStr(const char* str)
+{
+    strcat(utilStr, str);
+}
+
 
 /******************************************************************************/
 /**

@@ -595,9 +595,9 @@ void __fastcall__ screenPrintVerifyError(uint8_t nBank, uint8_t nChip,
 {
     utilStr[0] = '\0';
     utilAppendFlashAddr(nBank, nChip, nOffset);
-    strcat(utilStr, ": data ");
+    utilAppendStr(": data ");
     utilAppendHex2(nData);
-    strcat(utilStr, " != flash ");
+    utilAppendStr(" != flash ");
     utilAppendHex2(nFlashVal);
 
     screenPrintTwoLinesDialog("Verify error at", utilStr);

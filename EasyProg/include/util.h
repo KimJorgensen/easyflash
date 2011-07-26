@@ -23,6 +23,7 @@ void utilResetKillCartridge(void);
 void __fastcall__ utilAppendHex1(uint8_t n);
 void __fastcall__ utilAppendHex2(uint8_t n);
 void __fastcall__ utilAppendChar(char c);
+void __fastcall__ utilAppendStr(const char* str);
 
 void __fastcall__ utilAppendFlashAddr(uint8_t nBank,
                                       uint8_t nChip, uint16_t nOffset);

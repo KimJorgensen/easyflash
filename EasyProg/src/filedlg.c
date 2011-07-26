@@ -245,13 +245,13 @@ static void fileDlgReadDir(void)
 
 /******************************************************************************/
 /**
- * Print/Update the file dialog of the headline
+ * Print/Update the headline
  */
 static void __fastcall__ fileDlgHeadline(const char* pStrType)
 {
     strcpy(utilStr, "Select ");
-    strcat(utilStr, pStrType);
-    strcat(utilStr, " file - drive ");
+    utilAppendStr(pStrType);
+    utilAppendStr(" file - drive ");
     utilAppendDecimal(g_nDrive);
     utilAppendChar(' ');
     cputsxy(FILEDLG_X + 1, FILEDLG_Y + 1, utilStr);
@@ -260,7 +260,7 @@ static void __fastcall__ fileDlgHeadline(const char* pStrType)
 
 /******************************************************************************/
 /**
- * Print/Update the file dialog of the headline
+ * Print/Update the frame
  */
 static void fileDlgPrintFrame(void)
 {

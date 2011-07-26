@@ -1,7 +1,7 @@
 /*
  * EasyProg - easyprog.c - The main module
  *
- * (c) 2009 Thomas Giesel
+ * (c) 2009 - 2011 Thomas Giesel
  *
  * This software is provided 'as-is', without any express or implied
  * warranty.  In no event will the authors be held liable for any damages
@@ -42,6 +42,7 @@
 #include "write.h"
 #include "torturetest.h"
 #include "filedlg.h"
+#include "slots.h"
 #include "sprites.h"
 #include "util.h"
 
@@ -59,6 +60,8 @@ static void updateFastLoaderText();
 // Low/High flash chip manufacturer/device ID
 uint8_t nManufacturerId;
 uint8_t nDeviceId;
+uint8_t nBanks;
+uint8_t nSlots;
 const char* pStrFlashDriver = "";
 
 
@@ -70,8 +73,8 @@ uint8_t g_bFastLoaderEnabled;
 
 // String describes the current action
 static char strStatus[41];
-
 static char strFastLoader[30];
+static char strMemSize[30];
 
 /******************************************************************************/
 
@@ -252,8 +255,11 @@ void refreshMainScreen(void)
     cputs("elp");
 
     textcolor(COLOR_LIGHTFRAME);
-    screenPrintBox(16, 4, 23, 3);
-    screenPrintBox(16, 7, 23, 3);
+    screenPrintBox(16, 4, 23, 11);
+    screenPrintSepLine(16, 38, 6);
+    screenPrintSepLine(16, 38, 8);
+    screenPrintSepLine(16, 38, 10);
+    screenPrintSepLine(16, 38, 12);
     textcolor(COLOR_FOREGROUND);
 
     gotoxy(6, 5);
@@ -261,30 +267,42 @@ void refreshMainScreen(void)
     gotox(17);
     cputs(g_strFileName);
 
-    gotoxy(7, 8);
+    gotoxy(7, 7);
     cputs("CRT Type:");
     gotox(17);
     cputs(aStrInternalCartTypeName[internalCartType]);
 
-    textcolor(COLOR_LIGHTFRAME);
-    screenPrintBox(16, 10, 23, 3);
-    textcolor(COLOR_FOREGROUND);
-
-    gotoxy(3, 11);
+    gotoxy(3, 9);
     cputs("Flash Driver:");
     gotox(17);
     cputs(pStrFlashDriver);
 
-    textcolor(COLOR_LIGHTFRAME);
-    screenPrintBox(16, 13, 23, 3);
-    textcolor(COLOR_FOREGROUND);
+    gotoxy(10, 11);
+    cputs("Slots:");
+    gotox(17);
+    cputs(strMemSize);
 
-    gotoxy(3, 14);
+    gotoxy(3, 13);
     cputs("Time elapsed:");
 
     refreshElapsedTime();
     progressShow();
     refreshStatusLine();
+}
+
+
+/******************************************************************************/
+/**
+ * Update the text strMemSize according to nSlots and nBanks.
+ */
+static void updateMemSizeText(void)
+{
+    utilStr[0] = '\0';
+    utilAppendDecimal(nSlots);
+    utilAppendStr(" * ");
+    utilAppendDecimal(nBanks * 16);
+    utilAppendStr(" KiByte");
+    strcpy(strMemSize, utilStr);
 }
 
 
@@ -311,7 +329,7 @@ void refreshElapsedTime(void)
     uint16_t t;
 
     t = timerGet();
-    gotoxy(17, 14);
+    gotoxy(17, 13);
     leadingZero(t >> 8);
     utilAppendDecimal(t >> 8);
     cputs(utilStr);
@@ -338,7 +356,8 @@ uint8_t checkFlashType(void)
     {
         memcpy(EAPI_LOAD_TO, pDriver, EAPI_SIZE);
 
-        if (eapiInit(&nManufacturerId, &nDeviceId) > 0)
+        nBanks = eapiInit(&nManufacturerId, &nDeviceId);
+        if (nBanks > 0)
         {
             bDriverFound = 1;
             break;
@@ -365,7 +384,16 @@ uint8_t checkFlashType(void)
     if (bDriverFound)
     {
         pStrFlashDriver = EAPI_DRIVER_NAME;
+        nSlots = 1;
+        if (nBanks < 64)
+        {
+            nSlots = nBanks;
+            nBanks = 64;
+        }
+        updateMemSizeText();
         refreshMainScreen();
+        if (nSlots > 1)
+            selectSlot(nSlots);
         return 1;
     }
     else
