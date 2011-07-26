@@ -65,7 +65,8 @@ EAPICodeBase:
 ;       If C is clear:
 ;       A   Device ID
 ;       X   Manufacturer ID
-;       Y   Number of physical banks (64 for Am29F040)
+;       Y   Number of physical banks (>= 64) or
+;           number of slots (< 64) with 64 banks each
 ;       If C is set:
 ;       A   Error reason
 ; changes:
