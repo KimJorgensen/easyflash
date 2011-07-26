@@ -183,7 +183,7 @@ static void tortureTest(uint8_t bComplete)
         {
             strcpy(utilStr, "Bank test error: set ");
             utilAppendHex2(rv >> 8);
-            strcat(utilStr, " != read ");
+            utilAppendStr(" != read ");
             utilAppendHex2(rv & 0xff);
 
             screenPrintTwoLinesDialog(pStrTestFailed, utilStr);
