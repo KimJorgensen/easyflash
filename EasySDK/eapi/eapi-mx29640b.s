@@ -27,7 +27,7 @@ FLASH_ALG_ERROR_BIT      = $20
 EAPI_ZP_INIT_CODE_BASE   = $4b
 
 ; hardware dependend values
-MX29LV640EB_NUM_BANKS    = 64
+MX29LV640EB_NUM_SLOTS    = 8
 MX29LV640EB_MFR_ID       = $c2
 MX29LV640EB_DEV_ID       = $cb
 
@@ -65,7 +65,8 @@ EAPICodeBase:
 ;       If C is clear:
 ;       A   Device ID
 ;       X   Manufacturer ID
-;       Y   Number of physical banks (64 for Am29F040)
+;       Y   Number of physical banks (>= 64) or
+;           number of slots (< 64) with 64 banks each
 ;       If C is set:
 ;       A   Error reason
 ; changes:
@@ -296,7 +297,7 @@ returnOnly:                     ; C indicates error
         lda EAPI_TMP_VAL2       ; device or error code in A
         bcs returnCSet
         ldx EAPI_TMP_VAL1       ; manufacturer in X
-        ldy #MX29LV640EB_NUM_BANKS ; number of banks in Y
+        ldy #MX29LV640EB_NUM_SLOTS ; number of slots in Y
 
         plp
         clc                     ; do this after plp :)
