@@ -12,6 +12,9 @@ a.out
 *.bin
 *.crt
 *.orig
+*.jed
+*.xsvf
+*.log
 
 # Eclipse
 .csettings
@@ -30,11 +33,12 @@ Hardware/*/*gerber*
 *-cache.lib
 *.cache.lib
 *.cache.dcm
-
-*.jed
-*.xsvf
-*.log
 synth/*
 log/*
 isim/*
+_xmsgs/*
 tmperr.err
+
+# test files and compiled releases
+EasyProg/test
+EasyProg/easyprog-*
