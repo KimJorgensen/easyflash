@@ -42,7 +42,7 @@ eapi += eapi-m29w160t-03
 eapi += eapi-mx29640b-01
 
 eapi_dir := ../EasySDK/eapi
-eapi_src := $(addprefix $(eapi_dir)/,$(eapi))
+eapi_src := $(addprefix $(eapi_dir)/out/,$(eapi))
 eapi_obj := $(addprefix obj/,$(eapi))
 
 inc      := include

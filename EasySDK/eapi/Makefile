@@ -1,28 +1,25 @@
 
-EAPI := eapi-am29f040-12 eapi-m29w160t-03 eapi-mx29640b-01
+EAPI := out/eapi-am29f040-12 out/eapi-m29w160t-03 out/eapi-mx29640b-01
 
 .PHONY: all
 all: test.prg $(EAPI)
 
 ###############################################################################
-eapi-am29f040-12: eapi-am29f040.s
+out/eapi-am29f040-12: eapi-am29f040.s out
 	acme -o $@ $<
 
-eapi-m29w160t-03: eapi-m29w160t.s
+out/eapi-m29w160t-03: eapi-m29w160t.s out
 	acme -o $@ $<
 
-eapi-mx29640b-01: eapi-mx29640b.s
-	acme -o $@ $<
-
-###############################################################################
-%.prg: %.s
+out/eapi-mx29640b-01: eapi-mx29640b.s out
 	acme -o $@ $<
 
 ###############################################################################
-obj:
+out:
 	mkdir -p $@
 
 
 .PHONY: clean
 clean:
-	rm -f test.prg $(EAPI)
+	rm -f $(EAPI)
+	-rmdir out
