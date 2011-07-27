@@ -203,66 +203,6 @@ void __fastcall__ screenPrintAddr(uint8_t nBank, uint8_t nChip, uint16_t nOffset
 
 /******************************************************************************/
 /**
- * Print the Top line of a frame at y between xStart and xEnd (incl).
- *
- * ++++++++ <= This one
- * +      +
- * ++++++++
- * +      +
- * ++++++++
- */
-void screenPrintTopLine(uint8_t xStart, uint8_t xEnd, uint8_t y)
-{
-    --xEnd;
-
-    cputcxy(xStart, y, 0xb0);
-    chline(xEnd - xStart);
-    cputc(0xae);
-}
-
-
-/******************************************************************************/
-/**
- * Print a separation line at y between xStart and xEnd (incl).
- *
- * ++++++++
- * +      +
- * ++++++++ <= This one
- * +      +
- * ++++++++
- */
-void screenPrintSepLine(uint8_t xStart, uint8_t xEnd, uint8_t y)
-{
-    --xEnd;
-
-    cputcxy(xStart, y, 0xab);
-    chline(xEnd - xStart);
-    cputc(0xb3);
-}
-
-
-/******************************************************************************/
-/**
- * Print the bottom line of a frame at y between xStart and xEnd (incl).
- *
- * ++++++++
- * +      +
- * ++++++++
- * +      +
- * ++++++++ <= This one
- */
-void screenPrintBottomLine(uint8_t xStart, uint8_t xEnd, uint8_t y)
-{
-    --xEnd;
-
-    cputcxy(xStart, y, 0xad);
-    chline(xEnd - xStart);
-    cputc(0xbd);
-}
-
-
-/******************************************************************************/
-/**
  * Print a free line at y between xStart and xEnd (incl).
  *
  * ++++++++
