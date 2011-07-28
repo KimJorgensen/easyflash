@@ -112,6 +112,8 @@ jmpTable:
         jmp EAPISetLen - initCodeBase
         jmp EAPIReadFlashInc - initCodeBase
         jmp EAPIWriteFlashInc - initCodeBase
+        jmp EAPISetSlot - initCodeBase
+        jmp EAPIGetSlot - initCodeBase
 jmpTableEnd:
 ; =============================================================================
 ;
@@ -150,12 +152,19 @@ uwDest = * + 1
 ;
 ; Internal function
 ;
-; Set bank 0, send command cycles 1 and 2.
+; - backup current slot
+; - set slot 0, bank 0
+; - send command cycles 1 and 2
 ;
 ; =============================================================================
 prepareWrite:
-            ; select bank 0
+            ; backup slot
+            lda EASYFLASH_IO_SLOT
+            sta EAPI_SHADOW_SLOT
+
+            ; select slot 0 / bank 0
             lda #0
+            sta EASYFLASH_IO_SLOT
             sta EASYFLASH_IO_BANK
 
             ; cycle 1: write $AA to $AAA
@@ -197,8 +206,9 @@ EAPI_INC_TYPE           = * + 6 ; type used for EAPIReadFlashInc/EAPIWriteFlashI
 EAPI_LENGTH_LO          = * + 7
 EAPI_LENGTH_MED         = * + 8
 EAPI_LENGTH_HI          = * + 9
+EAPI_SHADOW_SLOT        = * + 10
 ; =============================================================================
-RAMContentEnd           = * + 10
+RAMContentEnd           = * + 11
         } ; end pseudopc
 RAMCodeEnd:
 
@@ -254,6 +264,7 @@ ciNoRamError:
         sta EAPI_ZP_INIT_CODE_BASE
         bcs returnOnly
 
+        ; *** start of flash detection ***
         ; check for M29F160ET
         jsr prepareWrite
 
@@ -294,6 +305,9 @@ resetAndReturn:
         jsr ultimaxWrite
 
 returnOnly:                     ; C indicates error
+        lda EAPI_SHADOW_SLOT
+        sta EASYFLASH_IO_SLOT   ; restore slot
+
         lda EAPI_TMP_VAL2       ; device or error code in A
         bcs returnCSet
         ldx EAPI_TMP_VAL1       ; manufacturer in X
@@ -348,7 +362,9 @@ EAPIWriteFlash:
         lda #$a0
         jsr ultimaxWrite
 
-        ; now we have to activate the right bank
+        ; now we have to activate the right slot and bank
+        lda EAPI_SHADOW_SLOT
+        sta EASYFLASH_IO_SLOT
         lda EAPI_SHADOW_BANK
         sta EASYFLASH_IO_BANK
 
@@ -478,7 +494,9 @@ seNormal:
         lda #$55
         jsr ultimaxWrite
 
-        ; activate the right bank
+        ; activate the right slot and bank
+        lda EAPI_SHADOW_SLOT
+        sta EASYFLASH_IO_SLOT
         lda EAPI_TMP_VAL1
         sta EASYFLASH_IO_BANK
 
@@ -497,10 +515,10 @@ seskip:
 sewait:
         dex
         bne sewait
-        
+
         lda EAPI_SHADOW_BANK
         sta EASYFLASH_IO_BANK
-        
+
         ; (Y is unchanged after ldy)
         clc
         bcc checkProgress2 ; always
@@ -521,7 +539,7 @@ sewait:
 ;       -
 ;
 ; changes:
-;       Z,N <- bank
+;       -
 ;
 ; =============================================================================
 EAPISetBank:
@@ -619,7 +637,7 @@ EAPISetLen:
 ;
 ; The number of bytes to be read may be set by calling EAPISetLen.
 ; EOF will be set if the length is zero, otherwise it will be decremented.
-; Even when EOF is delivered a new byte has been read and the pointer 
+; Even when EOF is delivered a new byte has been read and the pointer
 ; incremented. This means the use of EAPISetLen is optional.
 ;
 ; This function can only be used after having called EAPIInit.
@@ -642,12 +660,12 @@ EAPIReadFlashInc:
 
         ; call the read-routine
         jsr readByteForInc
-        
+
         ; remember the result & x/y registers
         sta EAPI_TMP_VAL1
         stx EAPI_TMP_VAL4
         sty EAPI_TMP_VAL5
-        
+
         ; make sure that the increment subroutine of the
         ; write routine jumps back to us, and call it
         lda #$00
@@ -702,7 +720,7 @@ EAPIWriteFlashInc:
         sta EAPI_TMP_VAL1
         stx EAPI_TMP_VAL4
         sty EAPI_TMP_VAL5
-        
+
         ; load address to store to
         ldx EAPI_INC_ADDR_LO
         lda EAPI_INC_ADDR_HI
@@ -716,13 +734,13 @@ writeInc_skip:
         ; write to flash
         jsr jmpTable + 0
         bcs rwInc_return
-        
+
         ; the increment code is used by both functions
 rwInc_inc:
         ; inc to next position
         inc EAPI_INC_ADDR_LO
         bne rwInc_noInc
-        
+
         ; inc page
         inc EAPI_INC_ADDR_HI
         lda EAPI_INC_TYPE
@@ -736,7 +754,7 @@ rwInc_inc:
         asl
         sta EAPI_INC_ADDR_HI
         inc EAPI_SHADOW_BANK
-        
+
 rwInc_noInc:
         ; no errors here, clear carry
         clc
@@ -751,7 +769,64 @@ rwInc_return:
         rts
 
 ; =============================================================================
+;
+; EAPISetSlot: User API: To be called with JSR jmpTable + 24 = $df98
+;
+; Set the slot. This function is only available if EAPIInit reported
+; multiple slots.
+;
+; Software which does not need to change the slot number should not need to
+; us this function. So usually only EasyProg or similar programs need to call
+; this.
+;
+; This will take effect immediately for cartridge read access
+; and will be used for the next flash write or read command.
+;
+; This function can only be used after having called EAPIInit.
+;
+; parameters:
+;       A   slot
+;
+; return:
+;       -
+;
+; changes:
+;       -
+;
+; =============================================================================
+EAPISetSlot:
+        sta EAPI_SHADOW_SLOT
+        sta EASYFLASH_IO_SLOT
+        rts
+
+; =============================================================================
+;
+; EAPIGetSlot: User API: To be called with JSR jmpTable + 27 = $df9b
+;
+; Get the selected slot which has been set with EAPISetSlot. This function is
+; only available if EAPIInit reported multiple slots.
+;
+; Software which does not need to know the slot number should not use this
+; function. So usually only EasyProg or similar programs need to call this.
+;
+; This function can only be used after having called EAPIInit.
+;
+; parameters:
+;       -
+;
+; return:
+;       A  slot
+;
+; changes:
+;       Z,N <- slot
+;
+; =============================================================================
+EAPIGetSlot:
+        lda EAPI_SHADOW_SLOT
+        rts
+
+; =============================================================================
 ; We pad the file to the maximal driver size ($0300) to make sure nobody
-; has the idea to used the memory behind EAPI in a cartridge. EasyProg
+; has the idea to use the memory behind EAPI in a cartridge. EasyProg
 ; replaces EAPI and would overwrite everything in this space.
 !fill $0300 - (* - EAPICodeBase), $ff

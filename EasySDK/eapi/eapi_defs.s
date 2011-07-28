@@ -10,6 +10,9 @@ EAPI_ERR_ROMH_PROTECTED = 5
 ; I/O address used to select the bank
 EASYFLASH_IO_BANK    = $de00
 
+; I/O address used to read and to select the slot
+EASYFLASH_IO_SLOT    = $de01
+
 ; I/O address for enabling memory configuration, /GAME and /EXROM states
 EASYFLASH_IO_CONTROL = $de02
 
