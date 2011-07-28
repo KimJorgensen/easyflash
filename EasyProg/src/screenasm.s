@@ -147,9 +147,9 @@ _screenPrintSepLine:
         ldy #$40        ; screen code for ---
         sty tmp2
         ldy #$73        ; screen code for -|
-        sty tmp3
         ; fall through
 printLine:
+        sty tmp3
         ; gotoxy(xStart, y);
         tax             ; line for PLOT
         ldy #0
@@ -187,7 +187,6 @@ _screenPrintTopLine:
         ldy #$40
         sty tmp2
         ldy #$6e
-        sty tmp3
         bne printLine
 
 .export _screenPrintBottomLine
@@ -197,5 +196,4 @@ _screenPrintBottomLine:
         ldy #$40
         sty tmp2
         ldy #$7d
-        sty tmp3
         bne printLine
