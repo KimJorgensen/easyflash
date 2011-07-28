@@ -33,6 +33,14 @@ obj += obj/torturetest.o
 obj += obj/write.o
 obj += obj/util.o
 
+ld65_version := $(shell [ `ld65 -V 2>&1 | sed -e 's/\(ld65 V\)\([0-9\.]*\)\( .*\)/\2/g; q'` \< "2.13.9" ] && echo old)
+
+ifeq "$(ld65_version)" "old"
+        ld_config := src/ld.cfg
+else
+        ld_config := src/ld2.cfg
+endif
+
 bin_acme :=
 bin_acme += obj/startup.bin
 bin_acme += obj/sprites.bin
@@ -98,8 +106,8 @@ obj/%.bin: src/%.s obj
 obj:
 	mkdir -p $@
 
-easyprog: $(obj) src/ld.cfg $(eload)
-	ld65 -o $@ -m $@.map -C src/ld.cfg $(obj) -L /usr/local/lib/cc65/lib \
+easyprog: $(obj) $(ld_config) $(eload)
+	ld65 -o $@ -m $@.map -C $(ld_config) $(obj) -L /usr/local/lib/cc65/lib \
 		--lib c64.lib --lib $(eload)
 	cat easyprog.map | grep -e "^Name\|^CODE\|^DATA\|^BSS\|^RODATA"
 
