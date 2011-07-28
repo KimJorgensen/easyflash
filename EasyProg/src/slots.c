@@ -72,7 +72,7 @@ static void slotsPrintFrame(uint8_t nSlots)
     screenPrintBox(FILEDLG_X, yPosition, FILEDLG_W, nSlots + 6);
     screenPrintSepLine(FILEDLG_X, FILEDLG_X + FILEDLG_W - 1, yPosition + 2);
     screenPrintSepLine(FILEDLG_X, FILEDLG_X + FILEDLG_W - 1, yPosition + nSlots + 6 - 3);
-    cputsxy(FILEDLG_X + 1, yPosition + nSlots + 6 - 2, "Up/Down/Stop/Enter");
+    cputsxy(FILEDLG_X + 1, yPosition + nSlots + 6 - 2, "Up/Down/Enter");
 }
 
 
@@ -134,12 +134,13 @@ static void __fastcall__ slotsPrintEntry(uint8_t nEntry)
 
 /******************************************************************************/
 /**
+ * Let the user select a slot. Return the slot number.
  */
 uint8_t __fastcall__ selectSlot(uint8_t nSlots)
 {
-    unsigned char n, nEntry, nOldSelection;
+    unsigned char n, nOldSelection;
     char key;
-    uint8_t rv, bRefresh;
+    uint8_t bRefresh;
     SlotEntry* pEntry;
 
     yPosition = 9 - nSlots / 2;
@@ -148,7 +149,6 @@ uint8_t __fastcall__ selectSlot(uint8_t nSlots)
     slotsHeadline("use");
 
     aEntries = SLOT_DIR_ADDR;
-    rv = 0;
     bRefresh = 1;
     nSelection = 0;
 
@@ -190,15 +190,7 @@ uint8_t __fastcall__ selectSlot(uint8_t nSlots)
 
         case CH_ENTER:
             pEntry = aEntries + nSelection;
-            //strcpy(g_strFileName, pEntry->name);
-            rv = 1;
-            goto end; // yeah!
-            break;
-
-        case CH_STOP:
-            goto end; // yeah!
+            return nSelection;
         }
     }
-end:
-    return rv;
 }

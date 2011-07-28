@@ -16,6 +16,8 @@ EAPISetPtr          = $df80 + 12
 EAPISetLen          = $df80 + 15
 EAPIReadFlashInc    = $df80 + 18
 EAPIWriteFlashInc   = $df80 + 21
+EAPISetSlot         = $df80 + 24
+EAPIGetSlot         = $df80 + 27
 
 ; =============================================================================
 ;
@@ -94,6 +96,43 @@ _eapiGetBank:
 .export _eapiSetBank
 _eapiSetBank:
         jmp EAPISetBank
+
+; =============================================================================
+;
+; Get the selected slot.
+;
+; uint8_t __fastcall__ eapiGetSlot(void);
+;
+; parameters:
+;       -
+;
+; return:
+;       slot in AX (A = low)
+;
+; =============================================================================
+.export _eapiGetSlot
+_eapiGetSlot:
+        jsr EAPIGetSlot
+        ldx #0
+        rts
+
+; =============================================================================
+;
+; Set the slot. This will take effect immediately for read access and will be
+; used for the next write and erase commands.
+;
+; void __fastcall__ eapiSetSlot(uint8_t nSlot);
+;
+; parameters:
+;       slot in A
+;
+; return:
+;       -
+;
+; =============================================================================
+.export _eapiSetSlot
+_eapiSetSlot:
+        jmp EAPISetSlot
 
 ; =============================================================================
 ;

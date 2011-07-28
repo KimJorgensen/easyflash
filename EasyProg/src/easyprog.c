@@ -255,34 +255,46 @@ void refreshMainScreen(void)
     cputs("elp");
 
     textcolor(COLOR_LIGHTFRAME);
-    screenPrintBox(16, 4, 23, 11);
-    screenPrintSepLine(16, 38, 6);
-    screenPrintSepLine(16, 38, 8);
-    screenPrintSepLine(16, 38, 10);
-    screenPrintSepLine(16, 38, 12);
+    screenPrintBox(16, 3, 23, 11);
+    screenPrintSepLine(16, 38, 5);
+    screenPrintSepLine(16, 38, 7);
+    screenPrintSepLine(16, 38, 9);
+    screenPrintSepLine(16, 38, 11);
     textcolor(COLOR_FOREGROUND);
 
-    gotoxy(6, 5);
+    gotoxy(6, 4);
     cputs("File name:");
     gotox(17);
     cputs(g_strFileName);
 
-    gotoxy(7, 7);
+    gotoxy(7, 6);
     cputs("CRT Type:");
     gotox(17);
     cputs(aStrInternalCartTypeName[internalCartType]);
 
-    gotoxy(3, 9);
+    gotoxy(3, 8);
     cputs("Flash Driver:");
     gotox(17);
     cputs(pStrFlashDriver);
 
-    gotoxy(10, 11);
+    gotoxy(10, 10);
     cputs("Slots:");
     gotox(17);
     cputs(strMemSize);
 
-    gotoxy(3, 13);
+    gotoxy(2, 12);
+    cputs("Selected Slot:");
+    gotox(17);
+    if (nSlots > 1)
+    {
+        utilStr[0] = '\0';
+        utilAppendDecimal(eapiGetSlot());
+        cputs(utilStr);
+    }
+    else
+        cputc('0');
+
+    gotoxy(3, 14);
     cputs("Time elapsed:");
 
     refreshElapsedTime();
@@ -329,7 +341,7 @@ void refreshElapsedTime(void)
     uint16_t t;
 
     t = timerGet();
-    gotoxy(17, 13);
+    gotoxy(17, 14);
     leadingZero(t >> 8);
     utilAppendDecimal(t >> 8);
     cputs(utilStr);
@@ -390,10 +402,10 @@ uint8_t checkFlashType(void)
             nSlots = nBanks;
             nBanks = 64;
         }
+        if (nSlots > 1)
+            eapiSetSlot(selectSlot(nSlots));
         updateMemSizeText();
         refreshMainScreen();
-        if (nSlots > 1)
-            selectSlot(nSlots);
         return 1;
     }
     else
