@@ -87,6 +87,7 @@ static void waitForKey(void)
         if (kbhit())
         {
             key = cgetc();
+            VIC.bordercolor = key;
 
             entry = kernal_menu;
             while (entry->key)

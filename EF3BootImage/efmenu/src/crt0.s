@@ -69,6 +69,7 @@ reset:
         sta sp + 1
 
         jsr initlib
+        cli
         jsr _main
 
 _exit:
