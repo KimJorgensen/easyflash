@@ -112,6 +112,8 @@ jmpTable:
         jmp EAPISetLen - initCodeBase
         jmp EAPIReadFlashInc - initCodeBase
         jmp EAPIWriteFlashInc - initCodeBase
+        jmp EAPISetSlot - initCodeBase
+        jmp EAPIGetSlot - initCodeBase
 jmpTableEnd:
 ; =============================================================================
 ;
@@ -476,10 +478,10 @@ seskip:
 sewait:
         dex
         bne sewait
-        
+
         lda EAPI_SHADOW_BANK
         sta EASYFLASH_IO_BANK
-        
+
         ; (Y is unchanged after ldy)
         clc
         bcc checkProgress2 ; always
@@ -500,7 +502,7 @@ sewait:
 ;       -
 ;
 ; changes:
-;       Z,N <- bank
+;       -
 ;
 ; =============================================================================
 EAPISetBank:
@@ -598,7 +600,7 @@ EAPISetLen:
 ;
 ; The number of bytes to be read may be set by calling EAPISetLen.
 ; EOF will be set if the length is zero, otherwise it will be decremented.
-; Even when EOF is delivered a new byte has been read and the pointer 
+; Even when EOF is delivered a new byte has been read and the pointer
 ; incremented. This means the use of EAPISetLen is optional.
 ;
 ; This function can only be used after having called EAPIInit.
@@ -621,12 +623,12 @@ EAPIReadFlashInc:
 
         ; call the read-routine
         jsr readByteForInc
-        
+
         ; remember the result & x/y registers
         sta EAPI_TMP_VAL1
         stx EAPI_TMP_VAL4
         sty EAPI_TMP_VAL5
-        
+
         ; make sure that the increment subroutine of the
         ; write routine jumps back to us, and call it
         lda #$00
@@ -681,7 +683,7 @@ EAPIWriteFlashInc:
         sta EAPI_TMP_VAL1
         stx EAPI_TMP_VAL4
         sty EAPI_TMP_VAL5
-        
+
         ; load address to store to
         ldx EAPI_INC_ADDR_LO
         lda EAPI_INC_ADDR_HI
@@ -695,13 +697,13 @@ writeInc_skip:
         ; write to flash
         jsr jmpTable + 0
         bcs rwInc_return
-        
+
         ; the increment code is used by both functions
 rwInc_inc:
         ; inc to next position
         inc EAPI_INC_ADDR_LO
         bne rwInc_noInc
-        
+
         ; inc page
         inc EAPI_INC_ADDR_HI
         lda EAPI_INC_TYPE
@@ -715,7 +717,7 @@ rwInc_inc:
         asl
         sta EAPI_INC_ADDR_HI
         inc EAPI_SHADOW_BANK
-        
+
 rwInc_noInc:
         ; no errors here, clear carry
         clc
@@ -727,10 +729,13 @@ rwInc_return:
         ldy EAPI_TMP_VAL5
         ldx EAPI_TMP_VAL4
         lda EAPI_TMP_VAL1
+
+EAPISetSlot:
+EAPIGetSlot:
         rts
 
 ; =============================================================================
 ; We pad the file to the maximal driver size ($0300) to make sure nobody
-; has the idea to used the memory behind EAPI in a cartridge. EasyProg
+; has the idea to use the memory behind EAPI in a cartridge. EasyProg
 ; replaces EAPI and would overwrite everything in this space.
 !fill $0300 - (* - EAPICodeBase), $ff

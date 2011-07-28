@@ -114,6 +114,8 @@ jmpTable:
         jmp EAPISetLen - initCodeBase
         jmp EAPIReadFlashInc - initCodeBase
         jmp EAPIWriteFlashInc - initCodeBase
+        jmp EAPISetSlot - initCodeBase
+        jmp EAPIGetSlot - initCodeBase
 jmpTableEnd:
 ; =============================================================================
 ;
@@ -654,7 +656,7 @@ sewait:
 ;       -
 ;
 ; changes:
-;       Z,N <- bank
+;       -
 ;
 ; =============================================================================
 EAPISetBank:
@@ -882,10 +884,13 @@ rwInc_return:
         ldy EAPI_TMP_VAL5
         ldx EAPI_TMP_VAL4
         lda EAPI_TMP_VAL1
+
+EAPISetSlot:
+EAPIGetSlot:
         rts
 
 ; =============================================================================
 ; We pad the file to the maximal driver size ($0300) to make sure nobody
-; has the idea to used the memory behind EAPI in a cartridge. EasyProg
+; has the idea to use the memory behind EAPI in a cartridge. EasyProg
 ; replaces EAPI and would overwrite everything in this space.
 !fill $0300 - (* - EAPICodeBase), $ff
