@@ -43,7 +43,7 @@ EAPI_RAM_SIZE           = 124
 EAPICodeBase:
         !byte $65, $61, $70, $69        ; signature "EAPI"
 
-        !pet "Am/M29F040 V1.2"
+        !pet "Am/M29F040 V1.3"
         !byte 0                   ; 16 bytes, must be 0-terminated
 
 ; =============================================================================
@@ -136,11 +136,20 @@ jmpTableEnd:
 ;           X
 ;
 ; =============================================================================
-ultimaxWrite55XXAA:
+ultimaxWrite552AA:
             lda #$55
             ldx #$aa
+            ldy EAPI_ADDR_BASE
+            iny
+            iny
             bne ultimaxWrite
-ultimaxWriteXX55:
+ultimaxWrite555:
+            ldy EAPI_ADDR_BASE
+            iny
+            iny
+            iny
+            iny
+            iny
             ldx #$55
 ultimaxWrite:
             stx uwDest
@@ -161,44 +170,20 @@ uwDest = * + 1
 ; Internal function
 ;
 ; Set bank 0, send command cycles 1 and 2.
-; Do this for the LOROM flash chip which is visible at $8000.
+; Do this for the ROML/ROMH flash chip depending from EAPI_ADDR_BASE ($80/$e0).
 ;
 ; =============================================================================
-prepareWriteLow:
+prepareWrite:
             ; select bank 0
             lda #0
             sta EASYFLASH_IO_BANK
 
             ; cycle 1: write $AA to $555
-            ldy #>$8555
             lda #$aa
-            jsr ultimaxWriteXX55
+            jsr ultimaxWrite555
 
             ; cycle 2: write $55 to $2AA
-            ldy #>$82aa
-            jmp ultimaxWrite55XXAA
-
-; =============================================================================
-;
-; Internal function
-;
-; Set bank 0, send command cycles 1 and 2.
-; Do this for the HIROM flash chip which is visible at $e000 in Ultimax mode.
-;
-; =============================================================================
-prepareWriteHigh:
-            ; select bank 0
-            lda #0
-            sta EASYFLASH_IO_BANK
-
-            ; cycle 1: write $AA to $555
-            ldy #>$e555
-            lda #$aa
-            jsr ultimaxWriteXX55
-
-            ; cycle 2: write $55 to $2AA
-            ldy #>$e2aa
-            jmp ultimaxWrite55XXAA
+            jmp ultimaxWrite552AA
 
 ; =============================================================================
 ;
@@ -214,6 +199,27 @@ EAPI_INC_ADDR_HI = * + 2
             rts
 
 ; =============================================================================
+;
+; Internal function
+;
+; Used for progress check. Load the value from (YX) and decrement the
+; progressTimer. Return Z set if the timer expired.
+;
+; Without outer loop this needs at least 33 cycles.
+;
+; =============================================================================
+readByte:                           ;  6  6 (JSR)
+            stx .read + 1           ; +4 10
+            sty .read + 2           ; +4 14
+.read
+            lda $ffff               ; +4 18
+            dec EAPI_TIMER_LO       ; +6 24
+            bne .ret                ; +3 27
+            dec EAPI_TIMER_HI
+.ret
+            rts                     ; +6 33
+
+; =============================================================================
 ; Variables
 ; =============================================================================
 
@@ -227,8 +233,12 @@ EAPI_INC_TYPE           = * + 6 ; type used for EAPIReadFlashInc/EAPIWriteFlashI
 EAPI_LENGTH_LO          = * + 7
 EAPI_LENGTH_MED         = * + 8
 EAPI_LENGTH_HI          = * + 9
+EAPI_TIMER_LO           = * + 10
+EAPI_TIMER_HI           = * + 11
+EAPI_ADDR_BASE          = * + 12 ; $80 to operate on ROML, $e0 for ROMH
+EAPI_CHECK_VAL          = * + 13
 ; =============================================================================
-RAMContentEnd           = * + 10
+RAMContentEnd           = * + 14
         } ; end pseudopc
 RAMCodeEnd:
 
@@ -284,13 +294,15 @@ ciNoRamError:
         sta EAPI_ZP_INIT_CODE_BASE
         bcs returnOnlyTrampoline ; branch on error from above
 
+        ; todo: optimize duplicated code for ROML/ROMH
         ; check for Am/M29F040, HIROM
-        jsr prepareWriteHigh
+        lda #$e0
+        sta EAPI_ADDR_BASE
+        jsr prepareWrite
 
         ; cycle 3: write $90 to $555
-        ldy #>$e555
         lda #$90
-        jsr ultimaxWriteXX55
+        jsr ultimaxWrite555
 
         ; offset 0: Manufacturer ID (we're on bank 0)
         ; offset 1: Device ID
@@ -314,12 +326,13 @@ ciROMHIsAMD:
         bne ciROMHNotSupported
 ciCheckLow:
         ; check for Am/M29F040, LOROM
-        jsr prepareWriteLow
+        lda #$80
+        sta EAPI_ADDR_BASE
+        jsr prepareWrite
 
         ; cycle 3: write $90 to $555
-        ldy #>$8555
         lda #$90
-        jsr ultimaxWriteXX55
+        jsr ultimaxWrite555
 
         ; offset 0: Manufacturer ID (we're on bank 0)
         ; offset 1: Device ID
@@ -404,6 +417,34 @@ returnCSet:
         sec                     ; do this after plp :)
         rts
 
+; =============================================================================
+;
+; Return stuff, used by checkProgress
+;
+; =============================================================================
+resetFlash:
+        ; lda #<$8000 - don't care
+        ldy #>$8000
+        lda #$f0
+        jsr ultimaxWrite
+
+        ; lda #<$e000 - don't care
+        ldy #>$e000
+        lda #$f0
+        jsr ultimaxWrite
+
+        plp
+        sec ; error
+        bcs ret
+
+retOk:
+        plp
+        clc
+ret:
+        ldy EAPI_TMP_VAL3
+        ldx EAPI_TMP_VAL2
+        lda EAPI_TMP_VAL1
+        rts
 
 ; =============================================================================
 ;
@@ -433,30 +474,27 @@ returnCSet:
 ; =============================================================================
 EAPIWriteFlash:
         sta EAPI_TMP_VAL1
+        sta EAPI_CHECK_VAL
         stx EAPI_TMP_VAL2
         sty EAPI_TMP_VAL3
         php
         sei
 
-        ; address lower than $E000?
+        ; set base address $8000 or $e000
         cpy #$e0
         bcc writeLow
-
-        jsr prepareWriteHigh
-
-        ; cycle 3: write $A0 to $555
-        ldy #>$e555
-        bne write_common    ; always
-
+        lda #$e0
+        bne wfSetBase
 writeLow:
-        jsr prepareWriteLow
+        lda #$80
+wfSetBase:
+        sta EAPI_ADDR_BASE
+
+        jsr prepareWrite
 
         ; cycle 3: write $A0 to $555
-        ldy #>$8555
-
-write_common:
         lda #$a0
-        jsr ultimaxWriteXX55
+        jsr ultimaxWrite555
 
         ; now we have to activate the right bank
         lda EAPI_SHADOW_BANK
@@ -469,75 +507,46 @@ write_common:
         jsr ultimaxWrite
 
         ; that's it
+        lda #10
+        sta EAPI_TIMER_LO
+        lda #0
+        sta EAPI_TIMER_HI
+
+        ldx EAPI_TMP_VAL2   ; load address
+        lda EAPI_TMP_VAL3
+        and #$bf            ; $ex => $ax
+        tay
+        ; fall through to checkProgress
+
+; =============================================================================
+;
+; Check the progress. To do this, read the value at (YX) until it matches
+; EAPI_CHECK_VAL or until EAPI_TIMER expires.
+;
+; If the timer expires, reset the flash chips and return an error indication.
+; Otherwise return OK.
+;
+; As long as an operation is not complete or was cancelled because of an error,
+; DQ can never be the expected value, as it contains a complement bit.
+; As it seems that we can't read the toggle bit reliably on all hardware
+; (read glitches?), we use this way to check the progress.
+;
+; =============================================================================
 
 checkProgress:
-        cpy #$e0
-        bcs checkProgressHi
-        ; check progress of flash memory at $8000
-
-        ; wait as long as the toggle bit toggles
-checkProgressLo:
-        lda $8000
-        cmp $8000
-        bne cpLoDifferent
-        ; read once more to catch the case status => data
-        cmp $8000
-        beq retOk
-cpLoDifferent:
-        ; check if the error bit is set
-        and #FLASH_ALG_ERROR_BIT
-        ; wait longer if not
-        beq checkProgressLo
-        bne resetFlash
-
-checkProgressHi:
-        ; same code for $e000 (we're not in Ultimax mode, use $a000)
-        ; wait as long as the toggle bit toggles
-        lda $a000
-        cmp $a000
-        bne cpHiDifferent
-        ; read once more to catch the case status => data
-        cmp $a000
-        beq retOk
-cpHiDifferent:
-        ; check if the error bit is set
-        and #FLASH_ALG_ERROR_BIT
-        ; wait longer if not
-        beq checkProgressHi
-
-resetFlash:
-        ; lda #<$8000 - don't care
-        ldy #>$8000
-        lda #$f0
-        jsr ultimaxWrite
-
-        ; lda #<$e000 - don't care
-        ldy #>$e000
-        lda #$f0
-        jsr ultimaxWrite
-
-        plp
-        sec ; error
-        bcs ret
-
-retOk:
-        plp
+        jsr readByte
+        bne cpCont
+        lda EAPI_SHADOW_BANK
+        sta EASYFLASH_IO_BANK
         clc
-ret:
-        ldy EAPI_TMP_VAL3
-        ldx EAPI_TMP_VAL2
-        lda EAPI_TMP_VAL1
-        rts
-
-
-; =============================================================================
-;
-; Trampoline
-;
-; =============================================================================
-
-checkProgress2:
-        bcc checkProgress ; always
+        bcc resetFlash      ; Time out and/or error
+cpCont:
+        cmp EAPI_CHECK_VAL
+        bne checkProgress
+        lda EAPI_SHADOW_BANK
+        sta EASYFLASH_IO_BANK
+        clc
+        bcc retOk
 
 ; =============================================================================
 ;
@@ -574,44 +583,23 @@ EAPIEraseSector:
         php
         sei
 
-        ; address lower than $A000?
-        cpy #$a0
-        bcc selow
-
-        jsr prepareWriteHigh
-
-        ; cycle 3: write $80 to $555
-        ldy #>$e555
-        lda #$80
-        jsr ultimaxWriteXX55
-
-        ; cycle 4: write $AA to $555
-        ; ldy #>$e555 <= unchanged
-        lda #$aa
-        jsr ultimaxWriteXX55
-
-        ; cycle 5: write $55 to $2AA
-        ldy #>$e2aa
-        bne secommon    ; always
-
-selow:
-        jsr prepareWriteLow
+        cpy #$80
+        beq seskip
+        ldy #$e0            ; $a0 => $e0
+seskip:
+        sty EAPI_ADDR_BASE
+        jsr prepareWrite
 
         ; cycle 3: write $80 to $555
-        ldy #>$8555
         lda #$80
-        jsr ultimaxWriteXX55
+        jsr ultimaxWrite555
 
         ; cycle 4: write $AA to $555
-        ; ldy #>$8555 <= unchanged
         lda #$aa
-        jsr ultimaxWriteXX55
+        jsr ultimaxWrite555
 
         ; cycle 5: write $55 to $2AA
-        ldy #>$82aa
-
-secommon:
-        jsr ultimaxWrite55XXAA
+        jsr ultimaxWrite552AA
 
         ; activate the right bank
         lda EAPI_TMP_VAL1
@@ -619,26 +607,19 @@ secommon:
 
         ; cycle 6: write $30 to base + SA
         ldx #$00
-        ldy EAPI_TMP_VAL3
-        cpy #$80
-        beq seskip
-        ldy #$e0 ; $a0 => $e0
-seskip:
+        ldy EAPI_ADDR_BASE
         lda #$30
         jsr ultimaxWrite
 
-        ; wait > 50 us before checking progress (=> datasheet)
-        ldx #20 ; > 100 us even
-sewait:
-        dex
-        bne sewait
-
-        lda EAPI_SHADOW_BANK
-        sta EASYFLASH_IO_BANK
-
-        ; (Y is unchanged after ldy)
-        clc
-        bcc checkProgress2 ; always
+        tya
+        and #$bf            ; $ex => $ax
+        tay
+        ldx #0              ; YX = $8000 or $a000
+        lda #$ff            ; max wait time and check value
+        sta EAPI_TIMER_LO
+        sta EAPI_TIMER_HI
+        sta EAPI_CHECK_VAL
+        bne checkProgress
 
 ; =============================================================================
 ;
