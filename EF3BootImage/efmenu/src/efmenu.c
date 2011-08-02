@@ -102,6 +102,10 @@ static void waitForKey(void)
                 }
                 ++entry;
             }
+            if (key == 'p')
+            {
+            	startProgram(9); // EasyProg
+            }
         }
     }
     while (1);

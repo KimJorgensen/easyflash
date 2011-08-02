@@ -27,10 +27,7 @@
 .importzp   tmp1, tmp2, tmp3, tmp4
 .import     popa
 
-.export _set_bank
-.export _setBankChangeMode
-.export _waitForNoKey
-
+EASYFLASH_16K        = $07
 
 ; I/O address used to select the bank
 EASYFLASH_IO_BANK    = $de00
@@ -54,6 +51,7 @@ EASYFLASH2_IO_MODE   = $de03
 ; out:
 ;       -
 ;
+.export _set_bank
 _set_bank:
         sta EASYFLASH_IO_BANK
         rts
@@ -70,6 +68,7 @@ _set_bank:
 ; out:
 ;       Never returns
 ;
+.export _setBankChangeMode
 _setBankChangeMode:
         sta tmp2    ; 2nd argument
         jsr popa    ; 1st argument
@@ -100,6 +99,56 @@ sbcmCodeEnd:
 
 ; =============================================================================
 ;
+; Set the EF ROM bank, copy 16k to 0x0801 and run that program by jumping to
+; 0x080d.
+;
+; The program in flash contains two byte start address, we ignore it and skip
+; these two bytes. That's why the copy starts from $8002.
+;
+;
+; void __fastcall__ startProgram(uint8_t bank);
+;
+; in:
+;       bank    bank to be set
+; out:
+;       Never returns
+;
+.export _startProgram
+_startProgram:
+        sta EASYFLASH_IO_BANK
+        lda #EASYFLASH_16K
+        sta EASYFLASH_IO_CONTROL
+        ldx #$00
+:
+        lda startProgramCode,x
+        sta $c000,x
+        dex
+        bne :-
+        jmp $c000
+startProgramCode:
+.org $c000
+        ldy #16 * 4
+        ldx #0
+@loop:
+@i1:
+        lda $8002,x
+@i2:
+        sta $0801,x
+        inx
+        bne @loop
+        inc @i1 + 2
+        inc @i2 + 2
+        dey
+        bne @loop
+
+        jsr $ff84   ; Initialise I/O
+        jsr $ff8a   ; Restore Kernal Vectors
+        jsr $ff81   ; Initialize screen editor
+        jmp $080d
+.reloc
+
+; =============================================================================
+;
 ; Wait until no key is pressed.
 ;
 ; void waitForNoKey(void)
@@ -109,6 +158,7 @@ sbcmCodeEnd:
 ; out:
 ;       -
 ;
+.export _waitForNoKey
 _waitForNoKey:
         ; Prepare the CIA to scan the keyboard
         ldx #$00
