@@ -12,6 +12,8 @@
 
 void __fastcall__ set_bank(uint8_t bank);
 void __fastcall__ setBankChangeMode(uint8_t bank, uint8_t mode);
+void __fastcall__ startProgram(uint8_t bank);
+
 void waitForNoKey(void);
 
 typedef struct efmenu_entry_s
