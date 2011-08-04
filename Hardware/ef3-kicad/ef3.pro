@@ -1,4 +1,4 @@
-update=Fr 22 Jul 2011 22:21:04 CEST
+update=Do 04 Aug 2011 21:56:40 CEST
 version=1
 last_client=pcbnew
 [cvpcb]
@@ -83,8 +83,8 @@ LibName31=ef3
 [pcbnew]
 version=1
 PadDrlX=0
-PadDimH=787
-PadDimV=197
+PadDimH=394
+PadDimV=591
 BoardThickness=630
 SgPcb45=1
 TxtPcbV=800
@@ -96,7 +96,7 @@ VEgarde=100
 DrawLar=50
 EdgeLar=10
 TxtLar=120
-MSegLar=120
+MSegLar=50
 LastNetListRead=ef3.net
 [pcbnew/libraries]
 LibDir=

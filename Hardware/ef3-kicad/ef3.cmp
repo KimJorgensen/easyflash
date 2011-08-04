@@ -1,4 +1,4 @@
-Cmp-Mod V01 Created by CvPCB (2010-00-09 BZR 23xx)-stable date = Fr 27 Mai 2011 22:11:26 CEST
+Cmp-Mod V01 Created by CvPCB (2010-00-09 BZR 23xx)-stable date = Do 04 Aug 2011 20:19:57 CEST
 
 BeginCmp
 TimeStamp = /4D8A5B0C;
@@ -17,22 +17,22 @@ EndCmp
 BeginCmp
 TimeStamp = /4DA0A2EB;
 Reference = C3;
-ValeurCmp = 1u;
-IdModule  = SM0805;
+ValeurCmp = 100n;
+IdModule  = SM0603;
 EndCmp
 
 BeginCmp
 TimeStamp = /4DD6C32D;
 Reference = C4;
-ValeurCmp = 1u;
-IdModule  = SM0805;
+ValeurCmp = 100n;
+IdModule  = SM0603;
 EndCmp
 
 BeginCmp
 TimeStamp = /4DD6C33D;
 Reference = C5;
-ValeurCmp = 1u;
-IdModule  = SM0805;
+ValeurCmp = 100n;
+IdModule  = SM0603;
 EndCmp
 
 BeginCmp
@@ -192,42 +192,42 @@ EndCmp
 BeginCmp
 TimeStamp = /4DD6C24C;
 Reference = R3;
-ValeurCmp = 1k;
+ValeurCmp = 100k;
 IdModule  = SM0805;
 EndCmp
 
 BeginCmp
 TimeStamp = /4DD6C269;
 Reference = R4;
-ValeurCmp = 1k;
+ValeurCmp = 100k;
 IdModule  = SM0805;
 EndCmp
 
 BeginCmp
 TimeStamp = /4DD6C26B;
 Reference = R5;
-ValeurCmp = 1k;
+ValeurCmp = 100k;
 IdModule  = SM0805;
 EndCmp
 
 BeginCmp
 TimeStamp = /4DA355B7;
 Reference = R6;
-ValeurCmp = 33k;
+ValeurCmp = 4k7;
 IdModule  = SM0805;
 EndCmp
 
 BeginCmp
 TimeStamp = /4DA355C0;
 Reference = R7;
-ValeurCmp = 33k;
+ValeurCmp = 4k7;
 IdModule  = SM0805;
 EndCmp
 
 BeginCmp
 TimeStamp = /4DD41588;
 Reference = R8;
-ValeurCmp = 33k;
+ValeurCmp = 4k7;
 IdModule  = SM0805;
 EndCmp
 
@@ -255,21 +255,21 @@ EndCmp
 BeginCmp
 TimeStamp = /4DA35562;
 Reference = SW1;
-ValeurCmp = RESET;
+ValeurCmp = MENU;
 IdModule  = Switch;
 EndCmp
 
 BeginCmp
 TimeStamp = /4DA35569;
 Reference = SW2;
-ValeurCmp = KILL;
+ValeurCmp = RESET;
 IdModule  = Switch;
 EndCmp
 
 BeginCmp
 TimeStamp = /4DD41579;
 Reference = SW3;
-ValeurCmp = KILL;
+ValeurCmp = SPECIAL;
 IdModule  = Switch;
 EndCmp
 
@@ -304,12 +304,12 @@ EndCmp
 BeginCmp
 TimeStamp = /4DD4296A;
 Reference = U5;
-ValeurCmp = CY62256...ZX;
+ValeurCmp = AS6C62256-55ST;
 IdModule  = TSOP28-I;
 EndCmp
 
 BeginCmp
-TimeStamp = /4DD6C1EC;
+TimeStamp = /4DE01424;
 Reference = U6;
 ValeurCmp = 74LVC14;
 IdModule  = SO14E;
