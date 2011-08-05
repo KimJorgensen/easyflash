@@ -62,6 +62,7 @@ uint8_t nManufacturerId;
 uint8_t nDeviceId;
 uint8_t nBanks;
 uint8_t nSlots;
+uint8_t nSelectedSlot;
 const char* pStrFlashDriver = "";
 
 
@@ -288,7 +289,7 @@ void refreshMainScreen(void)
     if (nSlots > 1)
     {
         utilStr[0] = '\0';
-        utilAppendDecimal(eapiGetSlot());
+        utilAppendDecimal(nSelectedSlot);
         cputs(utilStr);
     }
     else
@@ -403,7 +404,10 @@ uint8_t checkFlashType(void)
             nBanks = 64;
         }
         if (nSlots > 1)
-            eapiSetSlot(selectSlot(nSlots));
+        {
+        	nSelectedSlot = selectSlot(nSlots);
+            eapiSetSlot(nSelectedSlot);
+        }
         updateMemSizeText();
         refreshMainScreen();
         return 1;
@@ -417,6 +421,7 @@ failed:
     pStrFlashDriver = "(failed)";
     refreshMainScreen();
     nManufacturerId = nDeviceId = 0;
+    nSlots = nSelectedSlot = 0;
     return 0;
 }
 
