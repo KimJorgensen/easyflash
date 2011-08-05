@@ -74,6 +74,7 @@ _setBankChangeMode:
         jsr popa    ; 1st argument
         sta tmp1
 
+        sei
         ldx #sbcmCodeEnd - sbcmCode
 sbcmCopy:
         ; copy code on stack
@@ -83,17 +84,18 @@ sbcmCopy:
         bpl sbcmCopy
         jmp $0100
 
-        ; the following code will be run at $0100
 sbcmCode:
+.org $0100
+        ; the following code will be run at $0100
         lda tmp1
         sta EASYFLASH_IO_BANK
         lda tmp2
         sta EASYFLASH2_IO_MODE
         ; we don't pass here normally
-        clc
 sbcmWait:
         dec $d020
-        bcc sbcmWait
+        jmp sbcmWait
+.reloc
 sbcmCodeEnd:
 
 
