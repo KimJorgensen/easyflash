@@ -1,0 +1,44 @@
+syntax: glob
+obj/*
+out/*
+a.out
+*.tar.*
+*~
+*.map
+*.prg
+*.bak
+*.bck
+*.obj
+*.bin
+*.crt
+*.orig
+*.jed
+*.xsvf
+*.log
+
+# Eclipse
+.csettings
+.cproject
+.project
+
+EasyProg/easyprog
+eload.lib
+
+EasyLoader/build/*
+EasyLoader/.deps/*
+
+Hardware/*gerber*
+Hardware/*/*gerber*
+*.pho
+*-cache.lib
+*.cache.lib
+*.cache.dcm
+synth/*
+log/*
+isim/*
+_xmsgs/*
+tmperr.err
+
+# test files and compiled releases
+EasyProg/test
+EasyProg/easyprog-*
