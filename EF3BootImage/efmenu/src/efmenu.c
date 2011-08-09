@@ -47,15 +47,27 @@ extern uint8_t background;
 
 static efmenu_entry_t kernal_menu[] =
 {
-        { '1',    0x00,   MODE_KERNAL,    "1", "Empty" },
-        { '2',    0x01,   MODE_KERNAL,    "2", "Empty" },
-        { '3',    0x02,   MODE_KERNAL,    "3", "Empty" },
-        { '4',    0x03,   MODE_KERNAL,    "4", "Empty" },
-        { '5',    0x04,   MODE_KERNAL,    "5", "Empty" },
-        { '6',    0x05,   MODE_KERNAL,    "6", "Empty" },
-        { '7',    0x06,   MODE_KERNAL,    "7", "Empty" },
-        { '8',    0x07,   MODE_KERNAL,    "8", "Empty" },
-        { 0, 0, 0, "", NULL }
+        { '1',    0, 	0x00,   MODE_KERNAL,    "1", "Empty" },
+        { '2',    0, 	0x01,   MODE_KERNAL,    "2", "Empty" },
+        { '3',    0, 	0x02,   MODE_KERNAL,    "3", "Empty" },
+        { '4',    0, 	0x03,   MODE_KERNAL,    "4", "Empty" },
+        { '5',    0, 	0x04,   MODE_KERNAL,    "5", "Empty" },
+        { '6',    0, 	0x05,   MODE_KERNAL,    "6", "Empty" },
+        { '7',    0, 	0x06,   MODE_KERNAL,    "7", "Empty" },
+        { '8',    0, 	0x07,   MODE_KERNAL,    "8", "Empty" },
+        { 0, 0, 0, 0, "", NULL }
+};
+
+static efmenu_entry_t ef_menu[] =
+{
+        { 'a',    0x01,	0, 	MODE_EF,    "A", "EF Slot 1" },
+        { 'b',    0x02, 0, 	MODE_EF,    "B", "EF Slot 2" },
+        { 'c',    0x03, 0, 	MODE_EF,    "C", "EF Slot 3" },
+        { 'd',    0x04, 0, 	MODE_EF,    "D", "EF Slot 4" },
+        { 'e',    0x05, 0, 	MODE_EF,    "E", "EF Slot 5" },
+        { 'f',    0x06, 0, 	MODE_EF,    "F", "EF Slot 6" },
+        { 'g',    0x07, 0, 	MODE_EF,    "G", "EF Slot 7" },
+        { 0, 0, 0, 0, "", NULL }
 };
 
 
@@ -74,6 +86,27 @@ void showMenu(void)
         y += 9;
         ++entry;
     }
+
+    y = 13 * 8 + 4;
+    entry = ef_menu;
+    while (entry->key)
+    {
+        text_plot_puts(22 * 8 + 4, y, entry->label);
+        text_plot_puts(24 * 8 + 4, y, entry->name);
+        y += 9;
+        ++entry;
+    }
+}
+
+
+static void startMenuEntry(const efmenu_entry_t* entry)
+{
+	VIC.bordercolor = COLOR_WHITE;
+    // Wait until the key is released
+    waitForNoKey();
+    // PONR
+    *(uint8_t*)0xde01 = entry->slot; // <= todo: make it nice
+    setBankChangeMode(entry->bank, entry->mode);
 }
 
 
@@ -93,15 +126,18 @@ static void waitForKey(void)
             while (entry->key)
             {
                 if (entry->key == key)
-                {
-                	VIC.bordercolor = COLOR_WHITE;
-                    // Wait until the key is released
-                    waitForNoKey();
-                    // PONR
-                    setBankChangeMode(entry->bank, entry->mode);
-                }
+                	startMenuEntry(entry);
                 ++entry;
             }
+            entry = ef_menu;
+
+            while (entry->key)
+            {
+                if (entry->key == key)
+                	startMenuEntry(entry);
+                ++entry;
+            }
+
             if (key == 'p')
             {
             	startProgram(9); // EasyProg
@@ -119,12 +155,12 @@ static void prepare_background(void)
 	{
 		yy = y + 2;
 		memset(P_GFX_COLOR + 40 * yy + 2,
-			   COLOR_WHITE << 4, 16);
+			   COLOR_WHITE << 4 | COLOR_BLACK, 16);
 		memset(P_GFX_BITMAP + 320 * yy + 2 * 8, 0, 16 * 8);
 
 		yy = y + 13;
 		memset(P_GFX_COLOR + 40 * yy + 22,
-			   COLOR_BLACK << 4 | COLOR_GRAY3, 16);
+				COLOR_WHITE << 4 | COLOR_BLACK, 16);
 		memset(P_GFX_BITMAP + 320 * yy + 22 * 8, 0, 16 * 8);
 	}
 }

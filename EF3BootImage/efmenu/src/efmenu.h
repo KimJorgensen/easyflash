@@ -19,6 +19,7 @@ void waitForNoKey(void);
 typedef struct efmenu_entry_s
 {
     uint8_t     key;
+    uint8_t     slot;
     uint8_t     bank;
     uint8_t     mode;
     char        label[3 + 1];
