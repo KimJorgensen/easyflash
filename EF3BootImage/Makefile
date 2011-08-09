@@ -37,7 +37,7 @@ mkimage_cmd += trampoline.bin       0x00 0x3F00
 mkimage_cmd += images/exos.bin      0x00 0x0000
 mkimage_cmd += images/beast.bin     0x01 0x0000
 mkimage_cmd += images/ttn2crom.bin  0x02 0x0000
-mkimage_cmd += images/jiffy.bin     0x03 0x0000
+#mkimage_cmd += images/jiffy.bin     0x03 0x0000
 
 mkimage_cmd += efmenu/efmenu.bin    0x08 0x0000
 mkimage_cmd += $(easyprog)          0x09 0x0000
