@@ -25,55 +25,23 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <conio.h>
 #include <string.h>
 
 #include "easyprog.h"
 #include "buffer.h"
-#include "screen.h"
 #include "texts.h"
 #include "slots.h"
+#include "selectbox.h"
 #include "util.h"
 
 #define MAX_SLOTS 16
 
-#define FILEDLG_X 6
-#define FILEDLG_W 28
-
-static void fileDlgPrintFrame(uint8_t nSlots);
 
 /******************************************************************************/
 /** Local data: Put here to reduce code size */
 
 // buffer for entries
-static SlotEntry* aEntries;
-
-static uint8_t yPosition;
-static uint8_t nSelection;
-
-/******************************************************************************/
-/**
- * Print/Update the headline
- */
-static void __fastcall__ slotsHeadline(const char* pStrAction)
-{
-    strcpy(utilStr, "Select a slot to ");
-    utilAppendStr(pStrAction);
-    cputsxy(FILEDLG_X + 1, yPosition + 1, utilStr);
-}
-
-
-/******************************************************************************/
-/**
- * Print/Update the frame
- */
-static void slotsPrintFrame(uint8_t nSlots)
-{
-    screenPrintBox(FILEDLG_X, yPosition, FILEDLG_W, nSlots + 6);
-    screenPrintSepLine(FILEDLG_X, FILEDLG_X + FILEDLG_W - 1, yPosition + 2);
-    screenPrintSepLine(FILEDLG_X, FILEDLG_X + FILEDLG_W - 1, yPosition + nSlots + 6 - 3);
-    cputsxy(FILEDLG_X + 1, yPosition + nSlots + 6 - 2, "Up/Down/Enter");
-}
+static SelectBoxEntry* aEntries;
 
 
 /******************************************************************************/
@@ -82,115 +50,35 @@ static void slotsPrintFrame(uint8_t nSlots)
 static void slotsFillDirectory(uint8_t nSlots)
 {
     uint8_t    nSlot;
-    SlotEntry* pEntry;
+    SelectBoxEntry* pEntry;
 
     pEntry = aEntries;
     for (nSlot = 0; nSlot < nSlots; ++nSlot)
     {
         if (nSlot == 0)
         {
-            strcpy(pEntry->name, "System Area");
+            strcpy(pEntry->label, "System Area");
         }
         else
         {
             strcpy(utilStr, "Slot ");
             utilAppendDecimal(nSlot);
-            strcpy(pEntry->name, utilStr);
+            strcpy(pEntry->label, utilStr);
         }
         ++pEntry;
     }
-}
-
-
-/******************************************************************************/
-/**
- */
-static void __fastcall__ slotsPrintEntry(uint8_t nEntry)
-{
-    SlotEntry* pEntry;
-
-    pEntry = aEntries + nEntry;
-    gotoxy(FILEDLG_X + 1, yPosition + 3 + nEntry);
-
-    if (nEntry == nSelection)
-        revers(1);
-
-    // clear line
-    cclear(FILEDLG_W - 2);
-
-    // entry number
-    utilStr[0] = 0;
-    utilAppendDecimal(nEntry);
-    gotox(FILEDLG_X + 5 - strlen(utilStr));
-    cputs(utilStr);
-
-    // name
-    gotox(FILEDLG_X + 6);
-    cputs(pEntry->name);
-
-    revers(0);
+    pEntry->label[nSlot] = 0; // end marker
 }
 
 
 /******************************************************************************/
 /**
  * Let the user select a slot. Return the slot number.
+ * Return 255 if the user canceled the selection.
  */
 uint8_t __fastcall__ selectSlot(uint8_t nSlots)
 {
-    unsigned char n, nOldSelection;
-    char key;
-    uint8_t bRefresh;
-    SlotEntry* pEntry;
-
-    yPosition = 9 - nSlots / 2;
-
-    slotsPrintFrame(nSlots);
-    slotsHeadline("use");
-
     aEntries = SLOT_DIR_ADDR;
-    bRefresh = 1;
-    nSelection = 0;
-
     slotsFillDirectory(nSlots);
-    for (n = 0; n < nSlots; ++n)
-    {
-        slotsPrintEntry(n);
-    }
-
-    for (;;)
-    {
-        if (bRefresh)
-        {
-            // only refresh the two lines which have changed
-            slotsPrintEntry(nOldSelection);
-            slotsPrintEntry(nSelection);
-            bRefresh = 0;
-        }
-
-        nOldSelection = nSelection;
-        key = cgetc();
-        switch (key)
-        {
-        case CH_CURS_UP:
-            if (nSelection)
-            {
-                --nSelection;
-                bRefresh = 1;
-            }
-            break;
-
-        case CH_CURS_DOWN:
-            if (nSelection + 1 < nSlots)
-            {
-                ++nSelection;
-                bRefresh = 1;
-            }
-            break;
-
-        case CH_ENTER:
-            pEntry = aEntries + nSelection;
-            return nSelection;
-        }
-    }
+    return selectBox(aEntries, "a slot to use");
 }
