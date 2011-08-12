@@ -26,6 +26,7 @@ obj += obj/progress.o
 obj += obj/timerasm.o
 obj += obj/dir.o
 obj += obj/filedlg.o
+obj += obj/selectbox.o
 obj += obj/slots.o
 obj += obj/hex.o
 obj += obj/buffer.o
