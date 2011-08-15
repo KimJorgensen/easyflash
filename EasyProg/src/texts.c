@@ -145,6 +145,12 @@ const char* apStrFileOpenError[] =
         NULL
 };
 
+const char* apStrOutOfMemory[] =
+{
+        "Out of memory.",
+        NULL
+};
+
 const char* apStrHeaderReadError[] =
 {
         "Failed to read the cartridge",

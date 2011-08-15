@@ -29,7 +29,6 @@ void __fastcall__ utilAppendFlashAddr(uint8_t nBank,
                                       uint8_t nChip, uint16_t nOffset);
 void __fastcall__ utilAppendDecimal(uint16_t n);
 
-
 uint8_t utilOpenFile(uint8_t nPart);
 
 void utilReadSelectNormalFile(void);

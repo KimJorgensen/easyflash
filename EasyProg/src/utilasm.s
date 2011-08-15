@@ -33,8 +33,8 @@
 
 .export buffer_start_hi: absolute
 .export buffer_len_hi: absolute
-buffer_start_hi   = $6e             ; see buffer.h
-buffer_len_hi     = 16              ; see EASY_SPLIT_MAX_EXO_OFFSET and buffer.h
+buffer_start_hi   = $80             ; see ld.cfg (EXOBUFFER)
+buffer_len_hi     = $10             ; see EASY_SPLIT_MAX_EXO_OFFSET and ld.cfg
 
 ; Kernal I/O Status Word ST
 ST                = $90
@@ -153,10 +153,10 @@ _utilInitDecruncher:
 ; =============================================================================
 utilAskForNextCrunchedFile:
         ; backup cc65 ZP area
-        ldx #$1a        ; see ld.conf
+        ldx #$1a        ; see ld.cfg
 uafE1:
-        lda $02, x      ; see ld.conf
-        sta $7900, x    ; BUFFER_ZP_BACKUP_ADDR
+        lda $02, x      ; see ld.cfg
+        sta $c400, x
         dex
         bpl uafE1
 
@@ -166,10 +166,10 @@ uafE1:
         beq uafCancel
 
         ; restore cc65 ZP area
-        ldx #$1a        ; see ld.conf
+        ldx #$1a        ; see ld.cfg
 uafE2:
-        lda $7900, x    ; BUFFER_ZP_BACKUP_ADDR
-        sta $02, x      ; see ld.conf
+        lda $c400, x
+        sta $02, x      ; see ld.cfg
         dex
         bpl uafE2
         clc

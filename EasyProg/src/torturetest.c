@@ -105,9 +105,9 @@ static uint8_t tortureTestVerify(uint8_t nBank)
             {
                 nData = buffer[rv];
                 if (addr.nChip)
-                    nFlash = ROM1_BASE[addr.nOffset + rv];
+                    nFlash = efPeekCartROM(ROM1_BASE + addr.nOffset + rv);
                 else
-                    nFlash = ROM0_BASE[addr.nOffset + rv];
+                    nFlash = efPeekCartROM(ROM0_BASE + addr.nOffset + rv);
 
                 screenPrintVerifyError(addr.nBank, addr.nChip, addr.nOffset
                         + rv, nData, nFlash);

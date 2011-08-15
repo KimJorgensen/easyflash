@@ -24,8 +24,8 @@
 
 #include <conio.h>
 #include <string.h>
+#include <stdlib.h>
 
-#include "buffer.h"
 #include "cart.h"
 #include "screen.h"
 #include "texts.h"
@@ -45,15 +45,15 @@
 /* Static variables */
 
 /* static to save some function call overhead */
-static uint8_t  nBank;
-static uint16_t nAddress;
-static uint16_t nSize;
+static uint8_t  m_nBank;
+static uint16_t m_nAddress;
+static uint16_t m_nSize;
 static BankHeader bankHeader;
 
 /******************************************************************************/
 /**
  * Print a status line, read the next bank header from the currently active
- * input and calculate nBank, nAddress and nSize.
+ * input and calculate m_nBank, m_nAddress and m_nSize.
  *
  * return CART_RV_OK, CART_RV_ERR or CART_RV_EOF
  */
@@ -63,10 +63,10 @@ static uint8_t readNextHeader()
 
     rv = readNextBankHeader(&bankHeader);
 
-    nBank = bankHeader.bank[1];
+    m_nBank = bankHeader.bank[1] & FLASH_BANK_MASK;
 
-    nAddress = 256 * bankHeader.loadAddr[0] + bankHeader.loadAddr[1];
-    nSize = 256 * bankHeader.romLen[0] + bankHeader.romLen[1];
+    m_nAddress = 256 * bankHeader.loadAddr[0] + bankHeader.loadAddr[1];
+    m_nSize = 256 * bankHeader.romLen[0] + bankHeader.romLen[1];
 
     return rv;
 }
@@ -99,6 +99,7 @@ static uint8_t __fastcall__ writeStartUpCode(uint8_t* pBankOffset)
 {
     uint8_t  nConfig;
     uint8_t* pBuffer;
+    uint8_t  rv;
 
     // most CRT types are put on bank 1
     *pBankOffset = 1;
@@ -124,7 +125,7 @@ static uint8_t __fastcall__ writeStartUpCode(uint8_t* pBankOffset)
 
     case INTERNAL_CART_TYPE_EASYFLASH:
         *pBankOffset = 0;
-        return CART_RV_OK;
+        return CART_RV_OK; // nothing to do
 
     case INTERNAL_CART_TYPE_EASYFLASH_XBANK:
         nConfig = nXbankConfig;
@@ -135,7 +136,7 @@ static uint8_t __fastcall__ writeStartUpCode(uint8_t* pBankOffset)
         return CART_RV_ERR;
     }
 
-    pBuffer = BUFFER_WRITE_ADDR;
+    pBuffer = malloc(0x100);
 
     // btw: the buffer must always be 256 bytes long
     // !!! keep this crap in sync with startup.s - especially the code size !!!
@@ -151,18 +152,20 @@ static uint8_t __fastcall__ writeStartUpCode(uint8_t* pBankOffset)
     // write the startup code to bank 0, always write 2 * 256 bytes
     if (!flashWriteBlock(0, 1, 0x1e00, pBuffer) ||
         !flashWriteBlock(0, 1, 0x1f00, startUpStart + 0x100))
-    {
-        return writeCRTError();
-    }
+    	goto err;
 
 
     // write the sprites to 00:1:1800
     // keep this in sync with sprites.s
     if (!flashWriteBlock(0, 1, 0x1800, pSprites) ||
         !flashWriteBlock(0, 1, 0x1900, pSprites + 0x100))
-        return writeCRTError();
+    	goto err;
 
+	free(pBuffer);
     return CART_RV_OK;
+err:
+	free(pBuffer);
+	return CART_RV_ERR;
 }
 
 
@@ -201,29 +204,29 @@ static uint8_t writeCrtImage(void)
 
         if (rv == CART_RV_OK)
         {
-            nBank += nBankOffset;
+            m_nBank += nBankOffset;
 
-            if ((nAddress == (uint16_t) ROM0_BASE) && (nSize <= 0x4000))
+            if ((m_nAddress == (uint16_t) ROM0_BASE) && (m_nSize <= 0x4000))
             {
-                if (nSize > 0x2000)
+                if (m_nSize > 0x2000)
                 {
-                    if (!flashWriteBankFromFile(nBank, 0, 0x2000) ||
-                        !flashWriteBankFromFile(nBank, 1, nSize - 0x2000))
+                    if (!flashWriteBankFromFile(m_nBank, 0, 0x2000) ||
+                        !flashWriteBankFromFile(m_nBank, 1, m_nSize - 0x2000))
                     {
                         return CART_RV_ERR;
                     }
                 }
                 else
                 {
-                    if (!flashWriteBankFromFile(nBank, 0, nSize))
+                    if (!flashWriteBankFromFile(m_nBank, 0, m_nSize))
                         return CART_RV_ERR;
                 }
             }
-            else if (((nAddress == (uint16_t) ROM1_BASE) ||
-                      (nAddress == (uint16_t) ROM1_BASE_ULTIMAX)) &&
-                     (nSize <= 0x2000))
+            else if (((m_nAddress == (uint16_t) ROM1_BASE) ||
+                      (m_nAddress == (uint16_t) ROM1_BASE_ULTIMAX)) &&
+                     (m_nSize <= 0x2000))
             {
-                if (!flashWriteBankFromFile(nBank, 1, nSize))
+                if (!flashWriteBankFromFile(m_nBank, 1, m_nSize))
                     return CART_RV_ERR;
             }
             else
@@ -243,23 +246,24 @@ static uint8_t writeCrtImage(void)
 
 /******************************************************************************/
 /**
- * Write a BIN image from the given file to flash, either LOROM or HIROM.
+ * Write a BIN image from the given file to flash, either LOROM or HIROM,
+ * beginning at m_nBank.
  *
  * return CART_RV_OK or CART_RV_ERR
  */
 static uint8_t writeBinImage(uint8_t nChip)
 {
-    uint8_t  nBank;
     uint16_t nOffset;
     int      nBytes;
     uint8_t* pBuffer;
+    uint8_t  rv;
 
     // this will show the cartridge type from the header
     refreshMainScreen();
 
-    pBuffer = BUFFER_WRITE_ADDR;
+    pBuffer = malloc(0x100);
     nOffset = 0;
-    nBank = 0;
+    rv = CART_RV_ERR;
     do
     {
         nBytes = utilRead(pBuffer, 0x100);
@@ -267,28 +271,27 @@ static uint8_t writeBinImage(uint8_t nChip)
         if (nBytes >= 0)
         {
             // the last block may be smaller than 265 bytes, then we write padding
-            if (!flashWriteBlock(nBank, nChip, nOffset, pBuffer))
-                return 0;
+            if (!flashWriteBlock(m_nBank, nChip, nOffset, pBuffer))
+                goto ret;
 
-            if (!flashVerifyBlock(nBank, nChip, nOffset, pBuffer))
-                return 0;
+            if (!flashVerifyBlock(m_nBank, nChip, nOffset, pBuffer))
+                goto ret;
 
             nOffset += 0x100;
             if (nOffset == 0x2000)
             {
                 nOffset = 0;
-                ++nBank;
+                ++m_nBank;
             }
         }
-        else
-            break;  // shorter code...
     }
     while (nBytes == 0x100);
 
-    if (nOffset || nBank)
-        return CART_RV_OK;
-    else
-        return CART_RV_ERR;
+    if (nOffset || m_nBank)
+        rv = CART_RV_OK;
+ret:
+	free(pBuffer);
+	return rv;
 }
 
 
@@ -331,8 +334,16 @@ static void checkWriteImage(uint8_t imageType)
 
     if (imageType == IMAGE_TYPE_CRT)
         rv = writeCrtImage();
+    else if (imageType == IMAGE_TYPE_KERNAL)
+    {
+        m_nBank = FLASH_8K_SECTOR_BIT + 1;
+        rv = writeBinImage(0);
+    }
     else
+    {
+        m_nBank = 0;
         rv = writeBinImage(imageType == IMAGE_TYPE_HIROM);
+    }
     eload_close();
 
     timerStop();
@@ -349,6 +360,16 @@ static void checkWriteImage(uint8_t imageType)
 void checkWriteCRTImage(void)
 {
     checkWriteImage(IMAGE_TYPE_CRT);
+}
+
+
+/******************************************************************************/
+/**
+ * Write a KERNAL image file to the flash.
+ */
+void checkWriteKERNALImage(void)
+{
+    checkWriteImage(IMAGE_TYPE_KERNAL);
 }
 
 
