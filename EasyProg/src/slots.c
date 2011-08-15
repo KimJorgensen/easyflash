@@ -31,6 +31,7 @@
 #include "buffer.h"
 #include "texts.h"
 #include "slots.h"
+#include "screen.h"
 #include "selectbox.h"
 #include "util.h"
 
@@ -38,21 +39,24 @@
 
 
 /******************************************************************************/
-/** Local data: Put here to reduce code size */
-
-// buffer for entries
-static SelectBoxEntry* aEntries;
-
-
-/******************************************************************************/
 /**
+ * Let the user select a slot. Return the slot number.
+ * Return 255 if the user canceled the selection.
  */
-static void slotsFillDirectory(uint8_t nSlots)
+uint8_t __fastcall__ selectSlot(uint8_t nSlots)
 {
-    uint8_t    nSlot;
+	SelectBoxEntry* pEntries;
     SelectBoxEntry* pEntry;
+    uint8_t    nSlot, rv;
 
-    pEntry = aEntries;
+    pEntries = malloc(MAX_SLOTS * sizeof(SelectBoxEntry));
+    if (!pEntries)
+    {
+    	screenPrintSimpleDialog(apStrOutOfMemory);
+    	return 0;
+    }
+
+    pEntry = pEntries;
     for (nSlot = 0; nSlot < nSlots; ++nSlot)
     {
         if (nSlot == 0)
@@ -68,17 +72,8 @@ static void slotsFillDirectory(uint8_t nSlots)
         ++pEntry;
     }
     pEntry->label[nSlot] = 0; // end marker
-}
 
-
-/******************************************************************************/
-/**
- * Let the user select a slot. Return the slot number.
- * Return 255 if the user canceled the selection.
- */
-uint8_t __fastcall__ selectSlot(uint8_t nSlots)
-{
-    aEntries = SLOT_DIR_ADDR;
-    slotsFillDirectory(nSlots);
-    return selectBox(aEntries, "a slot to use");
+    rv = selectBox(pEntries, "a slot to use");
+    free(pEntries);
+    return rv;
 }

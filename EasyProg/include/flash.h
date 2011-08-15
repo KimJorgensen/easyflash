@@ -10,24 +10,27 @@
 
 #include <stdint.h>
 
-/// Manufacturer and Device ID
-#define FLASH_TYPE_AMD_AM29F040  0x01A4
-#define FLASH_TYPE_AMD_M29W160ET 0x20C4
+#define FLASH_MX29LV640EB_MFR_ID 0xc2
+#define FLASH_MX29LV640EB_DEV_ID 0xcb
 
-/// This bit is set in 29F040 when algorithm is running
+// This bit is set in 29F040 when algorithm is running
 #define FLASH_ALG_RUNNING_BIT   0x08
 
-/// This bit is set when an algorithm times out (error)
+// This bit is set when an algorithm times out (error)
 #define FLASH_ALG_ERROR_BIT     0x20
 
-/// Number of banks erased at once
+// Number of banks erased at once
 #define FLASH_BANKS_ERASE_AT_ONCE (64 / 8)
 
-/// Number of banks when using 2 * 512 kByte
+// Number of banks when using 2 * 512 kByte
 #define FLASH_NUM_BANKS     64
 
-/// Maximal number of banks
-#define FLASH_MAX_NUM_BANKS 128
+// If this bit is set, a 8k sector is to be addressed instead of a 64k sector
+// This is only supported by some devices and banks (e.g. EF3 KERNALs)
+#define FLASH_8K_SECTOR_BIT   128
+
+/// Mask to isolate the plain bank number
+#define FLASH_BANK_MASK     (FLASH_NUM_BANKS - 1)
 
 /// Address of Low ROM Chip
 #define ROM0_BASE           ((uint8_t*) 0x8000)

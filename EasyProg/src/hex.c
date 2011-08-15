@@ -10,6 +10,7 @@
 
 #include "flash.h"
 #include "eapiglue.h"
+#include "util.h"
 #include "screen.h"
 
 /******************************************************************************/
@@ -51,14 +52,14 @@ static void hexShowBlock(void)
 
         for (x = 0; x < 8; ++x)
         {
-            screenPrintHex2(*p++);
+            screenPrintHex2(efPeekCartROM(p++));
             cputc(' ');
         }
 
         p -= 8;
         for (x = 0; x < 8; ++x)
         {
-            nVal = *p++;
+            nVal = efPeekCartROM(p++);
             if (nVal < ' ')
                 cputc('.');
             else
@@ -81,7 +82,7 @@ static void hexNextBank(void)
         nOffset = 0;
         nChip = 1;
     }
-    else if (nBank < FLASH_MAX_NUM_BANKS)
+    else if (nBank < FLASH_NUM_BANKS)
     {
         ++nBank;
         nChip = 0;

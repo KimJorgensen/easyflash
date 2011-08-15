@@ -52,6 +52,7 @@ static void toggleFastLoader(void);
 static void checkEraseAll(void);
 static uint8_t returnTrue(void);
 static uint8_t ifHaveValidFlash(void);
+static uint8_t ifHaveKERNALs(void);
 static void updateFastLoaderText();
 
 /******************************************************************************/
@@ -75,7 +76,7 @@ uint8_t g_bFastLoaderEnabled;
 // String describes the current action
 static char strStatus[41];
 static char strFastLoader[30];
-static char strMemSize[30];
+static char strMemSize[24];
 
 /******************************************************************************/
 
@@ -97,6 +98,12 @@ ScreenMenu menuMain =
             "&Write CRT to flash",
             checkWriteCRTImage,
             ifHaveValidFlash,
+            0
+        },
+        {
+            "Write &KERNAL to flash",
+            checkWriteKERNALImage,
+            ifHaveKERNALs,
             0
         },
         {
@@ -301,6 +308,13 @@ void refreshMainScreen(void)
     refreshElapsedTime();
     progressShow();
     refreshStatusLine();
+
+    strcpy(utilStr, "Heap: blk ");
+    utilAppendDecimal(_heapmaxavail());
+    utilAppendStr(", all ");
+    utilAppendDecimal(_heapmemavail());
+    gotoxy(0, 0);
+    cputs(utilStr);
 }
 
 
@@ -370,6 +384,7 @@ uint8_t checkFlashType(void)
         memcpy(EAPI_LOAD_TO, pDriver, EAPI_SIZE);
 
         nBanks = eapiInit(&nManufacturerId, &nDeviceId);
+
         if (nBanks > 0)
         {
             bDriverFound = 1;
@@ -443,6 +458,16 @@ static uint8_t returnTrue(void)
 static uint8_t ifHaveValidFlash(void)
 {
     return nManufacturerId | nDeviceId;
+}
+
+/******************************************************************************/
+/**
+ * Return non-0 if the current device has KERNALs like the EF3.
+ */
+static uint8_t ifHaveKERNALs(void)
+{
+    return nManufacturerId == FLASH_MX29LV640EB_MFR_ID &&
+           nDeviceId == FLASH_MX29LV640EB_DEV_ID;
 }
 
 /******************************************************************************/
@@ -563,9 +588,7 @@ int main(void)
     refreshMainScreen();
     showAbout();
     refreshMainScreen();
-    screenBing();
 
-    // this also makes visible 16kByte of flash memory
     checkFlashType();
 
     checkRAM();

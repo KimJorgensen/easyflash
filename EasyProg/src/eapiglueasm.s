@@ -19,6 +19,138 @@ EAPIWriteFlashInc   = $df80 + 21
 EAPISetSlot         = $df80 + 24
 EAPIGetSlot         = $df80 + 27
 
+EASYFLASH_CONTROL = $de02
+EASYFLASH_KILL    = $04
+EASYFLASH_16K     = $07
+
+.segment "LOWCODE"
+
+; =============================================================================
+;
+; Hide BASIC/Cartridge ROM and CLI.
+;
+; changes: Y
+;
+; =============================================================================
+.export _efHideROM
+_efHideROM:
+        ldy #$36
+        sty $01
+        ldy #EASYFLASH_KILL
+        sty EASYFLASH_CONTROL ; avoid the evil mode with cart ROM at $a000
+        cli
+        rts
+
+
+; =============================================================================
+;
+; Show BASIC/Cartridge ROM.
+;
+; changes: Y
+;
+; =============================================================================
+.export _efShowROM
+_efShowROM:
+        sei
+        ldy #$37
+        sty $01
+        ldy #EASYFLASH_16K
+        sty EASYFLASH_CONTROL
+        rts
+
+
+; =============================================================================
+;
+; Map cartridge ROM, read a byte from cartridge ROM, hide ROM again.
+;
+; parameters:
+;       pointer in AX
+; return:
+;       value in A
+;
+; =============================================================================
+.export _efPeekCartROM
+_efPeekCartROM:
+        sta ptr1
+        stx ptr1 + 1
+        jsr _efShowROM
+        ldy #0
+        lda (ptr1), y
+        jsr _efHideROM
+        ldx #0
+        rts
+
+
+; =============================================================================
+;
+; Compare 256 bytes of flash contents and RAM contents. The bank must already
+; be set up. The whole block must be located in one bank and in one flash
+; chip.
+;
+; Return 0 for success, the bad flash memory address for error
+; uint8_t* __fastcall__ efVerifyFlash(uint8_t* pFlash, uint8_t* pRAM);
+;
+; Do not call this from Ultimax mode, Use normal addresses (8000/a000)
+;
+; parameters:
+;       RAM address in AX (A = low)
+;       flash address on cc65-stack
+;
+; return:
+;       result in AX (A = low), 0 = okay, address in flash = error
+;
+; =============================================================================
+.export _efVerifyFlash
+.proc   _efVerifyFlash
+_efVerifyFlash:
+
+        sta ptr1
+        stx ptr1 + 1
+
+        ; get and save address
+        jsr popax
+        sta ptr2
+        stx ptr2 + 1
+
+        sei
+        ldy #$37
+        sty $01
+        ldy #EASYFLASH_16K
+        sty EASYFLASH_CONTROL
+
+        ldy #0
+l1:
+        lda (ptr2), y
+        cmp (ptr1), y
+        bne bad
+        iny
+        bne l1
+
+        ; okay, return NULL
+        tya
+        tax
+        jmp ret4
+bad:
+        ; return bad flash address
+        ldx ptr2 + 1    ; high byte
+        clc
+        tya
+        adc ptr2        ; low byte + bad offset
+        bcc nohigh
+        inx
+nohigh:
+ret4:
+        ldy #$36
+        sty $01
+        ldy #EASYFLASH_KILL
+        sty EASYFLASH_CONTROL
+        cli
+
+        rts
+
+.endproc
+
+
 ; =============================================================================
 ;
 ; (refer to EasyAPI documentation)
@@ -42,9 +174,11 @@ _eapiInit:
         sta ptr1
         stx ptr1 + 1    ; pManufacturerId
 
+        jsr _efShowROM
         jsr EAPIInit
-
         sty tmp1
+        jsr _efHideROM
+
         ldy #0
         sta (ptr2),y    ; Device ID
         txa
@@ -149,12 +283,15 @@ _eapiSetSlot:
 ; =============================================================================
 .export _eapiSectorErase
 _eapiSectorErase:
+        jsr _efShowROM
         ; x to y (high byte of address)
         txa
         tay
 
         jsr EAPIGetBank
         jsr EAPIEraseSector
+        jsr _efHideROM
+
         lda #0
         tax
         bcs eseError
@@ -179,6 +316,8 @@ eseError:
 ; =============================================================================
 .export _eapiWriteFlash
 _eapiWriteFlash:
+        jsr _efShowROM
+
         ; remember value
         pha
 
@@ -194,6 +333,7 @@ _eapiWriteFlash:
         pla
 
         jsr EAPIWriteFlash
+        jsr _efHideROM
         lda #0
         tax
         bcs ewfError
@@ -233,10 +373,19 @@ _eapiGlueWriteBlock:
 wbNext:
         lda $1000, x        ; will be modified
 
+        sty tmp1
+        jsr _efShowROM
+        ldy tmp1            ; todo: optimize!
+
         ; parameters for EAPIWriteFlash
         ;       A   value
         ;       XY  address (X = low), $8xxx/$9xxx or $Exxx/$Fxxx
         jsr EAPIWriteFlash
+
+        sty tmp1
+        jsr _efHideROM
+        ldy tmp1            ; todo: optimize!
+
         bcs wbError
 
         inx
@@ -265,8 +414,8 @@ _aEAPIDrivers:
 
 EAPICode1:
 @CodeStart:
-.incbin "obj/eapi-m29w160t-03", 2
-.res $0300 - (* - @CodeStart), $ff
+;.incbin "obj/eapi-m29w160t-03", 2
+;.res $0300 - (* - @CodeStart), $ff
 
 EAPICode2:
 @CodeStart:
@@ -275,8 +424,8 @@ EAPICode2:
 
 EAPICode3:
 @CodeStart:
-.incbin "obj/eapi-mx29640b-01", 2
-.res $0300 - (* - @CodeStart), $ff
+;.incbin "obj/eapi-mx29640b-01", 2
+;.res $0300 - (* - @CodeStart), $ff
 
 EAPICodeEnd:
 .byte 0

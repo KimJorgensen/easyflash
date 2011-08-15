@@ -24,6 +24,7 @@ extern const char* apStrAskErase[];
 extern const char* apStrEraseFailed[];
 extern const char* apStrFlashWriteFailed[];
 extern const char* apStrFileOpenError[];
+extern const char* apStrOutOfMemory[];
 extern const char* apStrHeaderReadError[];
 extern const char* apStrChipReadError[];
 extern const char* apStrWriteComplete[];

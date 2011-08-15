@@ -30,13 +30,12 @@
 #include <cbm.h>
 
 #include "easyprog.h"
-#include "buffer.h"
 #include "screen.h"
 #include "texts.h"
 #include "dir.h"
 #include "util.h"
 
-#define FILEDLG_MAX_ENTRIES 255
+#define FILEDLG_MAX_ENTRIES 100
 #define FILEDLG_LFN     72
 
 #define FILEDLG_X 6
@@ -67,7 +66,7 @@ static const char strUp[] = { 95, 0 }; // arrow left
 /** Local data: Put here to reduce code size */
 
 // buffer for directory entries
-static DirEntry* aDirEntries;
+static DirEntry* pDirEntries;
 
 // number of directory entries in the buffer
 static uint8_t nDirEntries;
@@ -121,12 +120,12 @@ void fileDlgSort(void)
         if (root)
         {
             parent = --root;
-            entry = aDirEntries[root];
+            entry = pDirEntries[root];
         }
         else if (--n)
         {
-            entry = aDirEntries[n];
-            aDirEntries[n] = aDirEntries[0];
+            entry = pDirEntries[n];
+            pDirEntries[n] = pDirEntries[0];
             parent = 0;
         }
         else
@@ -134,20 +133,20 @@ void fileDlgSort(void)
 
         while ((child = (parent + 1) << 1) < n)
         {
-            if (fileDlgCompareEntries(aDirEntries + (child - 1), aDirEntries + child))
+            if (fileDlgCompareEntries(pDirEntries + (child - 1), pDirEntries + child))
                 --child;
 
-            aDirEntries[parent] = aDirEntries[child];
+            pDirEntries[parent] = pDirEntries[child];
             parent = child;
         }
 
         if (child == n)
         {
             --child;
-            if (fileDlgCompareEntries(aDirEntries + child, &entry))
+            if (fileDlgCompareEntries(pDirEntries + child, &entry))
             {
-                aDirEntries[parent] = aDirEntries[child];
-                aDirEntries[child] = entry;
+                pDirEntries[parent] = pDirEntries[child];
+                pDirEntries[child] = entry;
                 continue;
             }
 
@@ -155,9 +154,9 @@ void fileDlgSort(void)
         }
         else
         {
-            if (fileDlgCompareEntries(aDirEntries + parent, &entry))
+            if (fileDlgCompareEntries(pDirEntries + parent, &entry))
             {
-                aDirEntries[parent] = entry;
+                pDirEntries[parent] = entry;
                 continue;
             }
 
@@ -167,14 +166,14 @@ void fileDlgSort(void)
         while (child != root)
         {
             parent = (child - 1) >> 1;
-            if (fileDlgCompareEntries(aDirEntries + parent, &entry))
+            if (fileDlgCompareEntries(pDirEntries + parent, &entry))
                 break;
 
-            aDirEntries[child] = aDirEntries[parent];
+            pDirEntries[child] = pDirEntries[parent];
             child = parent;
         }
 
-        aDirEntries[child] = entry;
+        pDirEntries[child] = entry;
     }
 }
 
@@ -188,7 +187,7 @@ static void fileDlgReadDir(void)
     uint8_t c;
 
     nDirEntries = 0;
-    pEntry = aDirEntries;
+    pEntry = pDirEntries;
 
     if (dirOpen(FILEDLG_LFN, g_nDrive))
     {
@@ -278,7 +277,7 @@ static void __fastcall__ fileDlgPrintEntry(uint8_t nLine, uint8_t nEntry)
 {
     DirEntry* pEntry;
 
-    pEntry = aDirEntries + nEntry;
+    pEntry = pDirEntries + nEntry;
 
     gotoxy(FILEDLG_X + 1, FILEDLG_Y_ENTRIES + nLine);
 
@@ -342,10 +341,15 @@ uint8_t __fastcall__ fileDlg(const char* pStrType)
     uint8_t rv;
     DirEntry* pEntry;
 
-    bufferHideROM();
     fileDlgPrintFrame();
 
-    aDirEntries = BUFFER_DIR_ADDR;
+    pDirEntries = malloc(FILEDLG_MAX_ENTRIES * sizeof(DirEntry));
+    if (!pDirEntries)
+    {
+    	screenPrintSimpleDialog(apStrOutOfMemory);
+    	return 0;
+    }
+
     rv = 0;
 
     bReload = 1;
@@ -420,7 +424,7 @@ uint8_t __fastcall__ fileDlg(const char* pStrType)
             break;
 
         case CH_ENTER:
-            pEntry = aDirEntries + nSelection;
+            pEntry = pDirEntries + nSelection;
             if (fileDlgEntryIsDir(pEntry))
             {
                 fileDlgChangeDir(pEntry->name);
@@ -455,6 +459,6 @@ uint8_t __fastcall__ fileDlg(const char* pStrType)
         }
     }
 end:
-    bufferShowROM();
+    free(pDirEntries);
     return rv;
 }

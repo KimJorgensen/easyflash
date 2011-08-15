@@ -10,7 +10,7 @@
     .import        callmain
     .import        RESTOR, BSOUT, CLRCH
     .import        __INTERRUPTOR_COUNT__
-    .import        __HIRAM_START__, __HIRAM_SIZE__    ; Linker generated
+    .import        __RAM_START__, __RAM_SIZE__    ; Linker generated
 
     .importzp       sp, sreg, regsave
     .importzp       ptr1, ptr2, ptr3, ptr4
@@ -44,6 +44,9 @@ L1:     lda sp,x
         dex
         bpl L1
 
+        lda #$36        ; Hide BASIC/CART
+        sta $01
+
         ; Close open files
         jsr CLRCH
 
@@ -58,9 +61,9 @@ L1:     lda sp,x
         stx spsave      ; Save the system stack ptr
 
         ; Set argument stack ptr
-        lda #<(__HIRAM_START__ + __HIRAM_SIZE__)
+        lda #<(__RAM_START__ + __RAM_SIZE__)
         sta sp
-        lda #>(__HIRAM_START__ + __HIRAM_SIZE__)
+        lda #>(__RAM_START__ + __RAM_SIZE__)
         sta sp+1
 
         ; Call module constructors

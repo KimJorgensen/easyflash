@@ -38,7 +38,11 @@ static uint8_t buffer[FLASH_WRITE_SIZE];
 
 /******************************************************************************/
 /**
- * Erase a sector that contains the given bank and print the progress.
+ * Erase a 64k sector that contains the given bank and print the progress.
+ *
+ * If nBank has FLASH_8K_SECTOR_BIT set, erase an 8k sector.
+ * This is only possible on devices which have 8k sectors. It will simply
+ * fail or erase 64k on others.
  *
  * return 1 for success, 0 for failure
  */
@@ -46,38 +50,39 @@ uint8_t eraseSector(uint8_t nBank, uint8_t nChip)
 {
     uint8_t* pUltimaxBase;
     uint8_t* pNormalBase;
+    uint8_t  nBanksToErase;
 
-    // start erasing at the first bank of this flash sector
-    // we assume FLASH_BANKS_ERASE_AT_ONCE is a power of 2
-    nBank &= ~(FLASH_BANKS_ERASE_AT_ONCE - 1);
+    // for 64k: start erasing at the first bank of this flash sector
+    nBanksToErase = 1;
+    if (!(nBank & FLASH_8K_SECTOR_BIT))
+    {
+        nBanksToErase = FLASH_BANKS_ERASE_AT_ONCE;
+        nBank &= ~(FLASH_BANKS_ERASE_AT_ONCE - 1);
+    }
 
     pNormalBase  = apNormalRomBase[nChip];
     pUltimaxBase = apUltimaxRomBase[nChip];
 
     eapiSetBank(nBank);
 
-    progressSetMultipleBanksState(nBank, nChip,
-                                  FLASH_BANKS_ERASE_AT_ONCE,
+    progressSetMultipleBanksState(nBank, nChip, nBanksToErase,
                                   PROGRESS_ERASING);
 
     // send the erase command
     if (eapiSectorErase(pUltimaxBase))
     {
-        progressSetMultipleBanksState(nBank, nChip,
-                                      FLASH_BANKS_ERASE_AT_ONCE,
+        progressSetMultipleBanksState(nBank, nChip, nBanksToErase,
                                       PROGRESS_ERASED);
         return 1;
     }
     else
     {
-        progressSetMultipleBanksState(nBank, nChip,
-                                      FLASH_BANKS_ERASE_AT_ONCE,
+        progressSetMultipleBanksState(nBank, nChip, nBanksToErase,
                                       PROGRESS_UNTOUCHED);
         screenPrintSimpleDialog(apStrEraseFailed);
     }
     return 0;
 }
-
 
 /******************************************************************************/
 /**
@@ -92,7 +97,7 @@ uint8_t eraseAll(void)
 
     for (nChip = 0; nChip < 2; ++nChip)
     {
-        // erase 64 kByte = 8 banks at once (29F040)
+        // erase 64 kByte = 8 banks at once
         for (nBank = 0; nBank < FLASH_NUM_BANKS; nBank
                 += FLASH_BANKS_ERASE_AT_ONCE)
         {
@@ -174,7 +179,7 @@ uint8_t __fastcall__ flashVerifyBlock(uint8_t nBank, uint8_t nChip,
     pNormalBase = apNormalRomBase[nChip];
     pFlash      = pNormalBase + nOffset;
 
-    pFlash = tortureTestVerifyFlash(pFlash, pBlock);
+    pFlash = efVerifyFlash(pFlash, pBlock);
     if (pFlash)
     {
         nOffset = pFlash - pNormalBase;
