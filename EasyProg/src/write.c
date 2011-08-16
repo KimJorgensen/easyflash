@@ -36,6 +36,7 @@
 #include "write.h"
 #include "filedlg.h"
 #include "sprites.h"
+#include "slots.h"
 #include "progress.h"
 #include "timer.h"
 #include "util.h"
@@ -359,6 +360,7 @@ static void checkWriteImage(uint8_t imageType)
  */
 void checkWriteCRTImage(void)
 {
+    checkAskForSlot(1);
     checkWriteImage(IMAGE_TYPE_CRT);
 }
 
@@ -369,6 +371,7 @@ void checkWriteCRTImage(void)
  */
 void checkWriteKERNALImage(void)
 {
+    selectSlot0();
     checkWriteImage(IMAGE_TYPE_KERNAL);
 }
 
@@ -379,6 +382,7 @@ void checkWriteKERNALImage(void)
  */
 void checkWriteLOROMImage(void)
 {
+    checkAskForSlot(1);
     checkWriteImage(IMAGE_TYPE_LOROM);
 }
 
@@ -389,5 +393,6 @@ void checkWriteLOROMImage(void)
  */
 void checkWriteHIROMImage(void)
 {
+    checkAskForSlot(1);
     checkWriteImage(IMAGE_TYPE_HIROM);
 }

@@ -125,6 +125,16 @@ const char* apStrAskErase[] =
         NULL
 };
 
+const char* apStrSlot0[] =
+{
+        "Slot 0 is for the system menu."
+        "Are you sure that you want to"
+        "overwrite it?",
+        "Press <Stop> to cancel,",
+        "<Enter> to continue.",
+        NULL
+};
+
 const char* apStrEraseFailed[] =
 {
         "Flash erase failed,",

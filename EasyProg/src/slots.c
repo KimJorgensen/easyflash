@@ -37,6 +37,9 @@
 
 #define MAX_SLOTS 16
 
+uint8_t g_nSelectedSlot;
+uint8_t g_nSlots;
+
 
 /******************************************************************************/
 /**
@@ -76,4 +79,44 @@ uint8_t __fastcall__ selectSlotDialog(uint8_t nSlots)
     rv = selectBox(pEntries, "a slot to use");
     free(pEntries);
     return rv;
+}
+
+/******************************************************************************/
+/**
+ * If we have more than one slot, ask the user which one he wants to use.
+ * If bWarn != 0 and he selects slot 0, print a warning and repeat the
+ * selection.
+ **/
+void __fastcall__ checkAskForSlot(uint8_t bWarn)
+{
+    if (g_nSlots > 1)
+    {
+        for (;;)
+        {
+            refreshMainScreen();
+            g_nSelectedSlot = selectSlotDialog(g_nSlots);
+            if (g_nSelectedSlot == 0 && bWarn)
+            {
+                if (screenPrintDialog(apStrAskErase,
+                        BUTTON_ENTER | BUTTON_STOP) == BUTTON_ENTER)
+                    break;
+            }
+            else
+                break;
+        }
+        refreshMainScreen();
+    }
+}
+
+/******************************************************************************/
+/**
+ *
+ **/
+void selectSlot0(void)
+{
+    if (g_nSlots > 1)
+    {
+        g_nSelectedSlot = 0;
+        refreshMainScreen();
+    }
 }
