@@ -43,13 +43,13 @@
  * Let the user select a slot. Return the slot number.
  * Return 255 if the user canceled the selection.
  */
-uint8_t __fastcall__ selectSlot(uint8_t nSlots)
+uint8_t __fastcall__ selectSlotDialog(uint8_t nSlots)
 {
 	SelectBoxEntry* pEntries;
     SelectBoxEntry* pEntry;
     uint8_t    nSlot, rv;
 
-    pEntries = malloc(MAX_SLOTS * sizeof(SelectBoxEntry));
+    pEntries = malloc((MAX_SLOTS + 1) * sizeof(SelectBoxEntry));
     if (!pEntries)
     {
     	screenPrintSimpleDialog(apStrOutOfMemory);
@@ -71,7 +71,7 @@ uint8_t __fastcall__ selectSlot(uint8_t nSlots)
         }
         ++pEntry;
     }
-    pEntry->label[nSlot] = 0; // end marker
+    pEntry->label[0] = 0; // end marker
 
     rv = selectBox(pEntries, "a slot to use");
     free(pEntries);
