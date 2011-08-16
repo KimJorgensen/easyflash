@@ -59,12 +59,10 @@ static void updateFastLoaderText();
 
 
 // Low/High flash chip manufacturer/device ID
-uint8_t nManufacturerId;
-uint8_t nDeviceId;
-uint8_t nBanks;
-uint8_t nSlots;
-uint8_t nSelectedSlot;
-const char* pStrFlashDriver = "";
+static uint8_t nManufacturerId;
+static uint8_t nDeviceId;
+static uint8_t nBanks;
+static const char* pStrFlashDriver = "";
 
 
 uint8_t g_bFastLoaderEnabled;
@@ -263,11 +261,12 @@ void refreshMainScreen(void)
     cputs("elp");
 
     textcolor(COLOR_LIGHTFRAME);
-    screenPrintBox(16, 3, 23, 11);
+    screenPrintBox(16, 3, 23, 13);
     screenPrintSepLine(16, 38, 5);
     screenPrintSepLine(16, 38, 7);
     screenPrintSepLine(16, 38, 9);
     screenPrintSepLine(16, 38, 11);
+    screenPrintSepLine(16, 38, 13);
     textcolor(COLOR_FOREGROUND);
 
     gotoxy(6, 4);
@@ -293,10 +292,10 @@ void refreshMainScreen(void)
     gotoxy(2, 12);
     cputs("Selected Slot:");
     gotox(17);
-    if (nSlots > 1)
+    if (g_nSlots > 1)
     {
         utilStr[0] = '\0';
-        utilAppendDecimal(nSelectedSlot);
+        utilAppendDecimal(g_nSelectedSlot);
         cputs(utilStr);
     }
     else
@@ -325,7 +324,7 @@ void refreshMainScreen(void)
 static void updateMemSizeText(void)
 {
     utilStr[0] = '\0';
-    utilAppendDecimal(nSlots);
+    utilAppendDecimal(g_nSlots);
     utilAppendStr(" * ");
     utilAppendDecimal(nBanks * 16);
     utilAppendStr(" KiByte");
@@ -412,16 +411,12 @@ uint8_t checkFlashType(void)
     if (bDriverFound)
     {
         pStrFlashDriver = EAPI_DRIVER_NAME;
-        nSlots = 1;
+        g_nSlots = 1;
         if (nBanks < 64)
         {
-            nSlots = nBanks;
+            g_nSlots = nBanks;
             nBanks = 64;
-        }
-        if (nSlots > 1)
-        {
-        	nSelectedSlot = selectSlot(nSlots);
-            eapiSetSlot(nSelectedSlot);
+            eapiSetSlot(g_nSelectedSlot);
         }
         updateMemSizeText();
         refreshMainScreen();
@@ -436,7 +431,7 @@ failed:
     pStrFlashDriver = "(failed)";
     refreshMainScreen();
     nManufacturerId = nDeviceId = 0;
-    nSlots = nSelectedSlot = 0;
+    g_nSlots = g_nSelectedSlot = 0;
     return 0;
 }
 
