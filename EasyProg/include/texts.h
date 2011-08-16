@@ -21,6 +21,7 @@ extern const char* apStrBadRAM[];
 extern const char* apStrROMLProtected[];
 extern const char* apStrROMHProtected[];
 extern const char* apStrAskErase[];
+extern const char* apStrSlot0[];
 extern const char* apStrEraseFailed[];
 extern const char* apStrFlashWriteFailed[];
 extern const char* apStrFileOpenError[];
