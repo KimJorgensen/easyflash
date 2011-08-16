@@ -414,8 +414,8 @@ _aEAPIDrivers:
 
 EAPICode1:
 @CodeStart:
-;.incbin "obj/eapi-m29w160t-03", 2
-;.res $0300 - (* - @CodeStart), $ff
+.incbin "obj/eapi-m29w160t-03", 2
+.res $0300 - (* - @CodeStart), $ff
 
 EAPICode2:
 @CodeStart:
@@ -424,8 +424,8 @@ EAPICode2:
 
 EAPICode3:
 @CodeStart:
-;.incbin "obj/eapi-mx29640b-01", 2
-;.res $0300 - (* - @CodeStart), $ff
+.incbin "obj/eapi-mx29640b-01", 2
+.res $0300 - (* - @CodeStart), $ff
 
 EAPICodeEnd:
 .byte 0
