@@ -54,7 +54,7 @@ eapi_dir := ../EasySDK/eapi
 eapi_src := $(addprefix $(eapi_dir)/out/,$(eapi))
 eapi_obj := $(addprefix obj/,$(eapi))
 
-inc      := include
+inc      := src
 inc      += eload/src
 
 INCLUDE  := $(addprefix -I,$(inc))
