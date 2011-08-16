@@ -35,7 +35,6 @@
 #include "eapiglue.h"
 #include "flash.h"
 #include "texts.h"
-#include "buffer.h"
 #include "hex.h"
 #include "progress.h"
 #include "timer.h"
@@ -234,8 +233,6 @@ static void refreshStatusLine(void)
  */
 void refreshMainScreen(void)
 {
-    const char* str;
-
     screenPrintFrame();
 
     // menu entries

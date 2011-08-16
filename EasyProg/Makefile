@@ -29,7 +29,6 @@ obj += obj/filedlg.o
 obj += obj/selectbox.o
 obj += obj/slots.o
 obj += obj/hex.o
-obj += obj/buffer.o
 obj += obj/torturetest.o
 obj += obj/write.o
 obj += obj/util.o

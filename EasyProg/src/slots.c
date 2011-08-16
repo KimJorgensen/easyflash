@@ -28,7 +28,6 @@
 #include <string.h>
 
 #include "easyprog.h"
-#include "buffer.h"
 #include "texts.h"
 #include "slots.h"
 #include "screen.h"

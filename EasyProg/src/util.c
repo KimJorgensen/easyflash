@@ -22,7 +22,6 @@
  * Thomas Giesel skoe@directbox.com
  */
 
-#include <buffer.h>
 #include <cbm.h>
 #include <string.h>
 #include <conio.h>
