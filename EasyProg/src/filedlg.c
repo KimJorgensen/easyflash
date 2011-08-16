@@ -35,7 +35,7 @@
 #include "dir.h"
 #include "util.h"
 
-#define FILEDLG_MAX_ENTRIES 100
+#define FILEDLG_MAX_ENTRIES 255
 #define FILEDLG_LFN     72
 
 #define FILEDLG_X 6
