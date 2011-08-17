@@ -264,7 +264,7 @@ static uint8_t writeBinImage(uint8_t nChip)
     {
         nBytes = utilRead(BLOCK_BUFFER, 0x100);
 
-        if (nBytes >= 0)
+        if (nBytes > 0)
         {
             // the last block may be smaller than 265 bytes, then we write padding
             if (!flashWriteBlock(m_nBank, nChip, nOffset))
