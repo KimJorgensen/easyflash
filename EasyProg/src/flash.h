@@ -51,10 +51,10 @@ uint8_t eraseAll(void);
 uint8_t flashWrite(uint8_t nChip, uint16_t nOffset, uint8_t nVal);
 
 uint8_t __fastcall__ flashWriteBlock(uint8_t nBank, uint8_t nChip,
-                                     uint16_t nOffset, uint8_t* pBlock);
+                                     uint16_t nOffset);
 
 uint8_t __fastcall__ flashVerifyBlock(uint8_t nBank, uint8_t nChip,
-                                      uint16_t nOffset, uint8_t* pBlock);
+                                      uint16_t nOffset);
 
 uint8_t flashWriteBankFromFile(uint8_t nBank, uint8_t nChip,
                                 uint16_t nSize);

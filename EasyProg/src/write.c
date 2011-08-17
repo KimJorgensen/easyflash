@@ -41,6 +41,7 @@
 #include "timer.h"
 #include "util.h"
 #include "eload.h"
+#include "eapiglue.h"
 
 /******************************************************************************/
 /* Static variables */
@@ -99,7 +100,6 @@ static uint8_t writeCRTError(void)
 static uint8_t __fastcall__ writeStartUpCode(uint8_t* pBankOffset)
 {
     uint8_t  nConfig;
-    uint8_t* pBuffer;
     uint8_t  rv;
 
     // most CRT types are put on bank 1
@@ -134,38 +134,39 @@ static uint8_t __fastcall__ writeStartUpCode(uint8_t* pBankOffset)
 
     default:
         screenPrintSimpleDialog(apStrUnsupportedCRTType);
-        return CART_RV_ERR;
+        goto err;
     }
 
-    pBuffer = malloc(0x100);
-
-    // btw: the buffer must always be 256 bytes long
     // !!! keep this crap in sync with startup.s - especially the code size !!!
     // copy the startup code to the buffer and patch the start bank and config
-    memcpy(pBuffer, startUpStart, 0x100);
+    memcpy(BLOCK_BUFFER, startUpStart, 0x100);
 
     // the 1st byte of this code is the start bank to be used - patch it
-    pBuffer[0] = *pBankOffset;
+    BLOCK_BUFFER[0] = *pBankOffset;
 
     // the 2nd byte of this code is the memory config to be used - patch it
-    pBuffer[1] = nConfig | EASYFLASH_IO_BIT_LED;
+    BLOCK_BUFFER[1] = nConfig | EASYFLASH_IO_BIT_LED;
 
     // write the startup code to bank 0, always write 2 * 256 bytes
-    if (!flashWriteBlock(0, 1, 0x1e00, pBuffer) ||
-        !flashWriteBlock(0, 1, 0x1f00, startUpStart + 0x100))
-    	goto err;
+    if (!flashWriteBlock(0, 1, 0x1e00))
+        goto err;
 
+    memcpy(BLOCK_BUFFER, startUpStart + 0x100, 0x100);
+    if (!flashWriteBlock(0, 1, 0x1f00))
+    	goto err;
 
     // write the sprites to 00:1:1800
     // keep this in sync with sprites.s
-    if (!flashWriteBlock(0, 1, 0x1800, pSprites) ||
-        !flashWriteBlock(0, 1, 0x1900, pSprites + 0x100))
-    	goto err;
+    memcpy(BLOCK_BUFFER, pSprites, 0x100);
+    if (!flashWriteBlock(0, 1, 0x1800))
+        goto err;
 
-	free(pBuffer);
+    memcpy(BLOCK_BUFFER, pSprites + 0x100, 0x100);
+    if (!flashWriteBlock(0, 1, 0x1900))
+        goto err;
+
     return CART_RV_OK;
 err:
-	free(pBuffer);
 	return CART_RV_ERR;
 }
 
@@ -213,9 +214,7 @@ static uint8_t writeCrtImage(void)
                 {
                     if (!flashWriteBankFromFile(m_nBank, 0, 0x2000) ||
                         !flashWriteBankFromFile(m_nBank, 1, m_nSize - 0x2000))
-                    {
                         return CART_RV_ERR;
-                    }
                 }
                 else
                 {
@@ -256,27 +255,23 @@ static uint8_t writeBinImage(uint8_t nChip)
 {
     uint16_t nOffset;
     int      nBytes;
-    uint8_t* pBuffer;
-    uint8_t  rv;
 
     // this will show the cartridge type from the header
     refreshMainScreen();
 
-    pBuffer = malloc(0x100);
     nOffset = 0;
-    rv = CART_RV_ERR;
     do
     {
-        nBytes = utilRead(pBuffer, 0x100);
+        nBytes = utilRead(BLOCK_BUFFER, 0x100);
 
         if (nBytes >= 0)
         {
             // the last block may be smaller than 265 bytes, then we write padding
-            if (!flashWriteBlock(m_nBank, nChip, nOffset, pBuffer))
-                goto ret;
+            if (!flashWriteBlock(m_nBank, nChip, nOffset))
+                return CART_RV_ERR;
 
-            if (!flashVerifyBlock(m_nBank, nChip, nOffset, pBuffer))
-                goto ret;
+            if (!flashVerifyBlock(m_nBank, nChip, nOffset))
+                return CART_RV_ERR;
 
             nOffset += 0x100;
             if (nOffset == 0x2000)
@@ -289,10 +284,9 @@ static uint8_t writeBinImage(uint8_t nChip)
     while (nBytes == 0x100);
 
     if (nOffset || m_nBank)
-        rv = CART_RV_OK;
-ret:
-	free(pBuffer);
-	return rv;
+        return CART_RV_OK;
+
+    return CART_RV_ERR;
 }
 
 
@@ -337,12 +331,11 @@ static void checkWriteImage(uint8_t imageType)
         rv = writeCrtImage();
     else if (imageType == IMAGE_TYPE_KERNAL)
     {
-        m_nBank = FLASH_8K_SECTOR_BIT + 1;
         rv = writeBinImage(0);
     }
     else
     {
-        m_nBank = 0;
+        // m_nBank has been set by caller already;
         rv = writeBinImage(imageType == IMAGE_TYPE_HIROM);
     }
     eload_close();
@@ -372,7 +365,12 @@ void checkWriteCRTImage(void)
 void checkWriteKERNALImage(void)
 {
     selectSlot0();
-    checkWriteImage(IMAGE_TYPE_KERNAL);
+    m_nBank = selectKERNALSlotDialog();
+    if (m_nBank != 255)
+    {
+        m_nBank |= FLASH_8K_SECTOR_BIT;
+        checkWriteImage(IMAGE_TYPE_KERNAL);
+    }
 }
 
 
