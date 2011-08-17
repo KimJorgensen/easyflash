@@ -44,10 +44,6 @@
  *   1k 0xff - 0x00 (repeated)
  */
 
-// static because my heap doesn't work yet
-// The buffer must always be 256 bytes long
-static uint8_t buffer[256];
-
 /******************************************************************************/
 /**
  * Write the test data to the cartridge.
@@ -64,10 +60,9 @@ static uint8_t tortureTestWriteData(void)
         {
             for (addr.nOffset = 0; addr.nOffset < 0x2000; addr.nOffset += 256)
             {
-                tortureTestFillBuffer(buffer, &addr);
+                tortureTestFillBuffer(BLOCK_BUFFER, &addr);
 
-                if (!flashWriteBlock(addr.nBank, addr.nChip, addr.nOffset,
-                                     buffer))
+                if (!flashWriteBlock(addr.nBank, addr.nChip, addr.nOffset))
                 {
                     return 0;
                 }
@@ -97,13 +92,13 @@ static uint8_t tortureTestVerify(uint8_t nBank)
     {
         for (addr.nOffset = 0; addr.nOffset < 0x2000; addr.nOffset += 256)
         {
-            tortureTestFillBuffer(buffer, &addr);
+            tortureTestFillBuffer(BLOCK_BUFFER, &addr);
 
-            rv = tortureTestCompare(buffer, &addr);
+            rv = tortureTestCompare(BLOCK_BUFFER, &addr);
 
             if (rv != 256)
             {
-                nData = buffer[rv];
+                nData = BLOCK_BUFFER[rv];
                 if (addr.nChip)
                     nFlash = efPeekCartROM(ROM1_BASE + addr.nOffset + rv);
                 else

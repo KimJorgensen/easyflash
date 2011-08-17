@@ -30,4 +30,7 @@ void __fastcall__ eapiSetSlot(uint8_t nSlot);
 
 extern uint8_t aEAPIDrivers[][EAPI_SIZE];
 
+extern uint8_t _BLOCK_BUFFER_START__;
+#define BLOCK_BUFFER (&_BLOCK_BUFFER_START__)
+
 #endif

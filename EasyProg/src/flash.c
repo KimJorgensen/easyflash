@@ -34,7 +34,6 @@ static const unsigned char pStrEAPISignature[] =
 };
 
 #define FLASH_WRITE_SIZE 256
-static uint8_t buffer[FLASH_WRITE_SIZE];
 
 /******************************************************************************/
 /**
@@ -112,14 +111,14 @@ uint8_t eraseAll(void)
 
 /******************************************************************************/
 /**
- * Write a block of 256 bytes to the flash.
+ * Write a block of 256 bytes from BLOCK_BUFFER to the flash.
  * The whole block must be located in one bank and in one flash chip.
  * If the flash block has an unknown state, erase it.
  *
  * return 1 for success, 0 for failure
  */
 uint8_t __fastcall__ flashWriteBlock(uint8_t nBank, uint8_t nChip,
-                                     uint16_t nOffset, uint8_t* pBlock)
+                                     uint16_t nOffset)
 {
     uint16_t rv;
     uint8_t* pDest;
@@ -145,7 +144,7 @@ uint8_t __fastcall__ flashWriteBlock(uint8_t nBank, uint8_t nChip,
     pDest = apUltimaxRomBase[nChip] + nOffset;
 
     progressSetBankState(nBank, nChip, PROGRESS_WRITING);
-    rv = eapiGlueWriteBlock(pDest, pBlock);
+    rv = eapiGlueWriteBlock(pDest, BLOCK_BUFFER);
     if (rv != 0x100)
     {
          progressSetBankState(nBank, nChip, PROGRESS_UNTOUCHED);
@@ -160,7 +159,7 @@ uint8_t __fastcall__ flashWriteBlock(uint8_t nBank, uint8_t nChip,
 
 /******************************************************************************/
 /**
- * Compare 256 bytes of flash contents and RAM contents.
+ * Compare 256 bytes of flash contents and BLOCK_BUFFER contents.
  * The whole block must be located in one bank and in one flash
  * chip.
  *
@@ -169,7 +168,7 @@ uint8_t __fastcall__ flashWriteBlock(uint8_t nBank, uint8_t nChip,
  * return 1 for success (same), 0 for failure
  */
 uint8_t __fastcall__ flashVerifyBlock(uint8_t nBank, uint8_t nChip,
-                                      uint16_t nOffset, uint8_t* pBlock)
+                                      uint16_t nOffset)
 {
     uint8_t* pNormalBase;
     uint8_t* pFlash;
@@ -179,12 +178,12 @@ uint8_t __fastcall__ flashVerifyBlock(uint8_t nBank, uint8_t nChip,
     pNormalBase = apNormalRomBase[nChip];
     pFlash      = pNormalBase + nOffset;
 
-    pFlash = efVerifyFlash(pFlash, pBlock);
+    pFlash = efVerifyFlash(pFlash, BLOCK_BUFFER);
     if (pFlash)
     {
         nOffset = pFlash - pNormalBase;
         screenPrintVerifyError(nBank, nChip, nOffset,
-                               pBlock[nOffset], *pFlash);
+                BLOCK_BUFFER[nOffset], *pFlash);
         return 0;
     }
 
@@ -218,7 +217,7 @@ uint8_t flashWriteBankFromFile(uint8_t nBank, uint8_t nChip,
         oldState = progressGetStateAt(nBank, nChip);
         progressSetBankState(nBank, nChip, PROGRESS_READING);
 
-        if (utilRead(buffer, nBytes) != nBytes)
+        if (utilRead(BLOCK_BUFFER, nBytes) != nBytes)
         {
             screenPrintSimpleDialog(apStrFileTooShort);
             progressSetBankState(nBank, nChip, PROGRESS_UNTOUCHED);
@@ -229,23 +228,23 @@ uint8_t flashWriteBankFromFile(uint8_t nBank, uint8_t nChip,
 
         // Check if EAPI has to be replaced
         if (nBank == 0 && nChip == 1 && nOffset == 0x1800 &&
-                    memcmp(buffer, pStrEAPISignature, 4) == 0)
+                    memcmp(BLOCK_BUFFER, pStrEAPISignature, 4) == 0)
             bReplaceEAPI = 1;
 
         if (bReplaceEAPI)
         {
             if (nOffset == 0x1800)
-                memcpy(buffer, EAPI_LOAD_TO, 0x100);
+                memcpy(BLOCK_BUFFER, EAPI_LOAD_TO, 0x100);
             else if (nOffset == 0x1900)
-                memcpy(buffer, EAPI_LOAD_TO + 0x100, 0x100);
+                memcpy(BLOCK_BUFFER, EAPI_LOAD_TO + 0x100, 0x100);
             else if (nOffset == 0x1a00)
-                memcpy(buffer, EAPI_LOAD_TO + 0x200, 0x100);
+                memcpy(BLOCK_BUFFER, EAPI_LOAD_TO + 0x200, 0x100);
         }
 
-        if (!flashWriteBlock(nBank, nChip, nOffset, buffer))
+        if (!flashWriteBlock(nBank, nChip, nOffset))
             return 0;
 
-        if (!flashVerifyBlock(nBank, nChip, nOffset, buffer))
+        if (!flashVerifyBlock(nBank, nChip, nOffset))
             return 0;
 
         nSize -= nBytes;
