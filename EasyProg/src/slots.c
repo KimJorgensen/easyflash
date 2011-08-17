@@ -35,6 +35,7 @@
 #include "util.h"
 
 #define MAX_SLOTS 16
+#define MAX_KERNALS 8
 
 uint8_t g_nSelectedSlot;
 uint8_t g_nSlots;
@@ -80,6 +81,41 @@ uint8_t __fastcall__ selectSlotDialog(uint8_t nSlots)
     return rv;
 }
 
+
+/******************************************************************************/
+/**
+ * Let the user select a KERNAL slot. Return the slot number.
+ * Return 255 if the user canceled the selection.
+ */
+uint8_t selectKERNALSlotDialog(void)
+{
+    SelectBoxEntry* pEntries;
+    SelectBoxEntry* pEntry;
+    uint8_t    nSlot, rv;
+
+    pEntries = malloc((MAX_KERNALS + 1) * sizeof(SelectBoxEntry));
+    if (!pEntries)
+    {
+        screenPrintSimpleDialog(apStrOutOfMemory);
+        return 0;
+    }
+
+    pEntry = pEntries;
+    for (nSlot = 0; nSlot < MAX_KERNALS; ++nSlot)
+    {
+        strcpy(utilStr, "KERNAL ");
+        utilAppendDecimal(nSlot);
+        strcpy(pEntry->label, utilStr);
+        ++pEntry;
+    }
+    pEntry->label[0] = 0; // end marker
+
+    rv = selectBox(pEntries, "a KERNAL to write");
+    free(pEntries);
+    return rv;
+}
+
+
 /******************************************************************************/
 /**
  * If we have more than one slot, ask the user which one he wants to use.
@@ -96,7 +132,7 @@ void __fastcall__ checkAskForSlot(uint8_t bWarn)
             g_nSelectedSlot = selectSlotDialog(g_nSlots);
             if (g_nSelectedSlot == 0 && bWarn)
             {
-                if (screenPrintDialog(apStrAskErase,
+                if (screenPrintDialog(apStrSlot0,
                         BUTTON_ENTER | BUTTON_STOP) == BUTTON_ENTER)
                     break;
             }
