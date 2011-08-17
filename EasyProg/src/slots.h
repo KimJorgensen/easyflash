@@ -5,6 +5,7 @@
 #include <stdint.h>
 
 uint8_t __fastcall__ selectSlotDialog(uint8_t nSlots);
+uint8_t selectKERNALSlotDialog(void);
 void __fastcall__ checkAskForSlot(uint8_t bWarn);
 void selectSlot0(void);
 
