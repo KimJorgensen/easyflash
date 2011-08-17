@@ -127,9 +127,9 @@ const char* apStrAskErase[] =
 
 const char* apStrSlot0[] =
 {
-        "Slot 0 is for the system menu."
-        "Are you sure that you want to"
-        "overwrite it?",
+        "Slot 0 usually contains the",
+        "system menu. Are you sure",
+        "that you want to overwrite it?",
         "Press <Stop> to cancel,",
         "<Enter> to continue.",
         NULL
