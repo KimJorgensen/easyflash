@@ -1,3 +1,5 @@
 - Slot-Auswahl und KERNAL-Slot-Auswahl abbrechbar machen
-- KERNAL schreibt auf die nächste Seite
 - Hex-Editor und Torture-Test müssen Slot-Auswahl bekommen
+
+Prio 2:
+- Progress-Anzeige optimieren. Screen refresh dauert zu lange

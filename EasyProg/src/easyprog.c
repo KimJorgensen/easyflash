@@ -45,6 +45,8 @@
 #include "sprites.h"
 #include "util.h"
 
+#undef SHOW_HEAP_FREE
+
 /******************************************************************************/
 static void showAbout(void);
 static void toggleFastLoader(void);
@@ -304,13 +306,14 @@ void refreshMainScreen(void)
     refreshElapsedTime();
     progressShow();
     refreshStatusLine();
-
+#ifdef SHOW_HEAP_FREE
     strcpy(utilStr, "Heap: blk ");
     utilAppendDecimal(_heapmaxavail());
     utilAppendStr(", all ");
     utilAppendDecimal(_heapmemavail());
     gotoxy(0, 0);
     cputs(utilStr);
+#endif
 }
 
 
