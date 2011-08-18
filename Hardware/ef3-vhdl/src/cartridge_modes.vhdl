@@ -1,6 +1,6 @@
 ----------------------------------------------------------------------------------
 -- 
--- (c) 2009 Thomas 'skoe' Giesel
+-- (c) 2011 Thomas 'skoe' Giesel
 --
 -- This software is provided 'as-is', without any express or implied
 -- warranty.  In no event will the authors be held liable for any damages
