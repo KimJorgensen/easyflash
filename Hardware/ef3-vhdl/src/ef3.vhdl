@@ -187,38 +187,39 @@ architecture ef3_arc of ef3 is
 
     component cart_easyflash is
         port (
-            clk:        in  std_logic;
-            n_sys_reset: in  std_logic;
-            n_reset:    in  std_logic;
-            enable:     in  std_logic;
-            n_io1:      in  std_logic;
-            n_io2:      in  std_logic;
-            n_roml:     in  std_logic;
-            n_romh:     in  std_logic;
-            n_wr:       in  std_logic;
-            bus_ready:  in  std_logic;
-            cycle_end:  in  std_logic;
-            addr:       in  std_logic_vector(15 downto 0);
-            data:       in  std_logic_vector(7 downto 0);
+            clk:            in  std_logic;
+            n_sys_reset:    in  std_logic;
+            set_boot_flag:  in  std_logic;
+            n_reset:        in  std_logic;
+            enable:         in  std_logic;
+            n_io1:          in  std_logic;
+            n_io2:          in  std_logic;
+            n_roml:         in  std_logic;
+            n_romh:         in  std_logic;
+            n_wr:           in  std_logic;
+            bus_ready:      in  std_logic;
+            cycle_end:      in  std_logic;
+            addr:           in  std_logic_vector(15 downto 0);
+            data:           in  std_logic_vector(7 downto 0);
             button_crt_reset:  in std_logic;
             button_special_fn: in std_logic;
-            slot:       in std_logic_vector(2 downto 0);
-            new_slot:   out std_logic_vector(2 downto 0);
-            latch_slot: out std_logic;
-            mem_addr:   out std_logic_vector(12 downto 0);
+            slot:           in std_logic_vector(2 downto 0);
+            new_slot:       out std_logic_vector(2 downto 0);
+            latch_slot:     out std_logic;
+            mem_addr:       out std_logic_vector(12 downto 0);
             latch_mem_addr: out std_logic;
             bank:           out std_logic_vector(5 downto 0);
             latch_bank:     out std_logic;
-            ma19:       out std_logic;
-            latch_ma19: out std_logic;
-            n_game:     out std_logic;
-            n_exrom:    out std_logic;
-            start_reset: out std_logic;
-            ram_read:   out std_logic;
-            ram_write:  out std_logic;
-            flash_read: out std_logic;
-            flash_write: out std_logic;
-            data_out:   out std_logic_vector(7 downto 0);
+            ma19:           out std_logic;
+            latch_ma19:     out std_logic;
+            n_game:         out std_logic;
+            n_exrom:        out std_logic;
+            start_reset:    out std_logic;
+            ram_read:       out std_logic;
+            ram_write:      out std_logic;
+            flash_read:     out std_logic;
+            flash_write:    out std_logic;
+            data_out:       out std_logic_vector(7 downto 0);
             data_out_valid: out std_logic
         );
     end component;
@@ -271,7 +272,7 @@ begin
 
     u_cart_easyflash: cart_easyflash port map
     (
-        clk, n_sys_reset, n_reset, 
+        clk, n_sys_reset, start_reset_to_menu, n_reset, 
         enable_ef,
         n_io1, n_io2, n_roml, n_romh, n_wr, 
         bus_ready, cycle_end,

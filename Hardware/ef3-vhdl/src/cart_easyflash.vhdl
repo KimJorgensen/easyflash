@@ -27,38 +27,39 @@ use ieee.numeric_std.all;
 
 entity cart_easyflash is
     port (
-        clk:        in  std_logic;
-        n_sys_reset: in  std_logic;
-        n_reset:    in  std_logic;
-        enable:     in  std_logic;
-        n_io1:      in  std_logic;
-        n_io2:      in  std_logic;
-        n_roml:     in  std_logic;
-        n_romh:     in  std_logic;
-        n_wr:       in  std_logic;
-        bus_ready:  in  std_logic;
-        cycle_end:  in  std_logic;
-        addr:       in  std_logic_vector(15 downto 0);
-        data:       in  std_logic_vector(7 downto 0);
+        clk:            in  std_logic;
+        n_sys_reset:    in  std_logic;
+        set_boot_flag:  in  std_logic;
+        n_reset:        in  std_logic;
+        enable:         in  std_logic;
+        n_io1:          in  std_logic;
+        n_io2:          in  std_logic;
+        n_roml:         in  std_logic;
+        n_romh:         in  std_logic;
+        n_wr:           in  std_logic;
+        bus_ready:      in  std_logic;
+        cycle_end:      in  std_logic;
+        addr:           in  std_logic_vector(15 downto 0);
+        data:           in  std_logic_vector(7 downto 0);
         button_crt_reset:  in std_logic;
         button_special_fn: in std_logic;
-        slot:       in std_logic_vector(2 downto 0);
-        new_slot:   out std_logic_vector(2 downto 0);
-        latch_slot: out std_logic;
-        mem_addr:   out std_logic_vector(12 downto 0);
+        slot:           in std_logic_vector(2 downto 0);
+        new_slot:       out std_logic_vector(2 downto 0);
+        latch_slot:     out std_logic;
+        mem_addr:       out std_logic_vector(12 downto 0);
         latch_mem_addr: out std_logic;
-        bank:       out std_logic_vector(5 downto 0);
-        latch_bank: out std_logic;
-        ma19:       out std_logic;
-        latch_ma19: out std_logic;
-        n_game:     out std_logic;
-        n_exrom:    out std_logic;
-        start_reset: out std_logic;
-        ram_read:   out std_logic;
-        ram_write:  out std_logic;
-        flash_read: out std_logic;
-        flash_write: out std_logic;
-        data_out:   out std_logic_vector(7 downto 0);
+        bank:           out std_logic_vector(5 downto 0);
+        latch_bank:     out std_logic;
+        ma19:           out std_logic;
+        latch_ma19:     out std_logic;
+        n_game:         out std_logic;
+        n_exrom:        out std_logic;
+        start_reset:    out std_logic;
+        ram_read:       out std_logic;
+        ram_write:      out std_logic;
+        flash_read:     out std_logic;
+        flash_write:    out std_logic;
+        data_out:       out std_logic_vector(7 downto 0);
         data_out_valid: out std_logic
     );
 end cart_easyflash;
@@ -91,9 +92,9 @@ architecture behav of cart_easyflash is
     signal easyflash_boot:      std_logic := '1';
 begin
 
-    reset_boot_or_no_boot: process(n_sys_reset, clk)
+    reset_boot_or_no_boot: process(n_sys_reset, set_boot_flag, clk)
     begin
-        if n_sys_reset = '0' then
+        if n_sys_reset = '0' or set_boot_flag = '1' then
             easyflash_boot <= '1';
         elsif rising_edge(clk) then
             if enable = '1' then
