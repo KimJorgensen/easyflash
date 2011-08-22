@@ -364,7 +364,7 @@ void checkWriteCRTImage(void)
  */
 void checkWriteKERNALImage(void)
 {
-    selectSlot0();
+    slotSelect(0);
     m_nBank = selectKERNALSlotDialog();
     if (m_nBank != 255)
     {

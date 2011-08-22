@@ -1,9 +1,11 @@
 
-    .importzp       sp, sreg, regsave
-    .importzp       ptr1, ptr2, ptr3, ptr4
-    .importzp       tmp1, tmp2, tmp3, tmp4
+.importzp       sp, sreg, regsave
+.importzp       ptr1, ptr2, ptr3, ptr4
+.importzp       tmp1, tmp2, tmp3, tmp4
 
-    .import         popax
+.import         popax
+
+.import _g_nSelectedSlot
 
 ; Entry points for EasyFlash driver (EAPI)
 EAPIBase            = $c000         ; <= Use any address here
@@ -18,6 +20,8 @@ EAPIReadFlashInc    = $df80 + 18
 EAPIWriteFlashInc   = $df80 + 21
 EAPISetSlot         = $df80 + 24
 EAPIGetSlot         = $df80 + 27
+
+EASYFLASH_SLOT    = $de01
 
 EASYFLASH_CONTROL = $de02
 EASYFLASH_KILL    = $04
@@ -73,6 +77,8 @@ _efShowROM:
 _efPeekCartROM:
         sta ptr1
         stx ptr1 + 1
+        lda _g_nSelectedSlot
+        sta EASYFLASH_SLOT
         jsr _efShowROM
         ldy #0
         lda (ptr1), y
@@ -113,6 +119,8 @@ _efVerifyFlash:
         stx ptr2 + 1
 
         sei
+        ldy _g_nSelectedSlot
+        sty EASYFLASH_SLOT
         ldy #$37
         sty $01
         ldy #EASYFLASH_16K
@@ -284,6 +292,10 @@ _eapiSetSlot:
 .export _eapiSectorErase
 _eapiSectorErase:
         jsr _efShowROM
+
+        lda _g_nSelectedSlot
+        sta EASYFLASH_SLOT
+
         ; x to y (high byte of address)
         txa
         tay
@@ -320,6 +332,9 @@ _eapiWriteFlash:
 
         ; remember value
         pha
+
+        lda _g_nSelectedSlot
+        sta EASYFLASH_SLOT
 
         ; get address
         jsr popax
@@ -369,6 +384,9 @@ _eapiGlueWriteBlock:
         tay
         pla
         tax
+
+        lda _g_nSelectedSlot
+        sta EASYFLASH_SLOT
 
 wbNext:
         lda $1000, x        ; will be modified

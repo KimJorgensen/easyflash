@@ -28,6 +28,7 @@
 #include <conio.h>
 
 #include "flash.h"
+#include "slots.h"
 #include "screen.h"
 #include "progress.h"
 
@@ -35,7 +36,7 @@
 /* Static variables */
 
 // Array with the state of all banks on high and low flash.
-static char m_aBlockStates[2][FLASH_NUM_BANKS];
+static char m_aBlockStates[FLASH_MAX_SLOTS][2][FLASH_NUM_BANKS];
 
 /******************************************************************************/
 /**
@@ -102,7 +103,7 @@ void __fastcall__ progressDisplayBank(uint8_t nChip, uint8_t nBank)
 
     x = 6 + nBank % PROGRESS_BANKS_PER_LINE;
 
-    cputcxy(x, y, m_aBlockStates[nChip][nBank]);
+    cputcxy(x, y, m_aBlockStates[g_nSelectedSlot][nChip][nBank]);
 }
 
 
@@ -116,7 +117,8 @@ void __fastcall__ progressSetBankState(uint8_t nBank, uint8_t nChip,
 {
     if (nChip < 2)
     {
-        m_aBlockStates[nChip][nBank & FLASH_BANK_MASK] = state;
+        m_aBlockStates[g_nSelectedSlot][nChip][nBank & FLASH_BANK_MASK] =
+                state;
         progressDisplayBank(nChip, nBank);
     }
 }
@@ -136,7 +138,8 @@ void __fastcall__ progressSetMultipleBanksState(uint8_t nBank, uint8_t nChip,
     {
         if (nChip < 2)
         {
-            m_aBlockStates[nChip][i & FLASH_BANK_MASK] = state;
+            m_aBlockStates[g_nSelectedSlot][nChip][i & FLASH_BANK_MASK] =
+                    state;
             progressDisplayBank(nChip, i);
         }
     }
@@ -152,7 +155,7 @@ uint8_t __fastcall__ progressGetStateAt(uint8_t nBank, uint8_t nChip)
 {
     if (nChip < 2)
     {
-        return m_aBlockStates[nChip][nBank & FLASH_BANK_MASK];
+        return m_aBlockStates[g_nSelectedSlot][nChip][nBank & FLASH_BANK_MASK];
     }
     return PROGRESS_UNTOUCHED;
 }
