@@ -22,6 +22,9 @@
 // Number of banks erased at once
 #define FLASH_BANKS_ERASE_AT_ONCE (64 / 8)
 
+// max size of a multi-slot EF
+#define FLASH_MAX_SLOTS 16
+
 // Number of banks when using 2 * 512 kByte
 #define FLASH_NUM_BANKS     64
 

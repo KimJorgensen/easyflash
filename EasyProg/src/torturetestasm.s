@@ -35,8 +35,9 @@ zpaddr   = ptr2
 ; address of EasyFlash offset
 zpoffs   = ptr3
 
-; I/O address used to select the bank
+; I/O address used to select bank and slot
 EASYFLASH_IO_BANK    = $de00
+EASYFLASH_IO_SLOT    = $de01
 
 ; =============================================================================
 ;
@@ -67,25 +68,26 @@ _tortureTestFillBuffer:
         stx zpbuff + 1
 
         ; get high-byte of offset
-        ldy #3
+        ldy #4
         lda (zpaddr), y
 
-        ; byte 0..2k-1 => bank number
-        cmp #8
-        bcs notLT2k
+        cmp #4
+        bcs notLT1k
 
+        ; byte 0..1k-1 => bank number + chip number
         ; load bank number
-        ldy #0
+        ldy #1
         lda (zpaddr), y
+        dey
 fillWithBank:
         sta (zpbuff), y
         iny
         iny
         bne fillWithBank
 		; load chip number
-		iny
+		ldy #2
         lda (zpaddr), y
-        dey
+        ldy #0
 fillWithChip:
         iny
         sta (zpbuff), y
@@ -93,11 +95,20 @@ fillWithChip:
         bne fillWithChip
         rts
 
+notLT1k:
+        cmp #8
+        bcs notLT2k
+
+        ; byte 1k..2k-1 => slot number
+        ldy #0
+        lda (zpaddr), y
+        bcc fillConst
+
 notLT2k:
-        ; byte 2k..4k-1 => 0xaa
         cmp #16
         bcs notLT4k
 
+        ; byte 2k..4k-1 => 0xaa
         lda #$aa
         bcc fillConst
 
@@ -215,8 +226,12 @@ _tortureTestCompare:
         sta zpbuff
         stx zpbuff + 1
 
-        ; set the bank
+        ; set the slot and bank
         ldy #0
+        lda (zpaddr), y
+        sta EASYFLASH_IO_SLOT
+
+        iny
         lda (zpaddr), y
         sta EASYFLASH_IO_BANK
 

@@ -29,12 +29,12 @@
 
 #include "easyprog.h"
 #include "texts.h"
+#include "flash.h"
 #include "slots.h"
 #include "screen.h"
 #include "selectbox.h"
 #include "util.h"
 
-#define MAX_SLOTS 16
 #define MAX_KERNALS 8
 
 uint8_t g_nSelectedSlot;
@@ -52,7 +52,7 @@ uint8_t __fastcall__ selectSlotDialog(uint8_t nSlots)
     SelectBoxEntry* pEntry;
     uint8_t    nSlot, rv;
 
-    pEntries = malloc((MAX_SLOTS + 1) * sizeof(SelectBoxEntry));
+    pEntries = malloc((FLASH_MAX_SLOTS + 1) * sizeof(SelectBoxEntry));
     if (!pEntries)
     {
     	screenPrintSimpleDialog(apStrOutOfMemory);
@@ -145,13 +145,14 @@ void __fastcall__ checkAskForSlot(uint8_t bWarn)
 
 /******************************************************************************/
 /**
- *
+ * This sets g_nSelectedSlot and refreshes the main screen, but does not
+ * write to the I/O register yet.
  **/
-void selectSlot0(void)
+void __fastcall__ slotSelect(uint8_t slot)
 {
+    g_nSelectedSlot = slot;
     if (g_nSlots > 1)
     {
-        g_nSelectedSlot = 0;
         refreshMainScreen();
     }
 }

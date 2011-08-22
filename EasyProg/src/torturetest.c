@@ -32,12 +32,14 @@
 #include "torturetest.h"
 #include "flash.h"
 #include "eapiglue.h"
+#include "slots.h"
 #include "util.h"
 
 /*
  * The cartridge test works like this:
  * - Each bank (8 KiB) is filled with a special pattern:
- *   2k bank number
+ *   1k slot number
+ *   1k bank number / chip number
  *   2k 0xaa
  *   2k 0x55
  *   1k 0x00 - 0xff (repeated)
@@ -54,17 +56,22 @@ static uint8_t tortureTestWriteData(void)
 {
     EasyFlashAddr addr;
 
-    for (addr.nBank = 0; addr.nBank < FLASH_NUM_BANKS; ++addr.nBank)
+    for (addr.nSlot = 0; addr.nSlot < g_nSlots; ++addr.nSlot)
     {
-        for (addr.nChip = 0; addr.nChip < 2; ++addr.nChip)
-        {
-            for (addr.nOffset = 0; addr.nOffset < 0x2000; addr.nOffset += 256)
-            {
-                tortureTestFillBuffer(BLOCK_BUFFER, &addr);
+        slotSelect(addr.nSlot); // also refreshes the screen
 
-                if (!flashWriteBlock(addr.nBank, addr.nChip, addr.nOffset))
+        for (addr.nBank = 0; addr.nBank < FLASH_NUM_BANKS; ++addr.nBank)
+        {
+            for (addr.nChip = 0; addr.nChip < 2; ++addr.nChip)
+            {
+                for (addr.nOffset = 0; addr.nOffset < 0x2000; addr.nOffset += 256)
                 {
-                    return 0;
+                    tortureTestFillBuffer(BLOCK_BUFFER, &addr);
+
+                    if (!flashWriteBlock(addr.nBank, addr.nChip, addr.nOffset))
+                    {
+                        return 0;
+                    }
                 }
             }
         }
