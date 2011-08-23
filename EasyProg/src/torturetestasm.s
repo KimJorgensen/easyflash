@@ -19,12 +19,15 @@
 ;    misrepresented as being the original software.
 ; 3. This notice may not be removed or altered from any source distribution.
 
-    .importzp       sp, sreg, regsave
-    .importzp       ptr1, ptr2, ptr3, ptr4
-    .importzp       tmp1, tmp2, tmp3, tmp4
-    .importzp       regbank
+.importzp       sp, sreg, regsave
+.importzp       ptr1, ptr2, ptr3, ptr4
+.importzp       tmp1, tmp2, tmp3, tmp4
+.importzp       regbank
 
-    .import         popax
+.import         popax
+
+.import _efShowROM
+.import _efHideROM
 
 ; address of buffer
 zpbuff   = ptr1
@@ -159,18 +162,22 @@ fillDec:
 ; Test the banking register: First 0..63 then 63..0
 ;
 ; uint16_t __fastcall__ tortureTestBanking(void);
+
+; Note: This function and all data must not be below ROM!
+;       Therefore LOWCODE must be for code and HIRAM or BLOCK_BUFFER for data.
 ;
-; parameters:Refer to the comment in tortureTest.c.
-;       -
+; parameters: Refer to the comment in tortureTest.c.
 ;
 ; return:
 ;       AX  0 for no error, otherwise
 ;           high byte (X) bank which didn't work, low byte (A) actual bank set
 ;
 ; =============================================================================
+.segment "LOWCODE"
 .export _tortureTestBanking
 .proc   _tortureTestBanking
 _tortureTestBanking:
+        jmp _efShowROM
         ldx #0
 tb:
         stx EASYFLASH_IO_BANK
@@ -190,18 +197,22 @@ tb2:
 
         lda #0
         tax
-        rts
+        jmp _efHideROM
 
 bankError:
         lda $8000
-        rts
+        jmp _efHideROM
 
 .endproc
+.code
 
 ; =============================================================================
 ;
 ; Compare the given buffer (256 bytes) with the test pattern for the flash address
 ; pointed to.
+;
+; Note: This function and all data must not be below ROM!
+;       Therefore LOWCODE must be for code and HIRAM or BLOCK_BUFFER for data.
 ;
 ; uint16_t __fastcall__ tortureTestCompare(const uint8_t* pBuffer,
 ;                                          const EasyFlashAddr* pAddr);
@@ -214,6 +225,7 @@ bankError:
 ;       256 for success, errornous offset (0..255) for failure
 ;
 ; =============================================================================
+.segment "LOWCODE"
 .export _tortureTestCompare
 .proc   _tortureTestCompare
 _tortureTestCompare:
@@ -225,6 +237,8 @@ _tortureTestCompare:
         jsr popax
         sta zpbuff
         stx zpbuff + 1
+
+        jsr _efShowROM
 
         ; set the slot and bank
         ldy #0
@@ -269,14 +283,15 @@ cmp1:
         ; success: return 256
         ldx #1
         tya             ; Y still 0
-        rts
+        jmp _efHideROM
 
 different:
         ; return errornous offset 0..255
         tya
         ldx #0
-        rts
+        jmp _efHideROM
 .endproc
+.code
 
 ; =============================================================================
 ;
