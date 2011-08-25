@@ -1,0 +1,91 @@
+﻿<html>
+
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Preparing the FT245 Chip</title>
+</head>
+<body leftmargin=30 rightmargin=30>
+
+<h1>How to initialize the FTDI FT245 Chip on the EasyFlash 3</h1>
+
+<i>Written by jmp$fce2, minor changes by skoe.</i>
+
+<p>The EasyFlash 3 has its own USB PID, so the tools can easily recognize the right USB device. Additionally the right name can be shown in the device manager. For this the FTDI chip has to be programmed by the manufacturer. <b>End users don't need to do this all. They need the EasyFlash 3 Drivers only.</b></p>
+ 
+<p>First of all you need some tools and drivers which can be downloaded at the following places:</p>
+
+<p><a href="http://www.ftdichip.com/Drivers/D2XX.htm">FTDI D2XX-Drivers for Windows</a></p>
+<p><a href="http://www.ftdichip.com/Support/Utilities.htm#FT_Prog">FTDI FT_Prog</a></p>
+<p><a href="https://bitbucket.org/skoe/easyflash/raw/69ae1f6b1f75/Hardware/ef3-ftdi/easyflash3-ftdi-template.xml">EasyFlash 3 Template for FT245</a> (right click and save as)</p>
+<p><a href="https://bitbucket.org/skoe/easyflash/downloads/EF3-driver-windows.zip">EasyFlash 3 Drivers</a></p>
+
+<p>Download and unzip these files to a new directory. Now plug your EasyFlash 3 Hardware to USB. Windows will detect new hardware and ask for drivers. Following images shows the driver installation.</p>
+
+<p>Do not connect to "Windows Update":</p>
+
+<p><img border="0" src="snapshots/snap_01.png"</p>
+
+<p>Select a source for a driver manually:</p>
+
+<p><img border="0" src="snapshots/snap_02.png"</p>
+
+<p>Point to the path were you have unzipped the CDM20814_WHQL_Certified.zip</p>
+
+<p><img border="0" src="snapshots/snap_03.png"</p>
+
+<p><img border="0" src="snapshots/snap_04.png"</p>
+
+<p>Next, Windows will find a USB Serial Port and ask for drivers.
+If Windows doesen't find new Hardware unplug the EasyFlash 3 from USB and reconnect it.</p>
+
+<p><img border="0" src="snapshots/snap_05.png"</p>
+
+<p><img border="0" src="snapshots/snap_03.png"</p>
+
+<p><img border="0" src="snapshots/snap_06.png"</p>
+
+<p>If the installation was succsessful take a look into the Windows Device Manager,
+the EasyFlash 3 appears as a USB Serial Port (COM..)</p>
+
+<p><img border="0" src="snapshots/snap_07.png"</p>
+
+<p>Now start the FTProg Tool and click on the Scan/Parse icon.</p>
+
+<p><img border="0" src="snapshots/snap_08.png"</p>
+
+<p>FTProg shows up the connected device:</p>
+
+<p>At this point you must load and apply a template for the device by
+right click on the device and select "Apply Template" > "From File".
+Select the file <em>easyflash3-ftdi-template.xml</em> you unpacked before.
+
+<p><img border="0" src="snapshots/snap_09.png"</p>
+
+<p>If you applied the template correctly, the FTProg-Window should look like this:</p>
+
+<p><img border="0" src="snapshots/snap_10.png"</p>
+
+<p>Now it´s time to program the chip :)</p>
+
+<p>Click on the "Program Devices" icon, a window pops up and then click "Program"</p>
+
+<p><img border="0" src="snapshots/snap_11.png"</p>
+
+<p>
+After that, close FTProg and unplug EasyFlash 3 from USB and reconnect it.
+If programming was correctly done Windows will detect again new hardware and ask for drivers. Now you can install the real EasyFlash drivers.
+</p>
+
+<p><img border="0" src="snapshots/snap_12.png"</p>
+<p><img border="0" src="snapshots/snap_13.png"</p>
+
+<p>If all was succsessfully done the Windows Device Manager shows a new device class with EasyFlash 3 as device.
+</p>
+
+<p><img border="0" src="snapshots/snap_14.png"</p>
+
+<p><font size="6">Congratulations!</font></p>
+
+</body>
+</html>
+
