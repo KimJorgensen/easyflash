@@ -18,7 +18,6 @@
 /******************************************************************************/
 /* Static variables */
 
-static uint8_t nSlot;
 static uint8_t nBank;
 static uint8_t nChip;
 static uint16_t nOffset;
@@ -41,7 +40,7 @@ static void hexShowBlock(void)
         p = ROM0_BASE;
 
     p += nOffset;
-    eapiSetSlot(nSlot);
+    eapiSetSlot(g_nSelectedSlot);
     eapiSetBank(nBank);
 
     gotoxy(1, 23);
@@ -49,7 +48,7 @@ static void hexShowBlock(void)
     if (g_nSlots > 1)
     {
         strcpy(utilStr, ", slot ");
-        utilAppendDecimal(nSlot);
+        utilAppendDecimal(g_nSelectedSlot);
         cputs(utilStr);
     }
 
@@ -149,7 +148,7 @@ void hexViewer(void)
     utilAppendStr("/<Stop>");
     cputsxy(1, 21, utilStr);
 
-    nSlot = nBank = nChip = nOffset = 0;
+    g_nSelectedSlot = nBank = nChip = nOffset = 0;
 
     do
     {
@@ -183,8 +182,7 @@ void hexViewer(void)
         default:
             if (key >= '0' && key < g_nSlots + '0')
             {
-                nSlot = key - '0';
-                eapiSetSlot(nSlot);
+                g_nSelectedSlot = key - '0';
                 hexShowBlock();
             }
         }
