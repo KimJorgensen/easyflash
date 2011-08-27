@@ -7,18 +7,21 @@
 
 #include <conio.h>
 #include <stdint.h>
+#include <string.h>
 
 #include "flash.h"
 #include "eapiglue.h"
 #include "util.h"
 #include "screen.h"
+#include "slots.h"
 
 /******************************************************************************/
 /* Static variables */
 
-uint8_t nBank;
-uint8_t nChip;
-uint16_t nOffset;
+static uint8_t nSlot;
+static uint8_t nBank;
+static uint8_t nChip;
+static uint16_t nOffset;
 
 /******************************************************************************/
 /**
@@ -38,15 +41,22 @@ static void hexShowBlock(void)
         p = ROM0_BASE;
 
     p += nOffset;
+    eapiSetSlot(nSlot);
     eapiSetBank(nBank);
 
     gotoxy(1, 23);
     screenPrintAddr(nBank, nChip, nOffset);
+    if (g_nSlots > 1)
+    {
+        strcpy(utilStr, ", slot ");
+        utilAppendDecimal(nSlot);
+        cputs(utilStr);
+    }
 
     n = nOffset;
     for (y = 0; y < 16; ++y)
     {
-        gotoxy(1, 4 + y);
+        gotoxy(1, 3 + y);
         screenPrintHex4(n);
         cputc(' ');
 
@@ -125,11 +135,21 @@ void hexViewer(void)
         return;
 
     screenPrintFrame();
+    screenPrintSepLine(0, 39, 20);
+
     prevKeyRepeat = screenSetKeyRepeat(KEY_REPEAT_ALL);
     cputsxy(1, 1, "Hex Viewer");
-    cputsxy(12, 23, "<Up>/<Down>/<+>/<->/<Stop>");
+    strcpy(utilStr, "<Up>/<Down>/<+>/<->");
+    if (g_nSlots > 1)
+    {
+        utilAppendStr("/<0>..<");
+        utilAppendDecimal(g_nSlots - 1);
+        utilAppendChar('>');
+    }
+    utilAppendStr("/<Stop>");
+    cputsxy(1, 21, utilStr);
 
-    nBank = nChip = nOffset = 0;
+    nSlot = nBank = nChip = nOffset = 0;
 
     do
     {
@@ -159,6 +179,14 @@ void hexViewer(void)
         case '-':
             hexPrevBank(0);
             break;
+
+        default:
+            if (key >= '0' && key < g_nSlots + '0')
+            {
+                nSlot = key - '0';
+                eapiSetSlot(nSlot);
+                hexShowBlock();
+            }
         }
     }
     while (key != CH_STOP);
