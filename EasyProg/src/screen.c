@@ -567,7 +567,6 @@ uint8_t __fastcall__ screenWaitKey(uint8_t flags)
 }
 
 
-#if 0 // unused
 /******************************************************************************/
 /**
  *
@@ -575,38 +574,31 @@ uint8_t __fastcall__ screenWaitKey(uint8_t flags)
  * Return NULL if the user pressed <stop>.
  * Not reentrant ;-)
  */
-const char* __fastcall__ screenReadInput(const char* pStrTitle, const char* pStrPrompt)
+const char* __fastcall__ screenReadInput(const char* pStrTitle,
+                                         const char* pStrPrompt,
+                                         const char* pStrDefault)
 {
-    uint8_t y, len;
+    uint8_t len;
     static char strInput[FILENAME_MAX];
     char c;
 
-    // Top line
-    y = 6;
-    screenPrintTopLine(2, 37, y);
-    screenPrintFreeLine(2, 37, ++y);
-    cputsxy(3, y, pStrTitle);
-    screenPrintSepLine(2, 37, ++y);
+    strcpy(strInput, pStrDefault);
+    len = strlen(strInput);
 
-    // some lines
-    for (++y; y < 19; ++y)
-        screenPrintFreeLine(2, 37, y);
-    // Bottom line
-    screenPrintBottomLine(2, 37, y);
+    screenPrintBox(2, 6, 36, 13);
+    screenPrintSepLine(2, 37, 8);
 
-    // the prompt
-    cputsxy(4, 9, pStrPrompt);
+    cputsxy(3, 7, pStrTitle);
+    cputsxy(4, 10, pStrPrompt);
 
     // the input field
     textcolor(COLOR_LIGHTFRAME);
     screenPrintBox(4, 11, 32, 3);
     textcolor(COLOR_FOREGROUND);
 
-    screenPrintButton(3, 16, "Stop");
-    screenPrintButton(30, 16, "Enter");
+    screenPrintButton(3, 15, "Stop");
+    screenPrintButton(30, 15, "Enter");
 
-    strInput[0] = '\0';
-    len = 0;
     cursor(1);
     do
     {
@@ -627,10 +619,10 @@ const char* __fastcall__ screenReadInput(const char* pStrTitle, const char* pStr
     } while((c != CH_ENTER) && (c != CH_STOP));
 
     cursor(0);
+    refreshMainScreen();
 
     if (c == CH_STOP)
         return NULL;
     else
         return strInput;
 }
-#endif
