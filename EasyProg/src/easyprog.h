@@ -29,6 +29,7 @@
 // If this flag is set in a menu entry, it needs a known flash type
 #define EASYPROG_MENU_FLAG_NEEDS_FLASH 1
 
+#define EF_CART_NAME_LEN 16
 
 /// This structure contains an EasyFlash address 00:0:0000
 typedef struct EasyFlashAddr_s
@@ -42,6 +43,7 @@ EasyFlashAddr;
 
 
 extern uint8_t g_bFastLoaderEnabled;
+extern char g_strCartName[EF_CART_NAME_LEN + 1];
 
 
 uint8_t checkFlashType(void);
