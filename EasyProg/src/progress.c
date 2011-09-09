@@ -71,12 +71,19 @@ void progressShow(void)
  */
 void progressUpdateDisplay(void)
 {
-    uint8_t nChip, nBank;
+    uint8_t nChip;
+    char* pCurrentChip;
+    char* pScreen;
 
+    pScreen = (char*)0x0400 + 17 * 40 + 6;
     for (nChip = 0; nChip < 2; ++nChip)
     {
-        for (nBank = 0; nBank < FLASH_NUM_BANKS; ++nBank)
-            progressDisplayBank(nChip, nBank);
+        pCurrentChip = m_aBlockStates[g_nSelectedSlot][nChip];
+        memcpy(pScreen, pCurrentChip, PROGRESS_BANKS_PER_LINE);
+        pScreen += 40;
+        memcpy(pScreen, pCurrentChip + PROGRESS_BANKS_PER_LINE,
+               PROGRESS_BANKS_PER_LINE);
+        pScreen += 40;
     }
 }
 
@@ -93,16 +100,15 @@ void __fastcall__ progressDisplayBank(uint8_t nChip, uint8_t nBank)
 
     nBank &= FLASH_BANK_MASK;
 
-    /* y = 17 + nChip * (FLASH_NUM_BANKS / PROGRESS_BANKS_PER_LINE) +
-        nBank / PROGRESS_BANKS_PER_LINE; */
-    y  = 17;
+    x = 6 + nBank;
+    y = 17;
     if (nChip)
         y += (FLASH_NUM_BANKS / PROGRESS_BANKS_PER_LINE);
     if (nBank >= PROGRESS_BANKS_PER_LINE)
+    {
         ++y;
-
-    x = 6 + nBank % PROGRESS_BANKS_PER_LINE;
-
+        x -= PROGRESS_BANKS_PER_LINE;
+    }
     cputcxy(x, y, m_aBlockStates[g_nSelectedSlot][nChip][nBank]);
 }
 
@@ -140,9 +146,9 @@ void __fastcall__ progressSetMultipleBanksState(uint8_t nBank, uint8_t nChip,
         {
             m_aBlockStates[g_nSelectedSlot][nChip][i & FLASH_BANK_MASK] =
                     state;
-            progressDisplayBank(nChip, i);
         }
     }
+    progressUpdateDisplay();
 }
 
 
