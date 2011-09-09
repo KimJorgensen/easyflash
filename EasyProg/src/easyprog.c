@@ -68,12 +68,13 @@ static const char* pStrFlashDriver = "";
 
 uint8_t g_bFastLoaderEnabled;
 
+char g_strCartName[EF_CART_NAME_LEN + 1];
 
 /******************************************************************************/
 /* Static variables */
 
 // String describes the current action
-static char strStatus[41];
+static char strStatus[31];
 static char strFastLoader[30];
 static char strMemSize[24];
 
@@ -225,7 +226,7 @@ static void refreshStatusLine(void)
 {
     gotoxy (1, 23);
     cputs(strStatus);
-    cclear(39 - wherex());
+    cclear(sizeof(strStatus) - 2 - wherex());
 }
 
 
@@ -269,26 +270,31 @@ void refreshMainScreen(void)
     textcolor(COLOR_FOREGROUND);
 
     gotoxy(6, 4);
-    cputs("File name:");
+    cputs("File Name:");
     gotox(17);
     cputs(g_strFileName);
 
     gotoxy(7, 6);
+    cputs("CRT Name:");
+    gotox(17);
+    cputs(g_strCartName);
+
+    gotoxy(7, 8);
     cputs("CRT Type:");
     gotox(17);
     cputs(aStrInternalCartTypeName[internalCartType]);
 
-    gotoxy(3, 8);
+    gotoxy(3, 10);
     cputs("Flash Driver:");
     gotox(17);
     cputs(pStrFlashDriver);
 
-    gotoxy(10, 10);
+    gotoxy(10, 12);
     cputs("Slots:");
     gotox(17);
     cputs(strMemSize);
 
-    gotoxy(2, 12);
+    gotoxy(2, 14);
     cputs("Selected Slot:");
     gotox(17);
     if (g_nSlots > 1)
@@ -299,9 +305,6 @@ void refreshMainScreen(void)
     }
     else
         cputc('0');
-
-    gotoxy(3, 14);
-    cputs("Time elapsed:");
 
     refreshElapsedTime();
     progressShow();
@@ -355,7 +358,7 @@ void refreshElapsedTime(void)
     uint16_t t;
 
     t = timerGet();
-    gotoxy(17, 14);
+    gotoxy(34, 23);
     leadingZero(t >> 8);
     utilAppendDecimal(t >> 8);
     cputs(utilStr);
@@ -515,7 +518,9 @@ static void checkEraseAll(void)
         eraseAll();
 
         // remove the name, it's not valid anymore
-        g_strFileName[0] = '\0';
+        g_strFileName[0] =
+        g_strCartName[0] = '\0';
+
         internalCartType = INTERNAL_CART_TYPE_NONE;
     }
 }
@@ -570,7 +575,9 @@ int main(void)
     screenInit();
     progressInit();
 
-    g_strFileName[0] = '\0';
+    g_strFileName[0] =
+    g_strCartName[0] = '\0';
+
     g_nDrive = *(uint8_t*)0xba;
     if (g_nDrive < 8)
         g_nDrive = 8;

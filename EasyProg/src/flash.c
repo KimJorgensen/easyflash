@@ -28,9 +28,15 @@ static uint8_t* const apNormalRomBase[2] = { ROM0_BASE, ROM1_BASE };
 static uint8_t* const apUltimaxRomBase[2] = { ROM0_BASE, ROM1_BASE_ULTIMAX };
 
 // EAPI signature
-static const unsigned char pStrEAPISignature[] =
+static const unsigned char aEAPISignature[] =
 {
         0x65, 0x61, 0x70, 0x69 /* "EAPI" */
+};
+
+// EAPI signature
+static const unsigned char aEFNameSignature[] =
+{
+        0x65, 0x66, 0x2d, 0x6e, 0x41, 0x4d, 0x45, 0x3a /* "EF-Name:" */
 };
 
 #define FLASH_WRITE_SIZE 256
@@ -227,9 +233,20 @@ uint8_t flashWriteBankFromFile(uint8_t nBank, uint8_t nChip,
         progressSetBankState(nBank, nChip, oldState);
 
         // Check if EAPI has to be replaced
-        if (nBank == 0 && nChip == 1 && nOffset == 0x1800 &&
-                    memcmp(BLOCK_BUFFER, pStrEAPISignature, 4) == 0)
-            bReplaceEAPI = 1;
+        if (nBank == 0 && nChip == 1)
+        {
+            if (nOffset == 0x1800 &&
+                memcmp(BLOCK_BUFFER, aEAPISignature, sizeof(aEAPISignature)) == 0)
+                bReplaceEAPI = 1;
+            if (nOffset == 0x1b00 &&
+                memcmp(BLOCK_BUFFER, aEFNameSignature, sizeof(aEFNameSignature)) == 0)
+            {
+                memcpy(g_strCartName, BLOCK_BUFFER + sizeof(aEFNameSignature),
+                       EF_CART_NAME_LEN);
+                g_strCartName[EF_CART_NAME_LEN] = '\0';
+                refreshMainScreen();
+            }
+        }
 
         if (bReplaceEAPI)
         {
@@ -238,7 +255,10 @@ uint8_t flashWriteBankFromFile(uint8_t nBank, uint8_t nChip,
             else if (nOffset == 0x1900)
                 memcpy(BLOCK_BUFFER, EAPI_LOAD_TO + 0x100, 0x100);
             else if (nOffset == 0x1a00)
+            {
                 memcpy(BLOCK_BUFFER, EAPI_LOAD_TO + 0x200, 0x100);
+                bReplaceEAPI = 0;
+            }
         }
 
         if (!flashWriteBlock(nBank, nChip, nOffset))
