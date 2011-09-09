@@ -130,7 +130,6 @@ static uint8_t tortureTestVerify(uint8_t nBank)
  */
 static uint8_t tortureTestFlashIds(void)
 {
-    char strStatus[41];
     uint8_t nManufacturerId, nDeviceId;
     uint8_t nLoop;
 
@@ -139,7 +138,7 @@ static uint8_t tortureTestFlashIds(void)
     {
         if (!eapiInit(&nManufacturerId, &nDeviceId))
         {
-            screenPrintTwoLinesDialog(pStrTestFailed, strStatus);
+            screenPrintTwoLinesDialog(pStrTestFailed, "(Init)");
             return 0;
         }
     }
