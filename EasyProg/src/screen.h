@@ -83,7 +83,9 @@ void __fastcall__ screenPrintVerifyError(uint8_t nBank, uint8_t nChip,
                                          uint8_t nData,
                                          uint8_t nFlashVal);
 uint8_t __fastcall__ screenWaitKey(uint8_t flags);
-const char* __fastcall__ screenReadInput(const char* pStrTitle, const char* pStrPrompt);
+const char* __fastcall__ screenReadInput(const char* pStrTitle,
+                                         const char* pStrPrompt,
+                                         const char* pStrDefault);
 void __fastcall__ screenDoMenu(ScreenMenu* pMenu);
 void screenShowSprites(void);
 
