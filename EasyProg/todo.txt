@@ -1,5 +1,3 @@
 - Slot-Auswahl und KERNAL-Slot-Auswahl abbrechbar machen
-- Hex-Editor und Torture-Test müssen Slot-Auswahl bekommen
+- Time elapsed fuer binaries
 
-Prio 2:
-- Progress-Anzeige optimieren. Screen refresh dauert zu lange
