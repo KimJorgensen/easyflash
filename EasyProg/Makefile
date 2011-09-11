@@ -23,6 +23,7 @@ obj += obj/cart.o
 obj += obj/screen.o
 obj += obj/screenasm.o
 obj += obj/progress.o
+obj += obj/progressasm.o
 obj += obj/timerasm.o
 obj += obj/dir.o
 obj += obj/filedlg.o

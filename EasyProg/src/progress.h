@@ -26,13 +26,13 @@
 #ifndef PROGRESS_H_
 #define PROGRESS_H_
 
-#define PROGRESS_UNTOUCHED  '.'
-#define PROGRESS_ERASING    'E'
-#define PROGRESS_READING    'R' /* from file */
-#define PROGRESS_WRITING    'W'
-#define PROGRESS_VERIFYING  'V'
-#define PROGRESS_ERASED     '-'
-#define PROGRESS_PROGRAMMED 'P'
+#define PROGRESS_UNTOUCHED  0x2e // '.'
+#define PROGRESS_ERASING    0x45 // 'E'
+#define PROGRESS_READING    0x52 // 'R' /* from file */
+#define PROGRESS_WRITING    0x57 // 'W'
+#define PROGRESS_VERIFYING  0x56 // 'V'
+#define PROGRESS_ERASED     0x2d // '-'
+#define PROGRESS_PROGRAMMED 0x50 // 'P'
 
 // That many banks are displayed in one screen line
 #define PROGRESS_BANKS_PER_LINE 32
@@ -40,7 +40,6 @@
 void progressInit(void);
 void progressShow(void);
 void progressUpdateDisplay(void);
-void __fastcall__ progressDisplayBank(uint8_t nChip, uint8_t nBank);
 void __fastcall__ progressSetBankState(uint8_t nBank, uint8_t nChip,
                                        uint8_t state);
 void __fastcall__ progressSetMultipleBanksState(uint8_t nBank, uint8_t nChip,
