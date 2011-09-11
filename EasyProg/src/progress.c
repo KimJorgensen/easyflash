@@ -36,7 +36,7 @@
 /* Static variables */
 
 // Array with the state of all banks on high and low flash.
-static char m_aBlockStates[FLASH_MAX_SLOTS][2][FLASH_NUM_BANKS];
+char m_aBlockStates[FLASH_MAX_SLOTS][2][FLASH_NUM_BANKS];
 
 /******************************************************************************/
 /**
@@ -65,53 +65,6 @@ void progressShow(void)
     progressUpdateDisplay();
 }
 
-/******************************************************************************/
-/**
- * Update the progress display area, values only.
- */
-void progressUpdateDisplay(void)
-{
-    uint8_t nChip;
-    char* pCurrentChip;
-    char* pScreen;
-
-    pScreen = (char*)0x0400 + 17 * 40 + 6;
-    for (nChip = 0; nChip < 2; ++nChip)
-    {
-        pCurrentChip = m_aBlockStates[g_nSelectedSlot][nChip];
-        memcpy(pScreen, pCurrentChip, PROGRESS_BANKS_PER_LINE);
-        pScreen += 40;
-        memcpy(pScreen, pCurrentChip + PROGRESS_BANKS_PER_LINE,
-               PROGRESS_BANKS_PER_LINE);
-        pScreen += 40;
-    }
-}
-
-
-/******************************************************************************/
-/**
- * Update the value of a single bank in the progress display area.
- * Only the bits in FLASH_BANK_MASK are used.
- *
- */
-void __fastcall__ progressDisplayBank(uint8_t nChip, uint8_t nBank)
-{
-    uint8_t  x, y;
-
-    nBank &= FLASH_BANK_MASK;
-
-    x = 6 + nBank;
-    y = 17;
-    if (nChip)
-        y += (FLASH_NUM_BANKS / PROGRESS_BANKS_PER_LINE);
-    if (nBank >= PROGRESS_BANKS_PER_LINE)
-    {
-        ++y;
-        x -= PROGRESS_BANKS_PER_LINE;
-    }
-    cputcxy(x, y, m_aBlockStates[g_nSelectedSlot][nChip][nBank]);
-}
-
 
 /******************************************************************************/
 /**
@@ -125,7 +78,8 @@ void __fastcall__ progressSetBankState(uint8_t nBank, uint8_t nChip,
     {
         m_aBlockStates[g_nSelectedSlot][nChip][nBank & FLASH_BANK_MASK] =
                 state;
-        progressDisplayBank(nChip, nBank);
+        //progressDisplayBank(nChip, nBank);
+        progressUpdateDisplay();
     }
 }
 
