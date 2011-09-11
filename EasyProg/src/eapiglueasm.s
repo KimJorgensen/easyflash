@@ -21,7 +21,7 @@ EAPIWriteFlashInc   = $df80 + 21
 EAPISetSlot         = $df80 + 24
 EAPIGetSlot         = $df80 + 27
 
-EASYFLASH_SLOT    = $de01
+;EASYFLASH_SLOT    = $de01
 
 EASYFLASH_CONTROL = $de02
 EASYFLASH_KILL    = $04
@@ -78,7 +78,7 @@ _efPeekCartROM:
         sta ptr1
         stx ptr1 + 1
         lda _g_nSelectedSlot
-        sta EASYFLASH_SLOT
+        jsr EAPISetSlot
         jsr _efShowROM
         ldy #0
         lda (ptr1), y
@@ -119,13 +119,12 @@ _efVerifyFlash:
         stx ptr2 + 1
 
         sei
-        ldy _g_nSelectedSlot
-        sty EASYFLASH_SLOT
-        ldy #$37
-        sty $01
+        lda _g_nSelectedSlot
+        jsr EAPISetSlot
         ldy #EASYFLASH_16K
         sty EASYFLASH_CONTROL
 
+        jsr _efShowROM
         ldy #0
 l1:
         lda (ptr2), y
@@ -148,8 +147,7 @@ bad:
         inx
 nohigh:
 ret4:
-        ldy #$36
-        sty $01
+        jsr _efHideROM
         ldy #EASYFLASH_KILL
         sty EASYFLASH_CONTROL
         cli
@@ -294,7 +292,7 @@ _eapiSectorErase:
         jsr _efShowROM
 
         lda _g_nSelectedSlot
-        sta EASYFLASH_SLOT
+        jsr EAPISetSlot
 
         ; x to y (high byte of address)
         txa
@@ -334,7 +332,7 @@ _eapiWriteFlash:
         pha
 
         lda _g_nSelectedSlot
-        sta EASYFLASH_SLOT
+        jsr EAPISetSlot
 
         ; get address
         jsr popax
@@ -386,7 +384,7 @@ _eapiGlueWriteBlock:
         tax
 
         lda _g_nSelectedSlot
-        sta EASYFLASH_SLOT
+        jsr EAPISetSlot
 
 wbNext:
         lda $1000, x        ; will be modified
