@@ -192,6 +192,7 @@ architecture ef3_arc of ef3 is
             set_boot_flag:  in  std_logic;
             n_reset:        in  std_logic;
             enable:         in  std_logic;
+            phi2:           in  std_logic;
             n_io1:          in  std_logic;
             n_io2:          in  std_logic;
             n_roml:         in  std_logic;
@@ -274,7 +275,7 @@ begin
     (
         clk, n_sys_reset, start_reset_to_menu, n_reset, 
         enable_ef,
-        n_io1, n_io2, n_roml, n_romh, n_wr, 
+        phi2, n_io1, n_io2, n_roml, n_romh, n_wr, 
         bus_ready, cycle_end,
         addr, data, 
         button_crt_reset, button_special_fn,
@@ -519,6 +520,10 @@ begin
     --
     -- The memory bus is always driven by the CPLD when no memory chip has
     -- OE active.
+    --
+    -- We need a special case with phi2 = '0' for C128 which doesn't set R/W
+    -- correctly for Phi1 cycles.
+    -- 
     ---------------------------------------------------------------------------
     data_out_enable: process(n_io1, n_io2, n_roml, n_romh, phi2, n_wr,
                              mem_data, data_out,
@@ -526,7 +531,8 @@ begin
     begin
         mem_data <= (others => 'Z');
         data <= (others => 'Z');
-        if (n_io1 and n_io2 and n_roml and n_romh) = '0' and n_wr = '1' and phi2 = '1' then
+        if (n_io1 and n_io2 and n_roml and n_romh) = '0' and 
+           ((n_wr = '1' and phi2 = '1') or phi2 = '0') then
             if data_out_valid = '1' then
                 data <= data_out;
             else
