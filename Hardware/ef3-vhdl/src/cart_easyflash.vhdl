@@ -32,6 +32,7 @@ entity cart_easyflash is
         set_boot_flag:  in  std_logic;
         n_reset:        in  std_logic;
         enable:         in  std_logic;
+        phi2:           in  std_logic;
         n_io1:          in  std_logic;
         n_io2:          in  std_logic;
         n_roml:         in  std_logic;
@@ -206,16 +207,24 @@ begin
        end if; -- clk
     end process;
 
+    -- We need a special case with phi2 = '0' for C128 which doesn't set R/W
+    -- correctly for Phi1 cycles.
     rw_flash: process(enable, n_roml, n_romh, n_wr, bus_ready)
     begin
         flash_write <= '0';
         flash_read <= '0';
         if enable = '1' then
             if bus_ready = '1' and (n_roml = '0' or n_romh = '0') then
-                if n_wr = '1' then
+                if phi2 = '0' then
+                    -- VIC-II
                     flash_read <= '1';
                 else
-                    flash_write <= '1';
+                    -- CPU
+                    if n_wr = '1' then
+                        flash_read <= '1';
+                    else
+                        flash_write <= '1';
+                    end if;
                 end if;
             end if;
         end if;
