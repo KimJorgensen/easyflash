@@ -1,34 +1,27 @@
-# BANK ROML             ROMH
-# 00   KERNAL0          Trampoline
-# 01   KERNAL1
-# 02   KERNAL2
-# 03   KERNAL3
-# 04   KERNAL4
-# 05   KERNAL5
-# 06   KERNAL6
-# 07   KERNAL7
+# BANK ROML         .	ROMH
+# 00   KERNAL0      .	Trampoline
+# 01   KERNAL1      .
+# 02   KERNAL2      .
+# 03   KERNAL3      .
+# 04   KERNAL4      .
+# 05   KERNAL5      .
+# 06   KERNAL6      .
+# 07   KERNAL7      .
 # 08   <-------- Boot menu -------->
-# 09   <--------- EasyProg -------->
-# .
-# .
-# 10 \
-# 11  \ Final Cartridge III
-# 12  /
-# 13 /
-# 14 -- Exos?
-# 15
-# 16
-# 17
-# 18
-# 19
-# 1a
-# 1b
-# 1c
-# 1d
-# 1e
-# 1f
+# 09 \ <--------- EasyProg
+# 0a /                     -------->
+# .                 .
+# 10 \              .
+# .   \ Directory   .
+# .   / (64k        .
+# 17 /   reserved)  .
+# 18 \
+# 19  \ Final Cartridge III
+# 1a  /
+# 1b /
 
-easyprog    := ../EasyProg/easyprog.prg
+# uncompressed version of EasyProg
+easyprog    := ../EasyProg/easyprog
 
 mkimage_cmd := ./mkimages
 
@@ -42,7 +35,9 @@ mkimage_cmd += images/ttn2crom.bin  0x02 0x0000
 mkimage_cmd += efmenu/efmenu.bin    0x08 0x0000
 mkimage_cmd += $(easyprog)          0x09 0x0000
 
-#mkimage_cmd += fc3-1988.bin         0x10 0x0000
+mkimage_cmd += directory.bin        0x10 0x0000
+
+#mkimage_cmd += fc3-1988.bin         0x18 0x0000
 
 mkimage_cmd += ef3-multi.bin
 
@@ -52,7 +47,10 @@ ef3-multi.crt: ef3-multi.bin
 trampoline.bin: trampoline.s
 	acme -f plain -o $@ $<
 
-ef3-multi.bin: trampoline.bin mkimages fc3-1988.bin \
+directory.bin: directory.s
+	acme -f plain -o $@ $<
+
+ef3-multi.bin: trampoline.bin directory.bin mkimages \
 		efmenu/efmenu.bin $(easyprog)
 	$(mkimage_cmd)
 

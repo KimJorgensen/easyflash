@@ -28,9 +28,13 @@
 .import     popa
 
 EASYFLASH_16K        = $07
+EASYFLASH_KILL       = $04
 
 ; I/O address used to select the bank
 EASYFLASH_IO_BANK    = $de00
+
+; I/O address used to select the slot
+EASYFLASH_IO_SLOT    = $de01
 
 ; I/O address for enabling memory configuration, /GAME and /EXROM states
 EASYFLASH_IO_CONTROL = $de02
@@ -42,7 +46,23 @@ EASYFLASH2_IO_MODE   = $de03
 
 ; =============================================================================
 ;
-; Set the EF ROM bank.
+; Set the EF slot.
+;
+; void __fastcall__ set_slot(uint8_t slot)
+;
+; in:
+;       slot    slot to be set
+; out:
+;       -
+;
+.export _set_slot
+_set_slot:
+        sta EASYFLASH_IO_SLOT
+        rts
+
+; =============================================================================
+;
+; Set the EF bank.
 ;
 ; void __fastcall__ set_bank(uint8_t bank)
 ;
@@ -117,7 +137,7 @@ sbcmCodeEnd:
 ;
 .export _startProgram
 _startProgram:
-        sta EASYFLASH_IO_BANK
+        pha
         lda #EASYFLASH_16K
         sta EASYFLASH_IO_CONTROL
         ldx #$00
@@ -126,12 +146,18 @@ _startProgram:
         sta $c000,x
         dex
         bne :-
+        pla
+        sta startProgramBank
         jmp $c000
 startProgramCode:
 .org $c000
-        ldy #16 * 4
+        sei
+        ldy #32 * 4     ; number of blocks to copy
         ldx #0
+startProgramBank = * + 1
 @loop:
+        lda #0
+        sta EASYFLASH_IO_BANK
 @i1:
         lda $8002,x
 @i2:
@@ -140,12 +166,23 @@ startProgramCode:
         bne @loop
         inc @i1 + 2
         inc @i2 + 2
+        lda @i1 + 2
+        cmp #$c0
+        bne @noBankInc
+        inc startProgramBank
+        lda #$80
+        sta @i1 + 2
+@noBankInc:
         dey
         bne @loop
+
+        lda #EASYFLASH_KILL
+        sta EASYFLASH_IO_CONTROL
 
         jsr $ff84   ; Initialise I/O
         jsr $ff8a   ; Restore Kernal Vectors
         jsr $ff81   ; Initialize screen editor
+
         jmp $080d
 .reloc
 
