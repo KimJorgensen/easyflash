@@ -27,7 +27,6 @@
 #include <c64.h>
 
 #include "text_plot.h"
-#include "image_detect.h"
 #include "memcfg.h"
 #include "efmenu.h"
 
@@ -37,13 +36,6 @@ extern const uint8_t* bitmap;
 extern const uint8_t* colmap;
 extern const uint8_t* attrib;
 extern uint8_t background;
-
-
-#define MODE_EF     0
-#define MODE_FC3    1
-#define MODE_GEORAM 2
-#define MODE_KERNAL 3
-
 
 static efmenu_entry_t kernal_menu[] =
 {
@@ -55,7 +47,7 @@ static efmenu_entry_t kernal_menu[] =
         { '6',    0, 	0x05,   MODE_KERNAL,    "6", "Empty" },
         { '7',    0, 	0x06,   MODE_KERNAL,    "7", "Empty" },
         { '8',    0, 	0x07,   MODE_KERNAL,    "8", "Empty" },
-        { 0, 0, 0, 0, "", NULL }
+        { 0, 0, 0, 0, "", "" }
 };
 
 static efmenu_entry_t ef_menu[] =
@@ -67,7 +59,7 @@ static efmenu_entry_t ef_menu[] =
         { 'e',    0x05, 0, 	MODE_EF,    "E", "EF Slot 5" },
         { 'f',    0x06, 0, 	MODE_EF,    "F", "EF Slot 6" },
         { 'g',    0x07, 0, 	MODE_EF,    "G", "EF Slot 7" },
-        { 0, 0, 0, 0, "", NULL }
+        { 0, 0, 0, 0, "", "" }
 };
 
 
@@ -105,7 +97,7 @@ static void startMenuEntry(const efmenu_entry_t* entry)
     // Wait until the key is released
     waitForNoKey();
     // PONR
-    *(uint8_t*)0xde01 = entry->slot; // <= todo: make it nice
+    set_slot(entry->slot);
     setBankChangeMode(entry->bank, entry->mode);
 }
 
@@ -166,6 +158,39 @@ static void prepare_background(void)
 }
 
 
+static void fill_directory(void)
+{
+    const efmenu_dir_t* p_dir = (efmenu_dir_t*)0x8000;
+    int i;
+    efmenu_entry_t* p_entry;
+    char*           p_name;
+
+    set_slot(0);
+    set_bank(0x10);
+    // we show slot 1 to 7 only
+    p_name  = p_dir->slots[1];
+    p_entry = ef_menu;
+    for (i = 0; i < 7; ++i)
+    {
+        memcpy(p_entry->name, p_name, sizeof(p_dir->slots[0]));
+        ++p_entry;
+        p_name += sizeof(p_dir->slots[0]);
+        p_entry->name[sizeof(ef_menu[0].name) - 1] = '\0';
+    }
+
+    // and KERNAL 1 to 8
+    p_name  = p_dir->kernals[0];
+    p_entry = kernal_menu;
+    for (i = 0; i < 8; ++i)
+    {
+        memcpy(p_entry->name, p_name, sizeof(p_dir->kernals[0]));
+        ++p_entry;
+        p_name += sizeof(p_dir->slots[0]);
+        p_entry->name[sizeof(kernal_menu[0].name) - 1] = '\0';
+    }
+}
+
+
 int main(void)
 {
     // copy bitmap at $A000 from ROM to RAM => VIC can see it
@@ -191,7 +216,7 @@ int main(void)
 
     prepare_background();
 
-    detect_images(kernal_menu);
+    fill_directory();
     showMenu();
     waitForKey();
 

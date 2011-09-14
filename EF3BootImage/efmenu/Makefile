@@ -26,7 +26,6 @@ obj += obj/gfx.o
 obj += obj/charset.o
 obj += obj/text_plot.o
 obj += obj/text_plot_asm.o
-obj += obj/image_detect.o
 
 INCLUDE  := src
 
