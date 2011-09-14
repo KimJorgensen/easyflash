@@ -33,7 +33,7 @@
 #include "selectbox.h"
 
 #define SELECTBOX_X 6
-#define SELECTBOX_W 28
+#define SELECTBOX_W 26
 
 static const SelectBoxEntry* pEntries;
 static uint8_t yPosition;
@@ -79,14 +79,8 @@ static void __fastcall__ selectBoxPrintEntry(uint8_t nEntry)
     // clear line
     cclear(SELECTBOX_W - 2);
 
-    // entry number
-    utilStr[0] = 0;
-    utilAppendDecimal(nEntry);
-    gotox(SELECTBOX_X + 5 - strlen(utilStr));
-    cputs(utilStr);
-
     // name
-    gotox(SELECTBOX_X + 6);
+    gotox(SELECTBOX_X + 2);
     cputs(pEntry->label);
 
     revers(0);
