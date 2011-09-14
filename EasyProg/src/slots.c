@@ -101,7 +101,7 @@ uint8_t selectKERNALSlotDialog(void)
     }
 
     pEntry = pEntries;
-    for (nSlot = 0; nSlot < MAX_KERNALS; ++nSlot)
+    for (nSlot = 1; nSlot <= MAX_KERNALS; ++nSlot)
     {
         strcpy(utilStr, "KERNAL ");
         utilAppendDecimal(nSlot);
@@ -110,7 +110,7 @@ uint8_t selectKERNALSlotDialog(void)
     }
     pEntry->label[0] = 0; // end marker
 
-    rv = selectBox(pEntries, "a KERNAL to write");
+    rv = selectBox(pEntries, "KERNAL to write");
     free(pEntries);
     return rv;
 }
