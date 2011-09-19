@@ -24,8 +24,11 @@
 PROGRESS_SCREEN_ADDR    = $0400 + 17 * 40 + 6
 PROGRESS_COLOR_ADDR     = $d800 + 17 * 40 + 6
 PROGRESS_BANKS_PER_LINE = 32
+FLASH_NUM_BANKS         = 64
+FLASH_NUM_CHIPS         = 2
 
 .import _m_aBlockStates
+.import _g_nSelectedSlot
 
 .code
 
@@ -47,8 +50,21 @@ PROGRESS_BANKS_PER_LINE = 32
 _progressUpdateDisplay:
         lda #<_m_aBlockStates
         sta ptr1
-        lda #>_m_aBlockStates
-        sta ptr1 + 1
+        ldy #>_m_aBlockStates
+
+        ldx _g_nSelectedSlot
+@mul:
+        dex
+        bmi @mulEnd
+        lda ptr1
+        clc
+        adc #(FLASH_NUM_CHIPS * FLASH_NUM_BANKS)
+        sta ptr1
+        bcc @mul
+        iny
+        bne @mul    ; always
+@mulEnd:
+        sty ptr1 + 1
 
         lda #<PROGRESS_SCREEN_ADDR
         sta ptr2
