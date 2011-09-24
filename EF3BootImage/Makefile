@@ -11,6 +11,7 @@
 # 09 \ <--------- EasyProg
 # 0a /                     -------->
 # .                 .
+# 0f <----------- sound ----------->    
 # 10 \              .
 # .   \ Directory   .
 # .   / (64k        .
@@ -34,6 +35,9 @@ mkimage_cmd += images/ttn2crom.bin  0x02 0x0000
 
 mkimage_cmd += efmenu/efmenu.bin    0x08 0x0000
 mkimage_cmd += $(easyprog)          0x09 0x0000
+
+#mkimage_cmd += waterdrop.raw        0x0f 0x0000
+#mkimage_cmd += bing.raw        0x0f 0x0000
 
 mkimage_cmd += directory.bin        0x10 0x0000
 

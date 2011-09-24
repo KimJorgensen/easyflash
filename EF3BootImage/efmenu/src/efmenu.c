@@ -165,8 +165,8 @@ static void fill_directory(void)
     efmenu_entry_t* p_entry;
     char*           p_name;
 
-    set_slot(0);
-    set_bank(0x10);
+    set_slot(EF_DIR_SLOT);
+    set_bank(EF_DIR_BANK);
     // we show slot 1 to 7 only
     p_name  = p_dir->slots[1];
     p_entry = ef_menu;
@@ -190,6 +190,7 @@ static void fill_directory(void)
     }
 }
 
+void initNMI(void);
 
 int main(void)
 {
@@ -218,6 +219,16 @@ int main(void)
 
     fill_directory();
     showMenu();
+
+
+#if 0
+    set_bank(0x0f);
+    memcpy((void*)0x8000, (void*)0x8000, 0x2000);
+    // copy KERNAL to RAM
+    memcpy((void*)0xe000, (void*)0xe000, 0x2000);
+    initNMI();
+#endif
+
     waitForKey();
 
     return 0;

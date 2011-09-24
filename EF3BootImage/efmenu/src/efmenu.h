@@ -19,6 +19,8 @@
 #define EF_DIR_BANK         0x10
 #define EF_DIR_NUM_SLOTS    16
 #define EF_DIR_NUM_KERNALS  8
+#define EF_DIR_SLOT         0
+#define EF_DIR_BANK         0x10
 
 
 void __fastcall__ set_slot(uint8_t slot);
