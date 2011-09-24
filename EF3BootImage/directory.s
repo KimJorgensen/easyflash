@@ -5,37 +5,37 @@
 !pet "EF-Directory V1:"
 
 ; 16 EasyFlash slots
-!byte 0                 ; slot 0
+!pet "System Area"      ; slot 0
 !align 15, 0, 0
-!pet "Testeintrag"      ; slot 1
+!pet "Slot 1"           ; slot 1
 !align 15, 0, 0
-!byte 0                 ; slot 2
+!pet "Slot 2"           ; slot 2
 !align 15, 0, 0
-!byte 0                 ; slot 3
+!pet "Slot 3"           ; slot 3
 !align 15, 0, 0
-!byte 0                 ; slot 4
+!pet "Slot 4"           ; slot 4
 !align 15, 0, 0
-!byte 0                 ; slot 5
+!pet "Slot 5"           ; slot 5
 !align 15, 0, 0
-!byte 0                 ; slot 6
+!pet "Slot 6"           ; slot 6
 !align 15, 0, 0
-!byte 0                 ; slot 7
+!pet "Slot 7"           ; slot 7
 !align 15, 0, 0
-!byte 0                 ; slot 8
+!pet "Slot 8"           ; slot 8
 !align 15, 0, 0
-!byte 0                 ; slot 9
+!pet "Slot 9"           ; slot 9
 !align 15, 0, 0
-!byte 0                 ; slot 10
+!pet "Slot 10"          ; slot 10
 !align 15, 0, 0
-!byte 0                 ; slot 11
+!pet "Slot 11"          ; slot 11
 !align 15, 0, 0
-!byte 0                 ; slot 12
+!pet "Slot 12"          ; slot 12
 !align 15, 0, 0
-!byte 0                 ; slot 13
+!pet "Slot 13"          ; slot 13
 !align 15, 0, 0
-!byte 0                 ; slot 14
+!pet "Slot 14"          ; slot 14
 !align 15, 0, 0
-!byte 0                 ; slot 15
+!pet "Slot 15"          ; slot 15
 !align 15, 0, 0
 
 ; 8 KERNAL slots
@@ -45,12 +45,13 @@
 !align 15, 0, 0
 !pet "Turbo Tape"       ; KERNAL 3
 !align 15, 0, 0
-!byte 0                 ; KERNAL 4
+!pet "KERNAL 4"         ; KERNAL 4
 !align 15, 0, 0
-!byte 0                 ; KERNAL 5
+!pet "KERNAL 5"         ; KERNAL 5
 !align 15, 0, 0
-!byte 0                 ; KERNAL 6
+!pet "KERNAL 6"         ; KERNAL 6
 !align 15, 0, 0
-!byte 0                 ; KERNAL 7
+!pet "KERNAL 7"         ; KERNAL 7
 !align 15, 0, 0
-!byte 0                 ; KERNAL 8
+!pet "KERNAL 8"         ; KERNAL 8
+!align 15, 0, 0
