@@ -17,9 +17,11 @@
 uint8_t  efShowROM(void* addr);
 uint8_t  efHideROM(void* addr);
 uint8_t __fastcall__ efPeekCartROM(void* addr);
+void* __fastcall__ efCopyCartROM(void* dest, const void* src, size_t count);
 uint8_t* __fastcall__ efVerifyFlash(uint8_t* pFlash, uint8_t* pRAM);
 
-uint16_t __fastcall__ eapiInit(uint8_t* pManufacturerId, uint8_t* pDeviceId);
+uint8_t __fastcall__ eapiInit(uint8_t* pManufacturerId, uint8_t* pDeviceId);
+uint8_t eapiReInit(void);
 uint8_t __fastcall__ eapiGetBank(void);
 void __fastcall__ eapiSetBank(uint8_t nBank);
 uint8_t __fastcall__ eapiSectorErase(uint8_t* pBase);

@@ -60,7 +60,7 @@ static void selectBoxPrintFrame(uint8_t nEntries)
     screenPrintBox(SELECTBOX_X, yPosition, SELECTBOX_W, nEntries + 6);
     screenPrintSepLine(SELECTBOX_X, SELECTBOX_X + SELECTBOX_W - 1, yPosition + 2);
     screenPrintSepLine(SELECTBOX_X, SELECTBOX_X + SELECTBOX_W - 1, yPosition + nEntries + 6 - 3);
-    cputsxy(SELECTBOX_X + 1, yPosition + nEntries + 6 - 2, "Up/Down/Enter");
+    cputsxy(SELECTBOX_X + 1, yPosition + nEntries + 6 - 2, "Up/Down/Enter/Stop");
 }
 
 /******************************************************************************/
@@ -91,7 +91,7 @@ static void __fastcall__ selectBoxPrintEntry(uint8_t nEntry)
 /******************************************************************************/
 /**
  * Let the user select an entry. Return the entry number.
- * Return 255 if the user canceled the selection.
+ * Return ~0 if the user canceled the selection.
  */
 uint8_t __fastcall__ selectBox(const SelectBoxEntry* p,
                                const char* pStrWhatToSelect)
@@ -154,8 +154,10 @@ uint8_t __fastcall__ selectBox(const SelectBoxEntry* p,
             break;
 
         case CH_ENTER:
-            pEntry = pEntries + nSelection;
             return nSelection;
+
+        case CH_STOP:
+            return ~0;
         }
     }
 }

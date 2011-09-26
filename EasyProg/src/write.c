@@ -353,8 +353,8 @@ static void checkWriteImage(uint8_t imageType)
  */
 void checkWriteCRTImage(void)
 {
-    checkAskForSlot(1);
-    checkWriteImage(IMAGE_TYPE_CRT);
+    if (checkAskForSlot())
+        checkWriteImage(IMAGE_TYPE_CRT);
 }
 
 
@@ -366,7 +366,7 @@ void checkWriteKERNALImage(void)
 {
     slotSelect(0);
     m_nBank = selectKERNALSlotDialog();
-    if (m_nBank != 255)
+    if (m_nBank != ~0)
     {
         m_nBank |= FLASH_8K_SECTOR_BIT;
         checkWriteImage(IMAGE_TYPE_KERNAL);
@@ -380,8 +380,8 @@ void checkWriteKERNALImage(void)
  */
 void checkWriteLOROMImage(void)
 {
-    checkAskForSlot(1);
-    checkWriteImage(IMAGE_TYPE_LOROM);
+    if (checkAskForSlot())
+        checkWriteImage(IMAGE_TYPE_LOROM);
 }
 
 
@@ -391,6 +391,6 @@ void checkWriteLOROMImage(void)
  */
 void checkWriteHIROMImage(void)
 {
-    checkAskForSlot(1);
-    checkWriteImage(IMAGE_TYPE_HIROM);
+    if (checkAskForSlot())
+        checkWriteImage(IMAGE_TYPE_HIROM);
 }
