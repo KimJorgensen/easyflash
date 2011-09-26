@@ -129,8 +129,7 @@ void hexViewer(void)
     char key;
     uint8_t  prevKeyRepeat;
 
-    // we can discard the values => just use "key"
-    if (!eapiInit(&key, &key))
+    if (!eapiReInit())
         return;
 
     screenPrintFrame();

@@ -4,6 +4,7 @@
 .importzp       tmp1, tmp2, tmp3, tmp4
 
 .import         popax
+.import         memcpy_getparams
 
 .import _g_nSelectedSlot
 
@@ -33,16 +34,18 @@ EASYFLASH_16K     = $07
 ;
 ; Hide BASIC/Cartridge ROM and CLI.
 ;
-; changes: Y
+; changes: -
 ;
 ; =============================================================================
 .export _efHideROM
 _efHideROM:
-        ldy #$36
-        sty $01
-        ldy #EASYFLASH_KILL
-        sty EASYFLASH_CONTROL ; avoid the evil mode with cart ROM at $a000
+        pha
+        lda #$36
+        sta $01
+        lda #EASYFLASH_KILL
+        sta EASYFLASH_CONTROL ; avoid the evil mode with cart ROM at $a000
         cli
+        pla
         rts
 
 
@@ -50,16 +53,18 @@ _efHideROM:
 ;
 ; Show BASIC/Cartridge ROM.
 ;
-; changes: Y
+; changes: -
 ;
 ; =============================================================================
 .export _efShowROM
 _efShowROM:
         sei
-        ldy #$37
-        sty $01
-        ldy #EASYFLASH_16K
-        sty EASYFLASH_CONTROL
+        pha
+        lda #$37
+        sta $01
+        lda #EASYFLASH_16K
+        sta EASYFLASH_CONTROL
+        pla
         rts
 
 
@@ -86,6 +91,57 @@ _efPeekCartROM:
         ldx #0
         rts
 
+
+; =============================================================================
+;
+; Copy data from cartridge ROM to RAM. The RAM may be under the ROM.
+;
+; parameters:
+;       like memcpy
+; return:
+;       like memcpy
+;
+; =============================================================================
+.export _efCopyCartROM
+_efCopyCartROM:
+        ; Get the parameters from stack as follows:
+        ;       size            --> ptr3
+        ;       src             --> ptr1
+        ;       dest            --> ptr2
+        ;   First argument (dest) will remain on stack and is returned in a/x!
+        jsr memcpy_getparams
+
+        ; assert Y = 0
+        ; copy n * 256 bytes
+        ldx ptr3 + 1
+        beq @less256
+@copy256:
+        jsr _efShowROM
+        lda (ptr1),y
+        jsr _efHideROM
+        sta (ptr2),y
+
+        iny
+        bne @copy256
+        inc ptr1 + 1
+        inc ptr2 + 1
+        dex
+        bne @copy256
+
+@less256:
+        ldx ptr3        ; Get the low byte of n
+        beq @done       ; something to copy
+@copyRest:
+        ; assert Y = 0
+        jsr _efShowROM
+        lda (ptr1),y
+        jsr _efHideROM
+        sta (ptr2),y
+        iny
+        dex
+        bne @copyRest
+@done:
+        jmp popax       ; Pop ptr and return as result
 
 ; =============================================================================
 ;
@@ -162,7 +218,8 @@ ret4:
 ; (refer to EasyAPI documentation)
 ; In case of an error, the error code is returned in *pDeviceId.
 ;
-; uint16_t __fastcall__ eapiInit(uint8_t* pManufacturerId, uint8_t* pDeviceId)
+; uint8_t __fastcall__ eapiInit(uint8_t* pManufacturerId, uint8_t* pDeviceId)
+; uint8_t eapiReInit(void);
 ;
 ; parameters:
 ;       pDeviceId in AX
@@ -189,7 +246,7 @@ _eapiInit:
         sta (ptr2),y    ; Device ID
         txa
         sta (ptr1),y    ; Manufacturer ID
-
+eapiInitRet:
         bcc eiOK
         lda #0
         tax
@@ -199,6 +256,13 @@ eiOK:
         ldx #0
         rts
 
+.export _eapiReInit
+_eapiReInit:
+        jsr _efShowROM
+        jsr EAPIInit
+        sty tmp1
+        jsr _efHideROM
+        jmp eapiInitRet
 
 ; =============================================================================
 ;
