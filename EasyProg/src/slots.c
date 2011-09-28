@@ -53,10 +53,12 @@ static const char* m_pEFSignature = "EF-Directory V1:";
  */
 void slotsFillEFDir(void)
 {
-    uint8_t i;
+    uint8_t i, nSlot;
+
+    nSlot = g_nSelectedSlot;
+    g_nSelectedSlot = EF_DIR_SLOT;
 
     eapiReInit();
-    eapiSetSlot(EF_DIR_SLOT);
     eapiSetBank(EF_DIR_BANK);
 
     efCopyCartROM(&m_EFDir, (void*)(0x8000), sizeof(m_EFDir));
@@ -82,6 +84,8 @@ void slotsFillEFDir(void)
 
     // slot 0 always gets this name
     strcpy(m_EFDir.slots[0], "System Area");
+
+    g_nSelectedSlot = nSlot;
 }
 
 /******************************************************************************/
@@ -214,4 +218,34 @@ void __fastcall__ slotSelect(uint8_t slot)
     {
         refreshMainScreen();
     }
+}
+
+
+/******************************************************************************/
+/**
+ * Read the slot directory from flash, set the name of g_nSelectedSlot in
+ * the slot directory and write it back to flash.
+ **/
+void __fastcall__ slotSaveName(const char* name)
+{
+    uint16_t offset;
+    uint8_t  nSlot;
+
+    nSlot = g_nSelectedSlot;
+    g_nSelectedSlot = EF_DIR_SLOT;
+
+    slotsFillEFDir();
+    strncpy(m_EFDir.slots[nSlot], name, sizeof(m_EFDir.slots[0]));
+
+    // slotsFillEFDir initialized EAPI etc. for us already
+    eraseSector(EF_DIR_BANK, 0);
+    offset = 0;
+    do
+    {
+        memcpy(BLOCK_BUFFER, ((uint8_t*) &m_EFDir) + offset, 256);
+        flashWriteBlock(EF_DIR_BANK, 0, offset);
+        offset += 256;
+    }
+    while (offset < sizeof(m_EFDir));
+    g_nSelectedSlot = nSlot;
 }

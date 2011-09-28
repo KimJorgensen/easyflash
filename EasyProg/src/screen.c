@@ -569,10 +569,8 @@ uint8_t __fastcall__ screenWaitKey(uint8_t flags)
 
 /******************************************************************************/
 /**
- *
- * Return the string entered.
- * Return NULL if the user pressed <stop>.
- * Not reentrant ;-)
+ * Return the string entered. The maximal length of the string is
+ * FILENAME_MAX, i.e. 16+1.
  */
 const char* __fastcall__ screenReadInput(const char* pStrTitle,
                                          const char* pStrPrompt,
@@ -616,13 +614,10 @@ const char* __fastcall__ screenReadInput(const char* pStrTitle,
             if (len)
                 strInput[--len] = '\0';
         }
-    } while((c != CH_ENTER) && (c != CH_STOP));
+    } while (c != CH_ENTER);
 
     cursor(0);
     refreshMainScreen();
 
-    if (c == CH_STOP)
-        return NULL;
-    else
-        return strInput;
+    return strInput;
 }
