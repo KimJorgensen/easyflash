@@ -111,6 +111,9 @@ _efCopyCartROM:
         ;   First argument (dest) will remain on stack and is returned in a/x!
         jsr memcpy_getparams
 
+        lda _g_nSelectedSlot
+        jsr EAPISetSlot
+
         ; assert Y = 0
         ; copy n * 256 bytes
         ldx ptr3 + 1

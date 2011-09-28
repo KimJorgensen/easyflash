@@ -195,15 +195,8 @@ static uint8_t writeCrtImage(void)
     if (writeStartUpCode(&nBankOffset) != CART_RV_OK)
         return CART_RV_ERR;
 
-    do
+    while ((rv = readNextHeader()) != CART_RV_EOF)
     {
-        rv = readNextHeader();
-        if (rv == CART_RV_ERR)
-        {
-            screenPrintSimpleDialog(apStrChipReadError);
-            return CART_RV_ERR;
-        }
-
         if (rv == CART_RV_OK)
         {
             m_nBank += nBankOffset;
@@ -235,10 +228,19 @@ static uint8_t writeCrtImage(void)
                 return CART_RV_ERR;
             }
         }
-
-        // rv == CART_RV_EOF is the normal way to leave this loop
+        else
+        {
+            screenPrintSimpleDialog(apStrChipReadError);
+            return CART_RV_ERR;
+        }
     }
-    while (rv == CART_RV_OK);
+
+    if (g_nSlots > 1 && g_nSelectedSlot != 0)
+    {
+        slotSaveName(
+            screenReadInput("CRT Name", "Name of cartridge",
+                            g_strCartName));
+    }
 
     return CART_RV_OK;
 }
