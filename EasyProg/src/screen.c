@@ -605,7 +605,7 @@ const char* __fastcall__ screenReadInput(const char* pStrTitle,
         gotox(5 + len);
 
         c = cgetc();
-        if ((c >= 32) && (c < 127) && (len < sizeof(strInput) - 1))
+        if ((c >= 32) && (len < sizeof(strInput) - 1))
         {
             strInput[len++] = c;
         }
