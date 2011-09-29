@@ -55,3 +55,6 @@
 !align 15, 0, 0
 !pet "KERNAL 8"         ; KERNAL 8
 !align 15, 0, 0
+
+; $4711 = no checksum
+!word $4711
