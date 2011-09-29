@@ -24,57 +24,87 @@
 # uncompressed version of EasyProg
 easyprog    := ../EasyProg/easyprog
 
-mkimage_cmd := ./mkimages
+###############################################################################
+#
+PHONY: all
+all: ef3-init.crt ef3-menu.crt
 
-mkimage_cmd += trampoline.bin       0x00 0x3F00
+###############################################################################
+# These files are in "menu" image and "initial" image
 
-mkimage_cmd += images/exos.bin      0x00 0x0000
-mkimage_cmd += images/beast.bin     0x01 0x0000
-mkimage_cmd += images/ttn2crom.bin  0x02 0x0000
-#mkimage_cmd += images/jiffy.bin     0x03 0x0000
+menu_image  := trampoline.bin       0x00 0x3F00
+menu_image  += efmenu/efmenu.bin    0x08 0x0000
+menu_image  += $(easyprog)          0x09 0x0000
+#menu_image += waterdrop.raw        0x0f 0x0000
+#menu_image += bing.raw        0x0f 0x0000
 
-mkimage_cmd += efmenu/efmenu.bin    0x08 0x0000
-mkimage_cmd += $(easyprog)          0x09 0x0000
+menu_deps   := trampoline.bin
+menu_deps   += efmenu/efmenu.bin
+menu_deps   += $(easyprog)
 
-#mkimage_cmd += waterdrop.raw        0x0f 0x0000
-#mkimage_cmd += bing.raw        0x0f 0x0000
+###############################################################################
+# The menu image: Contains menu and tools
+#
+ef3-menu.bin: $(menu_deps) mkimages
+	./mkimages \
+		$(menu_image) \
+		ef3-menu.bin
 
-mkimage_cmd += directory.bin        0x10 0x0000
+###############################################################################
+# The initial image: Contains menu, tools, some KERNALS and a directory
+#
+ef3-init.bin: $(menu_deps) mkimages \
+              directory.bin
+	./mkimages \
+		$(menu_image) \
+		images/exos.bin      0x00 0x0000 \
+		images/beast.bin     0x01 0x0000 \
+		images/ttn2crom.bin  0x02 0x0000 \
+		directory.bin        0x10 0x0000 \
+		ef3-init.bin
 
-#mkimage_cmd += fc3-1988.bin         0x18 0x0000
 
-mkimage_cmd += ef3-multi.bin
+#sys_image_cmd += fc3-1988.bin         0x18 0x0000
 
-ef3-multi.crt: ef3-multi.bin
-	cartconv -t easy -i $< -o $@
-
-trampoline.bin: trampoline.s
-	acme -f plain -o $@ $<
-
-directory.bin: directory.s
-	acme -f plain -o $@ $<
-
-ef3-multi.bin: trampoline.bin directory.bin mkimages \
-		efmenu/efmenu.bin $(easyprog)
-	$(mkimage_cmd)
-
+###############################################################################
+#
 mkimages: mkimages.c
 	$(CC) -o $@ $<
 
+###############################################################################
+#
 efmenu/efmenu.bin: always
 	$(MAKE) -C efmenu
 
+.PHONY: always
+always:
+
+###############################################################################
+#
 $(easyprog): always
 	$(MAKE) -C $(dir $@)
 
+###############################################################################
+#
 .PHONY: clean
 clean:
-	-rm mkimages
-	-rm ef3-multi.crt
+	-rm -f mkimages
+	-rm -f ef3-init.crt
+	-rm -f ef3-init.bin
+	-rm -f ef3-menu.crt
+	-rm -f ef3-menu.bin
+	-rm -f mkimages
+	-rm -f directory.bin
 	-make -C efmenu clean
 
-%.bin: %.s
-	acme -o $@ $<
+###############################################################################
+# create a .crt image from a .bin image
+#
+%.crt: %.bin
+	cartconv -t easy -i $< -o $@
 
-.PHONY: always
-always:
+###############################################################################
+# create a plain .bin image from a .s file
+#
+%.bin: %.s
+	acme -f plain -o $@ $<
