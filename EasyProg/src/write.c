@@ -100,7 +100,6 @@ static uint8_t writeCRTError(void)
 static uint8_t __fastcall__ writeStartUpCode(uint8_t* pBankOffset)
 {
     uint8_t  nConfig;
-    uint8_t  rv;
 
     // most CRT types are put on bank 1
     *pBankOffset = 1;
@@ -235,13 +234,6 @@ static uint8_t writeCrtImage(void)
         }
     }
 
-    if (g_nSlots > 1 && g_nSelectedSlot != 0)
-    {
-        slotSaveName(
-            screenReadInput("CRT Name", "Name of cartridge",
-                            g_strCartName));
-    }
-
     return CART_RV_OK;
 }
 
@@ -253,7 +245,7 @@ static uint8_t writeCrtImage(void)
  *
  * return CART_RV_OK or CART_RV_ERR
  */
-static uint8_t writeBinImage(uint8_t nChip)
+static uint8_t __fastcall__ writeBinImage(uint8_t nChip)
 {
     uint16_t nOffset;
     int      nBytes;
@@ -296,9 +288,10 @@ static uint8_t writeBinImage(uint8_t nChip)
 /**
  * Write an image file to the flash.
  *
- * imageType must be one of IMAGE_TYPE_CRT, IMAGE_TYPE_LOROM, IMAGE_TYPE_HIROM.
+ * imageType must be one of IMAGE_TYPE_CRT, IMAGE_TYPE_LOROM, IMAGE_TYPE_HIROM,
+ *                          IMAGE_TYPE_KERNAL
  */
-static void checkWriteImage(uint8_t imageType)
+static uint8_t __fastcall__ checkWriteImage(uint8_t imageType)
 {
     uint8_t  rv;
 
@@ -308,7 +301,7 @@ static void checkWriteImage(uint8_t imageType)
     {
         rv = fileDlg(imageType == IMAGE_TYPE_CRT ? "CRT" : "BIN");
         if (!rv)
-            return;
+            return CART_RV_ERR;
 
         rv = utilOpenFile(0);
         if (rv == 1)
@@ -319,7 +312,7 @@ static void checkWriteImage(uint8_t imageType)
     if (screenAskEraseDialog() != BUTTON_ENTER)
     {
         eload_close();
-        return;
+        return CART_RV_ERR;
     }
 
     refreshMainScreen();
@@ -332,20 +325,15 @@ static void checkWriteImage(uint8_t imageType)
     if (imageType == IMAGE_TYPE_CRT)
         rv = writeCrtImage();
     else if (imageType == IMAGE_TYPE_KERNAL)
-    {
         rv = writeBinImage(0);
-    }
     else
-    {
         // m_nBank has been set by caller already;
         rv = writeBinImage(imageType == IMAGE_TYPE_HIROM);
-    }
+
     eload_close();
 
     timerStop();
-
-    if (rv == CART_RV_OK)
-        screenPrintSimpleDialog(apStrWriteComplete);
+    return rv;
 }
 
 
@@ -356,7 +344,17 @@ static void checkWriteImage(uint8_t imageType)
 void checkWriteCRTImage(void)
 {
     if (checkAskForSlot())
-        checkWriteImage(IMAGE_TYPE_CRT);
+    {
+        if (checkWriteImage(IMAGE_TYPE_CRT) == CART_RV_OK)
+        {
+            if (g_nSlots > 1 && g_nSelectedSlot != 0)
+            {
+                slotSaveName(screenReadInput("Cartridge Name", g_strCartName),
+                    ~0);
+            }
+            screenPrintSimpleDialog(apStrWriteComplete);
+        }
+    }
 }
 
 
@@ -366,12 +364,16 @@ void checkWriteCRTImage(void)
  */
 void checkWriteKERNALImage(void)
 {
+    uint8_t nKERNAL;
+
     slotSelect(0);
-    m_nBank = selectKERNALSlotDialog();
-    if (m_nBank != ~0)
+    nKERNAL = selectKERNALSlotDialog();
+    if (nKERNAL != ~0)
     {
-        m_nBank |= FLASH_8K_SECTOR_BIT;
+        m_nBank = nKERNAL | FLASH_8K_SECTOR_BIT;
         checkWriteImage(IMAGE_TYPE_KERNAL);
+        slotSaveName(screenReadInput("KERNAL Name", g_strFileName), nKERNAL);
+        screenPrintSimpleDialog(apStrWriteComplete);
     }
 }
 
