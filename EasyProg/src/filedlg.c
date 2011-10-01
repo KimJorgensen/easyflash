@@ -191,7 +191,6 @@ static void fileDlgReadDir(void)
 
     if (dirOpen(FILEDLG_LFN, g_nDrive))
     {
-        dirClose(FILEDLG_LFN);
         return;
     }
 
@@ -202,7 +201,6 @@ static void fileDlgReadDir(void)
         if (pEntry->size > 9999)
             pEntry->size = 9999;
 
-        // only accept supported file types
         if (strcmp(pEntry->name, "..") &&
             strcmp(pEntry->name, ".") &&
             strcmp(pEntry->name, strUp) &&
