@@ -573,7 +573,6 @@ uint8_t __fastcall__ screenWaitKey(uint8_t flags)
  * FILENAME_MAX, i.e. 16+1.
  */
 const char* __fastcall__ screenReadInput(const char* pStrTitle,
-                                         const char* pStrPrompt,
                                          const char* pStrDefault)
 {
     uint8_t len;
@@ -583,24 +582,22 @@ const char* __fastcall__ screenReadInput(const char* pStrTitle,
     strcpy(strInput, pStrDefault);
     len = strlen(strInput);
 
-    screenPrintBox(2, 6, 36, 13);
+    screenPrintBox(2, 6, 36, 12);
     screenPrintSepLine(2, 37, 8);
 
     cputsxy(3, 7, pStrTitle);
-    cputsxy(4, 10, pStrPrompt);
 
     // the input field
     textcolor(COLOR_LIGHTFRAME);
-    screenPrintBox(4, 11, 32, 3);
+    screenPrintBox(4, 10, 32, 3);
     textcolor(COLOR_FOREGROUND);
 
-    screenPrintButton(3, 15, "Stop");
-    screenPrintButton(30, 15, "Enter");
+    screenPrintButton(30, 14, "Enter");
 
     cursor(1);
     do
     {
-        cputsxy(5, 12, strInput);
+        cputsxy(5, 11, strInput);
         cputc(' ');
         gotox(5 + len);
 
