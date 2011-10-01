@@ -52,6 +52,7 @@ uint8_t __fastcall__ dirOpen(uint8_t lfn, uint8_t device)
 
             return 0;
         }
+        cbm_close(lfn);
     }
     return 1;
 }
