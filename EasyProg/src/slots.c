@@ -223,10 +223,14 @@ void __fastcall__ slotSelect(uint8_t slot)
 
 /******************************************************************************/
 /**
- * Read the slot directory from flash, set the name of g_nSelectedSlot in
- * the slot directory and write it back to flash.
+ * Read the slot directory from flash, set the name of an EF slot or a KERNAL
+ * in the slot directory and write it back to flash.
+ *
+ * If nKERNAL is ~0, the name is written to EF Slot number g_nSelectedSlot.
+ * Otherwise nKERNAL contains the KERNAL slot number.
+ *
  **/
-void __fastcall__ slotSaveName(const char* name)
+void __fastcall__ slotSaveName(const char* name, uint8_t nKERNAL)
 {
     uint16_t offset;
     uint8_t  nSlot;
@@ -235,7 +239,10 @@ void __fastcall__ slotSaveName(const char* name)
     g_nSelectedSlot = EF_DIR_SLOT;
 
     slotsFillEFDir();
-    strncpy(m_EFDir.slots[nSlot], name, sizeof(m_EFDir.slots[0]));
+    if (nKERNAL != ~0)
+        strncpy(m_EFDir.kernals[nKERNAL], name, sizeof(m_EFDir.kernals[0]));
+    else
+        strncpy(m_EFDir.slots[nSlot], name, sizeof(m_EFDir.slots[0]));
 
     // slotsFillEFDir initialized EAPI etc. for us already
     eraseSector(EF_DIR_BANK, 0);
