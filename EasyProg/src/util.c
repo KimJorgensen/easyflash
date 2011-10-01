@@ -28,6 +28,7 @@
 #include <stdio.h>
 
 #include "util.h"
+#include "flash.h"
 #include "filedlg.h"
 #include "screen.h"
 #include "texts.h"
@@ -180,7 +181,7 @@ void __fastcall__ utilAppendFlashAddr(uint8_t nBank,
                                       uint8_t nChip,
                                       uint16_t nOffset)
 {
-    utilAppendHex2(nBank);
+    utilAppendHex2(nBank & FLASH_BANK_MASK);
     utilAppendChar(':');
     utilAppendHex1(nChip);
     utilAppendChar(':');
