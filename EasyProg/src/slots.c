@@ -91,7 +91,7 @@ void slotsFillEFDir(void)
 /******************************************************************************/
 /**
  * Let the user select a slot. Return the slot number.
- * Return ~0 if the user canceled the selection.
+ * Return 0xff if the user canceled the selection.
  */
 uint8_t __fastcall__ selectSlotDialog(uint8_t nSlots)
 {
@@ -188,7 +188,7 @@ uint8_t __fastcall__ checkAskForSlot(void)
         {
             refreshMainScreen();
             s = selectSlotDialog(g_nSlots);
-            if (s == ~0)
+            if (s == 0xff)
                 return 0;
 
             g_nSelectedSlot = s;
@@ -239,7 +239,7 @@ void __fastcall__ slotSaveName(const char* name, uint8_t nKERNAL)
     g_nSelectedSlot = EF_DIR_SLOT;
 
     slotsFillEFDir();
-    if (nKERNAL != ~0)
+    if (nKERNAL != 0xff)
         strncpy(m_EFDir.kernals[nKERNAL], name, sizeof(m_EFDir.kernals[0]));
     else
         strncpy(m_EFDir.slots[nSlot], name, sizeof(m_EFDir.slots[0]));

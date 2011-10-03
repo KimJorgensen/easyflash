@@ -91,7 +91,7 @@ static void __fastcall__ selectBoxPrintEntry(uint8_t nEntry)
 /******************************************************************************/
 /**
  * Let the user select an entry. Return the entry number.
- * Return ~0 if the user canceled the selection.
+ * Return 0xff if the user canceled the selection.
  */
 uint8_t __fastcall__ selectBox(const SelectBoxEntry* p,
                                const char* pStrWhatToSelect)
@@ -157,7 +157,7 @@ uint8_t __fastcall__ selectBox(const SelectBoxEntry* p,
             return nSelection;
 
         case CH_STOP:
-            return ~0;
+            return 0xff;
         }
     }
 }

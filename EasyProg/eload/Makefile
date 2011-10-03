@@ -20,7 +20,11 @@ obj += obj/eload_read_byte.o
 obj += obj/eload_close.o
 obj += obj/eload_dos.o
 
-all: eload.lib eload_test.prg
+.PHONY: all
+all: eload.lib 
+
+.PHONY: test
+test: eload_test.prg
 
 obj/%.o: src/%.s obj $(inc)
 	ca65 -I src -t c64 -o $@ $<
