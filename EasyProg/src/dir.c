@@ -45,15 +45,14 @@ uint8_t __fastcall__ dirOpen(uint8_t lfn, uint8_t device)
             cbm_k_basin();
             if (cbm_k_readst())
             {
-                cbm_close(lfn);
-                cbm_k_clrch();
+                dirClose(lfn);
                 return 1;
             }
 
             return 0;
         }
-        cbm_close(lfn);
     }
+    dirClose(lfn);
     return 1;
 }
 

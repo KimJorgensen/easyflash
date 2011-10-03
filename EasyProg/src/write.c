@@ -368,7 +368,7 @@ void checkWriteKERNALImage(void)
 
     slotSelect(0);
     nKERNAL = selectKERNALSlotDialog();
-    if (nKERNAL != ~0)
+    if (nKERNAL != 0xff)
     {
         m_nBank = nKERNAL | FLASH_8K_SECTOR_BIT;
         checkWriteImage(IMAGE_TYPE_KERNAL);
