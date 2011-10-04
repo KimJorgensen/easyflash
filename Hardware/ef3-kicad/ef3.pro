@@ -1,4 +1,4 @@
-update=Do 04 Aug 2011 21:56:40 CEST
+update=Mi 05 Okt 2011 00:07:08 CEST
 version=1
 last_client=pcbnew
 [cvpcb]
@@ -82,9 +82,9 @@ LibName30=valves
 LibName31=ef3
 [pcbnew]
 version=1
-PadDrlX=0
-PadDimH=394
-PadDimV=591
+PadDrlX=1260
+PadDimH=1260
+PadDimV=1260
 BoardThickness=630
 SgPcb45=1
 TxtPcbV=800
