@@ -158,14 +158,18 @@ startProgramBank = * + 1
 @loop:
         lda #0
         sta EASYFLASH_IO_BANK
+@copy:
 @i1:
-        lda $8002,x
+        lda $8002
 @i2:
-        sta $0801,x
-        inx
-        bne @loop
-        inc @i1 + 2
+        sta $0801
+        inc @i2 + 1
+        bne @nhi
         inc @i2 + 2
+@nhi:
+        inc @i1 + 1
+        bne @copy
+        inc @i1 + 2
         lda @i1 + 2
         cmp #$c0
         bne @noBankInc
