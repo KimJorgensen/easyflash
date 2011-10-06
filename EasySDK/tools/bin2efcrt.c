@@ -91,9 +91,9 @@ static void usage(const char* pStrProgName)
     puts("Name:");
     puts("\tbin2efcrt - Convert a binary file to an EasyFlash CRT file.");
     puts("Synopsis:");
-    printf("\t%s <LAYOUT> <INFILE> <OUTFILE>\n", pStrProgName);
-    puts("Supported LAYOUTs:");
-    puts("\tlinear\tLOROM and HIROM banks alternating, starting at bank 0");
+    printf("\t%s <INFILE> <OUTFILE>\n", pStrProgName);
+    puts("Binary file layout:");
+    puts("\tLOROM and HIROM banks alternating, starting at bank 0");
     puts("\t\t                 | L | H ");
     puts("\t\t              ---|---|---");
     puts("\t\t               0 | A | B ");
@@ -286,7 +286,7 @@ int main(int argc, char** argv)
     size_t size;
     uint8_t* pBuffer;
 
-    if (argc != 4)
+    if (argc != 3)
         usage(argv[0]);
 
     pBuffer = malloc(EF_MAX_CART_SIZE + 1);
@@ -295,17 +295,9 @@ int main(int argc, char** argv)
         fprintf(stderr, "Out of memory\n");
         return 2;
     }
-    size = readInputFile(pBuffer, argv[2]);
+    size = readInputFile(pBuffer, argv[1]);
 
-    if (strcmp(argv[1], "linear") == 0)
-    {
-        writeCRTLinearLayout(argv[3], pBuffer, size);
-    }
-    else
-    {
-        fprintf(stderr, "Unsupported layout: %s\n", argv[1]);
-        return 3;
-    }
+    writeCRTLinearLayout(argv[2], pBuffer, size);
 
     return 0;
 }
