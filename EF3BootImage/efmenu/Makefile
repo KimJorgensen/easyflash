@@ -65,7 +65,7 @@ obj/charset.s: src/charset.sed obj
 # create a crt image from a binary image
 #
 %.crt: %.bin
-	../../EasySDK/tools/bin2efcrt linear $< $@
+	../../EasySDK/tools/bin2efcrt $< $@
 
 ###############################################################################
 obj:

@@ -47,7 +47,7 @@ obj/%.o: src/%.s obj $(bin_acme)
 # create a crt image from a binary image
 #
 %.crt: %.bin
-	../../tools/bin2efcrt linear $< $@
+	../../tools/bin2efcrt $< $@
 
 ###############################################################################
 obj:
