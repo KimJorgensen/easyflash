@@ -42,3 +42,5 @@ tmperr.err
 # test files and compiled releases
 EasyProg/test
 EasyProg/easyprog-*
+
+EasySDK/tools/bin2efcrt
