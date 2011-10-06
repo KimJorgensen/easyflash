@@ -602,9 +602,13 @@ const char* __fastcall__ screenReadInput(const char* pStrTitle,
         gotox(5 + len);
 
         c = cgetc();
-        if ((c >= 32) && (len < sizeof(strInput) - 1))
+        if (len < sizeof(strInput) - 1 &&
+                ((c >=  32 && c < 128) ||
+                 (c >= 192 && c < 224))
+           )
         {
             strInput[len++] = c;
+            strInput[len]   = '\0';
         }
         else if (c == CH_DEL)
         {
