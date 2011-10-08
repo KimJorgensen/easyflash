@@ -1,4 +1,4 @@
-EESchema Schematic File Version 2  date Di 04 Okt 2011 23:56:10 CEST
+EESchema Schematic File Version 2  date Sat Oct  8 23:00:35 2011
 LIBS:power
 LIBS:device
 LIBS:transistors
@@ -31,19 +31,29 @@ LIBS:contrib
 LIBS:valves
 LIBS:ef3
 LIBS:ef3-cache
-EELAYER 24  0
+EELAYER 25  0
 EELAYER END
 $Descr A3 16535 11700
+encoding utf-8
 Sheet 1 1
 Title "EasyFlash 3"
-Date "4 oct 2011"
-Rev "1.0"
+Date "8 oct 2011"
+Rev "1.1"
 Comp "Skoe"
 Comment1 ""
 Comment2 ""
 Comment3 ""
 Comment4 ""
 $EndDescr
+$Comp
+L MCP1700-TO U11
+U 1 1 4E90B426
+P 4700 1950
+F 0 "U11" H 4900 1700 60  0000 C CNN
+F 1 "MCP1700-3302E/TO" H 4700 2250 50  0000 C CNN
+	1    4700 1950
+	1    0    0    -1  
+$EndComp
 Text Notes 4000 1400 0    60   ~ 0
 Use one of the regulators only!\nU11 is a THT alternative.
 Wire Wire Line
@@ -1014,15 +1024,6 @@ P 5200 1800
 F 0 "#PWR03" H 5200 1900 30  0001 C CNN
 F 1 "VDD" H 5200 1910 30  0000 C CNN
 	1    5200 1800
-	1    0    0    -1  
-$EndComp
-$Comp
-L LT1585CM U11
-U 1 1 4E88CF3C
-P 4700 1950
-F 0 "U11" H 4900 1700 60  0000 C CNN
-F 1 "MCP1700-3302E/TO" H 4700 2300 50  0000 C CNN
-	1    4700 1950
 	1    0    0    -1  
 $EndComp
 Entry Wire Line

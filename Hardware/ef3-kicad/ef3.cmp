@@ -1,4 +1,4 @@
-Cmp-Mod V01 Created by CvPCB (2010-00-09 BZR 23xx)-stable date = Di 04 Okt 2011 23:20:07 CEST
+Cmp-Mod V01 Created by CvPCB (2011-07-08 BZR 3044)-stable date = Sa 08 Okt 2011 22:36:39 CEST
 
 BeginCmp
 TimeStamp = /4D8A5B0C;
@@ -316,7 +316,7 @@ IdModule  = SO14E;
 EndCmp
 
 BeginCmp
-TimeStamp = /4E88CF3C;
+TimeStamp = /4E90B426;
 Reference = U11;
 ValeurCmp = MCP1700-3302E/TO;
 IdModule  = TO92-MCP1700;
