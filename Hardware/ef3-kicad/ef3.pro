@@ -1,4 +1,4 @@
-update=Mi 05 Okt 2011 00:07:08 CEST
+update=Fr 07 Okt 2011 23:07:01 CEST
 version=1
 last_client=pcbnew
 [cvpcb]
@@ -86,7 +86,6 @@ PadDrlX=1260
 PadDimH=1260
 PadDimV=1260
 BoardThickness=630
-SgPcb45=1
 TxtPcbV=800
 TxtPcbH=600
 TxtModV=600
@@ -111,3 +110,4 @@ LibName8=valves
 LibName9=led
 LibName10=dip_sockets
 LibName11=ef3
+LibName12=ef-logo

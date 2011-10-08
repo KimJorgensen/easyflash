@@ -1,16 +1,16 @@
 #!/bin/sh
 
-PROJECT=ef3-v1
+PROJECT=ef3-v1.1
 
 rm -rf $PROJECT-gerber
 mkdir $PROJECT-gerber
-cp *.gtl $PROJECT-gerber/TopCopper.gtl
-cp *.gbl $PROJECT-gerber/BottomCopper.gbl
-cp *.gts $PROJECT-gerber/TopSolderMask.gts
-cp *.gbs $PROJECT-gerber/BottomSolderMask.gbs
-cp *.gbr $PROJECT-gerber/Outline.gbr
-cp *.gto $PROJECT-gerber/TopSilkScreen.gto
-cp *.drl $PROJECT-gerber/Drill.drl
+mv *.gtl $PROJECT-gerber/TopCopper.gtl
+mv *.gbl $PROJECT-gerber/BottomCopper.gbl
+mv *.gts $PROJECT-gerber/TopSolderMask.gts
+mv *.gbs $PROJECT-gerber/BottomSolderMask.gbs
+mv *.gbr $PROJECT-gerber/Outline.gbr
+mv *.gto $PROJECT-gerber/TopSilkScreen.gto
+mv *.drl $PROJECT-gerber/Drill.drl
 
 rm $PROJECT-gerber.zip
 
