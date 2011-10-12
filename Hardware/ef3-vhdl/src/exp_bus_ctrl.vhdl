@@ -33,13 +33,10 @@ entity exp_bus_ctrl is
         n_wr:       in  std_logic;
         ba:         in  std_logic;
 
-        -- This combinatorical signal is '1' for one clk cycle at the 
+        -- This combinatorical signal is '1' for one clk cycle at the
         -- beginning of a Phi2 cycle (when Phi2 is low)
         phi2_cycle_start: out std_logic;
-        
-        -- This combinatorical signal is '1' for one clk cycle
-        -- when the address from CPU or VIC is stable, this is the
-        -- case between 80 ns to 120 ns after Phi2 edges.
+
         addr_ready: out std_logic;
 
         -- This combinatorical signal is '1' for one clk cycle
@@ -75,29 +72,34 @@ end exp_bus_ctrl;
 --                     +40..80 ns
 --                      _______________________________________________
 -- prev_phi2:  ________/                                               \_______
--- 
+--
 --             .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .
 -- clk_cnt:   11  12   0   1   2   3   4   5   6   7   8   9  10  11   0   1
 --             .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .
 -- t_min              40  80  120 160 200 240 280 320 360 400 440 480 ns
 -- t_max              80  120 160 200 240 280 320 360 400 440 480 520 ns
 --             .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .
---                  ___
+--                  ___                .       .       .
 -- cycle_end:  ____/   \_______________________________________________________
---                          ___
--- addr_ready: ____________/   \_______________________________________________
---                                  ___
--- bus_ready:  ____________________/   \_______________________________________________
--- 
+--                                  ___.       .       .
+-- addr_ready: ____________________/   \_______________________________________
+--                                             .       .
+-- dma_ready,                               ___.       .
+-- bus_ready:  ____________________________/   \_______________________________
+--                                                     .
+--                                                     .
+-- hiram_detect_ready:                              ___.
+--             ____________________________________/   \_______________________
+--
 -- Note: clk_cnt counts to about 11 or 12, depending on wether if it is a
 -- PAL or NTSC model and on the shift between the two clock domains. The
 -- actual limit is not important, as it is not used anywhere.
--- 
+--
 architecture arc of exp_bus_ctrl is
     signal prev_phi2:   std_logic;
     signal phi2_s:      std_logic;
     signal cycle_end_i: std_logic;
-    signal clk_cnt:     integer range 0 to 13; -- 25 MHz ~ 0.5 us 
+    signal clk_cnt:     integer range 0 to 13; -- 25 MHz ~ 0.5 us
 begin
 
     synchronize_stuff: process(clk)
@@ -124,9 +126,9 @@ begin
 
     ---------------------------------------------------------------------------
     -- Create control signals depending from clk counter
-    -- 
-    -- This signals are generated combinatorically, they are to be used in the
-    -- next cycle.
+    --
+    -- This signals are generated combinatorically, they are to be used on the
+    -- next rising edge of clk.
     ---------------------------------------------------------------------------
     bus_states: process(clk_cnt, prev_phi2, phi2_s, n_wr, ba, phi2)
     begin
@@ -140,7 +142,7 @@ begin
         else
             cycle_end_i <= '0';
         end if;
-        
+
         if clk_cnt = 3 then
             addr_ready <= '1';
         end if;
