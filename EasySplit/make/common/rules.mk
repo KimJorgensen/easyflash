@@ -50,13 +50,6 @@ $(outdir)/$(app_name): $(obj) | $(outdir) check-environment
 		`wx-config --libs`
 
 ###############################################################################
-# This rule can copy files from <base>/res/* to <outdir>/res/*
-#
-$(outdir)/res/%: $(srcdir)/../res/%
-	mkdir -p $(dir $@)
-	cp $^ $@
-
-###############################################################################
 # This rule can create the directories we need
 #
 $(outdir) $(objdir):
@@ -88,6 +81,7 @@ $(objdir)/%.xpm: $(srcdir)/../res/%.png | $(objdir) check-environment
 # This rule can copy * to $(outdir)/*
 # 
 $(outdir)/%: $(srcdir)/../%
+	mkdir -p $(dir $@)
 	cp $< $@
 
 ###############################################################################
