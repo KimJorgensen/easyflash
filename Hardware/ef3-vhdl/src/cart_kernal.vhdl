@@ -34,7 +34,7 @@ entity cart_kernal is
         n_romh:     in  std_logic;
         n_wr:       in  std_logic;
         addr_ready: in  std_logic;
-        dma_ready:  in  std_logic;
+        bus_ready:  in  std_logic;
         hiram_detect_ready: in std_logic;
         cycle_end:  in  std_logic;
         addr:       in  std_logic_vector(15 downto 0);
@@ -42,7 +42,6 @@ entity cart_kernal is
         latch_mem_addr: out std_logic;
         ma19:       out std_logic;
         latch_ma19: out std_logic;
-        n_dma:      out std_logic;
         a14:        out std_logic;
         n_game:     out std_logic;
         n_exrom:    out std_logic;
@@ -67,7 +66,7 @@ begin
     begin
         if rising_edge(clk) then
             if enable = '1' then
-                if dma_ready = '1' and kernal_space_cpu_read then
+                if bus_ready = '1' and kernal_space_cpu_read then
                     -- Address lines are tristated/pulled up now
                     n_game  <= '0';
                     n_exrom <= '0';
@@ -88,14 +87,12 @@ begin
                 end if;
                 if cycle_end = '1' then
                     -- KERNAL read complete
-                    n_dma <= '1';
                     n_game  <= '1';
                     n_exrom <= '1';
                     a14 <= 'Z';
                     kernal_read_active <= false;
                 end if;
             else
-                n_dma <= '1';
                 n_game  <= '1';
                 n_exrom <= '1';
                 a14 <= 'Z';

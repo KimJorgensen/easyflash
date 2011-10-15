@@ -86,12 +86,11 @@ architecture ef3_arc of ef3 is
 
     signal addr_ready:  std_logic;
     signal bus_ready:   std_logic;
-    signal dma_ready:   std_logic;
     signal hiram_detect_ready: std_logic;
     signal cycle_end:   std_logic;
-    
+
     signal data_out:    std_logic_vector(7 downto 0);
-    signal data_out_valid: std_logic; 
+    signal data_out_valid: std_logic;
 
     signal n_exrom_out: std_logic;
     signal n_game_out:  std_logic;
@@ -151,7 +150,6 @@ architecture ef3_arc of ef3 is
     signal kernal_latch_mem_addr: std_logic;
     signal kernal_ma19:         std_logic;
     signal kernal_latch_ma19:   std_logic;
-    signal kernal_n_dma:        std_logic;
     signal kernal_a14:          std_logic;
     signal kernal_n_game:       std_logic;
     signal kernal_n_exrom:      std_logic;
@@ -161,12 +159,9 @@ architecture ef3_arc of ef3 is
         port (
             clk:        in  std_logic;
             phi2:       in  std_logic;
-            n_wr:       in  std_logic;
-            ba:         in  std_logic;
             phi2_cycle_start: out std_logic;
             addr_ready: out std_logic;
             bus_ready:  out std_logic;
-            dma_ready:  out std_logic;
             hiram_detect_ready: out std_logic;
             cycle_end:  out std_logic
         );
@@ -235,7 +230,7 @@ architecture ef3_arc of ef3 is
             n_romh:         in  std_logic;
             n_wr:           in  std_logic;
             addr_ready:     in  std_logic;
-            dma_ready:      in  std_logic;
+            bus_ready:      in  std_logic;
             hiram_detect_ready: in std_logic;
             cycle_end:      in  std_logic;
             addr:           in  std_logic_vector(15 downto 0);
@@ -243,7 +238,6 @@ architecture ef3_arc of ef3 is
             latch_mem_addr: out std_logic;
             ma19:           out std_logic;
             latch_ma19:     out std_logic;
-            n_dma:          out std_logic;
             a14:            out std_logic;
             n_game:         out std_logic;
             n_exrom:        out std_logic;
@@ -258,9 +252,9 @@ begin
     ---------------------------------------------------------------------------
     u_exp_bus_ctrl: exp_bus_ctrl port map
     (
-        clk, phi2, n_wr, ba,
+        clk, phi2,
         phi2_cycle_start,
-        addr_ready, bus_ready, dma_ready, hiram_detect_ready, cycle_end
+        addr_ready, bus_ready, hiram_detect_ready, cycle_end
     );
 
     u_reset_generator: reset_generator port map
@@ -273,14 +267,14 @@ begin
 
     u_cart_easyflash: cart_easyflash port map
     (
-        clk, n_sys_reset, start_reset_to_menu, n_reset, 
+        clk, n_sys_reset, start_reset_to_menu, n_reset,
         enable_ef,
-        phi2, n_io1, n_io2, n_roml, n_romh, n_wr, 
+        phi2, n_io1, n_io2, n_roml, n_romh, n_wr,
         bus_ready, cycle_end,
-        addr, data, 
+        addr, data,
         button_crt_reset, button_special_fn,
         slot, new_slot, latch_slot,
-        ef_mem_addr, ef_latch_mem_addr, 
+        ef_mem_addr, ef_latch_mem_addr,
         new_bank, latch_bank,
         ef_ma19, ef_latch_ma19,
         ef_n_game, ef_n_exrom,
@@ -294,11 +288,10 @@ begin
     (
         clk, n_reset, enable_kernal,
         phi2, ba, n_romh, n_wr,
-        addr_ready, dma_ready, hiram_detect_ready, cycle_end,
+        addr_ready, bus_ready, hiram_detect_ready, cycle_end,
         addr,
         kernal_mem_addr, kernal_latch_mem_addr,
-        kernal_ma19, kernal_latch_ma19,
-        kernal_n_dma, kernal_a14,
+        kernal_ma19, kernal_latch_ma19, kernal_a14,
         kernal_n_game, kernal_n_exrom,
         kernal_flash_read,
         hiram
@@ -449,7 +442,7 @@ begin
                 mem_addr(14 downto 13) <= bank(1 downto 0);
             elsif ram_read = '1' or ram_write = '1' then
                 mem_addr(14 downto 13) <= "00"; -- for now
-            end if;             
+            end if;
         end if;
     end process;
     mem_addr(22 downto 20) <= slot;
@@ -523,7 +516,7 @@ begin
     --
     -- We need a special case with phi2 = '0' for C128 which doesn't set R/W
     -- correctly for Phi1 cycles.
-    -- 
+    --
     ---------------------------------------------------------------------------
     data_out_enable: process(n_io1, n_io2, n_roml, n_romh, phi2, n_wr,
                              mem_data, data_out,
@@ -531,7 +524,7 @@ begin
     begin
         mem_data <= (others => 'Z');
         data <= (others => 'Z');
-        if (n_io1 and n_io2 and n_roml and n_romh) = '0' and 
+        if (n_io1 and n_io2 and n_roml and n_romh) = '0' and
            ((n_wr = '1' and phi2 = '1') or phi2 = '0') then
             if data_out_valid = '1' then
                 data <= data_out;
