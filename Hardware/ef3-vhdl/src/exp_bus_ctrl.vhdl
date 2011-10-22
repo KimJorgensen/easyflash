@@ -49,16 +49,16 @@ entity exp_bus_ctrl is
 
         -- This combinatorical signal is '1' for one clk cycle
         -- after the end of each Phi2 half cycle
-        cycle_end:  out std_logic
+        cycle_start:  out std_logic
     );
 end exp_bus_ctrl;
 
 
 architecture arc of exp_bus_ctrl is
-    signal prev_phi2:   std_logic;
-    signal phi2_s:      std_logic;
-    signal cycle_end_i: std_logic;
-    signal clk_cnt:     integer range 0 to 13; -- 25 MHz ~ 0.5 us
+    signal prev_phi2:       std_logic;
+    signal phi2_s:          std_logic;
+    signal cycle_start_i:   std_logic;
+    signal clk_cnt:         integer range 0 to 13; -- 25 MHz ~ 0.5 us
 begin
 
     synchronize_stuff: process(clk)
@@ -96,9 +96,9 @@ begin
         hiram_detect_ready <= '0';
 
         if prev_phi2 /= phi2_s then
-            cycle_end_i <= '1';
+            cycle_start_i <= '1';
         else
-            cycle_end_i <= '0';
+            cycle_start_i <= '0';
         end if;
 
         if clk_cnt = 3 then
@@ -113,6 +113,6 @@ begin
 
     end process bus_states;
 
-    cycle_end <= cycle_end_i;
-    phi2_cycle_start <= not phi2_s and cycle_end_i;
+    cycle_start <= cycle_start_i;
+    phi2_cycle_start <= not phi2_s and cycle_start_i;
 end arc;
