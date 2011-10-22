@@ -27,36 +27,36 @@ use ieee.numeric_std.all;
 use work.cartridge_modes.all;
 
 entity ef3 is
-    port ( addr:        inout std_logic_vector (15 downto 0);
-           data:        inout std_logic_vector (7 downto 0);
-           n_dma:       inout std_logic;
-           ba:          in std_logic;
-           n_roml:      in std_logic;
-           n_romh:      in std_logic;
-           n_io1:       in std_logic;
-           n_io2:       in std_logic;
-           n_wr:        in std_logic;
-           n_irq:       in std_logic;
-           n_nmi:       inout std_logic;
-           n_reset_io:  inout std_logic;
-           clk:         in std_logic;
-           phi2:        in std_logic;
-           n_exrom:     inout std_logic;
-           n_game:      inout std_logic;
-           button_a:    in  std_logic;
-           button_b:    in  std_logic;
-           button_c:    in  std_logic;
-           n_led:       out std_logic;
-           mem_addr:    out std_logic_vector (22 downto 0);
-           mem_data:    inout std_logic_vector (7 downto 0);
-           n_mem_wr:    out std_logic;
-           n_mem_oe:    out std_logic;
-           n_flash_cs:  out std_logic;
-           n_ram_cs:    out std_logic;
-           usb_txe:     in std_logic;
-           usb_rxf:     in std_logic;
-           usb_wr:      out std_logic;
-           usb_rd:      out std_logic
+    port ( addr:                inout std_logic_vector (15 downto 0);
+           data:                inout std_logic_vector (7 downto 0);
+           n_dma:               inout std_logic;
+           ba:                  in std_logic;
+           n_roml:              in std_logic;
+           n_romh:              in std_logic;
+           n_io1:               in std_logic;
+           n_io2:               in std_logic;
+           n_wr:                in std_logic;
+           n_irq:               in std_logic;
+           n_nmi:               inout std_logic;
+           n_reset_io:          inout std_logic;
+           clk:                 in std_logic;
+           phi2:                in std_logic;
+           n_exrom:             inout std_logic;
+           n_game:              inout std_logic;
+           button_a:            in  std_logic;
+           button_b:            in  std_logic;
+           button_c:            in  std_logic;
+           n_led:               out std_logic;
+           mem_addr:            out std_logic_vector (22 downto 0);
+           mem_data:            inout std_logic_vector (7 downto 0);
+           n_mem_wr:            out std_logic;
+           n_mem_oe:            out std_logic;
+           n_flash_cs:          out std_logic;
+           n_ram_cs:            out std_logic;
+           n_usb_txe:           in std_logic;
+           n_usb_rxf:           in std_logic;
+           usb_wr:              out std_logic;
+           n_usb_rd:            out std_logic
          );
 end ef3;
 
@@ -82,28 +82,30 @@ architecture ef3_arc of ef3 is
     -- Special function of a cartridge (e.g. boot disabled or freezer)
     signal button_special_fn:   std_logic;
 
-    signal n_mem_oe_i:  std_logic;
+    signal n_mem_oe_i:          std_logic;
+    signal n_usb_rd_i:          std_logic;
+    signal n_usb_wr:            std_logic;
 
-    signal addr_ready:  std_logic;
-    signal bus_ready:   std_logic;
-    signal hiram_detect_ready: std_logic;
-    signal cycle_end:   std_logic;
+    signal addr_ready:          std_logic;
+    signal bus_ready:           std_logic;
+    signal hiram_detect_ready:  std_logic;
+    signal cycle_start:         std_logic;
 
-    signal data_out:    std_logic_vector(7 downto 0);
-    signal data_out_valid: std_logic;
+    signal data_out:            std_logic_vector(7 downto 0);
+    signal data_out_valid:      std_logic;
 
-    signal n_exrom_out: std_logic;
-    signal n_game_out:  std_logic;
-    --signal n_dma_out:   std_logic;
+    signal n_exrom_out:         std_logic;
+    signal n_game_out:          std_logic;
+    --signal n_dma_out:         std_logic;
 
-    signal phi2_cycle_start: std_logic;
+    signal phi2_cycle_start:    std_logic;
 
     -- When this it '1' at the rising edge of clk the reset generator
     -- is started
-    signal start_reset_generator: std_logic;
+    signal start_reset:         std_logic;
 
     -- Reset the machine to enter the menu mode
-    signal start_reset_to_menu:    std_logic;
+    signal start_reset_to_menu: std_logic;
 
     -- This is '1' when software starts the reset generator
     signal sw_start_reset:      std_logic;
@@ -112,39 +114,39 @@ architecture ef3_arc of ef3 is
     signal n_sys_reset:         std_logic;
     signal n_generated_reset:   std_logic;
 
-    signal hiram:       std_logic;
+    signal hiram:               std_logic;
 
     -- Number of the current slot, where one slot is 1 MByte
-    signal slot:        std_logic_vector(2 downto 0);
-    signal latch_slot:  std_logic;
-    signal new_slot:    std_logic_vector(2 downto 0);
-    signal ma19:        std_logic;
-    signal new_ma19:    std_logic;
-    signal latch_ma19:  std_logic;
-    signal bank:        std_logic_vector(5 downto 0);
-    signal latch_bank:  std_logic;
-    signal new_bank:    std_logic_vector(5 downto 0);
+    signal slot:                std_logic_vector(2 downto 0);
+    signal latch_slot:          std_logic;
+    signal new_slot:            std_logic_vector(2 downto 0);
+    signal ma19:                std_logic;
+    signal new_ma19:            std_logic;
+    signal latch_ma19:          std_logic;
+    signal bank:                std_logic_vector(5 downto 0);
+    signal latch_bank:          std_logic;
+    signal new_bank:            std_logic_vector(5 downto 0);
 
-    signal ram_read:    std_logic;
-    signal ram_write:   std_logic;
-    signal flash_read:  std_logic;
-    signal flash_write: std_logic;
-    signal latch_mem_addr: std_logic;
-    signal new_mem_addr: std_logic_vector (12 downto 0);
+    signal ram_read:            std_logic;
+    signal ram_write:           std_logic;
+    signal flash_read:          std_logic;
+    signal flash_write:         std_logic;
+    signal latch_mem_addr:      std_logic;
+    signal new_mem_addr:        std_logic_vector (12 downto 0);
 
-    signal ef_mem_addr:     std_logic_vector(12 downto 0);
-    signal ef_latch_mem_addr: std_logic;
-    signal ef_ma19:         std_logic;
-    signal ef_latch_ma19:   std_logic;
-    signal ef_n_game:       std_logic;
-    signal ef_n_exrom:      std_logic;
-    signal ef_start_reset:  std_logic;
-    signal ef_ram_read:     std_logic;
-    signal ef_ram_write:    std_logic;
-    signal ef_flash_read:   std_logic;
-    signal ef_flash_write:  std_logic;
-    signal ef_data_out:     std_logic_vector(7 downto 0);
-    signal ef_data_out_valid: std_logic;
+    signal ef_mem_addr:         std_logic_vector(12 downto 0);
+    signal ef_latch_mem_addr:   std_logic;
+    signal ef_ma19:             std_logic;
+    signal ef_latch_ma19:       std_logic;
+    signal ef_n_game:           std_logic;
+    signal ef_n_exrom:          std_logic;
+    signal ef_start_reset:      std_logic;
+    signal ef_ram_read:         std_logic;
+    signal ef_ram_write:        std_logic;
+    signal ef_flash_read:       std_logic;
+    signal ef_flash_write:      std_logic;
+    signal ef_data_out:         std_logic_vector(7 downto 0);
+    signal ef_data_out_valid:   std_logic;
 
     signal kernal_mem_addr:     std_logic_vector(12 downto 0);
     signal kernal_latch_mem_addr: std_logic;
@@ -155,146 +157,227 @@ architecture ef3_arc of ef3 is
     signal kernal_n_exrom:      std_logic;
     signal kernal_flash_read:   std_logic;
 
+    signal usb_read:            std_logic;
+    signal usb_write:           std_logic;
+    signal usb_data_out:        std_logic_vector(7 downto 0);
+    signal usb_data_out_valid:  std_logic;
+
     component exp_bus_ctrl is
         port (
-            clk:        in  std_logic;
-            phi2:       in  std_logic;
-            phi2_cycle_start: out std_logic;
-            addr_ready: out std_logic;
-            bus_ready:  out std_logic;
+            clk:                in  std_logic;
+            phi2:               in  std_logic;
+            phi2_cycle_start:   out std_logic;
+            addr_ready:         out std_logic;
+            bus_ready:          out std_logic;
             hiram_detect_ready: out std_logic;
-            cycle_end:  out std_logic
+            cycle_start:        out std_logic
         );
     end component;
 
     component reset_generator is
         port
         (
-            clk:                    in std_logic;
-            phi2_cycle_start:       in std_logic;
-            start_reset_generator:  in std_logic;
-            n_reset_in:             in  std_logic;
-            n_reset:                out std_logic;
-            n_generated_reset:      out std_logic;
-            n_sys_reset:            out std_logic
+            clk:                in std_logic;
+            phi2_cycle_start:   in std_logic;
+            start_reset:        in std_logic;
+            n_reset_in:         in  std_logic;
+            n_reset:            out std_logic;
+            n_generated_reset:  out std_logic;
+            n_sys_reset:        out std_logic
         );
     end component;
 
     component cart_easyflash is
         port (
-            clk:            in  std_logic;
-            n_sys_reset:    in  std_logic;
-            set_boot_flag:  in  std_logic;
-            n_reset:        in  std_logic;
-            enable:         in  std_logic;
-            phi2:           in  std_logic;
-            n_io1:          in  std_logic;
-            n_io2:          in  std_logic;
-            n_roml:         in  std_logic;
-            n_romh:         in  std_logic;
-            n_wr:           in  std_logic;
-            bus_ready:      in  std_logic;
-            cycle_end:      in  std_logic;
-            addr:           in  std_logic_vector(15 downto 0);
-            data:           in  std_logic_vector(7 downto 0);
-            button_crt_reset:  in std_logic;
-            button_special_fn: in std_logic;
-            slot:           in std_logic_vector(2 downto 0);
-            new_slot:       out std_logic_vector(2 downto 0);
-            latch_slot:     out std_logic;
-            mem_addr:       out std_logic_vector(12 downto 0);
-            latch_mem_addr: out std_logic;
-            bank:           out std_logic_vector(5 downto 0);
-            latch_bank:     out std_logic;
-            ma19:           out std_logic;
-            latch_ma19:     out std_logic;
-            n_game:         out std_logic;
-            n_exrom:        out std_logic;
-            start_reset:    out std_logic;
-            ram_read:       out std_logic;
-            ram_write:      out std_logic;
-            flash_read:     out std_logic;
-            flash_write:    out std_logic;
-            data_out:       out std_logic_vector(7 downto 0);
-            data_out_valid: out std_logic
+            clk:                in  std_logic;
+            n_sys_reset:        in  std_logic;
+            set_boot_flag:      in  std_logic;
+            n_reset:            in  std_logic;
+            enable:             in  std_logic;
+            phi2:               in  std_logic;
+            n_io1:              in  std_logic;
+            n_io2:              in  std_logic;
+            n_roml:             in  std_logic;
+            n_romh:             in  std_logic;
+            n_wr:               in  std_logic;
+            bus_ready:          in  std_logic;
+            cycle_start:        in  std_logic;
+            addr:               in  std_logic_vector(15 downto 0);
+            data:               in  std_logic_vector(7 downto 0);
+            button_crt_reset:   in  std_logic;
+            button_special_fn:  in  std_logic;
+            slot:               in  std_logic_vector(2 downto 0);
+            new_slot:           out std_logic_vector(2 downto 0);
+            latch_slot:         out std_logic;
+            mem_addr:           out std_logic_vector(12 downto 0);
+            latch_mem_addr:     out std_logic;
+            bank:               out std_logic_vector(5 downto 0);
+            latch_bank:         out std_logic;
+            ma19:               out std_logic;
+            latch_ma19:         out std_logic;
+            n_game:             out std_logic;
+            n_exrom:            out std_logic;
+            start_reset:        out std_logic;
+            ram_read:           out std_logic;
+            ram_write:          out std_logic;
+            flash_read:         out std_logic;
+            flash_write:        out std_logic;
+            data_out:           out std_logic_vector(7 downto 0);
+            data_out_valid:     out std_logic
         );
     end component;
 
     component cart_kernal is
         port (
-            clk:            in  std_logic;
-            n_reset:        in  std_logic;
-            enable:         in  std_logic;
-            phi2:           in  std_logic;
-            ba:             in  std_logic;
-            n_romh:         in  std_logic;
-            n_wr:           in  std_logic;
-            addr_ready:     in  std_logic;
-            bus_ready:      in  std_logic;
+            clk:                in  std_logic;
+            n_reset:            in  std_logic;
+            enable:             in  std_logic;
+            phi2:               in  std_logic;
+            ba:                 in  std_logic;
+            n_romh:             in  std_logic;
+            n_wr:               in  std_logic;
+            addr_ready:         in  std_logic;
+            bus_ready:          in  std_logic;
             hiram_detect_ready: in std_logic;
-            cycle_end:      in  std_logic;
-            addr:           in  std_logic_vector(15 downto 0);
-            mem_addr:       out std_logic_vector(12 downto 0);
-            latch_mem_addr: out std_logic;
-            ma19:           out std_logic;
-            latch_ma19:     out std_logic;
-            a14:            out std_logic;
-            n_game:         out std_logic;
-            n_exrom:        out std_logic;
-            flash_read:     out std_logic;
-            hiram:          out std_logic
+            cycle_start:        in  std_logic;
+            addr:               in  std_logic_vector(15 downto 0);
+            mem_addr:           out std_logic_vector(12 downto 0);
+            latch_mem_addr:     out std_logic;
+            ma19:               out std_logic;
+            latch_ma19:         out std_logic;
+            a14:                out std_logic;
+            n_game:             out std_logic;
+            n_exrom:            out std_logic;
+            flash_read:         out std_logic;
+            hiram:              out std_logic
+        );
+    end component;
+
+    component cart_usb is
+        port (
+            clk:                in  std_logic;
+            n_reset:            in  std_logic;
+            enable:             in  std_logic;
+            n_io1:              in  std_logic;
+            n_wr:               in  std_logic;
+            bus_ready:          in  std_logic;
+            cycle_start:        in  std_logic;
+            addr:               in  std_logic_vector(15 downto 0);
+            n_usb_rxf:          in  std_logic;
+            n_usb_txe:          in  std_logic;
+            usb_read:           out std_logic;
+            usb_write:          out std_logic;
+            data_out:           out std_logic_vector(7 downto 0);
+            data_out_valid:     out std_logic
         );
     end component;
 
 begin
     ---------------------------------------------------------------------------
-    -- Component: Expansion Port Bus Control
+    -- Components
     ---------------------------------------------------------------------------
     u_exp_bus_ctrl: exp_bus_ctrl port map
     (
-        clk, phi2,
-        phi2_cycle_start,
-        addr_ready, bus_ready, hiram_detect_ready, cycle_end
+        clk                     => clk,
+        phi2                    => phi2,
+        phi2_cycle_start        => phi2_cycle_start,
+        addr_ready              => addr_ready,
+        bus_ready               => bus_ready,
+        hiram_detect_ready      => hiram_detect_ready,
+        cycle_start             => cycle_start
     );
 
     u_reset_generator: reset_generator port map
     (
-        clk, phi2_cycle_start,
-        start_reset_generator,
-        n_reset_io,
-        n_reset, n_generated_reset, n_sys_reset
+        clk                     => clk,
+        phi2_cycle_start        => phi2_cycle_start,
+        start_reset             => start_reset,
+        n_reset_in              => n_reset_io,
+        n_reset                 => n_reset,
+        n_generated_reset       => n_generated_reset,
+        n_sys_reset             => n_sys_reset
     );
 
     u_cart_easyflash: cart_easyflash port map
     (
-        clk, n_sys_reset, start_reset_to_menu, n_reset,
-        enable_ef,
-        phi2, n_io1, n_io2, n_roml, n_romh, n_wr,
-        bus_ready, cycle_end,
-        addr, data,
-        button_crt_reset, button_special_fn,
-        slot, new_slot, latch_slot,
-        ef_mem_addr, ef_latch_mem_addr,
-        new_bank, latch_bank,
-        ef_ma19, ef_latch_ma19,
-        ef_n_game, ef_n_exrom,
-        ef_start_reset,
-        ef_ram_read, ef_ram_write,
-        ef_flash_read, ef_flash_write,
-        ef_data_out, ef_data_out_valid
+        clk                     => clk,
+        n_sys_reset             => n_sys_reset,
+        set_boot_flag           => start_reset_to_menu,
+        n_reset                 => n_reset,
+        enable                  => enable_ef,
+        phi2                    => phi2,
+        n_io1                   => n_io1,
+        n_io2                   => n_io2,
+        n_roml                  => n_roml,
+        n_romh                  => n_romh,
+        n_wr                    => n_wr,
+        bus_ready               => bus_ready,
+        cycle_start             => cycle_start,
+        addr                    => addr,
+        data                    => data,
+        button_crt_reset        => button_crt_reset,
+        button_special_fn       => button_special_fn,
+        slot                    => slot,
+        new_slot                => new_slot,
+        latch_slot              => latch_slot,
+        mem_addr                => ef_mem_addr,
+        latch_mem_addr          => ef_latch_mem_addr,
+        bank                    => new_bank,
+        latch_bank              => latch_bank,
+        ma19                    => ef_ma19,
+        latch_ma19              => ef_latch_ma19,
+        n_game                  => ef_n_game,
+        n_exrom                 => ef_n_exrom,
+        start_reset             => ef_start_reset,
+        ram_read                => ef_ram_read,
+        ram_write               => ef_ram_write,
+        flash_read              => ef_flash_read,
+        flash_write             => ef_flash_write,
+        data_out                => ef_data_out,
+        data_out_valid          => ef_data_out_valid
     );
 
     u_cart_kernal: cart_kernal port map
     (
-        clk, n_reset, enable_kernal,
-        phi2, ba, n_romh, n_wr,
-        addr_ready, bus_ready, hiram_detect_ready, cycle_end,
-        addr,
-        kernal_mem_addr, kernal_latch_mem_addr,
-        kernal_ma19, kernal_latch_ma19, kernal_a14,
-        kernal_n_game, kernal_n_exrom,
-        kernal_flash_read,
-        hiram
+        clk                     => clk,
+        n_reset                 => n_reset,
+        enable                  => enable_kernal,
+        phi2                    => phi2,
+        ba                      => ba,
+        n_romh                  => n_romh,
+        n_wr                    => n_wr,
+        addr_ready              => addr_ready,
+        bus_ready               => bus_ready,
+        hiram_detect_ready      => hiram_detect_ready,
+        cycle_start             => cycle_start,
+        addr                    => addr,
+        mem_addr                => kernal_mem_addr,
+        latch_mem_addr          => kernal_latch_mem_addr,
+        ma19                    => kernal_ma19,
+        latch_ma19              => kernal_latch_ma19,
+        a14                     => kernal_a14,
+        n_game                  => kernal_n_game,
+        n_exrom                 => kernal_n_exrom,
+        flash_read              => kernal_flash_read,
+        hiram                   => hiram
+    );
+
+    u_cart_usb: cart_usb
+    port map(
+        clk                     => clk,
+        n_reset                 => n_reset,
+        enable                  => enable_ef,
+        n_io1                   => n_io1,
+        n_wr                    => n_wr,
+        bus_ready               => bus_ready,
+        cycle_start             => cycle_start,
+        addr                    => addr,
+        n_usb_rxf               => n_usb_rxf,
+        n_usb_txe               => n_usb_txe,
+        usb_read                => usb_read,
+        usb_write               => usb_write,
+        data_out                => usb_data_out,
+        data_out_valid          => usb_data_out_valid
     );
 
     button_menu       <= buttons_enabled and button_a;
@@ -315,11 +398,10 @@ begin
 
     -- unused signals and defaults
     addr <= (others => 'Z');
-    usb_rd <= '1';
-    usb_wr <= '1';
     n_nmi <= 'Z';
 
-    n_led <= '0' when (n_io1 and n_io2 and n_roml and n_romh) = '0' and n_wr = '1' and phi2 = '1' else '1';
+    n_led <= '0';
+
     n_reset_io <= 'Z' when n_generated_reset = '1' else '0';
 
 
@@ -401,11 +483,10 @@ begin
     latch_mem_addr  <= ef_latch_mem_addr or kernal_latch_mem_addr;
     new_ma19        <= ef_ma19 or kernal_ma19;
     latch_ma19      <= ef_latch_ma19 or kernal_latch_ma19;
-    data_out        <= ef_data_out;
-    data_out_valid  <= ef_data_out_valid;
+    data_out        <= ef_data_out or usb_data_out;
+    data_out_valid  <= ef_data_out_valid or usb_data_out_valid;
 
-    start_reset_generator <=
-        ef_start_reset or start_reset_to_menu or sw_start_reset;
+    start_reset     <= ef_start_reset or start_reset_to_menu or sw_start_reset;
 
     n_dma <= 'Z';
 
@@ -452,7 +533,8 @@ begin
     -- mem_addr(12 downto 0) come from the cartridge implementations
 
     ---------------------------------------------------------------------------
-    --
+    -- The variable write_scheduled is used to delay a n_mem_wr by one
+    -- cycle to allow data and address bus to settle.
     ---------------------------------------------------------------------------
     mem_ctrl: process(clk, n_reset)
         variable write_scheduled : boolean; -- todo: 2 Zyklen!
@@ -462,45 +544,70 @@ begin
             n_flash_cs  <= '1';
             n_mem_oe_i  <= '1';
             n_mem_wr    <= '1';
+            n_usb_rd_i  <= '1';
+            n_usb_wr    <= '1';
             write_scheduled := false;
         elsif rising_edge(clk) then
-            -- n_mem_wr_i is only set for one write cycle
-            -- after write_scheduled has been set
+            -- write signals are set for one cycle only
             n_mem_wr <= '1';
+            n_usb_wr <= '1';
             if write_scheduled then
                 n_mem_wr    <= '0'; -- will be active for one cycle only
                 write_scheduled := false;
             elsif ram_read = '1' then
-                -- start ram read, leave until cycle_end
+                -- start ram read, leave until cycle_start
                 n_ram_cs    <= '0';
                 n_flash_cs  <= '1';
                 n_mem_oe_i  <= '0';
+                n_usb_rd_i  <= '1';
             elsif ram_write = '1' then
+                -- ram write tbd in next cycle
                 n_ram_cs    <= '0';
                 n_flash_cs  <= '1';
                 n_mem_oe_i  <= '1';
-                write_scheduled := true; -- tbd in next cycle
+                n_usb_rd_i  <= '1';
+                write_scheduled := true;
             elsif flash_read = '1' then
-                -- start flash read, leave until cycle_end
+                -- start flash read, leave until cycle_start
                 n_ram_cs    <= '1';
                 n_flash_cs  <= '0';
                 n_mem_oe_i  <= '0';
+                n_usb_rd_i  <= '1';
             elsif flash_write = '1' then
+                -- flash write tbd in next cycle
                 n_ram_cs    <= '1';
                 n_flash_cs  <= '0';
                 n_mem_oe_i  <= '1';
-                write_scheduled := true; -- tbd in next cycle
-            elsif cycle_end = '1' then
-                -- idle
+                n_usb_rd_i  <= '1';
+                write_scheduled := true;
+            elsif usb_read = '1' then
+                -- start usb read, leave until cycle_start
                 n_ram_cs    <= '1';
                 n_flash_cs  <= '1';
                 n_mem_oe_i  <= '1';
+                n_usb_rd_i  <= '0';
+            elsif usb_write = '1' then
+                -- usb write can start now
+                n_ram_cs    <= '1';
+                n_flash_cs  <= '1';
+                n_mem_oe_i  <= '1';
+                n_usb_rd_i  <= '1';
+                n_usb_wr    <= '0';
+            elsif cycle_start = '1' then
+                -- return to idle
+                n_ram_cs    <= '1';
+                n_flash_cs  <= '1';
+                n_mem_oe_i  <= '1';
+                n_usb_rd_i  <= '1';
+                n_usb_wr    <= '1';
                 write_scheduled := false;
             end if;
 
         end if;
     end process mem_ctrl;
     n_mem_oe <= n_mem_oe_i;
+    n_usb_rd <= n_usb_rd_i;
+    usb_wr   <= not n_usb_wr;
 
     ---------------------------------------------------------------------------
     -- Combinatorically decide:
@@ -519,8 +626,8 @@ begin
     --
     ---------------------------------------------------------------------------
     data_out_enable: process(n_io1, n_io2, n_roml, n_romh, phi2, n_wr,
-                             mem_data, data_out,
-                             n_mem_oe_i, data)
+                             mem_data, data_out, data_out_valid,
+                             n_mem_oe_i, n_usb_rd_i, data)
     begin
         mem_data <= (others => 'Z');
         data <= (others => 'Z');
@@ -531,7 +638,7 @@ begin
             else
                 data <= mem_data;
             end if;
-        elsif n_mem_oe_i = '1' then
+        elsif n_mem_oe_i = '1' and n_usb_rd_i = '1' then
             mem_data <= data;
         end if;
     end process data_out_enable;

@@ -36,7 +36,7 @@ entity cart_kernal is
         addr_ready: in  std_logic;
         bus_ready:  in  std_logic;
         hiram_detect_ready: in std_logic;
-        cycle_end:  in  std_logic;
+        cycle_start: in  std_logic;
         addr:       in  std_logic_vector(15 downto 0);
         mem_addr:   out std_logic_vector(12 downto 0);
         latch_mem_addr: out std_logic;
@@ -85,7 +85,7 @@ begin
                         n_exrom <= '1'; -- Ultimax mode
                     end if;
                 end if;
-                if cycle_end = '1' then
+                if cycle_start = '1' then
                     -- KERNAL read complete
                     n_game  <= '1';
                     n_exrom <= '1';
