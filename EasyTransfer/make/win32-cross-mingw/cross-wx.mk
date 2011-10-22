@@ -23,10 +23,14 @@
 # Thomas Giesel skoe@directbox.com
 #
 
-wx-version     := wxMSW-2.8.9
+cross          := i586-mingw32msvc
+wx-version     := wxMSW-2.8.12
 wx-archive-dir := $(here)/archive
-wx-build-dir  := wx-build
+wx-build-dir   := wx-build
 wx-prefix      := /opt/cross/$(cross)-$(wx-version)
+
+# after adding some paths to this it will be used as PATH
+path          := $(PATH)
 
 ###############################################################################
 # Rules to check the cross compiling environment
@@ -35,7 +39,6 @@ wx-prefix      := /opt/cross/$(cross)-$(wx-version)
 check-environment: out/check-environment.ok
 
 out/check-environment.ok:
-	$(MAKE) check-mingw
 	$(MAKE) check-wx
 	mkdir -p out
 	touch $@
