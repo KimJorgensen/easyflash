@@ -28,6 +28,8 @@
 #include <stdlib.h>
 #include <stdint.h>
 
+#include <ftdi.h>
+
 #include "WorkerThread.h"
 #include "EasyTransferMainFrame.h"
 #include "EasyTransferApp.h"
@@ -38,11 +40,9 @@ WorkerThread* WorkerThread::m_pTheWorkerThread;
 
 /*****************************************************************************/
 WorkerThread::WorkerThread(wxEvtHandler* pEventHandler,
-        const wxString& stringInputFileName,
-        const wxString& stringOutputFileName, unsigned nSize1, unsigned nSizeN) :
+        const wxString& stringInputFileName) :
     wxThread(wxTHREAD_JOINABLE), m_pEventHandler(pEventHandler),
-            m_stringInputFileName(stringInputFileName), m_stringOutputFileName(
-                    stringOutputFileName), m_nSize1(nSize1), m_nSizeN(nSizeN)
+            m_stringInputFileName(stringInputFileName)
 {
     m_pTheWorkerThread = this;
 }
@@ -83,17 +83,24 @@ void* WorkerThread::Entry()
     uint16_t      crc;
     size_t        i, size;
     uint8_t*      p;
+    bool          error;
 
-    WorkerThread_Log("Input:  %s\n",
+    Log("Input:  %s\n",
             (const char*) m_stringInputFileName.mb_str());
-    WorkerThread_Log("Output: %s.xx\n",
-            (const char*) m_stringOutputFileName.mb_str());
 
-    WorkerThread_Log("\n");
-    WorkerThread_Log("\n\\o/\nREADY.\n\n");
+    error = false;
+    if (!ConnectToEF())
+        error = true;
+
+    if (error || !StartHandshake())
+        error = true;
+
+    if (error)
+        Log("An error occurred, sorry :(\n");
+    else
+        Log("\n\\o/\nREADY.\n\n");
 
     LogComplete();
-
     return NULL;
 }
 
@@ -102,28 +109,98 @@ void* WorkerThread::Entry()
 /**
  *
  */
-void WorkerThread::Log(const char* pStrFormat, va_list args)
+bool WorkerThread::ConnectToEF()
 {
-    char str[200];
-    vsnprintf(str, sizeof(str) - 1, pStrFormat, args);
-    str[sizeof(str) - 1] = '\0';
+    int ret;
 
-    LogText(wxString(str, wxConvUTF8));
+    if (ftdi_init(&m_ftdic) < 0)
+    {
+        Log("Failed to initialize FTDI library\n");
+        return false;
+    }
+
+    if ((ret = ftdi_usb_open(&m_ftdic, 0x0403, 0x6001)) < 0)
+    {
+        Log("Unable to open ftdi device: %d (%s)\n", ret, ftdi_get_error_string(&m_ftdic));
+        return false;
+    }
+
+    if ((ret = ftdi_setflowctrl(&m_ftdic, SIO_DTR_DSR_HS)) != 0)
+    {
+        Log("Unable to set flow control: %d (%s)\n", ret, ftdi_get_error_string(&m_ftdic));
+        return false;
+    }
+
+    if ((ret = ftdi_set_baudrate(&m_ftdic, 1000000)) != 0)
+    {
+        Log("Unable to set baud rate: %d (%s)\n", ret, ftdi_get_error_string(&m_ftdic));
+        return false;
+    }
+
+    return true;
 }
+
 
 /*****************************************************************************/
 /**
  *
  */
-extern "C" void WorkerThread_Log(const char* pStrFormat, ...)
+bool WorkerThread::StartHandshake()
+{
+    int         ret;
+    unsigned char strResponse[8];
+    const char* pRequestStr;
+    size_t      nRequestLen;
+
+    Log("Waiting for answer from EasyFlash...\n");
+
+    pRequestStr = "EFSTART:";
+    nRequestLen = strlen(pRequestStr);
+    do
+    {
+        // Send request
+        /*ret = ftdi_write_data(&m_ftdic, (unsigned char*)pRequestStr, nRequestLen);
+        if (ret != nRequestLen)
+        {
+            Log("Write failed: %d (%s - %s)\n", ret, ftdi_get_error_string(&m_ftdic),
+                ret < 0 ? strerror(-ret) : "unknown cause");
+        }*/
+
+        // Check response
+        ret = ftdi_read_data(&m_ftdic, strResponse, sizeof(strResponse));
+        if (ret < 0)
+        {
+            Log("Write failed: %d (%s - %s)\n", ret, ftdi_get_error_string(&m_ftdic),
+                ret < 0 ? strerror(-ret) : "unknown cause");
+        }
+        else if (ret > 0)
+        {
+            Log("Response OK\n");
+        }
+        else
+            Log("Nothing\n");
+    }
+    while (1);
+
+    return true;
+}
+
+
+/*****************************************************************************/
+/**
+ *
+ */
+void WorkerThread::Log(const char* pStrFormat, ...)
 {
     va_list args;
+    char str[200];
 
-    if (WorkerThread::m_pTheWorkerThread)
-    {
-        va_start(args, pStrFormat);
-        WorkerThread::m_pTheWorkerThread->Log(pStrFormat, args);
-        va_end(args);
-    }
+    va_start(args, pStrFormat);
+    vsnprintf(str, sizeof(str) - 1, pStrFormat, args);
+    va_end(args);
+
+    str[sizeof(str) - 1] = '\0';
+    LogText(wxString(str, wxConvUTF8));
 }
+
 

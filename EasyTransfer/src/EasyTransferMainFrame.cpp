@@ -22,17 +22,13 @@
  */
 
 #include <wx/wx.h>
+#include <wx/button.h>
 #include <wx/slider.h>
 #include <wx/filepicker.h>
 
 #include "EasyTransferApp.h"
 #include "EasyTransferMainFrame.h"
 #include "WorkerThread.h"
-
-#define FILE_SIZE_1_1541    140
-#define FILE_SIZE_N_1541    164
-#define FILE_SIZE_1_1581    760
-#define FILE_SIZE_N_1581    783
 
 DEFINE_EVENT_TYPE(wxEVT_EASY_SPLIT_LOG)
 
@@ -56,7 +52,7 @@ DEFINE_EVENT_TYPE(wxEVT_EASY_SPLIT_LOG)
  * ---------------------------------------------------------------
  */
 EasyTransferMainFrame::EasyTransferMainFrame(wxFrame* parent, const wxString& title) :
-    wxFrame(parent, wxID_ANY, title, wxDefaultPosition, wxSize(800, 600),
+    wxFrame(parent, wxID_ANY, title, wxDefaultPosition, wxSize(800, 700),
             wxDEFAULT_FRAME_STYLE),
     m_pWorkerThread(NULL)
 {
@@ -84,43 +80,6 @@ EasyTransferMainFrame::EasyTransferMainFrame(wxFrame* parent, const wxString& ti
     pMainSizer->Add(m_pInputFilePicker, 1, wxEXPAND);
     pMainSizer->AddSpacer(10);
     pMainSizer->AddSpacer(10);
-
-    // Buttons for default sizes
-    pText = new wxStaticText(pPanel, wxID_ANY, _("Default sizes"));
-    pMainSizer->Add(pText, 0, wxALIGN_CENTER_VERTICAL | wxALIGN_RIGHT);
-    pButtonSizer = new wxBoxSizer(wxHORIZONTAL);
-    pMainSizer->Add(pButtonSizer, 1, wxEXPAND);
-    m_pButtonSize170k = new wxButton(pPanel, wxID_ANY, _("170 KiB (1541)"));
-    pButtonSizer->Add(m_pButtonSize170k);
-    m_pButtonSize800k = new wxButton(pPanel, wxID_ANY, _("800 KiB (1581)"));
-    pButtonSizer->Add(m_pButtonSize800k);
-
-    // Size of first file
-    pText = new wxStaticText(pPanel, wxID_ANY, _("First file [KiB]"));
-    pMainSizer->Add(pText, 1, wxALIGN_CENTER_VERTICAL | wxALIGN_RIGHT);
-    m_pSliderSize1 = new wxSlider(pPanel, wxID_ANY, FILE_SIZE_1_1541, 50, 1024,
-            wxDefaultPosition, wxDefaultSize, wxSL_LABELS);
-    m_pSliderSize1->SetMinSize(wxSize(150, m_pSliderSize1->GetMinSize().GetHeight()));
-    pMainSizer->Add(m_pSliderSize1, 1, wxEXPAND);
-
-    // Size of subsequent files
-    pText = new wxStaticText(pPanel, wxID_ANY, _("Subsequent files [KiB]"));
-    pMainSizer->Add(pText, 0, wxALIGN_CENTER_VERTICAL | wxALIGN_RIGHT);
-    m_pSliderSizeN = new wxSlider(pPanel, wxID_ANY, FILE_SIZE_N_1541, 50, 1024,
-            wxDefaultPosition, wxDefaultSize, wxSL_LABELS);
-    m_pSliderSizeN->SetMinSize(wxSize(300, m_pSliderSizeN->GetMinSize().GetHeight()));
-    pMainSizer->Add(m_pSliderSizeN, 1, wxEXPAND);
-
-    // Output file
-    pMainSizer->AddSpacer(10);
-    pMainSizer->AddSpacer(10);
-    pText = new wxStaticText(pPanel, wxID_ANY, _("Output Files (+.01, .02,...)"));
-    pMainSizer->Add(pText, 0, wxALIGN_CENTER_VERTICAL | wxALIGN_RIGHT);
-    m_pOutputFilePicker = new wxFilePickerCtrl(pPanel, wxID_ANY, wxEmptyString,
-            _("Select a file"), _("*"), wxDefaultPosition, wxDefaultSize,
-            wxFLP_USE_TEXTCTRL | wxFLP_SAVE);
-    m_pOutputFilePicker->SetMinSize(wxSize(300, m_pInputFilePicker->GetMinSize().GetHeight()));
-    pMainSizer->Add(m_pOutputFilePicker, 1, wxEXPAND);
 
     // Start Button
     pButtonSizer = new wxBoxSizer(wxHORIZONTAL);
@@ -150,17 +109,7 @@ EasyTransferMainFrame::EasyTransferMainFrame(wxFrame* parent, const wxString& ti
 /*****************************************************************************/
 void EasyTransferMainFrame::OnButton(wxCommandEvent& event)
 {
-    if (event.GetEventObject() == m_pButtonSize170k)
-    {
-        m_pSliderSize1->SetValue(FILE_SIZE_1_1541);
-        m_pSliderSizeN->SetValue(FILE_SIZE_N_1541);
-    }
-    else if (event.GetEventObject() == m_pButtonSize800k)
-    {
-        m_pSliderSize1->SetValue(FILE_SIZE_1_1581);
-        m_pSliderSizeN->SetValue(FILE_SIZE_N_1581);
-    }
-    else if (event.GetEventObject() == m_pButtonStart)
+    if (event.GetEventObject() == m_pButtonStart)
     {
         if (m_pInputFilePicker->GetPath().size())
             DoIt();
@@ -181,8 +130,6 @@ void EasyTransferMainFrame::OnButton(wxCommandEvent& event)
 /*****************************************************************************/
 void EasyTransferMainFrame::OnFilePickerChanged(wxFileDirPickerEvent& event)
 {
-    if (event.GetEventObject() == m_pInputFilePicker)
-        m_pOutputFilePicker->SetPath(m_pInputFilePicker->GetPath());
 }
 
 
@@ -211,12 +158,7 @@ void EasyTransferMainFrame::OnLog(wxCommandEvent& event)
 /*****************************************************************************/
 void EasyTransferMainFrame::EnableMyControls(bool bEnable)
 {
-    m_pButtonSize170k->Enable(bEnable);
-    m_pButtonSize800k->Enable(bEnable);
     m_pInputFilePicker->Enable(bEnable);
-    m_pOutputFilePicker->Enable(bEnable);
-    m_pSliderSize1->Enable(bEnable);
-    m_pSliderSizeN->Enable(bEnable);
     m_pButtonStart->Enable(bEnable);
 }
 
@@ -235,10 +177,7 @@ void EasyTransferMainFrame::DoIt()
         m_pTextCtrlLog->SetValue(_(""));
         m_pWorkerThread = new WorkerThread(
                 this,
-                m_pInputFilePicker->GetPath(),
-                m_pOutputFilePicker->GetPath(),
-                m_pSliderSize1->GetValue() * 1024,
-                m_pSliderSizeN->GetValue() * 1024);
+                m_pInputFilePicker->GetPath());
         m_pWorkerThread->Create();
         m_pWorkerThread->Run();
     }
