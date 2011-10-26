@@ -1,0 +1,61 @@
+
+This file contains documentation about the structure and semantic of
+the EF3 VHDL implementation.
+
+cartridge_modes
+===============
+
+This package contains an enumeration for all cartridges and modes implemented.
+
+exp_bus_ctrl
+============
+
+This entity contains low-level mechanisms to provide various control signals
+related to the expansion port to other parts.
+
+Its input are the main clock (25 MHz) and the unsynchronized Phi2 signal.
+
+The process "synchronize_stuff" creates a synchronized version of Phi2
+(phi2_s) and a copy of phi2_s which is delayed by one clock cycle (prev_phi2).
+
+The heart of this entity is the process clk_counter which controls a counter.
+It counts 25 MHz cycles and is reset to 0 synchronously each time when phi2_s
+is different from prev_phi2. So this counter (clk_cnt) counts from 0 to about
+11 or 12. The actual upper counter limit depends from the frequency of Phi2
+(PAL/NTSC) and the phase shift between the clock domains clk and Phi2.
+
+Note that there is a delay between the original Phi2 edges and the start of
+clk_cnt = 0. First we have a synchronization delay of 0..40 ns when phi2_s is
+created. Additionally 40 ns are added because of prev_phi2.
+
+This means that clk_cnt is reset to 0 about 40 to 80 ns after each edge of
+Phi2.
+
+The process bus_states creates various control signals from clk_cnt and phi2_s.
+All of them are created in a combinatorical way and therefore may contain
+glitches. They must only be consumed in synchronous processes to make sure
+they reached a stable state.
+
+cycle_end
+---------
+
+cycle_end is '1' for one clk-cycle after an edge of Phi2. It can be used
+to reset states needed by the previous Phi2 half-cycle and to prepare a new
+half-cycle of Phi2.
+
+addr_ready
+----------
+
+This combinatorical signal is '1' for one clk cycle when the address from
+CPU or VIC is stable. It can be used where the address must be known as early
+as possible in the Phi2 half-cycle. Note that the PLA decoding may not be
+ready yet at this time.
+
+bus_ready
+---------
+
+This combinatorical signal is '1' for one clk cycle when the PLA result for the
+current address is stable. This can be used whereever the address, one of the
+PLA output lines and/or the data bus will be evaluated.
+
+
