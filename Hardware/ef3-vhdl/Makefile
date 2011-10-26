@@ -10,6 +10,7 @@ src 		+= $(src_dir)/exp_bus_ctrl.vhdl
 src 		+= $(src_dir)/reset_generator.vhdl
 src 		+= $(src_dir)/cart_easyflash.vhdl
 src 		+= $(src_dir)/cart_kernal.vhdl
+src 		+= $(src_dir)/cart_usb.vhdl
 
 uc  := $(src_dir)/$(vhdlprj).ucf
 
