@@ -6,7 +6,9 @@
 .import         popax
 .import         memcpy_getparams
 
-.import _g_nSelectedSlot
+.import         _g_nSelectedSlot
+.import         __BLOCK_BUFFER_START__
+
 
 ; Entry points for EasyFlash driver (EAPI)
 EAPIBase            = $c000         ; <= Use any address here
@@ -148,18 +150,17 @@ _efCopyCartROM:
 
 ; =============================================================================
 ;
-; Compare 256 bytes of flash contents and RAM contents. The bank must already
-; be set up. The whole block must be located in one bank and in one flash
-; chip.
+; Compare 256 bytes of flash contents with the content of BLOCK_BUFFER.
+; The bank must be set up already. The whole block must be located in one bank
+; and in one flash chip.
 ;
 ; Return 0 for success, the bad flash memory address for error
-; uint8_t* __fastcall__ efVerifyFlash(uint8_t* pFlash, uint8_t* pRAM);
+; uint8_t* __fastcall__ efVerifyFlash(uint8_t* pFlash);
 ;
-; Do not call this from Ultimax mode, Use normal addresses (8000/a000)
+; Do not call this from Ultimax mode, use normal addresses (8000/a000)
 ;
 ; parameters:
-;       RAM address in AX (A = low)
-;       flash address on cc65-stack
+;       flash address in AX (A = low)
 ;
 ; return:
 ;       result in AX (A = low), 0 = okay, address in flash = error
@@ -168,14 +169,8 @@ _efCopyCartROM:
 .export _efVerifyFlash
 .proc   _efVerifyFlash
 _efVerifyFlash:
-
-        sta ptr1
-        stx ptr1 + 1
-
-        ; get and save address
-        jsr popax
-        sta ptr2
-        stx ptr2 + 1
+        sta cmpaddr
+        stx cmpaddr + 1
 
         sei
         lda _g_nSelectedSlot
@@ -186,8 +181,9 @@ _efVerifyFlash:
         jsr _efShowROM
         ldy #0
 l1:
-        lda (ptr2), y
-        cmp (ptr1), y
+        lda __BLOCK_BUFFER_START__, y
+cmpaddr = * + 1
+        cmp $8000, y
         bne bad
         iny
         bne l1
@@ -198,10 +194,10 @@ l1:
         jmp ret4
 bad:
         ; return bad flash address
-        ldx ptr2 + 1    ; high byte
+        ldx cmpaddr + 1     ; high byte
         clc
         tya
-        adc ptr2        ; low byte + bad offset
+        adc cmpaddr         ; low byte + bad offset
         bcc nohigh
         inx
 nohigh:
@@ -423,14 +419,13 @@ ewfError:
 
 ; =============================================================================
 ;
-; Write 256 bytes to the given address. The destination address must be
-; aligned to 256 bytes.
+; Write 256 bytes from BLOCK_BUFFER to the given address. The destination
+; address must be aligned to 256 bytes.
 ;
-; uint8_t __fastcall__ eapiGlueWriteBlock(uint8_t* pDst, uint8_t* pSrc);
+; uint8_t __fastcall__ eapiGlueWriteBlock(uint8_t* pDst);
 ;
 ; parameters:
-;       source address in AX
-;       destination address on cc65-stack $8xxx/$9xxx or $Exxx/$Fxxx
+;       destination address in AX $8xxx/$9xxx or $Exxx/$Fxxx
 ;
 ; return:
 ;       result in AX (A = low), 0x100 = okay, offset with error otherwise
@@ -438,11 +433,6 @@ ewfError:
 ; =============================================================================
 .export _eapiGlueWriteBlock
 _eapiGlueWriteBlock:
-        sta wbNext + 1
-        stx wbNext + 2
-
-        ; get address
-        jsr popax
         ; ax to xy
         pha
         txa
@@ -453,34 +443,26 @@ _eapiGlueWriteBlock:
         lda _g_nSelectedSlot
         jsr EAPISetSlot
 
-wbNext:
-        lda $1000, x        ; will be modified
-
-        sty tmp1
         jsr _efShowROM
-        ldy tmp1            ; todo: optimize!
-
+wbNext:
+        lda __BLOCK_BUFFER_START__, x
         ; parameters for EAPIWriteFlash
         ;       A   value
         ;       XY  address (X = low), $8xxx/$9xxx or $Exxx/$Fxxx
         jsr EAPIWriteFlash
-
-        sty tmp1
-        jsr _efHideROM
-        ldy tmp1            ; todo: optimize!
-
         bcs wbError
-
         inx
         bne wbNext
 
         ; return 0x100 => okay
+        jsr _efHideROM
         lda #0
         ldx #$01
         rts
 
 wbError:
         ; return bad offset in AX
+        jsr _efHideROM
         txa
         ldx #0
         rts
@@ -497,12 +479,12 @@ _aEAPIDrivers:
 
 EAPICode1:
 @CodeStart:
-.incbin "obj/eapi-m29w160t-03", 2
+.incbin "obj/eapi-am29f040-13", 2
 .res $0300 - (* - @CodeStart), $ff
 
 EAPICode2:
 @CodeStart:
-.incbin "obj/eapi-am29f040-13", 2
+.incbin "obj/eapi-m29w160t-03", 2
 .res $0300 - (* - @CodeStart), $ff
 
 EAPICode3:
