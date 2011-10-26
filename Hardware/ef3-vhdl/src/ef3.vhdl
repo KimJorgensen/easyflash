@@ -400,7 +400,7 @@ begin
     addr <= (others => 'Z');
     n_nmi <= 'Z';
 
-    n_led <= '0';
+    n_led <= n_usb_wr;
 
     n_reset_io <= 'Z' when n_generated_reset = '1' else '0';
 
@@ -537,7 +537,7 @@ begin
     -- cycle to allow data and address bus to settle.
     ---------------------------------------------------------------------------
     mem_ctrl: process(clk, n_reset)
-        variable write_scheduled : boolean; -- todo: 2 Zyklen!
+        variable write_scheduled : integer range 0 to 3;
     begin
         if n_reset = '0' then
             n_ram_cs    <= '1';
@@ -546,15 +546,19 @@ begin
             n_mem_wr    <= '1';
             n_usb_rd_i  <= '1';
             n_usb_wr    <= '1';
-            write_scheduled := false;
+            write_scheduled := 0;
         elsif rising_edge(clk) then
-            -- write signals are set for one cycle only
-            n_mem_wr <= '1';
-            n_usb_wr <= '1';
-            if write_scheduled then
-                n_mem_wr    <= '0'; -- will be active for one cycle only
-                write_scheduled := false;
-            elsif ram_read = '1' then
+            if write_scheduled = 3 then
+                n_mem_wr <= '0';
+                write_scheduled := write_scheduled - 1;
+            elsif write_scheduled = 0 then
+                n_mem_wr <= '1';
+                n_usb_wr <= '1';
+            else
+                write_scheduled := write_scheduled - 1;
+            end if;
+
+            if ram_read = '1' then
                 -- start ram read, leave until cycle_start
                 n_ram_cs    <= '0';
                 n_flash_cs  <= '1';
@@ -566,7 +570,8 @@ begin
                 n_flash_cs  <= '1';
                 n_mem_oe_i  <= '1';
                 n_usb_rd_i  <= '1';
-                write_scheduled := true;
+                -- 3 means activate n_mem_wr in the next cycle
+                write_scheduled := 3;
             elsif flash_read = '1' then
                 -- start flash read, leave until cycle_start
                 n_ram_cs    <= '1';
@@ -579,7 +584,8 @@ begin
                 n_flash_cs  <= '0';
                 n_mem_oe_i  <= '1';
                 n_usb_rd_i  <= '1';
-                write_scheduled := true;
+                -- 3 means activate n_mem_wr in the next cycle
+                write_scheduled := 3;
             elsif usb_read = '1' then
                 -- start usb read, leave until cycle_start
                 n_ram_cs    <= '1';
@@ -593,6 +599,8 @@ begin
                 n_mem_oe_i  <= '1';
                 n_usb_rd_i  <= '1';
                 n_usb_wr    <= '0';
+                -- set it to 2 but not to 3 to avoid n_mem_wr to be set
+                write_scheduled := 2;
             elsif cycle_start = '1' then
                 -- return to idle
                 n_ram_cs    <= '1';
@@ -600,7 +608,7 @@ begin
                 n_mem_oe_i  <= '1';
                 n_usb_rd_i  <= '1';
                 n_usb_wr    <= '1';
-                write_scheduled := false;
+                write_scheduled := 0;
             end if;
 
         end if;
