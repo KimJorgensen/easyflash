@@ -6,13 +6,13 @@ all: test.prg $(EAPI)
 
 ###############################################################################
 out/eapi-am29f040-13: eapi-am29f040.s out
-	acme -o $@ $<
+	acme -l $@.labels -o $@ $<
 
 out/eapi-m29w160t-03: eapi-m29w160t.s out
-	acme -o $@ $<
+	acme -l $@.labels -o $@ $<
 
 out/eapi-mx29640b-01: eapi-mx29640b.s out
-	acme -o $@ $<
+	acme -l $@.labels -o $@ $<
 
 ###############################################################################
 out:
