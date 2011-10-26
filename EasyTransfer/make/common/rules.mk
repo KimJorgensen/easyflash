@@ -46,8 +46,7 @@ $(outbase)/$(app_name)$(version_suffix).tar.bz2: \
 # Link the app
 # 
 $(outdir)/$(app_name): $(obj) | $(outdir) check-environment
-	$(cxx) $(ldflags) $(obj) -o $@ \
-		`wx-config --libs`
+	$(cxx) $(ldflags) $(obj) -o $@ $(libs)
 
 ###############################################################################
 # This rule can create the directories we need

@@ -24,45 +24,33 @@
 #ifndef WORKERTHREAD_H_
 #define WORKERTHREAD_H_
 
-#ifdef __cplusplus
 #include <wx/wx.h>
 #include <wx/thread.h>
 #include <stdarg.h>
 #include <stdint.h>
-#endif
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-void WorkerThread_Log(const char* pStrFormat, ...);
-#ifdef __cplusplus
-}
-#endif
+#include <ftdi.h>
 
-#ifdef __cplusplus
 
 class WorkerThread : public wxThread
 {
 public:
-    WorkerThread(wxEvtHandler* pEventHandler, const wxString& stringInputFileName,
-            const wxString& stringOutputFileName, unsigned nSize1, unsigned nSizeN);
+    WorkerThread(wxEvtHandler* pEventHandler, const wxString& stringInputFileName);
     virtual ~WorkerThread();
 
-    void Log(const char* pStrFormat, va_list args);
+    void Log(const char* pStrFormat, ...);
     void LogComplete(void);
 
     static WorkerThread* m_pTheWorkerThread;
 protected:
     virtual void* Entry();
     void LogText(const wxString& str);
+    bool ConnectToEF();
+    bool StartHandshake();
 
     wxEvtHandler* m_pEventHandler;
     wxString m_stringInputFileName;
-    wxString m_stringOutputFileName;
-    unsigned m_nSize1;
-    unsigned m_nSizeN;
+    struct ftdi_context m_ftdic;
 };
-
-#endif /* __cplusplus */
 
 #endif /* WORKERTHREAD_H_ */

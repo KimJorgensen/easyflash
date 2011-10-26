@@ -39,7 +39,7 @@ entity cart_easyflash is
         n_romh:         in  std_logic;
         n_wr:           in  std_logic;
         bus_ready:      in  std_logic;
-        cycle_end:      in  std_logic;
+        cycle_start:    in  std_logic;
         addr:           in  std_logic_vector(15 downto 0);
         data:           in  std_logic_vector(7 downto 0);
         button_crt_reset:  in std_logic;
@@ -91,6 +91,9 @@ architecture behav of cart_easyflash is
 
     -- boot enabled?
     signal easyflash_boot:      std_logic := '1';
+
+    signal data_out_valid_i:    std_logic;
+
 begin
 
     reset_boot_or_no_boot: process(n_sys_reset, set_boot_flag, clk)
@@ -139,10 +142,10 @@ begin
         end if;
     end process;
 
-    create_data_out: process(enable, slot)
+    create_data_out: process(data_out_valid_i, slot)
     begin
         data_out <= (others => '0');
-        if enable = '1' then
+        if data_out_valid_i = '1' then
             data_out <= "00000" & slot;
         end if;
     end process;
@@ -158,7 +161,7 @@ begin
             end if;
             latch_slot <= '0';
             latch_bank <= '0';
-            data_out_valid <= '0';
+            data_out_valid_i <= '0';
         elsif rising_edge(clk) then
             if enable = '1' then
                 latch_slot <= '0';
@@ -190,26 +193,28 @@ begin
                         -- read control register
                         if addr(7 downto 0) = x"01" then
                             -- $de01
-                            data_out_valid <= '1';
+                            data_out_valid_i <= '1';
                         end if;
                     end if;
                 end if; -- bus_ready...
-                if cycle_end = '1' then
-                    data_out_valid <= '0';
+                if cycle_start = '1' then
+                    data_out_valid_i <= '0';
                 end if;
             else
                 n_exrom <= '1';
                 n_game <= '1';
                 latch_slot <= '0';
                 latch_bank <= '0';
-                data_out_valid <= '0';
+                data_out_valid_i <= '0';
             end if; -- enable
        end if; -- clk
     end process;
+    
+    data_out_valid <= data_out_valid_i;
 
     -- We need a special case with phi2 = '0' for C128 which doesn't set R/W
     -- correctly for Phi1 cycles.
-    rw_flash: process(enable, n_roml, n_romh, n_wr, bus_ready)
+    rw_flash: process(enable, n_roml, n_romh, n_wr, bus_ready, phi2)
     begin
         flash_write <= '0';
         flash_read <= '0';
