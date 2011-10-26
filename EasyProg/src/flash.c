@@ -150,7 +150,7 @@ uint8_t __fastcall__ flashWriteBlock(uint8_t nBank, uint8_t nChip,
     pDest = apUltimaxRomBase[nChip] + nOffset;
 
     progressSetBankState(nBank, nChip, PROGRESS_WRITING);
-    rv = eapiGlueWriteBlock(pDest, BLOCK_BUFFER);
+    rv = eapiGlueWriteBlock(pDest);
     if (rv != 0x100)
     {
          progressSetBankState(nBank, nChip, PROGRESS_UNTOUCHED);
@@ -184,7 +184,7 @@ uint8_t __fastcall__ flashVerifyBlock(uint8_t nBank, uint8_t nChip,
     pNormalBase = apNormalRomBase[nChip];
     pFlash      = pNormalBase + nOffset;
 
-    pFlash = efVerifyFlash(pFlash, BLOCK_BUFFER);
+    pFlash = efVerifyFlash(pFlash);
     if (pFlash)
     {
         nOffset = pFlash - pNormalBase;

@@ -79,7 +79,7 @@ void __fastcall__ progressSetBankState(uint8_t nBank, uint8_t nChip,
         m_aBlockStates[g_nSelectedSlot][nChip][nBank & FLASH_BANK_MASK] =
                 state;
         //progressDisplayBank(nChip, nBank);
-        progressUpdateDisplay();
+        //progressUpdateDisplay();
     }
 }
 
@@ -102,7 +102,7 @@ void __fastcall__ progressSetMultipleBanksState(uint8_t nBank, uint8_t nChip,
                     state;
         }
     }
-    progressUpdateDisplay();
+    //progressUpdateDisplay();
 }
 
 
