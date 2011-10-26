@@ -55,11 +55,6 @@ protected:
     void OnFilePickerChanged(wxFileDirPickerEvent& event);
 
     wxFilePickerCtrl*   m_pInputFilePicker;
-    wxFilePickerCtrl*   m_pOutputFilePicker;
-    wxSlider*           m_pSliderSize1;
-    wxSlider*           m_pSliderSizeN;
-    wxButton*           m_pButtonSize170k;
-    wxButton*           m_pButtonSize800k;
     wxButton*           m_pButtonStart;
     wxButton*           m_pButtonQuit;
     wxTextCtrl*         m_pTextCtrlLog;

@@ -1,7 +1,7 @@
 #
 # Makefile
 #
-# (c) 2003-2010 Thomas Giesel
+# (c) 2003-2011 Thomas Giesel
 #
 # This software is provided 'as-is', without any express or implied
 # warranty.  In no event will the authors be held liable for any damages
@@ -22,24 +22,40 @@
 # Thomas Giesel skoe@directbox.com
 #
 
+here := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
+
+.PHONY: world
+world: all
+
+ifeq ($(win32), yes)
+    app_name      := easytransfer
+    cxx           := i586-mingw32msvc-c++
+    cc            := i586-mingw32msvc-gcc
+    outbase       := out_win32
+    include make/win32-cross-mingw/cross-wx.mk
+	cxxflags      := $(shell $(wx-prefix)/bin/wx-config --static=yes --cxxflags)
+	libs          := $(shell $(wx-prefix)/bin/wx-config --libs)
+else
+    app_name      := easytransfer
+    cxx           := c++
+    cc            := gcc
+    outbase       := out
+    cxxflags      := $(shell wx-config --cxxflags)
+    libs          := $(shell wx-config --libs) -lftdi -lpthread
+endif
+
 # Where to install on "make install"?
 inst_prefix   := /usr/local
 
-app_name      := easytransfer
-
-cxx           := c++
-cc            := gcc
-
 ifeq ($(debug), yes)
-    outbase       := out_debug
-    ccflags       := -g
-    cxxflags      := -g $(shell wx-config --cxxflags)
-    ldflags       := -g
+    outbase       := $(outbase)_debug
+    ccflags       += -g
+    cxxflags      += -g
+    ldflags       += -g
 else
-    outbase       := out
-    ccflags       := -O2
-    cxxflags      := -O2 $(shell wx-config --cxxflags)
-    ldflags       :=
+    ccflags       += -O2
+    cxxflags      += -O2
+    ldflags       +=
 endif
 
 ifneq "$(release)" "yes"
