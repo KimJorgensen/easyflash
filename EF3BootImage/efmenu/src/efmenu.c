@@ -29,6 +29,7 @@
 #include "text_plot.h"
 #include "memcfg.h"
 #include "efmenu.h"
+#include "usb.h"
 
 
 // from gfx.s
@@ -135,6 +136,7 @@ static void waitForKey(void)
             	startProgram(9); // EasyProg
             }
         }
+        usbCheck();
     }
     while (1);
 }
