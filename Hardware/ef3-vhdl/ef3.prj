@@ -1,0 +1,6 @@
+vhdl work src/ef3.vhdl
+vhdl work src/cartridge_modes.vhdl
+vhdl work src/exp_bus_ctrl.vhdl
+vhdl work src/reset_generator.vhdl
+vhdl work src/cart_easyflash.vhdl
+vhdl work src/cart_kernal.vhdl
