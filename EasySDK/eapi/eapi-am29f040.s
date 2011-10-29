@@ -26,7 +26,7 @@
 ; ohne true drive
 ; alt:           1:38
 ; ohne progress: 1:26
-; neu:           1:03, 0:52, 0:49
+; neu:           1:03, 0:52, 0:44
 
 
 FLASH_ALG_ERROR_BIT      = $20
@@ -38,8 +38,8 @@ EAPI_ZP_INIT_CODE_BASE   = $4b
 AM29F040_NUM_BANKS      = 64
 AM29F040_MFR_ID         = $01
 AM29F040_DEV_ID         = $a4
-;M29F040_MFR_ID          = $20
-;M29F040_DEV_ID          = $e2
+M29F040_MFR_ID          = $20
+M29F040_DEV_ID          = $e2
 
 EAPI_RAM_CODE           = $df80
 EAPI_RAM_SIZE           = 124
@@ -51,8 +51,8 @@ EAPI_RAM_SIZE           = 124
 EAPICodeBase:
         !byte $65, $61, $70, $69        ; signature "EAPI"
 
-        !pet "Am29F040 V1.0"
-        !byte 0, 0, 0                   ; 16 bytes, must be 0-terminated
+        !pet "Am/M29F040 V1.4"
+        !byte 0                   ; 16 bytes, must be 0-terminated
 
 ; =============================================================================
 ;
@@ -126,35 +126,42 @@ jmpTable:
         jmp EAPIGetSlot - initCodeBase
 jmpTableEnd:
 
-writeByte:
-            ; bank 0 must have been selected
+; =============================================================================
+;
+; Internal function
+;
+; Switch to Ultimax mode, write a byte to flash (complete write sequence),
+; return to normal mode.
+;
+; Must not change C flag!
+;
+; Parameters:
+;           A = EASYFLASH_IO_BIT_MEMCTRL | EASYFLASH_IO_BIT_GAME |
+;               EASYFLASH_IO_BIT_LED
+; Changes:
+;           X
+; Return:
+;           A = value which has been written
+;
+; =============================================================================
 
+writeByteLo:
+            ; bank 0 must have been selected
             ; /GAME low, /EXROM high, LED on
-            lda #EASYFLASH_IO_BIT_MEMCTRL | EASYFLASH_IO_BIT_GAME | EASYFLASH_IO_BIT_LED
             sta EASYFLASH_IO_CONTROL
 
             ; cycle 1: write $AA to $555
-EAPI_ADDR_BASE = * + 1  ; $80 to operate on ROML, $e0 for ROMH
-            lda #$80
-            clc
-            adc #2
-            sta wb2 + 2
-            adc #3
-            sta wb1 + 2
-            sta wb3 + 2
             lda #$aa
-wb1:
-            sta $0555
+            sta $8555
 
             ; cycle 2: write $55 to $2AA
             lda #$55
-wb2:
-            sta $02aa
+            sta $82aa
+
             ; cycle 3: write $A0 to $555
             lda #$a0
-wb3:
-            sta $0555
-
+            sta $8555
+writeCommon:
             ; now we have to activate the right bank
             lda EAPI_SHADOW_BANK
             sta EASYFLASH_IO_BANK
@@ -166,9 +173,28 @@ EAPI_WRITE_ADDR_HI = * + 2
             sta $ffff           ; will be modified
 exitUltimax:
             ; /GAME low, /EXROM low, LED off
-            lda #EASYFLASH_IO_BIT_MEMCTRL | EASYFLASH_IO_BIT_GAME | EASYFLASH_IO_BIT_EXROM
-            sta EASYFLASH_IO_CONTROL
+            ldx #EASYFLASH_IO_BIT_MEMCTRL | EASYFLASH_IO_BIT_GAME | EASYFLASH_IO_BIT_EXROM
+            stx EASYFLASH_IO_CONTROL
             rts
+
+
+writeByteHi:
+            ; bank 0 must have been selected
+            ; /GAME low, /EXROM high, LED on
+            sta EASYFLASH_IO_CONTROL
+
+            ; cycle 1: write $AA to $555
+            lda #$aa
+            sta $e555
+
+            ; cycle 2: write $55 to $2AA
+            lda #$55
+            sta $e2aa
+
+            ; cycle 3: write $A0 to $555
+            lda #$a0
+            sta $e555
+            bne writeCommon
 
 ; =============================================================================
 ;
@@ -199,11 +225,7 @@ ultimaxWrite:
             stx EASYFLASH_IO_CONTROL
 uwDest = * + 1
             sta $ffff           ; will be modified
-;            jmp exitUltimax
-            ; /GAME low, /EXROM low, LED off
-            ldx #EASYFLASH_IO_BIT_MEMCTRL | EASYFLASH_IO_BIT_GAME | EASYFLASH_IO_BIT_EXROM
-            stx EASYFLASH_IO_CONTROL
-            rts
+            jmp exitUltimax
 
 ; =============================================================================
 ;
@@ -235,16 +257,15 @@ EAPI_CMP_BYTE_ADDR_HI = * + 2
 ; Variables
 ; =============================================================================
 
-EAPI_TMP_VAL2           = * + 0
-EAPI_TMP_VAL4           = * + 1
-EAPI_TMP_VAL5           = * + 2
-EAPI_SHADOW_BANK        = * + 3 ; copy of current bank number set by the user
-EAPI_INC_TYPE           = * + 4 ; type used for EAPIReadFlashInc/EAPIWriteFlashInc
-EAPI_LENGTH_LO          = * + 5
-EAPI_LENGTH_MED         = * + 6
-EAPI_LENGTH_HI          = * + 7
+EAPI_TMP_VAL1           = * + 0
+EAPI_TMP_VAL2           = * + 1
+EAPI_SHADOW_BANK        = * + 2 ; copy of current bank number set by the user
+EAPI_INC_TYPE           = * + 3 ; type used for EAPIReadFlashInc/EAPIWriteFlashInc
+EAPI_LENGTH_LO          = * + 4
+EAPI_LENGTH_MED         = * + 5
+EAPI_LENGTH_HI          = * + 6
 ; =============================================================================
-RAMContentEnd           = * + 9
+RAMContentEnd           = * + 7
         } ; end pseudopc
 RAMCodeEnd:
 
@@ -290,7 +311,7 @@ cidFillJMP:
         bcc ciNoRamError
 ciRamError:
         lda #EAPI_ERR_RAM
-        sta EAPI_TMP_VAL2
+        sta EAPI_WRITE_ADDR_LO
         sec                     ; error
 ciNoRamError:
         ; restore the caller's ZP state
@@ -327,13 +348,19 @@ ciNoRamError:
         ; offset 0: Manufacturer ID (we're on bank 0)
         ; offset 1: Device ID
         lda $a000
-        sta EAPI_TMP_VAL5
+        sta EAPI_TMP_VAL2
         ldx $a001
-        stx EAPI_TMP_VAL2
+        stx EAPI_WRITE_ADDR_LO
 
         cmp #AM29F040_MFR_ID
-        bne ciROMHNotSupported
+        bne ciROMHCheck2
         cpx #AM29F040_DEV_ID
+        bne ciROMHCheck2
+        beq ciCheckLow
+ciROMHCheck2:
+        cmp #M29F040_MFR_ID
+        bne ciROMHNotSupported
+        cpx #M29F040_DEV_ID
         bne ciROMHNotSupported
         beq ciCheckLow
 
@@ -348,9 +375,16 @@ ciCheckLow:
         ldx $8001
 
         cmp #AM29F040_MFR_ID
-        bne ciROMLNotSupported
+        bne ciROMLCheck2
         cpx #AM29F040_DEV_ID
+        bne ciROMLCheck2
+        beq ciCheckProt
+ciROMLCheck2:
+        cmp #M29F040_MFR_ID
         bne ciROMLNotSupported
+        cpx #M29F040_DEV_ID
+        bne ciROMLNotSupported
+
 ciCheckProt:
         ; flashs were detected correctly, now check if any bank is write protected
         ldy #63
@@ -383,7 +417,7 @@ ciROMHProtected:
         lda #EAPI_ERR_ROMH_PROTECTED
 
 ciSaveErrorAndReturn:
-        sta EAPI_TMP_VAL2       ; error code in A
+        sta EAPI_WRITE_ADDR_LO  ; error code in A
         sec
 
 resetAndReturn:                 ; C indicates error
@@ -399,9 +433,9 @@ resetAndReturn:                 ; C indicates error
         jsr ultimaxWrite
 
 returnOnly:                     ; C indicates error
-        lda EAPI_TMP_VAL2       ; device or error code in A
+        lda EAPI_WRITE_ADDR_LO  ; device or error code in A
         bcs returnCSet
-        ldx EAPI_TMP_VAL5       ; manufacturer in X
+        ldx EAPI_TMP_VAL2       ; manufacturer in X
         ldy #AM29F040_NUM_BANKS ; number of banks in Y
 
         plp
@@ -440,7 +474,6 @@ returnCSet:
 ; =============================================================================
 EAPIWriteFlash:
         sta EAPI_WRITE_VAL
-        stx EAPI_TMP_VAL2 ; <= ???
         stx EAPI_WRITE_ADDR_LO
         stx EAPI_CMP_BYTE_ADDR_LO
         sty EAPI_WRITE_ADDR_HI
@@ -451,22 +484,20 @@ EAPIWriteFlash:
         and #$bf            ; $ex => $ax
         sta EAPI_CMP_BYTE_ADDR_HI
 
-        ; set base address $8000 or $e000
-        cpy #$e0
-        bcc writeLow
-        lda #$e0
-        bne wfSetBase
-writeLow:
-        lda #$80
-wfSetBase:
-        sta EAPI_ADDR_BASE
-
         lda #0
         sta EASYFLASH_IO_BANK
-        jsr writeByte
 
+        lda #EASYFLASH_IO_BIT_MEMCTRL | EASYFLASH_IO_BIT_GAME | EASYFLASH_IO_BIT_LED
+        ; check base address $8000 or $e000
+        cpy #$e0
+        bcc writeLo
+        jsr writeByteHi
+        bcs wcpCheck
+writeLo:
+        jsr writeByteLo
+wcpCheck:
         ; that's it, check result
-        lda EAPI_WRITE_VAL
+        ; EAPI_WRITE_VAL still in A
         ldx #20
 wcpLoop:
         jsr cmpByte
@@ -511,8 +542,8 @@ wcheckOK:
 ;
 ; =============================================================================
 EAPIEraseSector:
-        sta EAPI_WRITE_VAL  ; used for bank number here
-        stx EAPI_TMP_VAL2
+        sta EAPI_WRITE_VAL      ; used for bank number here
+        stx EAPI_WRITE_ADDR_LO  ; backup of X only, no parameter
         sty EAPI_WRITE_ADDR_HI
         php
         sei
@@ -524,7 +555,6 @@ EAPIEraseSector:
         lda #$a0
 seskip:
         sta EAPI_CMP_BYTE_ADDR_HI
-        sty EAPI_ADDR_BASE
         iny
         iny
         iny
@@ -608,7 +638,7 @@ retOk:
         clc
 ret:
         ldy EAPI_WRITE_ADDR_HI
-        ldx EAPI_TMP_VAL2
+        ldx EAPI_WRITE_ADDR_LO
         lda EAPI_WRITE_VAL
         rts
 
@@ -783,8 +813,8 @@ EAPIReadFlashInc:
 
         ; remember the result & x/y registers
         sta EAPI_WRITE_VAL
-        stx EAPI_TMP_VAL4
-        sty EAPI_TMP_VAL5
+        stx EAPI_TMP_VAL1
+        sty EAPI_TMP_VAL2
 
         ; make sure that the increment subroutine of the
         ; write routine jumps back to us, and call it
@@ -839,8 +869,8 @@ readInc_eof:
 EAPIWriteFlashInc:
         ; store X/Y
         sta EAPI_WRITE_VAL
-        stx EAPI_TMP_VAL4
-        sty EAPI_TMP_VAL5
+        stx EAPI_TMP_VAL1
+        sty EAPI_TMP_VAL2
 
         ; load address to store to
         ldx EAPI_INC_ADDR_LO
@@ -884,8 +914,8 @@ rwInc_noInc:
         lda EAPI_WRITE_ADDR_HI
         beq readInc_Length
 rwInc_return:
-        ldy EAPI_TMP_VAL5
-        ldx EAPI_TMP_VAL4
+        ldy EAPI_TMP_VAL2
+        ldx EAPI_TMP_VAL1
         lda EAPI_WRITE_VAL
 
 EAPISetSlot:
