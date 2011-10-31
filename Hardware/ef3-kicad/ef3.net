@@ -1,10 +1,10 @@
-# EESchema Netlist Version 1.1 created  Sa 08 Okt 2011 22:36:39 CEST
+# EESchema Netlist Version 1.1 created  So 30 Okt 2011 22:27:59 CET
 (
- ( /4D8A5B0C SM0805 C1 10u
+ ( /4D8A5B0C SM0805-simple C1 10u
   ( 1 +5V )
   ( 2 GND )
  )
- ( /4D8A5A96 SM0805 C2 10u
+ ( /4D8A5A96 SM0805-simple C2 10u
   ( 1 VCC )
   ( 2 GND )
  )
@@ -68,7 +68,7 @@
   ( 1 N-000139 )
   ( 2 GND )
  )
- ( /4DDBF811 SM0805 C52 10u
+ ( /4DDBF811 SM0805-simple C52 10u
   ( 1 N-000140 )
   ( 2 GND )
  )
@@ -76,7 +76,7 @@
   ( 1 N-000125 )
   ( 2 N-000004 )
  )
- ( /4DD422BC SM0805 FB50 Ferrite_Bead
+ ( /4DD422BC SM0805-simple FB50 Ferrite_Bead
   ( 1 N-000141 )
   ( 2 N-000140 )
  )
@@ -173,31 +173,31 @@
   ( 7 N-000095 )
   ( 8 /D0 )
  )
- ( /4DD6C24C SM0805 R3 100k
+ ( /4DD6C24C SM0805-simple R3 100k
   ( 1 N-000119 )
   ( 2 N-000128 )
  )
- ( /4DD6C269 SM0805 R4 100k
+ ( /4DD6C269 SM0805-simple R4 100k
   ( 1 N-000129 )
   ( 2 N-000120 )
  )
- ( /4DD6C26B SM0805 R5 100k
+ ( /4DD6C26B SM0805-simple R5 100k
   ( 1 N-000124 )
   ( 2 N-000121 )
  )
- ( /4DA355B7 SM0805 R6 4k7
+ ( /4DA355B7 SM0805-simple R6 4k7
   ( 1 VCC )
   ( 2 N-000119 )
  )
- ( /4DA355C0 SM0805 R7 4k7
+ ( /4DA355C0 SM0805-simple R7 4k7
   ( 1 VCC )
   ( 2 N-000129 )
  )
- ( /4DD41588 SM0805 R8 4k7
+ ( /4DD41588 SM0805-simple R8 4k7
   ( 1 VCC )
   ( 2 N-000124 )
  )
- ( /4DDD4138 SM0805 R9 470
+ ( /4DDD4138 SM0805-simple R9 470
   ( 1 VCC )
   ( 2 N-000125 )
  )

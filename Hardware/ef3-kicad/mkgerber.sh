@@ -1,6 +1,6 @@
 #!/bin/sh
 
-PROJECT=ef3-v1.1
+PROJECT=ef3-v1.2
 
 rm -rf $PROJECT-gerber
 mkdir $PROJECT-gerber
@@ -34,11 +34,12 @@ Mask Cmp
 ?Edges?
 
 Other Settings 
-Leave the print $foo settings alone... most should be on (off!!!) and defaults are fine 
-Plot format: GERBER 
-Plot origin: absolute 
-?? Spot min: 0.015 (default) 
+Leave the print $foo settings alone... most should be off and defaults are fine 
+Plot format: GERBER
+Plot origin: absolute
+?? Spot min: 0.015 (default)
 Lines Width: 0.001 (default) 
+Plot silk screen texts
 
 Click Save Options so you dont have to re-do it, and then click Plot. It will create .pho files in your board directory which are your GERBER files. You will need to send these to your manufacturer. Feel free to open them with the gerbview program Kicad provides. They look cool =) 
 

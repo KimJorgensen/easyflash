@@ -1,17 +1,17 @@
-Cmp-Mod V01 Created by CvPCB (2011-07-08 BZR 3044)-stable date = Sa 08 Okt 2011 22:36:39 CEST
+Cmp-Mod V01 Created by CvPCB (2011-05-25)-stable date = So 30 Okt 2011 22:27:59 CET
 
 BeginCmp
 TimeStamp = /4D8A5B0C;
 Reference = C1;
 ValeurCmp = 10u;
-IdModule  = SM0805;
+IdModule  = SM0805-simple;
 EndCmp
 
 BeginCmp
 TimeStamp = /4D8A5A96;
 Reference = C2;
 ValeurCmp = 10u;
-IdModule  = SM0805;
+IdModule  = SM0805-simple;
 EndCmp
 
 BeginCmp
@@ -123,7 +123,7 @@ BeginCmp
 TimeStamp = /4DDBF811;
 Reference = C52;
 ValeurCmp = 10u;
-IdModule  = SM0805;
+IdModule  = SM0805-simple;
 EndCmp
 
 BeginCmp
@@ -137,7 +137,7 @@ BeginCmp
 TimeStamp = /4DD422BC;
 Reference = FB50;
 ValeurCmp = Ferrite_Bead;
-IdModule  = SM0805;
+IdModule  = SM0805-simple;
 EndCmp
 
 BeginCmp
@@ -193,49 +193,49 @@ BeginCmp
 TimeStamp = /4DD6C24C;
 Reference = R3;
 ValeurCmp = 100k;
-IdModule  = SM0805;
+IdModule  = SM0805-simple;
 EndCmp
 
 BeginCmp
 TimeStamp = /4DD6C269;
 Reference = R4;
 ValeurCmp = 100k;
-IdModule  = SM0805;
+IdModule  = SM0805-simple;
 EndCmp
 
 BeginCmp
 TimeStamp = /4DD6C26B;
 Reference = R5;
 ValeurCmp = 100k;
-IdModule  = SM0805;
+IdModule  = SM0805-simple;
 EndCmp
 
 BeginCmp
 TimeStamp = /4DA355B7;
 Reference = R6;
 ValeurCmp = 4k7;
-IdModule  = SM0805;
+IdModule  = SM0805-simple;
 EndCmp
 
 BeginCmp
 TimeStamp = /4DA355C0;
 Reference = R7;
 ValeurCmp = 4k7;
-IdModule  = SM0805;
+IdModule  = SM0805-simple;
 EndCmp
 
 BeginCmp
 TimeStamp = /4DD41588;
 Reference = R8;
 ValeurCmp = 4k7;
-IdModule  = SM0805;
+IdModule  = SM0805-simple;
 EndCmp
 
 BeginCmp
 TimeStamp = /4DDD4138;
 Reference = R9;
 ValeurCmp = 470;
-IdModule  = SM0805;
+IdModule  = SM0805-simple;
 EndCmp
 
 BeginCmp

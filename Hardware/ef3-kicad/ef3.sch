@@ -1,4 +1,4 @@
-EESchema Schematic File Version 2  date Sat Oct  8 23:00:35 2011
+EESchema Schematic File Version 2  date So 30 Okt 2011 22:21:33 CET
 LIBS:power
 LIBS:device
 LIBS:transistors
@@ -38,7 +38,7 @@ encoding utf-8
 Sheet 1 1
 Title "EasyFlash 3"
 Date "8 oct 2011"
-Rev "1.1"
+Rev "1.2"
 Comp "Skoe"
 Comment1 ""
 Comment2 ""
