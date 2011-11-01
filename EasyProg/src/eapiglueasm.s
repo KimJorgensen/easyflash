@@ -479,7 +479,7 @@ _aEAPIDrivers:
 
 EAPICode1:
 @CodeStart:
-.incbin "obj/eapi-am29f040-13", 2
+.incbin "obj/eapi-am29f040-14", 2
 .res $0300 - (* - @CodeStart), $ff
 
 EAPICode2:
@@ -489,7 +489,7 @@ EAPICode2:
 
 EAPICode3:
 @CodeStart:
-.incbin "obj/eapi-mx29640b-01", 2
+.incbin "obj/eapi-mx29640b-11", 2
 .res $0300 - (* - @CodeStart), $ff
 
 EAPICodeEnd:

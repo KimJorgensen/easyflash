@@ -133,7 +133,7 @@ jmpTableEnd:
 ; Switch to Ultimax mode, write a byte to flash (complete write sequence),
 ; return to normal mode.
 ;
-; Must not change C flag!
+; Must not change the C flag!
 ;
 ; Parameters:
 ;           A = EASYFLASH_IO_BIT_MEMCTRL | EASYFLASH_IO_BIT_GAME |
@@ -458,7 +458,7 @@ returnCSet:
 ; an error. You must erase a memory block to get '1' bits.
 ;
 ; This function uses SEI, it restores all flags except C before it returns.
-; Do not call it with D-flag set. $01 must enable the affected ROM area.
+; Do not call it with D-flag set. $01 must enable both ROM areas.
 ; It can only be used after having called EAPIInit.
 ;
 ; parameters:
@@ -668,7 +668,7 @@ checkEraseProgress:
         clc
         bcc resetFlash
 .cpOK:
-        lda EAPI_SHADOW_BANK
+        lda EAPI_SHADOW_BANK; todo: ?????
         sta EASYFLASH_IO_BANK
         clc
         bcc retOk
@@ -867,7 +867,6 @@ readInc_eof:
 ;
 ; =============================================================================
 EAPIWriteFlashInc:
-        ; store X/Y
         sta EAPI_WRITE_VAL
         stx EAPI_TMP_VAL1
         sty EAPI_TMP_VAL2
