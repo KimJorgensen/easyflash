@@ -82,6 +82,7 @@ architecture ef3_arc of ef3 is
     -- Special function of a cartridge (e.g. boot disabled or freezer)
     signal button_special_fn:   std_logic;
 
+    signal n_ram_cs_i:          std_logic;
     signal n_mem_oe_i:          std_logic;
     signal n_usb_rd_i:          std_logic;
     signal n_usb_wr:            std_logic;
@@ -116,28 +117,13 @@ architecture ef3_arc of ef3 is
 
     signal hiram:               std_logic;
 
-    -- Number of the current slot, where one slot is 1 MByte
-    signal slot:                std_logic_vector(2 downto 0);
-    signal latch_slot:          std_logic;
-    signal new_slot:            std_logic_vector(2 downto 0);
-    signal ma19:                std_logic;
-    signal new_ma19:            std_logic;
-    signal latch_ma19:          std_logic;
-    signal bank:                std_logic_vector(5 downto 0);
-    signal latch_bank:          std_logic;
-    signal new_bank:            std_logic_vector(5 downto 0);
-
     signal ram_read:            std_logic;
     signal ram_write:           std_logic;
     signal flash_read:          std_logic;
     signal flash_write:         std_logic;
-    signal latch_mem_addr:      std_logic;
-    signal new_mem_addr:        std_logic_vector (12 downto 0);
 
-    signal ef_mem_addr:         std_logic_vector(12 downto 0);
-    signal ef_latch_mem_addr:   std_logic;
-    signal ef_ma19:             std_logic;
-    signal ef_latch_ma19:       std_logic;
+    signal ef_flash_addr:       std_logic_vector(22 downto 0);
+    signal ef_ram_addr:         std_logic_vector(14 downto 0);
     signal ef_n_game:           std_logic;
     signal ef_n_exrom:          std_logic;
     signal ef_start_reset:      std_logic;
@@ -148,10 +134,7 @@ architecture ef3_arc of ef3 is
     signal ef_data_out:         std_logic_vector(7 downto 0);
     signal ef_data_out_valid:   std_logic;
 
-    signal kernal_mem_addr:     std_logic_vector(12 downto 0);
-    signal kernal_latch_mem_addr: std_logic;
-    signal kernal_ma19:         std_logic;
-    signal kernal_latch_ma19:   std_logic;
+    signal kernal_flash_addr:   std_logic_vector(22 downto 0);
     signal kernal_a14:          std_logic;
     signal kernal_n_game:       std_logic;
     signal kernal_n_exrom:      std_logic;
@@ -191,7 +174,7 @@ architecture ef3_arc of ef3 is
         port (
             clk:                in  std_logic;
             n_sys_reset:        in  std_logic;
-            set_boot_flag:      in  std_logic;
+            reset_to_menu:      in  std_logic;
             n_reset:            in  std_logic;
             enable:             in  std_logic;
             phi2:               in  std_logic;
@@ -206,15 +189,8 @@ architecture ef3_arc of ef3 is
             data:               in  std_logic_vector(7 downto 0);
             button_crt_reset:   in  std_logic;
             button_special_fn:  in  std_logic;
-            slot:               in  std_logic_vector(2 downto 0);
-            new_slot:           out std_logic_vector(2 downto 0);
-            latch_slot:         out std_logic;
-            mem_addr:           out std_logic_vector(12 downto 0);
-            latch_mem_addr:     out std_logic;
-            bank:               out std_logic_vector(5 downto 0);
-            latch_bank:         out std_logic;
-            ma19:               out std_logic;
-            latch_ma19:         out std_logic;
+            flash_addr:         out std_logic_vector(22 downto 0);
+            ram_addr:           out std_logic_vector(14 downto 0);
             n_game:             out std_logic;
             n_exrom:            out std_logic;
             start_reset:        out std_logic;
@@ -241,10 +217,7 @@ architecture ef3_arc of ef3 is
             hiram_detect_ready: in std_logic;
             cycle_start:        in  std_logic;
             addr:               in  std_logic_vector(15 downto 0);
-            mem_addr:           out std_logic_vector(12 downto 0);
-            latch_mem_addr:     out std_logic;
-            ma19:               out std_logic;
-            latch_ma19:         out std_logic;
+            flash_addr:         out std_logic_vector(22 downto 0);
             a14:                out std_logic;
             n_game:             out std_logic;
             n_exrom:            out std_logic;
@@ -302,7 +275,7 @@ begin
     (
         clk                     => clk,
         n_sys_reset             => n_sys_reset,
-        set_boot_flag           => start_reset_to_menu,
+        reset_to_menu           => start_reset_to_menu,
         n_reset                 => n_reset,
         enable                  => enable_ef,
         phi2                    => phi2,
@@ -317,15 +290,8 @@ begin
         data                    => data,
         button_crt_reset        => button_crt_reset,
         button_special_fn       => button_special_fn,
-        slot                    => slot,
-        new_slot                => new_slot,
-        latch_slot              => latch_slot,
-        mem_addr                => ef_mem_addr,
-        latch_mem_addr          => ef_latch_mem_addr,
-        bank                    => new_bank,
-        latch_bank              => latch_bank,
-        ma19                    => ef_ma19,
-        latch_ma19              => ef_latch_ma19,
+        flash_addr              => ef_flash_addr,
+        ram_addr                => ef_ram_addr,
         n_game                  => ef_n_game,
         n_exrom                 => ef_n_exrom,
         start_reset             => ef_start_reset,
@@ -351,10 +317,7 @@ begin
         hiram_detect_ready      => hiram_detect_ready,
         cycle_start             => cycle_start,
         addr                    => addr,
-        mem_addr                => kernal_mem_addr,
-        latch_mem_addr          => kernal_latch_mem_addr,
-        ma19                    => kernal_ma19,
-        latch_ma19              => kernal_latch_ma19,
+        flash_addr              => kernal_flash_addr,
         a14                     => kernal_a14,
         n_game                  => kernal_n_game,
         n_exrom                 => kernal_n_exrom,
@@ -479,10 +442,7 @@ begin
     flash_write     <= ef_flash_write;
     n_exrom_out     <= ef_n_exrom and kernal_n_exrom;
     n_game_out      <= ef_n_game and kernal_n_game;
-    new_mem_addr    <= ef_mem_addr or kernal_mem_addr;
-    latch_mem_addr  <= ef_latch_mem_addr or kernal_latch_mem_addr;
-    new_ma19        <= ef_ma19 or kernal_ma19;
-    latch_ma19      <= ef_latch_ma19 or kernal_latch_ma19;
+
     data_out        <= ef_data_out or usb_data_out;
     data_out_valid  <= ef_data_out_valid or usb_data_out_valid;
 
@@ -496,41 +456,23 @@ begin
 
     addr(14) <= kernal_a14;
 
-    ---------------------------------------------------------------------------
-    --
-    ---------------------------------------------------------------------------
-    set_mem_addr: process(clk, n_sys_reset, start_reset_to_menu)
+    n_exrom <= n_exrom_out; -- when ((n_exrom and n_exrom_out) = '0') else 'Z';
+
+    set_mem_addr: process(ef_flash_addr, ef_ram_addr, kernal_flash_addr,
+                          enable_ef, enable_kernal, n_ram_cs_i)
     begin
-        if n_sys_reset = '0' or start_reset_to_menu = '1' then
-            slot <= (others => '0');
-            bank <= (others => '0');
-            mem_addr(12 downto 0) <= (others => '0');
-            mem_addr(19) <= '0';
-        elsif rising_edge(clk) then
-            if latch_slot = '1' then
-                slot <= new_slot;
-            end if;
-            if latch_bank = '1' then
-                bank <= new_bank;
-            end if;
-            if latch_mem_addr = '1' then
-                mem_addr(12 downto 0) <= new_mem_addr;
-            end if;
-            if latch_ma19 = '1' then
-                mem_addr(19) <= new_ma19;
-            end if;
-            if flash_read = '1' or flash_write = '1' then
-                mem_addr(14 downto 13) <= bank(1 downto 0);
-            elsif ram_read = '1' or ram_write = '1' then
-                mem_addr(14 downto 13) <= "00"; -- for now
+        mem_addr <= (others => '0');
+
+        if enable_kernal = '1' then
+            mem_addr <= kernal_flash_addr;
+        elsif enable_ef = '1' then
+            if n_ram_cs_i = '0' then
+                mem_addr <= "00000000" & ef_ram_addr;
+            else
+                mem_addr <= ef_flash_addr;
             end if;
         end if;
     end process;
-    mem_addr(22 downto 20) <= slot;
-    -- mem_addr(19) is taken from ROML/ROMH
-    mem_addr(18 downto 15) <= bank(5 downto 2);
-    -- mem_addr(14 downto 13) are different for flash and ram
-    -- mem_addr(12 downto 0) come from the cartridge implementations
 
     ---------------------------------------------------------------------------
     -- The variable write_scheduled is used to delay a n_mem_wr by one
@@ -540,7 +482,7 @@ begin
         variable write_scheduled : integer range 0 to 3;
     begin
         if n_reset = '0' then
-            n_ram_cs    <= '1';
+            n_ram_cs_i  <= '1';
             n_flash_cs  <= '1';
             n_mem_oe_i  <= '1';
             n_mem_wr    <= '1';
@@ -560,13 +502,13 @@ begin
 
             if ram_read = '1' then
                 -- start ram read, leave until cycle_start
-                n_ram_cs    <= '0';
+                n_ram_cs_i  <= '0';
                 n_flash_cs  <= '1';
                 n_mem_oe_i  <= '0';
                 n_usb_rd_i  <= '1';
             elsif ram_write = '1' then
                 -- ram write tbd in next cycle
-                n_ram_cs    <= '0';
+                n_ram_cs_i  <= '0';
                 n_flash_cs  <= '1';
                 n_mem_oe_i  <= '1';
                 n_usb_rd_i  <= '1';
@@ -574,13 +516,13 @@ begin
                 write_scheduled := 3;
             elsif flash_read = '1' then
                 -- start flash read, leave until cycle_start
-                n_ram_cs    <= '1';
+                n_ram_cs_i  <= '1';
                 n_flash_cs  <= '0';
                 n_mem_oe_i  <= '0';
                 n_usb_rd_i  <= '1';
             elsif flash_write = '1' then
                 -- flash write tbd in next cycle
-                n_ram_cs    <= '1';
+                n_ram_cs_i  <= '1';
                 n_flash_cs  <= '0';
                 n_mem_oe_i  <= '1';
                 n_usb_rd_i  <= '1';
@@ -588,13 +530,13 @@ begin
                 write_scheduled := 3;
             elsif usb_read = '1' then
                 -- start usb read, leave until cycle_start
-                n_ram_cs    <= '1';
+                n_ram_cs_i  <= '1';
                 n_flash_cs  <= '1';
                 n_mem_oe_i  <= '1';
                 n_usb_rd_i  <= '0';
             elsif usb_write = '1' then
                 -- usb write can start now
-                n_ram_cs    <= '1';
+                n_ram_cs_i  <= '1';
                 n_flash_cs  <= '1';
                 n_mem_oe_i  <= '1';
                 n_usb_rd_i  <= '1';
@@ -603,7 +545,7 @@ begin
                 write_scheduled := 2;
             elsif cycle_start = '1' then
                 -- return to idle
-                n_ram_cs    <= '1';
+                n_ram_cs_i  <= '1';
                 n_flash_cs  <= '1';
                 n_mem_oe_i  <= '1';
                 n_usb_rd_i  <= '1';
@@ -613,6 +555,7 @@ begin
 
         end if;
     end process mem_ctrl;
+    n_ram_cs <= n_ram_cs_i;
     n_mem_oe <= n_mem_oe_i;
     n_usb_rd <= n_usb_rd_i;
     usb_wr   <= not n_usb_wr;

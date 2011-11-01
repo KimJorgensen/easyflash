@@ -29,7 +29,7 @@ entity cart_easyflash is
     port (
         clk:            in  std_logic;
         n_sys_reset:    in  std_logic;
-        set_boot_flag:  in  std_logic;
+        reset_to_menu:  in  std_logic;
         n_reset:        in  std_logic;
         enable:         in  std_logic;
         phi2:           in  std_logic;
@@ -44,15 +44,8 @@ entity cart_easyflash is
         data:           in  std_logic_vector(7 downto 0);
         button_crt_reset:  in std_logic;
         button_special_fn: in std_logic;
-        slot:           in std_logic_vector(2 downto 0);
-        new_slot:       out std_logic_vector(2 downto 0);
-        latch_slot:     out std_logic;
-        mem_addr:       out std_logic_vector(12 downto 0);
-        latch_mem_addr: out std_logic;
-        bank:           out std_logic_vector(5 downto 0);
-        latch_bank:     out std_logic;
-        ma19:           out std_logic;
-        latch_ma19:     out std_logic;
+        flash_addr:     out std_logic_vector(22 downto 0);
+        ram_addr:       out std_logic_vector(14 downto 0);
         n_game:         out std_logic;
         n_exrom:        out std_logic;
         start_reset:    out std_logic;
@@ -72,9 +65,9 @@ end cart_easyflash;
 --   RAM (32 ki * 8)                  *************** (14..0)
 --   Flash (8 Mi * 8)         *********************** (22..0)
 -- Used in EF mode:
---   mem_addr(22 downto 15)   SSSLBBBB                (22..15) latch_addr_high
---   mem_addr(14 downto 13)           MM              (14..13) latch_addr_mid
---   mem_addr(12 downto 0)              AAAAAAAAAAAAA (12..0)  latch_addr_low
+--   mem_addr(22 downto 15)   SSSLBBBB                (22..15)
+--   mem_addr(14 downto 13)           MM              (14..13)
+--   mem_addr(12 downto 0)              AAAAAAAAAAAAA (12..0)
 --
 -- A    = Address from C64 bus to address 8k per bank
 -- B/M  = Bank number as set with $de00
@@ -94,11 +87,20 @@ architecture behav of cart_easyflash is
 
     signal data_out_valid_i:    std_logic;
 
+    signal slot:                std_logic_vector(2 downto 0);
+    signal bank:                std_logic_vector(5 downto 0);
+    signal io_bank:             std_logic_vector(4 downto 0);
+    signal io_a19:              std_logic;
+    signal io_to_flash:         std_logic;
+
 begin
 
-    reset_boot_or_no_boot: process(n_sys_reset, set_boot_flag, clk)
+    ---------------------------------------------------------------------------
+    --
+    ---------------------------------------------------------------------------
+    reset_boot_or_no_boot: process(n_sys_reset, reset_to_menu, clk)
     begin
-        if n_sys_reset = '0' or set_boot_flag = '1' then
+        if n_sys_reset = '0' or reset_to_menu = '1' then
             easyflash_boot <= '1';
         elsif rising_edge(clk) then
             if enable = '1' then
@@ -115,33 +117,23 @@ begin
         end if;
     end process;
 
-    create_mem_addr: process(enable, n_roml, n_romh,
-                             addr, bus_ready, data)
+    ---------------------------------------------------------------------------
+    -- Combinatorically create the next memory address.
+    ---------------------------------------------------------------------------
+    create_mem_addr: process(n_io2, n_roml, slot, bank, io_bank,
+                             io_a19, io_to_flash, addr)
     begin
-        mem_addr <= (others => '0');
-        new_slot <= (others => '0');
-        bank <= (others => '0');
-        ma19 <= '0';
-
-        latch_mem_addr <= '0';
-        latch_ma19 <= '0';
-
-        if enable = '1' then
-            if n_roml = '0' or n_romh = '0' then
-                mem_addr <= addr(12 downto 0);
-            else
-                -- RAM
-                mem_addr <= "00000" & addr(7 downto 0);
-            end if;
-            new_slot <= data(2 downto 0);
-            bank <= data(5 downto 0);
-            ma19 <= n_roml;
-
-            latch_mem_addr <= bus_ready;
-            latch_ma19     <= bus_ready;
+        if n_io2 = '0' then
+            flash_addr <= slot & io_a19 & bank & io_bank & addr(7 downto 0);
+        else
+            flash_addr <= slot & n_roml & bank & addr(12 downto 0);
         end if;
+        ram_addr   <= "0000000" & addr(7 downto 0);
     end process;
 
+    ---------------------------------------------------------------------------
+    --
+    ---------------------------------------------------------------------------
     create_data_out: process(data_out_valid_i, slot)
     begin
         data_out <= (others => '0');
@@ -150,7 +142,11 @@ begin
         end if;
     end process;
 
-    rw_control_regs: process(clk, n_reset, enable, easyflash_boot)
+    ---------------------------------------------------------------------------
+    --
+    ---------------------------------------------------------------------------
+    rw_control_regs: process(clk, n_reset, n_sys_reset, enable, 
+                             easyflash_boot, reset_to_menu)
     begin
         if n_reset = '0' then
             n_exrom <= '1';
@@ -159,24 +155,27 @@ begin
             else
                 n_game <= '1';
             end if;
-            latch_slot <= '0';
-            latch_bank <= '0';
             data_out_valid_i <= '0';
+            io_to_flash <= '0';
+            io_bank <= (others => '0');
+            io_a19 <= '0';
+            if n_sys_reset = '0' or reset_to_menu = '1' then
+                bank <= (others => '0');
+                slot <= (others => '0');
+            end if;
         elsif rising_edge(clk) then
             if enable = '1' then
-                latch_slot <= '0';
-                latch_bank <= '0';
                 if bus_ready = '1' and n_io1 = '0' then
                     if n_wr = '0' then
                         -- write control register
                         case addr(7 downto 0) is
                             when x"00" =>
                                 -- $de00
-                                latch_bank <= '1';
+                                bank <= data(5 downto 0);
 
                             when x"01" =>
                                 -- $de01
-                                latch_slot <= '1';
+                                slot <= data(2 downto 0);
 
                             when x"02" =>
                                 -- $de02
@@ -186,6 +185,12 @@ begin
                                 else
                                     n_game <= not data(0);
                                 end if;
+                                io_to_flash <= data(3);
+                                -- LED!
+
+                            when x"03" =>
+                                io_bank <= data(4 downto 0);
+                                io_a19  <= data(5);
 
                             when others => null;
                         end case;
@@ -203,49 +208,56 @@ begin
             else
                 n_exrom <= '1';
                 n_game <= '1';
-                latch_slot <= '0';
-                latch_bank <= '0';
                 data_out_valid_i <= '0';
             end if; -- enable
        end if; -- clk
     end process;
-    
-    data_out_valid <= data_out_valid_i;
 
+    data_out_valid <= data_out_valid_i;
+    slot <= slot;
+    bank <= bank;
+
+    ---------------------------------------------------------------------------
+    --
     -- We need a special case with phi2 = '0' for C128 which doesn't set R/W
     -- correctly for Phi1 cycles.
-    rw_flash: process(enable, n_roml, n_romh, n_wr, bus_ready, phi2)
+    ---------------------------------------------------------------------------
+    rw_mem: process(enable, n_io2, n_roml, n_romh, n_wr, phi2, io_to_flash, 
+                    bus_ready)
     begin
         flash_write <= '0';
         flash_read <= '0';
-        if enable = '1' then
-            if bus_ready = '1' and (n_roml = '0' or n_romh = '0') then
-                if phi2 = '0' then
-                    -- VIC-II
-                    flash_read <= '1';
-                else
-                    -- CPU
-                    if n_wr = '1' then
-                        flash_read <= '1';
-                    else
-                        flash_write <= '1';
-                    end if;
-                end if;
-            end if;
-        end if;
-    end process;
-
-    rw_ram: process(enable, n_io2, n_wr, bus_ready)
-    begin
         ram_write <= '0';
         ram_read <= '0';
         if enable = '1' then
-            if bus_ready = '1' and n_io2 = '0' then
-                if n_wr = '1' then
-                    ram_read <= '1';
-                else
-                    ram_write <= '1';
-                end if;
+            if bus_ready = '1' then
+                if n_io2 = '0' then
+                    if n_wr = '1' then
+                        if io_to_flash = '1' then
+                            flash_read <= '1';
+                        else
+                            ram_read <= '1';
+                        end if;
+                    else
+                        if io_to_flash = '1' then
+                            flash_write <= '1';
+                        else
+                            ram_write <= '1';
+                        end if;
+                    end if;
+                elsif n_roml = '0' or n_romh = '0' then
+                    if phi2 = '0' then
+                        -- VIC-II
+                        flash_read <= '1';
+                    else
+                        -- CPU
+                        if n_wr = '1' then
+                            flash_read <= '1';
+                        else
+                            flash_write <= '1';
+                        end if;
+                    end if;
+                end if; -- roml or romh
             end if;
         end if;
     end process;
