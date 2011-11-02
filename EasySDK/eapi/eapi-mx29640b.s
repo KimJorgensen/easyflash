@@ -41,7 +41,7 @@ EAPI_RAM_SIZE           = 124
 EAPICodeBase:
         !byte $65, $61, $70, $69        ; signature "EAPI"
 
-        !pet "MX29LV640EB 1.1"
+        !pet "MX29LV640EB 1.3"
         !byte 0                         ; 16 bytes, must be 0-terminated
 
 ; =============================================================================
@@ -74,8 +74,6 @@ EAPICodeBase:
 ;
 ; =============================================================================
 EAPIInit:
-        php
-        sei
         ; backup ZP space
         lda EAPI_ZP_INIT_CODE_BASE
         pha
@@ -114,8 +112,6 @@ jmpTable:
         jmp EAPIWriteFlashInc - initCodeBase
         jmp EAPISetSlot - initCodeBase
         jmp EAPIGetSlot - initCodeBase
-__EAPIResetFlashJmp: ; private!
-        jmp __EAPIResetFlash - initCodeBase ; private!
 jmpTableEnd:
 
 ; =============================================================================
@@ -137,28 +133,28 @@ jmpTableEnd:
 ;
 ; =============================================================================
 
-writeByte:
+;writeByte:
             ; bank 0 must have been selected
             ; /GAME low, /EXROM high, LED on
-            sta EASYFLASH_IO_CONTROL
+;            sta EASYFLASH_IO_CONTROL
 
             ; cycle 1: write $AA to $AAA
-            lda #$aa
-            sta $8aaa
+;            lda #$aa
+;            sta $8aaa
 
             ; cycle 2: write $55 to $555
-            lsr
-            sta $8555
+;            lsr
+;            sta $8555
 
             ; cycle 3: write $A0 to $AAA
-            lda #$a0
-            sta $8aaa
+;            lda #$a0
+;            sta $8aaa
 
             ; now we have to activate the right slot and bank
-            lda EAPI_SHADOW_SLOT
-            sta EASYFLASH_IO_SLOT
-            lda EAPI_SHADOW_BANK
-            sta EASYFLASH_IO_BANK
+;            lda EAPI_SHADOW_SLOT
+;            sta EASYFLASH_IO_SLOT
+;            lda EAPI_SHADOW_BANK
+;            sta EASYFLASH_IO_BANK
 
             ; cycle 4: write data
 EAPI_WRITE_VAL = * + 1
@@ -177,38 +173,6 @@ exitUltimax:
 ;
 ; Internal function
 ;
-; 1. Turn on Ultimax mode and LED
-; 2. Write byte to address
-; 3. Turn off Ultimax mode and LED
-;    (show 16k of current bank at $8000..$BFFF)
-;
-; Remember that the address must be based on $8000 for LOROM or
-; $E000 for HIROM! Der caller may want to SEI.
-;
-; Parameters:
-;           A   Value
-;           XY  Address (X = low)
-; Changes:
-;           X
-;
-; =============================================================================
-ultimaxWriteXX55:
-            ldx #$55
-ultimaxWrite:
-            stx uwDest
-            sty uwDest + 1
-            ; /GAME low, /EXROM high, LED on
-            ldx #EASYFLASH_IO_BIT_MEMCTRL | EASYFLASH_IO_BIT_GAME | EASYFLASH_IO_BIT_LED
-            stx EASYFLASH_IO_CONTROL
-uwDest = * + 1
-            sta $ffff           ; will be modified
-            jmp exitUltimax
-
-
-; =============================================================================
-;
-; Internal function
-;
 ; Read a byte from the inc-address
 ;
 ; =============================================================================
@@ -217,20 +181,6 @@ EAPI_INC_ADDR_LO = * + 1
 EAPI_INC_ADDR_HI = * + 2
             lda $ffff
             rts
-
-
-; =============================================================================
-;
-; Internal function
-;
-; Used for progress check. Compare A with the value from (YX).
-;
-; =============================================================================
-cmpByte:                            ;  6  6 (JSR)
-EAPI_CMP_BYTE_ADDR_LO = * + 1
-EAPI_CMP_BYTE_ADDR_HI = * + 2
-            cmp $ffff               ; +4 10
-            rts                     ; +6 25
 
 
 ; =============================================================================
@@ -294,8 +244,6 @@ cidFillJMP:
         clc
         bcc ciNoRamError
 ciRamError:
-        lda #EAPI_ERR_RAM
-        sta EAPI_TMP_VAL2
         sec                     ; error
 ciNoRamError:
         ; restore the caller's ZP state
@@ -303,35 +251,54 @@ ciNoRamError:
         sta EAPI_ZP_INIT_CODE_BASE + 1
         pla
         sta EAPI_ZP_INIT_CODE_BASE
-        bcs returnOnly
+        bcs ciRamErrorRet
+
+        lda EASYFLASH_IO_SLOT   ; backup slot
+        sta EAPI_SHADOW_SLOT
+        lda #0
+        sta EASYFLASH_IO_SLOT
+        sta EASYFLASH_IO_BANK
+
+        ; Show flash in IO2 area
+        lda #EASYFLASH_IO_BIT_MEMCTRL | EASYFLASH_IO_BIT_GAME | EASYFLASH_IO_BIT_EXROM | EASYFLASH_IO_BIT_LED | EASYFLASH_IO_BIT_FLASHIO
+        sta EASYFLASH_IO_CONTROL
 
         ; *** start of flash detection ***
         ; check for M29F160ET
         ; cycle 1: write $AA to $AAA
-        ldx #<$8aaa
-        ldy #>$8aaa
+        lda #$0a
+        sta $de03
         lda #$aa
-        jsr ultimaxWrite
+        sta $dfaa
 
         ; cycle 2: write $55 to $555
-        ldx #<$8555
-        ldy #>$8555
-        lsr
-        jsr ultimaxWrite
+        lda #$05
+        sta $de03
+        lda #$55
+        sta $df55
 
         ; cycle 3: write $90 to $aaa
-        ldx #<$8aaa
-        ldy #>$8aaa
+        lda #$0a
+        sta $de03
         lda #$90
-        jsr ultimaxWrite
+        sta $dfaa
+
+        lda #$00
+        sta $de03
 
         ; offset 0: Manufacturer ID (we're on bank 0)
-        ldx $8000
-        stx EAPI_TMP_VAL1
+        ldx $df00
 
         ; offset 2: Device ID
-        lda $8002
-        sta EAPI_TMP_VAL2
+        lda $df02
+
+        ; reset flash chip: write $F0 to any address
+        ldy #$f0
+        sty $df00
+
+        ; Show RAM in IO2 area
+        ldy #EASYFLASH_IO_BIT_MEMCTRL | EASYFLASH_IO_BIT_GAME | EASYFLASH_IO_BIT_EXROM
+        sty EASYFLASH_IO_CONTROL
 
         ; check if it is an MX29LV640EB
         cpx #MX29LV640EB_MFR_ID
@@ -341,36 +308,20 @@ ciNoRamError:
 
         ; everything okay
         clc
-        bcc resetAndReturn
+        bcc ciRet
 
 ciNotSupported:
         lda #EAPI_ERR_ROML
-        sta EAPI_TMP_VAL2       ; error code in A
         sec
-
-resetAndReturn:
-        ; reset flash chip: write $F0 to any address
-        ; ldx #<$8000 - don't care
-        ldy #>$8000
-        lda #$f0
-        jsr ultimaxWrite
-
-returnOnly:                     ; C indicates error
-        lda EAPI_SHADOW_SLOT
-        sta EASYFLASH_IO_SLOT   ; restore slot
-
-        lda EAPI_TMP_VAL2       ; device or error code in A
-        bcs returnCSet
-        ldx EAPI_TMP_VAL1       ; manufacturer in X
+ciRet:                     ; C indicates error
+        ldy EAPI_SHADOW_SLOT
+        sty EASYFLASH_IO_SLOT   ; restore slot
         ldy #MX29LV640EB_NUM_SLOTS ; number of slots in Y
+        rts
 
-        plp
-        clc                     ; do this after plp :)
-        rts
-returnCSet:
-        plp
-        sec                     ; do this after plp :)
-        rts
+ciRamErrorRet:
+        lda #EAPI_ERR_RAM
+        bcs ciRet               ; branch always
 
 ; =============================================================================
 ;
@@ -399,12 +350,8 @@ returnCSet:
 ;
 ; =============================================================================
 EAPIWriteFlash:
-        sta EAPI_WRITE_VAL
-        stx EAPI_WRITE_ADDR_LO
-        stx EAPI_CMP_BYTE_ADDR_LO
-        sty EAPI_WRITE_ADDR_HI
-        php
-        sei
+        pha
+        sty EAPI_TMP_VAL2
 
         ; backup slot
         lda EASYFLASH_IO_SLOT
@@ -415,29 +362,68 @@ EAPIWriteFlash:
         sta EASYFLASH_IO_SLOT
         sta EASYFLASH_IO_BANK
 
-        tya
-        and #$bf            ; $ex => $ax
-        sta EAPI_CMP_BYTE_ADDR_HI
+        ; show flash in IO2 area
+        lda #EASYFLASH_IO_BIT_MEMCTRL | EASYFLASH_IO_BIT_GAME | EASYFLASH_IO_BIT_EXROM | EASYFLASH_IO_BIT_LED | EASYFLASH_IO_BIT_FLASHIO
+        sta EASYFLASH_IO_CONTROL
 
-        lda #EASYFLASH_IO_BIT_MEMCTRL | EASYFLASH_IO_BIT_GAME | EASYFLASH_IO_BIT_LED
-        jsr writeByte
-wcpCheck:
-        ; that's it, check result
-        ; EAPI_WRITE_VAL still in A
-        ldx #20
+        ; cycle 1: write $AA to $AAA
+        lda #$0a
+        sta $de03
+        lda #$aa
+        sta $dfaa
+
+        ; cycle 2: write $55 to $555
+        lda #$05
+        sta $de03
+        lda #$55
+        sta $df55
+
+        ; cycle 3: write $A0 to $AAA
+        lda #$0a
+        sta $de03
+        lda #$a0
+        sta $dfaa
+
+        ; show RAM in IO2 area
+        lda #EASYFLASH_IO_BIT_MEMCTRL | EASYFLASH_IO_BIT_GAME | EASYFLASH_IO_BIT_EXROM
+        sta EASYFLASH_IO_CONTROL
+
+        ; now we have to activate the right slot and bank
+        lda EAPI_SHADOW_SLOT
+        sta EASYFLASH_IO_SLOT
+        lda EAPI_SHADOW_BANK
+        sta EASYFLASH_IO_BANK
+
+        ; show flash in IO2 area
+        lda #EASYFLASH_IO_BIT_MEMCTRL | EASYFLASH_IO_BIT_GAME | EASYFLASH_IO_BIT_EXROM | EASYFLASH_IO_BIT_LED | EASYFLASH_IO_BIT_FLASHIO
+        sta EASYFLASH_IO_CONTROL
+
+        ; cycle 4: write data
+        sty $de03
+        pla							; keep value in A until RTS
+        sta $df00, x
+
+        ldy #40
 wcpLoop:
-        jsr cmpByte
+        cmp $df00, x
         beq wcheckOK
-        dex
+        dey
         bne wcpLoop
+
         ; Time out and/or error
-        jmp __EAPIResetFlashJmp
+        ; write $f0 to reset flash
+        ldy #$f0
+        sty $df00
+        sec
+        bcs wcheckRet
 wcheckOK:
-        plp
         clc
-        ldy EAPI_WRITE_ADDR_HI
-        ldx EAPI_WRITE_ADDR_LO
-        ; EAPI_WRITE_VAL still in A
+wcheckRet:
+        ; show RAM in IO2 area
+        ldy #EASYFLASH_IO_BIT_MEMCTRL | EASYFLASH_IO_BIT_GAME | EASYFLASH_IO_BIT_EXROM
+        sty EASYFLASH_IO_CONTROL
+        ldy EAPI_TMP_VAL2
+        cmp #0 ; grrrr
         rts
 
 
@@ -477,13 +463,11 @@ EAPIEraseSector:
         sta EAPI_WRITE_VAL      ; used for bank number here
         stx EAPI_WRITE_ADDR_LO  ; backup of X only, no parameter
         sty EAPI_WRITE_ADDR_HI
-        php
         cmp #0          ; bank 0?
         ; todo: nur auf Slot 0
         bne seNormal
         cpy #$80        ; ROML?
         bne seNormal
-        plp
         ; when we are here they try to erase 00:0:0000
         ; there are 8 * 8 kByte boot blocks there, we erase all of them
         ldx #7
@@ -493,15 +477,13 @@ seEraseBootBlocks:
         bcc sebbOK
         lda #0
         sta EAPI_WRITE_VAL ; restore original backup of A=0
-        jmp __EAPIResetFlashJmp
+        beq echeckFail
 sebbOK:
         dex
         bne seEraseBootBlocks
         txa
         sta EAPI_WRITE_VAL ; restore original backup of A=0
-        php
 seNormal:
-        sei
 
         ; backup slot
         lda EASYFLASH_IO_SLOT
@@ -512,35 +494,41 @@ seNormal:
         sta EASYFLASH_IO_SLOT
         sta EASYFLASH_IO_BANK
 
+        ; show flash in IO2 area
+        lda #EASYFLASH_IO_BIT_MEMCTRL | EASYFLASH_IO_BIT_GAME | EASYFLASH_IO_BIT_EXROM | EASYFLASH_IO_BIT_LED | EASYFLASH_IO_BIT_FLASHIO
+        sta EASYFLASH_IO_CONTROL
+
         ; cycle 1: write $AA to $AAA
-        ldx #<$8aaa
-        ldy #>$8aaa
+        lda #$0a
+        sta $de03
         lda #$aa
-        jsr ultimaxWrite
+        sta $dfaa
 
         ; cycle 2: write $55 to $555
-        ldx #<$8555
-        ldy #>$8555
-        lsr
-        jsr ultimaxWrite
+        lda #$05
+        sta $de03
+        lda #$55
+        sta $df55
 
         ; cycle 3: write $80 to $AAA
-        ldx #<$8aaa
-        ldy #>$8aaa
+        lda #$0a
+        sta $de03
         lda #$80
-        jsr ultimaxWrite
+        sta $dfaa
 
         ; cycle 4: write $AA to $AAA
-        ldx #<$8aaa
-        ldy #>$8aaa
         lda #$aa
-        jsr ultimaxWrite
+        sta $dfaa
 
         ; cycle 5: write $55 to $555
-        ldx #<$8555
-        ldy #>$8555
-        lsr
-        jsr ultimaxWrite
+        lda #$05
+        sta $de03
+        lda #$55
+        sta $df55
+
+        ; show RAM in IO2 area
+        lda #EASYFLASH_IO_BIT_MEMCTRL | EASYFLASH_IO_BIT_GAME | EASYFLASH_IO_BIT_EXROM
+        sta EASYFLASH_IO_CONTROL
 
         ; activate the right slot and bank
         lda EAPI_SHADOW_SLOT
@@ -548,19 +536,14 @@ seNormal:
         lda EAPI_WRITE_VAL
         sta EASYFLASH_IO_BANK
 
+        ; show flash in IO2 area
+        lda #EASYFLASH_IO_BIT_MEMCTRL | EASYFLASH_IO_BIT_GAME | EASYFLASH_IO_BIT_EXROM | EASYFLASH_IO_BIT_LED | EASYFLASH_IO_BIT_FLASHIO
+        sta EASYFLASH_IO_CONTROL
+
         ; cycle 6: write $30 to base + SA
-        ldx #$00
-        stx EAPI_CMP_BYTE_ADDR_LO
-        ldy EAPI_WRITE_ADDR_HI
-        tya
-        cpy #$80
-        beq seskip
-        ldy #$e0 ; $a0 => $e0
-        lda #$a0
-seskip:
-        sta EAPI_CMP_BYTE_ADDR_HI
+        sty $de03
         lda #$30
-        jsr ultimaxWrite
+        sta $df00
 
 ; =============================================================================
 ;
@@ -580,45 +563,30 @@ seskip:
         tax
         tay                 ; timer
 ecpLoop:
-        jsr cmpByte
-        beq ecpOK
+        cmp $df00
+        beq echeckOK
         dex
         bne ecpLoop
         dey
         bne ecpLoop
         ; Time out and/or error
-        jmp __EAPIResetFlashJmp
-ecpOK:
-        plp
-        clc
-        ldy EAPI_WRITE_ADDR_HI
-        ldx EAPI_WRITE_ADDR_LO
-        lda EAPI_WRITE_VAL
-        rts
-
-; =============================================================================
-;
-; Reset flash and return error.
-;
-; =============================================================================
-__EAPIResetFlash:
-        lda EAPI_SHADOW_BANK
-        sta EASYFLASH_IO_BANK
-
-        ; ldx #<$8000 - don't care
-        ldy #>$8000
+        ; write $f0 to reset flash
         lda #$f0
-        jsr ultimaxWrite
-
-        ; ldx #<$e000 - don't care
-        ldy #>$e000
-        jsr ultimaxWrite
-
-        plp
-        sec ; error
+        sta $df00
+        sec
+        bcs echeckFail
+echeckOK:
+        clc
+        bcc echeckRet
+echeckFail:
+		sec
+echeckRet:
+        ; show RAM in IO2 area
+        lda #EASYFLASH_IO_BIT_MEMCTRL | EASYFLASH_IO_BIT_GAME | EASYFLASH_IO_BIT_EXROM
+        sta EASYFLASH_IO_CONTROL
+        lda EAPI_WRITE_VAL
         ldy EAPI_WRITE_ADDR_HI
         ldx EAPI_WRITE_ADDR_LO
-        lda EAPI_WRITE_VAL
         rts
 
 ; =============================================================================
