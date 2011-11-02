@@ -25,5 +25,7 @@ EASYFLASH_IO_BIT_EXROM   = $02
 ; Bit for memory control (1 = enabled)
 EASYFLASH_IO_BIT_MEMCTRL = $04
 
+EASYFLASH_IO_BIT_FLASHIO = $08
+
 ; Bit for status LED (1 = on)
 EASYFLASH_IO_BIT_LED     = $80
