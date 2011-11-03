@@ -67,6 +67,7 @@ architecture ef3_arc of ef3 is
     signal enable_menu:         std_logic;
     signal enable_ef:           std_logic;
     signal enable_kernal:       std_logic;
+    signal enable_ar:           std_logic;
 
     signal buttons_enabled:     std_logic := '0';
 
@@ -139,6 +140,15 @@ architecture ef3_arc of ef3 is
     signal kernal_n_game:       std_logic;
     signal kernal_n_exrom:      std_logic;
     signal kernal_flash_read:   std_logic;
+
+    signal ar_flash_addr:       std_logic_vector(22 downto 0);
+    signal ar_ram_addr:         std_logic_vector(14 downto 0);
+    signal ar_n_game:           std_logic;
+    signal ar_n_exrom:          std_logic;
+    signal ar_start_reset:      std_logic;
+    signal ar_ram_read:         std_logic;
+    signal ar_ram_write:        std_logic;
+    signal ar_flash_read:       std_logic;
 
     signal usb_read:            std_logic;
     signal usb_write:           std_logic;
@@ -223,6 +233,35 @@ architecture ef3_arc of ef3 is
             n_exrom:            out std_logic;
             flash_read:         out std_logic;
             hiram:              out std_logic
+        );
+    end component;
+
+    component cart_ar is
+        port (
+            clk:                in  std_logic;
+            n_sys_reset:        in  std_logic;
+            n_reset:            in  std_logic;
+            enable:             in  std_logic;
+            phi2:               in  std_logic;
+            n_io1:              in  std_logic;
+            n_io2:              in  std_logic;
+            n_roml:             in  std_logic;
+            n_romh:             in  std_logic;
+            n_wr:               in  std_logic;
+            bus_ready:          in  std_logic;
+            cycle_start:        in  std_logic;
+            addr:               in  std_logic_vector(15 downto 0);
+            data:               in  std_logic_vector(7 downto 0);
+            button_crt_reset:   in std_logic;
+            button_special_fn:  in std_logic;
+            flash_addr:         out std_logic_vector(22 downto 0);
+            ram_addr:           out std_logic_vector(14 downto 0);
+            n_game:             out std_logic;
+            n_exrom:            out std_logic;
+            start_reset:        out std_logic;
+            ram_read:           out std_logic;
+            ram_write:          out std_logic;
+            flash_read:         out std_logic
         );
     end component;
 
@@ -325,6 +364,34 @@ begin
         hiram                   => hiram
     );
 
+    u_cart_ar: cart_ar port map
+    (
+        clk                     => clk,
+        n_sys_reset             => n_sys_reset,
+        n_reset                 => n_reset,
+        enable                  => enable_ar,
+        phi2                    => phi2,
+        n_io1                   => n_io1,
+        n_io2                   => n_io2,
+        n_roml                  => n_roml,
+        n_romh                  => n_romh,
+        n_wr                    => n_wr,
+        bus_ready               => bus_ready,
+        cycle_start             => cycle_start,
+        addr                    => addr,
+        data                    => data,
+        button_crt_reset        => button_crt_reset,
+        button_special_fn       => button_special_fn,
+        flash_addr              => ar_flash_addr,
+        ram_addr                => ar_ram_addr,
+        n_game                  => ar_n_game,
+        n_exrom                 => ar_n_exrom,
+        start_reset             => ar_start_reset,
+        ram_read                => ar_ram_read,
+        ram_write               => ar_ram_write,
+        flash_read              => ar_flash_read
+    );
+
     u_cart_usb: cart_usb
     port map(
         clk                     => clk,
@@ -357,6 +424,10 @@ begin
 
     enable_kernal   <= '1'
         when cart_mode = MODE_KERNAL
+        else '0';
+
+    enable_ar   <= '1'
+        when cart_mode = MODE_AR
         else '0';
 
     -- unused signals and defaults
@@ -425,6 +496,10 @@ begin
                                 cart_mode <= MODE_KERNAL;
                                 sw_start_reset <= '1';
 
+                            when "100" =>
+                                cart_mode <= MODE_AR;
+                                sw_start_reset <= '1';
+
                             when others => null;
                         end case;
                     when others => null;
@@ -436,17 +511,18 @@ begin
     ---------------------------------------------------------------------------
     -- Merge the output of all cartridges
     ---------------------------------------------------------------------------
-    ram_read        <= ef_ram_read;
-    ram_write       <= ef_ram_write;
-    flash_read      <= ef_flash_read or kernal_flash_read;
+    ram_read        <= ef_ram_read or ar_ram_read;
+    ram_write       <= ef_ram_write or ar_ram_write;
+    flash_read      <= ef_flash_read or kernal_flash_read or ar_flash_read;
     flash_write     <= ef_flash_write;
-    n_exrom_out     <= ef_n_exrom and kernal_n_exrom;
-    n_game_out      <= ef_n_game and kernal_n_game;
+    n_exrom_out     <= ef_n_exrom and kernal_n_exrom and ar_n_exrom;
+    n_game_out      <= ef_n_game and kernal_n_game and ar_n_game;
 
     data_out        <= ef_data_out or usb_data_out;
     data_out_valid  <= ef_data_out_valid or usb_data_out_valid;
 
-    start_reset     <= ef_start_reset or start_reset_to_menu or sw_start_reset;
+    start_reset     <= ef_start_reset or ar_start_reset or
+                       start_reset_to_menu or sw_start_reset;
 
     n_dma <= 'Z';
 
@@ -458,8 +534,10 @@ begin
 
     n_exrom <= n_exrom_out; -- when ((n_exrom and n_exrom_out) = '0') else 'Z';
 
-    set_mem_addr: process(ef_flash_addr, ef_ram_addr, kernal_flash_addr,
-                          enable_ef, enable_kernal, n_ram_cs_i)
+    set_mem_addr: process(enable_ef, ef_flash_addr, ef_ram_addr, 
+                          enable_kernal, kernal_flash_addr,
+                          enable_ar, ar_flash_addr, ar_ram_addr,
+                          n_ram_cs_i)
     begin
         mem_addr <= (others => '0');
 
@@ -470,6 +548,12 @@ begin
                 mem_addr <= "00000000" & ef_ram_addr;
             else
                 mem_addr <= ef_flash_addr;
+            end if;
+        elsif enable_ar = '1' then
+            if n_ram_cs_i = '0' then
+                mem_addr <= "00000000" & ar_ram_addr;
+            else
+                mem_addr <= ar_flash_addr;
             end if;
         end if;
     end process;

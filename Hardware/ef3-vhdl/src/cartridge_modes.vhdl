@@ -27,7 +27,8 @@ package cartridge_modes is
         MODE_MENU,
         MODE_EASYFLASH,
         MODE_KERNAL,
-        MODE_FC3
+        MODE_FC3,
+        MODE_AR
     );
 
 end cartridge_modes;
