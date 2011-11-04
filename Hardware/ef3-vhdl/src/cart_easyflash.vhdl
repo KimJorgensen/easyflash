@@ -145,7 +145,7 @@ begin
     ---------------------------------------------------------------------------
     --
     ---------------------------------------------------------------------------
-    rw_control_regs: process(clk, n_reset, n_sys_reset, enable, 
+    rw_control_regs: process(clk, n_reset, n_sys_reset, enable,
                              easyflash_boot, reset_to_menu)
     begin
         if n_reset = '0' then
@@ -222,7 +222,7 @@ begin
     -- We need a special case with phi2 = '0' for C128 which doesn't set R/W
     -- correctly for Phi1 cycles.
     ---------------------------------------------------------------------------
-    rw_mem: process(enable, n_io2, n_roml, n_romh, n_wr, phi2, io_to_flash, 
+    rw_mem: process(enable, n_io2, n_roml, n_romh, n_wr, phi2, io_to_flash,
                     bus_ready)
     begin
         flash_write <= '0';

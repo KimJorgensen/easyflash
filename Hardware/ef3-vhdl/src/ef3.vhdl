@@ -481,22 +481,26 @@ begin
             elsif n_wr = '0' and bus_ready = '1' and
                 n_io1 = '0' and enable_menu = '1' then
                 case addr(7 downto 0) is
-                    when x"03" =>
-                        -- $de03 = cartridge mode
-                        case data(2 downto 0) is
-                            when "000" =>
+                    when x"0f" =>
+                        -- $de0f = cartridge mode
+                        case data(3 downto 0) is
+                            when x"0" =>
                                 cart_mode <= MODE_EASYFLASH;
                                 sw_start_reset <= '1';
 
-                            when "001" =>
-                                cart_mode <= MODE_FC3;
-                                sw_start_reset <= '1';
+                            when x"1" =>
+                                cart_mode <= MODE_EASYFLASH;
+                                -- without reset, hide this register only
 
-                            when "011" =>
+                            when x"2" =>
                                 cart_mode <= MODE_KERNAL;
                                 sw_start_reset <= '1';
 
-                            when "100" =>
+                            when x"3" =>
+                                cart_mode <= MODE_FC3;
+                                sw_start_reset <= '1';
+
+                            when x"4" =>
                                 cart_mode <= MODE_AR;
                                 sw_start_reset <= '1';
 
@@ -534,7 +538,7 @@ begin
 
     n_exrom <= n_exrom_out; -- when ((n_exrom and n_exrom_out) = '0') else 'Z';
 
-    set_mem_addr: process(enable_ef, ef_flash_addr, ef_ram_addr, 
+    set_mem_addr: process(enable_ef, ef_flash_addr, ef_ram_addr,
                           enable_kernal, kernal_flash_addr,
                           enable_ar, ar_flash_addr, ar_ram_addr,
                           n_ram_cs_i)
