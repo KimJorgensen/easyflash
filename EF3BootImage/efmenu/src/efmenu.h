@@ -11,10 +11,11 @@
 #include <stdint.h>
 
 
-#define MODE_EF     0
-#define MODE_FC3    1
-#define MODE_GEORAM 2
-#define MODE_KERNAL 3
+#define MODE_EF             0
+#define MODE_EF_NO_RESET    1
+#define MODE_KERNAL         2
+#define MODE_FC3            3
+#define MODE_AR             4
 
 #define EF_DIR_BANK         0x10
 #define EF_DIR_NUM_SLOTS    16

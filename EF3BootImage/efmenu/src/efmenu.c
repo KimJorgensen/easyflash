@@ -63,6 +63,12 @@ static efmenu_entry_t ef_menu[] =
         { 0, 0, 0, 0, "", "" }
 };
 
+/* Dummy menu entry to start the AR */
+static efmenu_entry_t ar_menu_entry =
+{
+        'r',    0, 0,  MODE_AR,    "", ""
+};
+
 
 void showMenu(void)
 {
@@ -134,6 +140,10 @@ static void waitForKey(void)
             if (key == 'p')
             {
             	startProgram(9); // EasyProg
+            }
+            else if (key == 'r')
+            {
+                startMenuEntry(&ar_menu_entry);
             }
         }
         usbCheck();
