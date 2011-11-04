@@ -118,61 +118,6 @@ jmpTableEnd:
 ;
 ; Internal function
 ;
-; Switch to Ultimax mode, write a byte to flash (complete write sequence),
-; return to normal mode.
-;
-; Must not change the C flag!
-;
-; Parameters:
-;           A = EASYFLASH_IO_BIT_MEMCTRL | EASYFLASH_IO_BIT_GAME |
-;               EASYFLASH_IO_BIT_LED
-; Changes:
-;           X
-; Return:
-;           A = value which has been written
-;
-; =============================================================================
-
-;writeByte:
-            ; bank 0 must have been selected
-            ; /GAME low, /EXROM high, LED on
-;            sta EASYFLASH_IO_CONTROL
-
-            ; cycle 1: write $AA to $AAA
-;            lda #$aa
-;            sta $8aaa
-
-            ; cycle 2: write $55 to $555
-;            lsr
-;            sta $8555
-
-            ; cycle 3: write $A0 to $AAA
-;            lda #$a0
-;            sta $8aaa
-
-            ; now we have to activate the right slot and bank
-;            lda EAPI_SHADOW_SLOT
-;            sta EASYFLASH_IO_SLOT
-;            lda EAPI_SHADOW_BANK
-;            sta EASYFLASH_IO_BANK
-
-            ; cycle 4: write data
-EAPI_WRITE_VAL = * + 1
-            lda #00
-EAPI_WRITE_ADDR_LO = * + 1
-EAPI_WRITE_ADDR_HI = * + 2
-            sta $ffff           ; will be modified
-exitUltimax:
-            ; /GAME low, /EXROM low, LED off
-            ldx #EASYFLASH_IO_BIT_MEMCTRL | EASYFLASH_IO_BIT_GAME | EASYFLASH_IO_BIT_EXROM
-            stx EASYFLASH_IO_CONTROL
-            rts
-
-
-; =============================================================================
-;
-; Internal function
-;
 ; Read a byte from the inc-address
 ;
 ; =============================================================================
@@ -182,6 +127,30 @@ EAPI_INC_ADDR_HI = * + 2
             lda $ffff
             rts
 
+; =============================================================================
+;
+; =============================================================================
+        ; the increment code is used by both functions
+rwInc_inc:
+	        ; inc to next position
+	        inc EAPI_INC_ADDR_LO
+	        bne rwInc_noInc
+
+	        ; inc page
+	        inc EAPI_INC_ADDR_HI
+	        lda EAPI_INC_TYPE
+	        and #$e0
+	        cmp EAPI_INC_ADDR_HI
+	        bne rwInc_noInc
+	        ; inc bank
+	        lda EAPI_INC_TYPE
+	        asl
+	        asl
+	        asl
+	        sta EAPI_INC_ADDR_HI
+	        inc EAPI_SHADOW_BANK
+rwInc_noInc:
+			rts
 
 ; =============================================================================
 ; Variables
@@ -189,17 +158,15 @@ EAPI_INC_ADDR_HI = * + 2
 
 EAPI_TMP_VAL1           = * + 0
 EAPI_TMP_VAL2           = * + 1
-EAPI_TMP_VAL3           = * + 2
-EAPI_TMP_VAL4           = * + 3
-EAPI_TMP_VAL5           = * + 4
-EAPI_SHADOW_BANK        = * + 5 ; copy of current bank number set by the user
-EAPI_INC_TYPE           = * + 6 ; type used for EAPIReadFlashInc/EAPIWriteFlashInc
-EAPI_LENGTH_LO          = * + 7
-EAPI_LENGTH_MED         = * + 8
-EAPI_LENGTH_HI          = * + 9
-EAPI_SHADOW_SLOT        = * + 10
+EAPI_SHADOW_BANK        = * + 2 ; copy of current bank number set by the user
+EAPI_INC_TYPE           = * + 3 ; type used for EAPIReadFlashInc/EAPIWriteFlashInc
+EAPI_LENGTH_LO          = * + 4
+EAPI_LENGTH_MED         = * + 5
+EAPI_LENGTH_HI          = * + 6
+EAPI_SHADOW_SLOT        = * + 7
+EAPI_WRITE_VAL          = * + 8
 ; =============================================================================
-RAMContentEnd           = * + 11
+RAMContentEnd           = * + 9
         } ; end pseudopc
 RAMCodeEnd:
 
@@ -423,7 +390,7 @@ wcheckRet:
         ldy #EASYFLASH_IO_BIT_MEMCTRL | EASYFLASH_IO_BIT_GAME | EASYFLASH_IO_BIT_EXROM
         sty EASYFLASH_IO_CONTROL
         ldy EAPI_TMP_VAL2
-        cmp #0 ; grrrr
+        ; cmp #0 ; grrrr
         rts
 
 
@@ -461,8 +428,8 @@ wcheckRet:
 ; =============================================================================
 EAPIEraseSector:
         sta EAPI_WRITE_VAL      ; used for bank number here
-        stx EAPI_WRITE_ADDR_LO  ; backup of X only, no parameter
-        sty EAPI_WRITE_ADDR_HI
+        stx EAPI_TMP_VAL1       ; backup of X only, no parameter
+        sty EAPI_TMP_VAL2
         cmp #0          ; bank 0?
         ; todo: nur auf Slot 0
         bne seNormal
@@ -585,8 +552,8 @@ echeckRet:
         lda #EASYFLASH_IO_BIT_MEMCTRL | EASYFLASH_IO_BIT_GAME | EASYFLASH_IO_BIT_EXROM
         sta EASYFLASH_IO_CONTROL
         lda EAPI_WRITE_VAL
-        ldy EAPI_WRITE_ADDR_HI
-        ldx EAPI_WRITE_ADDR_LO
+        ldy EAPI_TMP_VAL2
+        ldx EAPI_TMP_VAL1
         rts
 
 ; =============================================================================
@@ -732,11 +699,7 @@ EAPIReadFlashInc:
         stx EAPI_TMP_VAL1
         sty EAPI_TMP_VAL2
 
-        ; make sure that the increment subroutine of the
-        ; write routine jumps back to us, and call it
-        lda #$00
-        sta EAPI_WRITE_ADDR_HI
-        beq rwInc_inc
+		jsr rwInc_inc
 
 readInc_Length:
         ; decrement length
@@ -751,7 +714,7 @@ readInc_nohi:
         dec EAPI_LENGTH_MED
 readInc_nomed:
         dec EAPI_LENGTH_LO
-        ;clc ; no EOF - already set by rwInc_noInc
+        clc ; no EOF
         bcc rwInc_return
 
 readInc_eof:
@@ -800,33 +763,9 @@ writeInc_skip:
         jsr jmpTable + 0
         bcs rwInc_return
 
-        ; the increment code is used by both functions
-rwInc_inc:
-        ; inc to next position
-        inc EAPI_INC_ADDR_LO
-        bne rwInc_noInc
-
-        ; inc page
-        inc EAPI_INC_ADDR_HI
-        lda EAPI_INC_TYPE
-        and #$e0
-        cmp EAPI_INC_ADDR_HI
-        bne rwInc_noInc
-        ; inc bank
-        lda EAPI_INC_TYPE
-        asl
-        asl
-        asl
-        sta EAPI_INC_ADDR_HI
-        inc EAPI_SHADOW_BANK
-
-rwInc_noInc:
+		jsr rwInc_inc
         ; no errors here, clear carry
         clc
-        ; readInc: value has be set to zero, so jump back
-        ; writeInc: value ist set by EAPIWriteFlash to the HI address (never zero)
-        lda EAPI_WRITE_ADDR_HI
-        beq readInc_Length
 rwInc_return:
         ldy EAPI_TMP_VAL2
         ldx EAPI_TMP_VAL1
