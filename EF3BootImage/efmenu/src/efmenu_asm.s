@@ -30,6 +30,8 @@
 EASYFLASH_16K        = $07
 EASYFLASH_KILL       = $04
 
+MODE_EF_NO_RESET     = $01
+
 ; I/O address used to select the bank
 EASYFLASH_IO_BANK    = $de00
 
@@ -40,7 +42,7 @@ EASYFLASH_IO_SLOT    = $de01
 EASYFLASH_IO_CONTROL = $de02
 
 ; I/O address to set the cartridge mode
-EASYFLASH2_IO_MODE   = $de03
+EASYFLASH2_IO_MODE   = $de0f
 
 .code
 
@@ -138,6 +140,8 @@ sbcmCodeEnd:
 .export _startProgram
 _startProgram:
         pha
+        lda #MODE_EF_NO_RESET
+        sta EASYFLASH2_IO_MODE          ; hides the mode register
         lda #EASYFLASH_16K
         sta EASYFLASH_IO_CONTROL
         ldx #$00
@@ -152,7 +156,7 @@ _startProgram:
 startProgramCode:
 .org $c000
         sei
-        ldy #32 * 4     ; number of blocks to copy
+        ldy #32 * 4             ; number of blocks to copy
         ldx #0
 startProgramBank = * + 1
 @loop:
