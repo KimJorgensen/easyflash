@@ -20,6 +20,10 @@
 # 19  \ Final Cartridge III
 # 1a  /
 # 1b /
+# 1c \
+# 1d  \ Action Replay
+# 1e  /
+# 1f /
 
 # uncompressed version of EasyProg
 easyprog    := ../EasyProg/easyprog
@@ -43,6 +47,17 @@ menu_deps   += efmenu/efmenu.bin
 menu_deps   += $(easyprog)
 
 ###############################################################################
+# These files are in and "initial" image only
+
+init_image 	:= images/exos.bin      0x00 0x0000
+init_image 	+= images/beast.bin     0x01 0x0000
+init_image 	+= images/ttn2crom.bin  0x02 0x0000
+
+init_image 	+= directory.bin        0x10 0x0000
+
+init_image 	+= images/ar.bin  		0x1c 0x0000
+
+###############################################################################
 # The menu image: Contains menu and tools
 #
 ef3-menu.bin: $(menu_deps) mkimages
@@ -57,14 +72,9 @@ ef3-init.bin: $(menu_deps) mkimages \
               directory.bin
 	./mkimages \
 		$(menu_image) \
-		images/exos.bin      0x00 0x0000 \
-		images/beast.bin     0x01 0x0000 \
-		images/ttn2crom.bin  0x02 0x0000 \
-		directory.bin        0x10 0x0000 \
+		$(init_image) \
 		ef3-init.bin
 
-
-#sys_image_cmd += fc3-1988.bin         0x18 0x0000
 
 ###############################################################################
 #
