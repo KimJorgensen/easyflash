@@ -141,7 +141,7 @@ static void wait_for_key(void)
             menu = all_menus;
             while (menu->pp_entries)
             {
-                entry = kernal_menu;
+                entry = menu->pp_entries;
                 while (entry->key)
                 {
                     if (entry->key == key)
