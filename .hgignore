@@ -4,6 +4,7 @@ out/*
 a.out
 *.tar.*
 *~
+*.lib
 *.map
 *.prg
 *.bak
@@ -15,6 +16,8 @@ a.out
 *.jed
 *.xsvf
 *.log
+*.labels
+*.err
 
 # Eclipse
 .csettings
@@ -22,7 +25,6 @@ a.out
 .project
 
 EasyProg/easyprog
-eload.lib
 
 EasyLoader/build/*
 EasyLoader/.deps/*
@@ -30,17 +32,15 @@ EasyLoader/.deps/*
 Hardware/*gerber*
 Hardware/*/*gerber*
 *.pho
-*-cache.lib
-*.cache.lib
 *.cache.dcm
 synth/*
 log/*
 isim/*
 _xmsgs/*
-tmperr.err
 
 # test files and compiled releases
 EasyProg/test
 EasyProg/easyprog-*
 
 EasySDK/tools/bin2efcrt
+
