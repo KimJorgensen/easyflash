@@ -63,55 +63,72 @@ static efmenu_entry_t ef_menu[] =
         { 0, 0, 0, 0, "", "" }
 };
 
-/* Dummy menu entry to start the AR */
-static efmenu_entry_t ar_menu_entry =
+static efmenu_entry_t special_menu[] =
 {
-        'r',    0, 0,  MODE_AR,    "", ""
+        { 'r',    0, 0,  MODE_AR,           "R", "Action Replay" },
+        { 'p',    0, 9,  MODE_EF_NO_RESET,  "P", "EasyProg" },
+        { 'k',    0, 0,  MODE_KILL,         "K", "Kill Cartridge" },
+        { 0, 0, 0, 0, "", "" }
+};
+
+static efmenu_t all_menus[] =
+{
+        {  2 * 8,  2 * 8, 10, kernal_menu },
+        { 22 * 8, 13 * 8, 10, ef_menu },
+        {  2 * 8, 14 * 8,  8, special_menu },
+        {  0, 0, NULL }
 };
 
 
-void showMenu(void)
+static void show_menu(void)
 {
     uint8_t y;
+    const efmenu_t* menu;
     const efmenu_entry_t* entry;
 
-    y = 2 * 8 + 4;
-
-    entry = kernal_menu;
-    while (entry->key)
+    menu = all_menus;
+    while (menu->pp_entries)
     {
-        text_plot_puts(2 * 8 + 4, y, entry->label);
-        text_plot_puts(4 * 8 + 4, y, entry->name);
-        y += 9;
-        ++entry;
-    }
+        y = menu->y_pos + 8;
 
-    y = 13 * 8 + 4;
-    entry = ef_menu;
-    while (entry->key)
-    {
-        text_plot_puts(22 * 8 + 4, y, entry->label);
-        text_plot_puts(24 * 8 + 4, y, entry->name);
-        y += 9;
-        ++entry;
+        entry = menu->pp_entries;
+        while (entry->key)
+        {
+            text_plot_puts(menu->x_pos + 8,  y, entry->label);
+            text_plot_puts(menu->x_pos + 20, y, entry->name);
+            y += 8;
+            ++entry;
+        }
+        ++menu;
     }
 }
 
 
-static void startMenuEntry(const efmenu_entry_t* entry)
+static void start_menu_entry(const efmenu_entry_t* entry)
 {
 	VIC.bordercolor = COLOR_WHITE;
     // Wait until the key is released
-    waitForNoKey();
-    // PONR
+    wait_for_no_key();
+
     set_slot(entry->slot);
-    setBankChangeMode(entry->bank, entry->mode);
+
+    if (entry->mode == MODE_EF_NO_RESET)
+    {
+        // PONR
+        start_program(entry->bank);
+    }
+    else
+    {
+        // PONR
+        set_bank_change_mode(entry->bank, entry->mode);
+    }
 }
 
 
-static void waitForKey(void)
+static void wait_for_key(void)
 {
     uint8_t key;
+    const efmenu_t* menu;
     const efmenu_entry_t* entry;
 
     do
@@ -121,29 +138,18 @@ static void waitForKey(void)
             key = cgetc();
             VIC.bordercolor = key;
 
-            entry = kernal_menu;
-            while (entry->key)
+            menu = all_menus;
+            while (menu->pp_entries)
             {
-                if (entry->key == key)
-                	startMenuEntry(entry);
-                ++entry;
-            }
-            entry = ef_menu;
+                entry = kernal_menu;
+                while (entry->key)
+                {
+                    if (entry->key == key)
+                        start_menu_entry(entry);
 
-            while (entry->key)
-            {
-                if (entry->key == key)
-                	startMenuEntry(entry);
-                ++entry;
-            }
-
-            if (key == 'p')
-            {
-            	startProgram(9); // EasyProg
-            }
-            else if (key == 'r')
-            {
-                startMenuEntry(&ar_menu_entry);
+                    ++entry;
+                }
+                ++menu;
             }
         }
         usbCheck();
@@ -153,20 +159,25 @@ static void waitForKey(void)
 
 static void prepare_background(void)
 {
-	uint8_t y, yy;
+    uint8_t  n;
+	uint16_t offset;
 
-	for (y = 0; y < 10; ++y)
-	{
-		yy = y + 2;
-		memset(P_GFX_COLOR + 40 * yy + 2,
-			   COLOR_WHITE << 4 | COLOR_BLACK, 16);
-		memset(P_GFX_BITMAP + 320 * yy + 2 * 8, 0, 16 * 8);
+    const efmenu_t* menu;
 
-		yy = y + 13;
-		memset(P_GFX_COLOR + 40 * yy + 22,
-				COLOR_WHITE << 4 | COLOR_BLACK, 16);
-		memset(P_GFX_BITMAP + 320 * yy + 22 * 8, 0, 16 * 8);
-	}
+    menu = all_menus;
+    while (menu->pp_entries)
+    {
+        offset = menu->y_pos * 40 + menu->x_pos;
+
+        for (n = menu->n_max_entries; n > 0; --n)
+        {
+            //memset(P_GFX_COLOR + offset / 8, COLOR_WHITE << 4 | COLOR_BLACK, 16);
+            memset(P_GFX_COLOR + offset / 8, COLOR_BLACK << 4 | COLOR_GRAY3, 16);
+            memset(P_GFX_BITMAP + offset, 0, 16 * 8);
+            offset += 320;
+        }
+        ++menu;
+    }
 }
 
 
@@ -230,7 +241,7 @@ int main(void)
     prepare_background();
 
     fill_directory();
-    showMenu();
+    show_menu();
 
 
 #if 0
@@ -241,7 +252,7 @@ int main(void)
     initNMI();
 #endif
 
-    waitForKey();
+    wait_for_key();
 
     return 0;
 }
