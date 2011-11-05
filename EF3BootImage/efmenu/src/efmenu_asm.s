@@ -82,7 +82,7 @@ _set_bank:
 ;
 ; Set the EF ROM bank and change to the given cartridge mode.
 ;
-; void __fastcall__ setBankChangeMode(uint8_t bank, uint8_t mode)
+; void __fastcall__ set_bank_change_mode(uint8_t bank, uint8_t mode)
 ;
 ; in:
 ;       bank    bank to be set
@@ -90,23 +90,23 @@ _set_bank:
 ; out:
 ;       Never returns
 ;
-.export _setBankChangeMode
-_setBankChangeMode:
+.export _set_bank_change_mode
+_set_bank_change_mode:
         sta tmp2    ; 2nd argument
         jsr popa    ; 1st argument
         sta tmp1
 
         sei
-        ldx #sbcmCodeEnd - sbcmCode
-sbcmCopy:
+        ldx #sbcm_codeEnd - sbcm_code
+sbcm_copy:
         ; copy code on stack
-        lda sbcmCode, x
+        lda sbcm_code, x
         sta $0100, x
         dex
-        bpl sbcmCopy
+        bpl sbcm_copy
         jmp $0100
 
-sbcmCode:
+sbcm_code:
 .org $0100
         ; the following code will be run at $0100
         lda tmp1
@@ -114,11 +114,11 @@ sbcmCode:
         lda tmp2
         sta EASYFLASH2_IO_MODE
         ; we don't pass here normally
-sbcmWait:
+sbcm_wait:
         dec $d020
-        jmp sbcmWait
+        jmp sbcm_wait
 .reloc
-sbcmCodeEnd:
+sbcm_codeEnd:
 
 
 ; =============================================================================
@@ -130,15 +130,15 @@ sbcmCodeEnd:
 ; these two bytes. That's why the copy starts from $8002.
 ;
 ;
-; void __fastcall__ startProgram(uint8_t bank);
+; void __fastcall__ start_program(uint8_t bank);
 ;
 ; in:
 ;       bank    bank to be set
 ; out:
 ;       Never returns
 ;
-.export _startProgram
-_startProgram:
+.export _start_program
+_start_program:
         pha
         lda #MODE_EF_NO_RESET
         sta EASYFLASH2_IO_MODE          ; hides the mode register
@@ -146,19 +146,19 @@ _startProgram:
         sta EASYFLASH_IO_CONTROL
         ldx #$00
 :
-        lda startProgramCode,x
+        lda start_program_code,x
         sta $c000,x
         dex
         bne :-
         pla
-        sta startProgramBank
+        sta start_program_bank
         jmp $c000
-startProgramCode:
+start_program_code:
 .org $c000
         sei
         ldy #32 * 4             ; number of blocks to copy
         ldx #0
-startProgramBank = * + 1
+start_program_bank = * + 1
 @loop:
         lda #0
         sta EASYFLASH_IO_BANK
@@ -177,7 +177,7 @@ startProgramBank = * + 1
         lda @i1 + 2
         cmp #$c0
         bne @noBankInc
-        inc startProgramBank
+        inc start_program_bank
         lda #$80
         sta @i1 + 2
 @noBankInc:
@@ -198,15 +198,15 @@ startProgramBank = * + 1
 ;
 ; Wait until no key is pressed.
 ;
-; void waitForNoKey(void)
+; void wait_for_no_key(void)
 ;
 ; in:
 ;       -
 ; out:
 ;       -
 ;
-.export _waitForNoKey
-_waitForNoKey:
+.export _wait_for_no_key
+_wait_for_no_key:
         ; Prepare the CIA to scan the keyboard
         ldx #$00
         sta $dc00       ; Port A: pull down all rows
