@@ -2,7 +2,7 @@
 EAPI := out/eapi-am29f040-14 out/eapi-m29w160t-03 out/eapi-mx29640b-11
 
 .PHONY: all
-all: test.prg $(EAPI)
+all: $(EAPI)
 
 ###############################################################################
 out/eapi-am29f040-14: eapi-am29f040.s out
