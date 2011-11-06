@@ -75,6 +75,7 @@ architecture behav of cart_ar is
     signal ctrl_game:       std_logic;
     signal ctrl_exrom:      std_logic;
     signal ctrl_ram:        std_logic;
+    signal ctrl_kill:       std_logic;
     signal bank:            std_logic_vector(1 downto 0);
 
 begin
@@ -97,14 +98,16 @@ begin
             ctrl_exrom <= '0';
             ctrl_game  <= '0';
             ctrl_ram   <= '0';
+            ctrl_kill  <= '0';
             bank       <= (others => '0');
         elsif rising_edge(clk) then
-            if enable = '1' then
+            if enable = '1' and ctrl_kill = '0' then
                 if bus_ready = '1' and n_io1 = '0' then
                     if n_wr = '0' then
                         -- write control register
                         ctrl_ram    <= data(5); 
                         bank        <= data(4 downto 3);
+                        ctrl_kill   <= data(2);
                         ctrl_exrom  <= data(1);
                         ctrl_game   <= data(0);
                     end if;
@@ -123,12 +126,12 @@ begin
     --
     ---------------------------------------------------------------------------
     rw_mem: process(enable, addr, n_io2, n_roml, n_romh, n_wr, phi2, 
-                    bus_ready, ctrl_ram)
+                    bus_ready, ctrl_ram, ctrl_kill)
     begin
         flash_read <= '0';
         ram_write <= '0';
         ram_read <= '0';
-        if enable = '1' then
+        if enable = '1' and ctrl_kill = '0' then
             if bus_ready = '1' then
                 if ctrl_ram = '1' then
                     -- RAM in ROML enabled
