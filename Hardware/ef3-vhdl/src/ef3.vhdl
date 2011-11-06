@@ -396,7 +396,7 @@ begin
     port map(
         clk                     => clk,
         n_reset                 => n_reset,
-        enable                  => enable_ef,
+        enable                  => enable_ef, -- currently only in EF mode
         n_io1                   => n_io1,
         n_wr                    => n_wr,
         bus_ready               => bus_ready,
@@ -502,6 +502,10 @@ begin
 
                             when x"4" =>
                                 cart_mode <= MODE_AR;
+                                sw_start_reset <= '1';
+
+                            when x"7" =>
+                                cart_mode <= MODE_DISABLED;
                                 sw_start_reset <= '1';
 
                             when others => null;
