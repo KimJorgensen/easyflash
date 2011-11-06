@@ -24,6 +24,7 @@ package cartridge_modes is
 
     type cartridge_mode_type is
     (
+        MODE_DISABLED,
         MODE_MENU,
         MODE_EASYFLASH,
         MODE_KERNAL,
