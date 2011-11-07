@@ -149,6 +149,8 @@ architecture ef3_arc of ef3 is
     signal ar_ram_read:         std_logic;
     signal ar_ram_write:        std_logic;
     signal ar_flash_read:       std_logic;
+    signal ar_data_out:         std_logic_vector(7 downto 0);
+    signal ar_data_out_valid:   std_logic;
 
     signal usb_read:            std_logic;
     signal usb_write:           std_logic;
@@ -261,7 +263,9 @@ architecture ef3_arc of ef3 is
             start_reset:        out std_logic;
             ram_read:           out std_logic;
             ram_write:          out std_logic;
-            flash_read:         out std_logic
+            flash_read:         out std_logic;
+            data_out:           out std_logic_vector(7 downto 0);
+            data_out_valid:     out std_logic
         );
     end component;
 
@@ -389,7 +393,9 @@ begin
         start_reset             => ar_start_reset,
         ram_read                => ar_ram_read,
         ram_write               => ar_ram_write,
-        flash_read              => ar_flash_read
+        flash_read              => ar_flash_read,
+        data_out                => ar_data_out,
+        data_out_valid          => ar_data_out_valid
     );
 
     u_cart_usb: cart_usb
@@ -526,8 +532,8 @@ begin
     n_exrom_out     <= ef_n_exrom and kernal_n_exrom and ar_n_exrom;
     n_game_out      <= ef_n_game and kernal_n_game and ar_n_game;
 
-    data_out        <= ef_data_out or usb_data_out;
-    data_out_valid  <= ef_data_out_valid or usb_data_out_valid;
+    data_out        <= ef_data_out or usb_data_out or ar_data_out;
+    data_out_valid  <= ef_data_out_valid or usb_data_out_valid or ar_data_out_valid;
 
     start_reset     <= ef_start_reset or ar_start_reset or
                        start_reset_to_menu or sw_start_reset;
