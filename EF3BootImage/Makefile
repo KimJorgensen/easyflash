@@ -19,11 +19,16 @@
 # 18 \
 # 19  \ Final Cartridge III
 # 1a  /
-# 1b /
-# 1c \
-# 1d  \ Action Replay
-# 1e  /
 # 1f /
+# 20 \
+# .   \ Action Replay
+# .   / Slot 1
+# 27 /
+# 28 \
+# .   \ Action Replay
+# .   / Slot 2
+# 2f /
+
 
 # uncompressed version of EasyProg
 easyprog    := ../EasyProg/easyprog
@@ -55,7 +60,8 @@ init_image 	+= images/ttn2crom.bin  0x02 0x0000
 
 init_image 	+= directory.bin        0x10 0x0000
 
-init_image 	+= images/ar.bin  		0x1c 0x0000
+init_image 	+= images/ar.bin  	0x20 0x0000
+init_image	+= images/rr38ppal.bin	0x28 0x0000
 
 ###############################################################################
 # The menu image: Contains menu and tools
