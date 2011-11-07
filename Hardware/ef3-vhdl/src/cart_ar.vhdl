@@ -50,109 +50,213 @@ entity cart_ar is
         start_reset:        out std_logic;
         ram_read:           out std_logic;
         ram_write:          out std_logic;
-        flash_read:         out std_logic
+        flash_read:         out std_logic;
+        data_out:           out std_logic_vector(7 downto 0);
+        data_out_valid:     out std_logic
     );
 end cart_ar;
 
--- Memory mapping:
--- Bit                        21098765432109876543210
+-- Memory mapping of AR binary in Flash and AR RAM:
+-- Address Bit                21098765432109876543210
 --                            2221111111111  .
 -- Bits needed for RAM/Flash:           .    .
 --   RAM (32 ki * 8)                  *************** (14..0)
 --   Flash (8 Mi * 8)         *********************** (22..0)
 -- Used in AR mode:
---   mem_addr(22 downto 15)   000b0111                (22..15)
---   mem_addr(14 downto 13)           0B              (14..13)
+--   mem_addr(22 downto 15)   000b1000                (22..15)
+--   mem_addr(14 downto 13)           BB              (14..13)
 --   mem_addr(12 downto 0)              AAAAAAAAAAAAA (12..0)
--- 
+--
 -- A    = Address from C64 bus to address 8k per bank
 -- b    = AR bank(0)
--- B    = AR bank(1)
--- "01110" = EF Bank 0x1c
+-- B    = AR bank(2 downto 1) for flash
+--        AR bank(1 downto 0) or "00" for RAM
+-- "1000" corresponds to EF Bank 0x20
 
 architecture behav of cart_ar is
 
-    signal ctrl_game:       std_logic;
-    signal ctrl_exrom:      std_logic;
-    signal ctrl_ram:        std_logic;
-    signal ctrl_kill:       std_logic;
-    signal bank:            std_logic_vector(1 downto 0);
+    signal data_out_valid_i:    std_logic;
+    signal ctrl_game:           std_logic;
+    signal ctrl_exrom:          std_logic;
+    signal ctrl_ram:            std_logic;
+    signal ctrl_kill:           std_logic;
+    signal ctrl_reumap:         std_logic;
+    signal ctrl_de01_written:   std_logic;
+    signal bank:                std_logic_vector(2 downto 0);
 
+    signal addr_00_01:          boolean;
 begin
+
+    -- used to check if $00/$01 is addressed in I/O space (for $de00/$de01)
+    addr_00_01 <= addr(7 downto 1) = "1111111";
 
     ---------------------------------------------------------------------------
     -- Combinatorically create the next memory address.
     ---------------------------------------------------------------------------
-    create_mem_addr: process(bank, addr)
+    create_mem_addr: process(bank, addr, n_io1, n_io2)
     begin
-        flash_addr <= "000" & bank(0) & "01110" & bank(1) & addr(12 downto 0);
-        ram_addr   <= "00" & addr(12 downto 0);
+        flash_addr <= "000" & bank(0) & "1000" & bank(2 downto 1) & addr(12 downto 0);
+        if n_io1 = '0' or n_io2 = '0' then
+            -- no RAM banking in I/O space
+            ram_addr   <= "00" & addr(12 downto 0);
+        else
+            -- but in ROML space
+            ram_addr   <= bank(1 downto 0) & addr(12 downto 0);
+        end if;
     end process;
 
     ---------------------------------------------------------------------------
     --
     ---------------------------------------------------------------------------
+    create_data_out: process(data_out_valid_i, bank, ctrl_reumap)
+    begin
+        data_out <= (others => '0');
+        if data_out_valid_i = '1' then
+            data_out <= bank(2) & ctrl_reumap & '0' & bank(1 downto 0) & "000";
+        end if;
+    end process;
+
+    ---------------------------------------------------------------------------
+    --
+    --  $de00 write:
+    --      This register is reset to $00 on reset.
+    --      Bit 7: Bank address 15 for ROM
+    --      Bit 6: Write 1 to exit freeze mode
+    --      Bit 5: Switches between ROM and RAM: 0 = ROM, 1 = RAM
+    --      Bit 4: Bank address 14 for ROM/RAM
+    --      Bit 3: Bank address 13 for ROM/RAM
+    --      Bit 2: 1 = Kill cartridge, registers and memory inactive
+    --      Bit 1: EXROM line, 0 = assert
+    --      Bit 0: GAME line, 1 = assert
+    --
+    --  $de01 write:
+    --      This register is reset to $00 on a hard reset.
+    --      Bit 7: Bank address 15 for ROM      (mirror of $de00)
+    --      Bit 6: Memory map: 0 = standard, 1 = REU compatible memory map
+    --      Bit 5: (Bank address 16, ignored)
+    --      Bit 4: Bank address 14 for ROM/RAM  (mirror of $de00)
+    --      Bit 3: Bank address 13 for ROM/RAM  (mirror of $de00)
+    --      Bit 2: (NoFreeze, ignored)
+    --      Bit 1: (AllowBank, ignored)
+    --      Bit 0: (Enable accessory connector, ignored)
+    --
+    --  $de00/$de01 read:
+    --      Bit 7: Bank address 15 for ROM
+    --      Bit 6: Memory map: 0 = standard, 1 = REU compatible memory map
+    --      Bit 5: 0 (Bank address 16)
+    --      Bit 4: Bank address 14 for ROM/RAM
+    --      Bit 3: Bank address 13 for ROM/RAM
+    --      Bit 2: Freeze button (1 = pressed)
+    --      Bit 1: 0 (AllowBank)
+    --      Bit 0: 0 (Flashmode active)
+    --
+    ---------------------------------------------------------------------------
     rw_control_regs: process(clk, n_reset, n_sys_reset, enable)
     begin
         if n_reset = '0' then
-            ctrl_exrom <= '0';
-            ctrl_game  <= '0';
-            ctrl_ram   <= '0';
-            ctrl_kill  <= '0';
-            bank       <= (others => '0');
+            ctrl_exrom  <= '0';
+            ctrl_game   <= '0';
+            ctrl_ram    <= '0';
+            ctrl_kill   <= '0';
+            ctrl_reumap <= '0';
+            ctrl_de01_written <= '0';
+            bank <= (others => '0');
+            data_out_valid_i <= '0';
         elsif rising_edge(clk) then
             if enable = '1' and ctrl_kill = '0' then
                 if bus_ready = '1' and n_io1 = '0' then
                     if n_wr = '0' then
-                        -- write control register
-                        ctrl_ram    <= data(5); 
-                        bank        <= data(4 downto 3);
-                        ctrl_kill   <= data(2);
-                        ctrl_exrom  <= data(1);
-                        ctrl_game   <= data(0);
+                        case addr(7 downto 0) is
+                            when x"00" =>
+                                -- write control register $de00
+                                bank        <= data(7) & data(4 downto 3);
+                                ctrl_ram    <= data(5);
+                                ctrl_kill   <= data(2);
+                                ctrl_exrom  <= data(1);
+                                ctrl_game   <= data(0);
+
+                            when x"01" =>
+                                -- write control register $de01
+                                bank        <= data(7) & data(4 downto 3);
+                                ctrl_reumap <= data(6);
+                                ctrl_ram    <= data(5);
+                                if ctrl_de01_written = '0' then
+                                    ctrl_reumap <= data(6);
+                                    -- todo: no freeze
+                                    -- todo: allow bank
+                                    ctrl_de01_written <= '1';
+                                end if;
+
+                            when others => null;
+                        end case;
+                    else
+                        if addr_00_01 then
+                            -- read $de00/$de01
+                            data_out_valid_i <= '1';
+                        end if;
                     end if;
                 end if; -- bus_ready...
+                if cycle_start = '1' then
+                    data_out_valid_i <= '0';
+                end if;
             else
                 ctrl_exrom <= '1';
                 ctrl_game  <= '0';
+                data_out_valid_i <= '0';
             end if; -- enable
        end if; -- clk
     end process;
 
+    data_out_valid <= data_out_valid_i;
     n_exrom <= ctrl_exrom;
     n_game  <= not ctrl_game;
 
     ---------------------------------------------------------------------------
     --
     ---------------------------------------------------------------------------
-    rw_mem: process(enable, addr, n_io2, n_roml, n_romh, n_wr, phi2, 
-                    bus_ready, ctrl_ram, ctrl_kill)
+    rw_mem: process(enable, addr, n_io1, n_io2, n_roml, n_romh, n_wr, phi2,
+                    bus_ready, ctrl_ram, ctrl_kill, ctrl_reumap, addr_00_01)
     begin
         flash_read <= '0';
-        ram_write <= '0';
-        ram_read <= '0';
-        if enable = '1' and ctrl_kill = '0' then
-            if bus_ready = '1' then
-                if ctrl_ram = '1' then
-                    -- RAM in ROML enabled
-                    if n_wr = '1' then
-                        -- read RAM only on IO2/ROML to avoid bus contention
-                        if n_io2 = '0' or n_roml = '0' then
-                            ram_read <= '1';
-                        end if;
-                    else
-                        -- write through to cart RAM like original AR
-                        if n_io2 = '0' or addr(15 downto 13) = "100" then
-                            ram_write <= '1';
-                        end if;
-                    end if;
+        ram_read   <= '0';
+        ram_write  <= '0';
+
+        if enable = '1' and ctrl_kill = '0' and bus_ready = '1' then
+            if n_io1 = '0' and ctrl_reumap = '1' and not addr_00_01 then
+                -- RAM at I/O1 in REU map
+                if n_wr = '1' then
+                    ram_read <= '1';
                 else
-                    if (n_io2 = '0' or n_roml = '0') and n_wr = '1' then
+                    ram_write <= '1';
+                end if;
+            end if;
+
+
+            if (n_io2 = '0' and ctrl_reumap = '0') or n_roml = '0' then
+                if n_wr = '1' then
+                    if ctrl_ram = '1' then
+                        ram_read <= '1';
+                    else
                         flash_read <= '1';
                     end if;
+                else
+                    if ctrl_ram = '1' then
+                        ram_write <= '1';
+                    end if;
                 end if;
-                if n_romh = '0' and n_wr = '1' then
+            end if;
+
+            if ctrl_ram = '1' and addr(15 downto 13) = "100" and n_wr = '0' then
+                -- write through to cart RAM at ROML space like original AR
+                ram_write <= '1';
+            end if;
+
+            -- ROMH is always flash
+            if n_romh = '0' then
+                if n_wr = '1' then
                     flash_read <= '1';
+                else
+                    null; -- todo, Ultimax mode?
                 end if;
             end if;
         end if;
