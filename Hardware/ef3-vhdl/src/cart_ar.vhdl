@@ -208,9 +208,21 @@ begin
 
     data_out_valid <= data_out_valid_i;
 
-    -- todo: When the cartridge is disabled, we should not touch these lines
-    n_exrom <= ctrl_exrom;
-    n_game  <= not ctrl_game;
+
+    ---------------------------------------------------------------------------
+    -- Leave GAME and EXROM in VIC-II cycles to avoid flickering when software
+    -- uses the Ultimax mode. This seems to be the case with the RR loader.
+    ---------------------------------------------------------------------------
+    set_game_exrom: process(enable, ctrl_exrom, ctrl_game, phi2)
+    begin
+        if phi2 = '1' and enable = '1' then
+            n_exrom <= ctrl_exrom;
+            n_game  <= not ctrl_game;
+        else
+            n_exrom <= '1';
+            n_game  <= '1';
+        end if;
+    end process;
 
     ---------------------------------------------------------------------------
     --
