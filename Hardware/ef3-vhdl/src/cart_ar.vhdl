@@ -106,7 +106,7 @@ begin
     end process;
 
     ---------------------------------------------------------------------------
-    --
+    -- Combinatorically create the data value for a register read access.
     ---------------------------------------------------------------------------
     create_data_out: process(data_out_valid_i, bank, ctrl_reumap)
     begin
@@ -177,9 +177,8 @@ begin
 
                             when x"01" =>
                                 -- write control register $de01
-                                bank        <= data(7) & data(4 downto 3);
-                                ctrl_reumap <= data(6);
-                                ctrl_ram    <= data(5);
+                                    bank        <= data(7) & data(4 downto 3);
+                                    ctrl_ram    <= data(5);
                                 if ctrl_de01_written = '0' then
                                     ctrl_reumap <= data(6);
                                     -- todo: no freeze
@@ -208,6 +207,8 @@ begin
     end process;
 
     data_out_valid <= data_out_valid_i;
+
+    -- todo: When the cartridge is disabled, we should not touch these lines
     n_exrom <= ctrl_exrom;
     n_game  <= not ctrl_game;
 
@@ -222,17 +223,13 @@ begin
         ram_write  <= '0';
 
         if enable = '1' and ctrl_kill = '0' and bus_ready = '1' then
-            if n_io1 = '0' and ctrl_reumap = '1' and not addr_00_01 then
-                -- RAM at I/O1 in REU map
-                if n_wr = '1' then
-                    ram_read <= '1';
-                else
-                    ram_write <= '1';
-                end if;
-            end if;
-
-
-            if (n_io2 = '0' and ctrl_reumap = '0') or n_roml = '0' then
+            -- RAM or Flash at I/O1 in REU map or
+            --              at I/O2 in normal map or
+            --              at ROML
+            if (n_io1 = '0' and ctrl_reumap = '1' and not addr_00_01) or
+               (n_io2 = '0' and ctrl_reumap = '0') or
+               (n_roml = '0')
+            then
                 if n_wr = '1' then
                     if ctrl_ram = '1' then
                         ram_read <= '1';
@@ -252,12 +249,8 @@ begin
             end if;
 
             -- ROMH is always flash
-            if n_romh = '0' then
-                if n_wr = '1' then
-                    flash_read <= '1';
-                else
-                    null; -- todo, Ultimax mode?
-                end if;
+            if n_romh = '0' and n_wr = '1' then
+                flash_read <= '1';
             end if;
         end if;
     end process;
