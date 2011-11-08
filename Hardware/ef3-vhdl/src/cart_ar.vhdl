@@ -41,8 +41,8 @@ entity cart_ar is
         cycle_start:        in  std_logic;
         addr:               in  std_logic_vector(15 downto 0);
         data:               in  std_logic_vector(7 downto 0);
-        button_crt_reset:   in std_logic;
-        button_special_fn:  in std_logic;
+        button_crt_reset:   in  std_logic;
+        button_special_fn:  in  std_logic;
         flash_addr:         out std_logic_vector(22 downto 0);
         ram_addr:           out std_logic_vector(14 downto 0);
         n_game:             out std_logic;
@@ -88,14 +88,14 @@ architecture behav of cart_ar is
 begin
 
     -- used to check if $00/$01 is addressed in I/O space (for $de00/$de01)
-    addr_00_01 <= addr(7 downto 1) = "1111111";
+    addr_00_01 <= true when addr(7 downto 1) = "0000000" else false;
 
     ---------------------------------------------------------------------------
     -- Combinatorically create the next memory address.
     ---------------------------------------------------------------------------
     create_mem_addr: process(bank, addr, n_io1, n_io2)
     begin
-        flash_addr <= "000" & bank(0) & "1000" & bank(2 downto 1) & addr(12 downto 0);
+        flash_addr <= "000" & bank(0) & "1010" & bank(2 downto 1) & addr(12 downto 0);
         if n_io1 = '0' or n_io2 = '0' then
             -- no RAM banking in I/O space
             ram_addr   <= "00" & addr(12 downto 0);
