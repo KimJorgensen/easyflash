@@ -36,7 +36,7 @@ entity ef3 is
            n_io1:               in std_logic;
            n_io2:               in std_logic;
            n_wr:                in std_logic;
-           n_irq:               in std_logic;
+           n_irq:               inout std_logic;
            n_nmi:               inout std_logic;
            n_reset_io:          inout std_logic;
            clk:                 in std_logic;
@@ -115,6 +115,8 @@ architecture ef3_arc of ef3 is
     signal n_reset:             std_logic;
     signal n_sys_reset:         std_logic;
     signal n_generated_reset:   std_logic;
+    signal freezer_irq:         std_logic;
+    signal freezer_ready:       std_logic;
 
     signal hiram:               std_logic;
 
@@ -146,6 +148,8 @@ architecture ef3_arc of ef3 is
     signal ar_n_game:           std_logic;
     signal ar_n_exrom:          std_logic;
     signal ar_start_reset:      std_logic;
+    signal ar_start_freezer:    std_logic;
+    signal ar_reset_freezer:    std_logic;
     signal ar_ram_read:         std_logic;
     signal ar_ram_write:        std_logic;
     signal ar_flash_read:       std_logic;
@@ -170,8 +174,7 @@ architecture ef3_arc of ef3 is
     end component;
 
     component reset_generator is
-        port
-        (
+        port (
             clk:                in std_logic;
             phi2_cycle_start:   in std_logic;
             start_reset:        in std_logic;
@@ -179,6 +182,20 @@ architecture ef3_arc of ef3 is
             n_reset:            out std_logic;
             n_generated_reset:  out std_logic;
             n_sys_reset:        out std_logic
+        );
+    end component;
+
+    component freezer is
+        port (
+            clk:                    in  std_logic;
+            n_reset:                in  std_logic;
+            phi2:                   in  std_logic;
+            n_wr:                   in  std_logic;
+            bus_ready:              in  std_logic;
+            start_freezer:          in  std_logic;
+            reset_freezer:          in  std_logic;
+            freezer_irq:            out std_logic;
+            freezer_ready:          out std_logic
         );
     end component;
 
@@ -254,13 +271,16 @@ architecture ef3_arc of ef3 is
             cycle_start:        in  std_logic;
             addr:               in  std_logic_vector(15 downto 0);
             data:               in  std_logic_vector(7 downto 0);
-            button_crt_reset:   in std_logic;
-            button_special_fn:  in std_logic;
+            button_crt_reset:   in  std_logic;
+            button_special_fn:  in  std_logic;
+            freezer_ready:      in  std_logic;
             flash_addr:         out std_logic_vector(22 downto 0);
             ram_addr:           out std_logic_vector(14 downto 0);
             n_game:             out std_logic;
             n_exrom:            out std_logic;
             start_reset:        out std_logic;
+            start_freezer:      out std_logic;
+            reset_freezer:      out std_logic;
             ram_read:           out std_logic;
             ram_write:          out std_logic;
             flash_read:         out std_logic;
@@ -312,6 +332,19 @@ begin
         n_reset                 => n_reset,
         n_generated_reset       => n_generated_reset,
         n_sys_reset             => n_sys_reset
+    );
+
+    u_freezer: freezer port map
+    (
+        clk                     => clk,
+        n_reset                 => n_reset,
+        phi2                    => phi2,
+        n_wr                    => n_wr,
+        bus_ready               => bus_ready,
+        start_freezer           => ar_start_freezer,
+        reset_freezer           => ar_reset_freezer,
+        freezer_irq             => freezer_irq,
+        freezer_ready           => freezer_ready
     );
 
     u_cart_easyflash: cart_easyflash port map
@@ -386,11 +419,14 @@ begin
         data                    => data,
         button_crt_reset        => button_crt_reset,
         button_special_fn       => button_special_fn,
+        freezer_ready           => freezer_ready,
         flash_addr              => ar_flash_addr,
         ram_addr                => ar_ram_addr,
         n_game                  => ar_n_game,
         n_exrom                 => ar_n_exrom,
         start_reset             => ar_start_reset,
+        start_freezer           => ar_start_freezer,
+        reset_freezer           => ar_reset_freezer,
         ram_read                => ar_ram_read,
         ram_write               => ar_ram_write,
         flash_read              => ar_flash_read,
@@ -438,11 +474,13 @@ begin
 
     -- unused signals and defaults
     addr <= (others => 'Z');
-    n_nmi <= 'Z';
 
-    n_led <= n_usb_wr;
 
-    n_reset_io <= 'Z' when n_generated_reset = '1' else '0';
+    n_led <= freezer_ready;
+
+    n_reset_io  <= 'Z' when n_generated_reset = '1' else '0';
+    n_nmi       <= 'Z' when freezer_irq = '0'       else '0';
+    n_irq       <= 'Z' when freezer_irq = '0'       else '0';
 
 
     ---------------------------------------------------------------------------

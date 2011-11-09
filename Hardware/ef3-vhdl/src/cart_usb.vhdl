@@ -54,33 +54,62 @@ begin
     ---------------------------------------------------------------------------
     -- This process decides combinatorically which data has to be put to
     -- data out.
-    -- 
+    --
     -- ID register:      0xa1
     -- Check this register several times for 0xa1 to make sure USB is actually
     -- there. Not bullet-proof but better than nothing.
-    -- 
+    --
     -- Control register: 7   6   5   4   3   2   1   0
     --                   RXR TXR 0   0   0   0   0   0
-    -- 
+    --
     -- RXF  (RX Ready)   If this bit is set, received data can be read
     -- TXF  (TX Ready)   If this bit is set, data can be transmitted
     ---------------------------------------------------------------------------
-    create_data_out: process(data_out_valid_i, n_usb_rxf, n_usb_txe, addr)
+    create_data_out: process(data_out_valid_i, n_usb_rxf, n_usb_txe, addr, n_io1)
+        variable a : integer range 0 to 31;
     begin
         data_out <= (others => '0');
         if data_out_valid_i = '1' then
-            case addr(7 downto 0) is
-                when x"08" =>
-                    -- $de08 - read ID register
-                    data_out <= x"a1";
+            if n_io1 = '0' then
+                case addr(7 downto 0) is
+                    when x"08" =>
+                        -- $de08 - read ID register
+                        data_out <= x"a1";
 
-                when x"09" =>
-                    -- $de09 - read control register
-                    data_out <= not n_usb_rxf & not n_usb_txe & "000000";
+                    when x"09" =>
+                        -- $de09 - read control register
+                        data_out <= not n_usb_rxf & not n_usb_txe & "000000";
+                    when others => null;
+                end case;
+            else
+                a := to_integer(unsigned(addr(4 downto 0)));
+                case a is
+	                when  0 => data_out <= x"80";
+	                when  1 => data_out <= x"09"; -- start vector => $8009
+	                -- 2, 3 - don't care
+	                when  4 => data_out <= x"c3";
+	                when  5 => data_out <= x"c2";
+	                when  6 => data_out <= x"cd";
+	                when  7 => data_out <= x"38";
+	                when  8 => data_out <= x"30"; -- CBM80
+	                when  9 => data_out <= x"2c";
+	                when 10 => data_out <= x"09";
+	                when 11 => data_out <= x"de"; -- bit $de09
+	                when 12 => data_out <= x"10";
+	                when 13 => data_out <= x"fb"; -- bpl ...
+	                when 14 => data_out <= x"ad";
+	                when 15 => data_out <= x"0a";
+	                when 16 => data_out <= x"de"; -- lda $de0a
+	                when 17 => data_out <= x"48"; -- pha
+	                when 18 => data_out <= x"ca"; -- dex
+	                when 19 => data_out <= x"d0";
+	                when 20 => data_out <= x"f4"; -- bne ...
+	                when 21 => data_out <= x"60"; -- rts
 
-                when others => null;
-            end case;
-        end if;
+	                when others => null;
+	            end case;
+	        end if;
+	    end if;
     end process;
 
     ---------------------------------------------------------------------------
@@ -112,13 +141,17 @@ begin
                             when x"09" =>
                                 -- $de09 - read control register
                                 data_out_valid_i <= '1';
-                            
+
                             when x"0a" =>
                                 -- $de0a - read data
                                 usb_read <= '1';
 
                             when others => null;
                         end case;
+
+                        if addr(4) = '1' or addr(5) = '1' then
+                            data_out_valid_i <= '1';
+                        end if;
                     end if;
                 end if; -- bus_ready...
                 if cycle_start = '1' then

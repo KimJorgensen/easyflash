@@ -43,11 +43,14 @@ entity cart_ar is
         data:               in  std_logic_vector(7 downto 0);
         button_crt_reset:   in  std_logic;
         button_special_fn:  in  std_logic;
+        freezer_ready:      in  std_logic;
         flash_addr:         out std_logic_vector(22 downto 0);
         ram_addr:           out std_logic_vector(14 downto 0);
         n_game:             out std_logic;
         n_exrom:            out std_logic;
         start_reset:        out std_logic;
+        start_freezer:      out std_logic;
+        reset_freezer:      out std_logic;
         ram_read:           out std_logic;
         ram_write:          out std_logic;
         flash_read:         out std_logic;
@@ -76,10 +79,12 @@ end cart_ar;
 architecture behav of cart_ar is
 
     signal data_out_valid_i:    std_logic;
+    signal start_freezer_i:     std_logic;
     signal ctrl_game:           std_logic;
     signal ctrl_exrom:          std_logic;
     signal ctrl_ram:            std_logic;
     signal ctrl_kill:           std_logic;
+    signal ctrl_unfreeze:       std_logic;
     signal ctrl_reumap:         std_logic;
     signal ctrl_de01_written:   std_logic;
     signal bank:                std_logic_vector(2 downto 0);
@@ -91,19 +96,16 @@ begin
     addr_00_01 <= true when addr(7 downto 1) = "0000000" else false;
 
     ---------------------------------------------------------------------------
-    -- Combinatorically create the next memory address.
+    --
     ---------------------------------------------------------------------------
-    create_mem_addr: process(bank, addr, n_io1, n_io2)
+    do_freezer: process(enable, button_special_fn)
     begin
-        flash_addr <= "000" & bank(0) & "1010" & bank(2 downto 1) & addr(12 downto 0);
-        if n_io1 = '0' or n_io2 = '0' then
-            -- no RAM banking in I/O space
-            ram_addr   <= "00" & addr(12 downto 0);
-        else
-            -- but in ROML space
-            ram_addr   <= bank(1 downto 0) & addr(12 downto 0);
-        end if;
+        start_freezer_i <= '0';
+        if enable = '1' and button_special_fn = '1' then
+            start_freezer_i <= '1';
+        end if; 
     end process;
+    start_freezer <= start_freezer_i;
 
     ---------------------------------------------------------------------------
     -- Combinatorically create the data value for a register read access.
@@ -154,49 +156,60 @@ begin
     rw_control_regs: process(clk, n_reset, n_sys_reset, enable)
     begin
         if n_reset = '0' then
-            ctrl_exrom  <= '0';
-            ctrl_game   <= '0';
-            ctrl_ram    <= '0';
-            ctrl_kill   <= '0';
-            ctrl_reumap <= '0';
+            ctrl_exrom      <= '0';
+            ctrl_game       <= '0';
+            ctrl_ram        <= '0';
+            ctrl_kill       <= '0';
+            ctrl_unfreeze   <= '0';
+            ctrl_reumap     <= '0';
             ctrl_de01_written <= '0';
-            bank <= (others => '0');
+            bank            <= (others => '0');
             data_out_valid_i <= '0';
         elsif rising_edge(clk) then
-            if enable = '1' and ctrl_kill = '0' then
-                if bus_ready = '1' and n_io1 = '0' then
-                    if n_wr = '0' then
-                        case addr(7 downto 0) is
-                            when x"00" =>
-                                -- write control register $de00
-                                bank        <= data(7) & data(4 downto 3);
-                                ctrl_ram    <= data(5);
-                                ctrl_kill   <= data(2);
-                                ctrl_exrom  <= data(1);
-                                ctrl_game   <= data(0);
+            if enable = '1' then
+                if start_freezer_i = '1' then
+                    bank            <= (others => '0');
+                    ctrl_unfreeze   <= '0';
+                    ctrl_ram        <= '0';
+                    ctrl_kill       <= '0';
+                    ctrl_exrom      <= '0';
+                    ctrl_game       <= '0';
+                elsif ctrl_kill = '0' then
+                    if bus_ready = '1' and n_io1 = '0' then
+                        if n_wr = '0' then
+                            case addr(7 downto 0) is
+                                when x"00" =>
+                                    -- write control register $de00
+                                    bank            <= data(7) & data(4 downto 3);
+                                    ctrl_unfreeze   <= data(6);
+                                    ctrl_ram        <= data(5);
+                                    ctrl_kill       <= data(2);
+                                    ctrl_exrom      <= data(1);
+                                    ctrl_game       <= data(0);
 
-                            when x"01" =>
-                                -- write control register $de01
-                                    bank        <= data(7) & data(4 downto 3);
-                                    ctrl_ram    <= data(5);
-                                if ctrl_de01_written = '0' then
-                                    ctrl_reumap <= data(6);
-                                    -- todo: no freeze
-                                    -- todo: allow bank
-                                    ctrl_de01_written <= '1';
-                                end if;
+                                when x"01" =>
+                                    -- write control register $de01
+                                        bank        <= data(7) & data(4 downto 3);
+                                        ctrl_ram    <= data(5);
+                                    if ctrl_de01_written = '0' then
+                                        ctrl_reumap <= data(6);
+                                        -- todo: no freeze
+                                        -- todo: allow bank
+                                        ctrl_de01_written <= '1';
+                                    end if;
 
-                            when others => null;
-                        end case;
-                    else
-                        if addr_00_01 then
-                            -- read $de00/$de01
-                            data_out_valid_i <= '1';
+                                when others => null;
+                            end case;
+                        else
+                            if addr_00_01 then
+                                -- read $de00/$de01
+                                data_out_valid_i <= '1';
+                            end if;
                         end if;
+                    end if; -- bus_ready...
+                    if cycle_start = '1' then
+                        data_out_valid_i <= '0';
                     end if;
-                end if; -- bus_ready...
-                if cycle_start = '1' then
-                    data_out_valid_i <= '0';
                 end if;
             else
                 ctrl_exrom <= '1';
@@ -207,7 +220,7 @@ begin
     end process;
 
     data_out_valid <= data_out_valid_i;
-
+    reset_freezer  <= ctrl_unfreeze;
 
     ---------------------------------------------------------------------------
     -- Leave GAME and EXROM in VIC-II cycles to avoid flickering when software
@@ -215,7 +228,10 @@ begin
     ---------------------------------------------------------------------------
     set_game_exrom: process(enable, ctrl_exrom, ctrl_game, phi2)
     begin
-        if phi2 = '1' and enable = '1' then
+        if freezer_ready = '1' then
+            n_exrom <= '1';
+            n_game <= '0';
+        elsif phi2 = '1' and enable = '1' then
             n_exrom <= ctrl_exrom;
             n_game  <= not ctrl_game;
         else
@@ -264,6 +280,21 @@ begin
             if n_romh = '0' and n_wr = '1' then
                 flash_read <= '1';
             end if;
+        end if;
+    end process;
+
+    ---------------------------------------------------------------------------
+    -- Combinatorically create the next memory address.
+    ---------------------------------------------------------------------------
+    create_mem_addr: process(bank, addr, n_io1, n_io2)
+    begin
+        flash_addr <= "000" & bank(0) & "1000" & bank(2 downto 1) & addr(12 downto 0);
+        if n_io1 = '0' or n_io2 = '0' then
+            -- no RAM banking in I/O space
+            ram_addr   <= "00" & addr(12 downto 0);
+        else
+            -- but in ROML space
+            ram_addr   <= bank(1 downto 0) & addr(12 downto 0);
         end if;
     end process;
 
