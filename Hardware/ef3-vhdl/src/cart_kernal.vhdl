@@ -37,7 +37,9 @@ entity cart_kernal is
         bus_ready:          in  std_logic;
         hiram_detect_ready: in  std_logic;
         cycle_start:        in  std_logic;
+        set_bank:           in  std_logic;
         addr:               in  std_logic_vector(15 downto 0);
+        data:               in  std_logic_vector(7 downto 0);
         flash_addr:         out std_logic_vector(22 downto 0);
         a14:                out std_logic;
         n_game:             out std_logic;
@@ -51,6 +53,7 @@ architecture behav of cart_kernal is
     signal kernal_space_addressed:  boolean;
     signal kernal_space_cpu_read:   boolean;
     signal kernal_read_active:      boolean;
+    signal bank:                    std_logic_vector(2 downto 0);
 begin
 
     kernal_space_addressed <= true when addr(15 downto 13) = "111" else false;
@@ -59,6 +62,22 @@ begin
         phi2 = '1' and ba = '1' and n_wr = '1'
         else false;
 
+    ---------------------------------------------------------------------------
+    -- 
+    ---------------------------------------------------------------------------
+    set_kernal_bank: process(enable, clk)
+    begin
+        -- todo: reset?
+        if rising_edge(clk) then
+            if enable = '1' and set_bank = '1' then
+                bank <= data(2 downto 0);
+            end if;
+        end if;
+    end process;
+
+    ---------------------------------------------------------------------------
+    -- 
+    ---------------------------------------------------------------------------
     detect_hiram: process(enable, clk)
     begin
         if rising_edge(clk) then
@@ -103,11 +122,10 @@ begin
     -- Always read from part usually used for ROML, because there we have
     -- the boot sectors which contain the KERNAL images
     ---------------------------------------------------------------------------
-    create_mem_addr: process(addr)
+    create_mem_addr: process(bank, addr)
     begin
         flash_addr <= (others => '0');
-        -- todo: KERNAL-Nummer
-        flash_addr(12 downto 0) <= addr(12 downto 0);
+        flash_addr(15 downto 0) <= bank & addr(12 downto 0);
     end process;
 
     ---------------------------------------------------------------------------
