@@ -42,6 +42,7 @@ entity cart_easyflash is
         cycle_start:    in  std_logic;
         addr:           in  std_logic_vector(15 downto 0);
         data:           in  std_logic_vector(7 downto 0);
+        io1_addr_0x_rdy:   in  std_logic;
         button_crt_reset:  in std_logic;
         button_special_fn: in std_logic;
         flash_addr:     out std_logic_vector(22 downto 0);
@@ -165,19 +166,19 @@ begin
             end if;
         elsif rising_edge(clk) then
             if enable = '1' then
-                if bus_ready = '1' and n_io1 = '0' then
+                if io1_addr_0x_rdy = '1' then
                     if n_wr = '0' then
                         -- write control register
-                        case addr(7 downto 0) is
-                            when x"00" =>
+                        case addr(3 downto 0) is
+                            when x"0" =>
                                 -- $de00
                                 bank <= data(5 downto 0);
 
-                            when x"01" =>
+                            when x"1" =>
                                 -- $de01
                                 slot <= data(2 downto 0);
 
-                            when x"02" =>
+                            when x"2" =>
                                 -- $de02
                                 n_exrom <= not data(1);
                                 if data(2) = '0' then
@@ -188,7 +189,7 @@ begin
                                 io_to_flash <= data(3);
                                 -- LED!
 
-                            when x"03" =>
+                            when x"3" =>
                                 io_bank <= data(4 downto 0);
                                 io_a19  <= data(5);
 
@@ -196,7 +197,7 @@ begin
                         end case;
                     else
                         -- read control register
-                        if addr(7 downto 0) = x"01" then
+                        if addr(3 downto 0) = x"1" then
                             -- $de01
                             data_out_valid_i <= '1';
                         end if;

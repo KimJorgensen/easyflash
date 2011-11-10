@@ -288,7 +288,7 @@ begin
     ---------------------------------------------------------------------------
     create_mem_addr: process(bank, addr, n_io1, n_io2)
     begin
-        flash_addr <= "000" & bank(0) & "1000" & bank(2 downto 1) & addr(12 downto 0);
+        flash_addr <= "000" & bank(0) & "1010" & bank(2 downto 1) & addr(12 downto 0);
         if n_io1 = '0' or n_io2 = '0' then
             -- no RAM banking in I/O space
             ram_addr   <= "00" & addr(12 downto 0);
