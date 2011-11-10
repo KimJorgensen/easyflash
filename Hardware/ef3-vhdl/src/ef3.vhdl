@@ -642,7 +642,8 @@ begin
                 n_flash_cs  <= '1';
                 n_mem_oe_i  <= '0';
                 n_usb_rd_i  <= '1';
-            elsif ram_write = '1' then
+            end if;
+            if ram_write = '1' then
                 -- ram write tbd in next cycle
                 n_ram_cs_i  <= '0';
                 n_flash_cs  <= '1';
@@ -650,13 +651,15 @@ begin
                 n_usb_rd_i  <= '1';
                 -- 3 means activate n_mem_wr in the next cycle
                 write_scheduled := 3;
-            elsif flash_read = '1' then
+            end if;
+            if flash_read = '1' then
                 -- start flash read, leave until cycle_start
                 n_ram_cs_i  <= '1';
                 n_flash_cs  <= '0';
                 n_mem_oe_i  <= '0';
                 n_usb_rd_i  <= '1';
-            elsif flash_write = '1' then
+            end if;
+            if flash_write = '1' then
                 -- flash write tbd in next cycle
                 n_ram_cs_i  <= '1';
                 n_flash_cs  <= '0';
@@ -664,13 +667,15 @@ begin
                 n_usb_rd_i  <= '1';
                 -- 3 means activate n_mem_wr in the next cycle
                 write_scheduled := 3;
-            elsif usb_read = '1' then
+            end if;
+            if usb_read = '1' then
                 -- start usb read, leave until cycle_start
                 n_ram_cs_i  <= '1';
                 n_flash_cs  <= '1';
                 n_mem_oe_i  <= '1';
                 n_usb_rd_i  <= '0';
-            elsif usb_write = '1' then
+            end if;
+            if usb_write = '1' then
                 -- usb write can start now
                 n_ram_cs_i  <= '1';
                 n_flash_cs  <= '1';
@@ -679,7 +684,8 @@ begin
                 n_usb_wr    <= '0';
                 -- set it to 2 but not to 3 to avoid n_mem_wr to be set
                 write_scheduled := 2;
-            elsif cycle_start = '1' then
+            end if;
+            if cycle_start = '1' then
                 -- return to idle
                 n_ram_cs_i  <= '1';
                 n_flash_cs  <= '1';
