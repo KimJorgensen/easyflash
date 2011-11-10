@@ -305,6 +305,7 @@ architecture ef3_arc of ef3 is
             bus_ready:          in  std_logic;
             cycle_start:        in  std_logic;
             addr:               in  std_logic_vector(15 downto 0);
+            io1_addr_0x_rdy:    in  std_logic;
             n_usb_rxf:          in  std_logic;
             n_usb_txe:          in  std_logic;
             usb_read:           out std_logic;
@@ -451,6 +452,7 @@ begin
         bus_ready               => bus_ready,
         cycle_start             => cycle_start,
         addr                    => addr,
+        io1_addr_0x_rdy         => io1_addr_0x_rdy,
         n_usb_rxf               => n_usb_rxf,
         n_usb_txe               => n_usb_txe,
         usb_read                => usb_read,

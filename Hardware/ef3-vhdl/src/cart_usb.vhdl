@@ -35,6 +35,7 @@ entity cart_usb is
         bus_ready:      in  std_logic;
         cycle_start:    in  std_logic;
         addr:           in  std_logic_vector(15 downto 0);
+        io1_addr_0x_rdy: in  std_logic;
         n_usb_rxf:      in  std_logic;
         n_usb_txe:      in  std_logic;
         usb_read:       out std_logic;
@@ -123,35 +124,31 @@ begin
             usb_read  <= '0';
             usb_write <= '0';
             if enable = '1' then
-                if bus_ready = '1' and n_io1 = '0' then
+                if io1_addr_0x_rdy = '1' then
                     if n_wr = '0' then
-                        case addr(7 downto 0) is
-                            when x"0a" =>
+                        case addr(3 downto 0) is
+                            when x"a" =>
                                 -- $de0a - write data
                                 usb_write <= '1';
 
                             when others => null;
                         end case;
                     else
-                        case addr(7 downto 0) is
-                            when x"08" =>
+                        case addr(3 downto 0) is
+                            when x"8" =>
                                 -- $de08 - read ID register
                                 data_out_valid_i <= '1';
 
-                            when x"09" =>
+                            when x"9" =>
                                 -- $de09 - read control register
                                 data_out_valid_i <= '1';
 
-                            when x"0a" =>
+                            when x"a" =>
                                 -- $de0a - read data
                                 usb_read <= '1';
 
                             when others => null;
                         end case;
-
-                        if addr(4) = '1' or addr(5) = '1' then
-                            data_out_valid_i <= '1';
-                        end if;
                     end if;
                 end if; -- bus_ready...
                 if cycle_start = '1' then
