@@ -142,6 +142,7 @@ architecture ef3_arc of ef3 is
     signal kernal_n_game:       std_logic;
     signal kernal_n_exrom:      std_logic;
     signal kernal_flash_read:   std_logic;
+    signal kernal_set_bank:     std_logic;
 
     signal ar_flash_addr:       std_logic_vector(22 downto 0);
     signal ar_ram_addr:         std_logic_vector(14 downto 0);
@@ -251,7 +252,9 @@ architecture ef3_arc of ef3 is
             bus_ready:          in  std_logic;
             hiram_detect_ready: in std_logic;
             cycle_start:        in  std_logic;
+            set_bank:           in  std_logic;
             addr:               in  std_logic_vector(15 downto 0);
+            data:               in  std_logic_vector(7 downto 0);
             flash_addr:         out std_logic_vector(22 downto 0);
             a14:                out std_logic;
             n_game:             out std_logic;
@@ -400,7 +403,9 @@ begin
         bus_ready               => bus_ready,
         hiram_detect_ready      => hiram_detect_ready,
         cycle_start             => cycle_start,
+        set_bank                => kernal_set_bank,
         addr                    => addr,
+        data                    => data,
         flash_addr              => kernal_flash_addr,
         a14                     => kernal_a14,
         n_game                  => kernal_n_game,
@@ -531,14 +536,20 @@ begin
     begin
         if n_sys_reset = '0' then
             cart_mode <= MODE_MENU;
-            sw_start_reset <= '0';
+            sw_start_reset  <= '0';
+            kernal_set_bank <= '0';
         elsif rising_edge(clk) then
-            sw_start_reset <= '0';
+            sw_start_reset  <= '0';
+            kernal_set_bank <= '0';
             if start_reset_to_menu = '1' then
                 cart_mode <= MODE_MENU;
             elsif n_wr = '0' and bus_ready = '1' and
                 n_io1 = '0' and enable_menu = '1' then
                 case addr(7 downto 0) is
+                    when x"0e" =>
+                        -- $de0e = KERNAL bank
+                        kernal_set_bank <= '1';
+
                     when x"0f" =>
                         -- $de0f = cartridge mode
                         case data(3 downto 0) is
@@ -568,6 +579,7 @@ begin
 
                             when others => null;
                         end case;
+
                     when others => null;
                 end case;
             end if;
