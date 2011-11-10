@@ -161,6 +161,11 @@ architecture ef3_arc of ef3 is
     signal usb_data_out:        std_logic_vector(7 downto 0);
     signal usb_data_out_valid:  std_logic;
 
+    signal io1_addr_0x_rdy:     std_logic;
+
+    attribute KEEP : string;
+    attribute KEEP of io1_addr_0x_rdy : signal is "TRUE"; --keep buffer from being optimized out
+
     component exp_bus_ctrl is
         port (
             clk:                in  std_logic;
@@ -216,6 +221,7 @@ architecture ef3_arc of ef3 is
             cycle_start:        in  std_logic;
             addr:               in  std_logic_vector(15 downto 0);
             data:               in  std_logic_vector(7 downto 0);
+            io1_addr_0x_rdy:    in  std_logic;
             button_crt_reset:   in  std_logic;
             button_special_fn:  in  std_logic;
             flash_addr:         out std_logic_vector(22 downto 0);
@@ -364,6 +370,7 @@ begin
         cycle_start             => cycle_start,
         addr                    => addr,
         data                    => data,
+        io1_addr_0x_rdy         => io1_addr_0x_rdy,
         button_crt_reset        => button_crt_reset,
         button_special_fn       => button_special_fn,
         flash_addr              => ef_flash_addr,
@@ -475,13 +482,18 @@ begin
     -- unused signals and defaults
     addr <= (others => 'Z');
 
-
     n_led <= freezer_ready;
 
     n_reset_io  <= 'Z' when n_generated_reset = '1' else '0';
     n_nmi       <= 'Z' when freezer_irq = '0'       else '0';
     n_irq       <= 'Z' when freezer_irq = '0'       else '0';
 
+    -- for readable optimizations: '1' for n_io1 $de00..$de0f
+    io1_addr_0x_rdy <= '1' when
+            n_io1 = '0' and
+            addr(7 downto 4) = x"0" and
+            bus_ready = '1'
+        else '0';
 
     ---------------------------------------------------------------------------
     -- The buttons will be enabled after all buttons have been released one
