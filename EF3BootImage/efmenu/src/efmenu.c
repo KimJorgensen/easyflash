@@ -66,6 +66,7 @@ static efmenu_entry_t ef_menu[] =
 static efmenu_entry_t special_menu[] =
 {
         { 'r',    0, 0,  MODE_AR,           "R", "Action Replay" },
+        { 's',    0, 0,  MODE_SS5,          "S", "Super Snapshot 5" },
         { 'p',    0, 9,  MODE_EF_NO_RESET,  "P", "EasyProg" },
         { 'k',    0, 0,  MODE_KILL,         "K", "Kill Cartridge" },
         { 0, 0, 0, 0, "", "" }

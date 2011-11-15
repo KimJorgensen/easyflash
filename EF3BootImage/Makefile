@@ -1,33 +1,41 @@
-# BANK ROML         .	ROMH
-# 00   KERNAL0      .	Trampoline
-# 01   KERNAL1      .
-# 02   KERNAL2      .
-# 03   KERNAL3      .
-# 04   KERNAL4      .
-# 05   KERNAL5      .
-# 06   KERNAL6      .
-# 07   KERNAL7      .
-# 08   <-------- Boot menu -------->
-# 09 \ <--------- EasyProg
-# 0a /                     -------->
-# .                 .
-# 0f <----------- sound ----------->    
-# 10 \              .
-# .   \ Directory   .
-# .   / (64k        .
-# 17 /   reserved)  .
-# 18 \
-# 19  \ Final Cartridge III
-# 1a  /
-# 1f /
-# 20 \
-# .   \ Action Replay
-# .   / Slot 1
-# 27 /
-# 28 \
-# .   \ Action Replay
-# .   / Slot 2
-# 2f /
+# BANK ROML             |  ROMH
+# ==========================================
+# 00   KERNAL0          |  Trampoline
+# 01   KERNAL1          |
+# 02   KERNAL2          |
+# 03   KERNAL3          |
+# 04   KERNAL4          |
+# 05   KERNAL5          |
+# 06   KERNAL6          |
+# 07   KERNAL7          |
+# ==========================================
+# 08   <----------- Boot menu ------------->
+# 09 \ <----------- EasyProg
+# 0a /                       -------------->
+# .                     .
+# 0f <--------------- Sound --------------->
+#    ---------------------------------------
+# ==========================================
+# 10                    |
+# .     Directory       |
+# .     (64k reserved)  |
+# 17                    |
+# ==========================================
+# 18
+# 19           Final Cartridge III
+# 1a                   (?)
+# 1f
+# ==========================================
+# 20    Action Replay   |  Action Replay
+# .        Slot 0       |     Slot 1
+# .        (64 k)       |     (64 k)
+# 27                    |
+# ==========================================
+# 28
+# .              Super Snapsot
+# .             (128 k reserved)
+# 2f
+# ==========================================
 
 
 # uncompressed version of EasyProg
@@ -41,9 +49,9 @@ all: ef3-init.crt ef3-menu.crt
 ###############################################################################
 # These files are in "menu" image and "initial" image
 
-menu_image  := trampoline.bin       0x00 0x3F00
-menu_image  += efmenu/efmenu.bin    0x08 0x0000
-menu_image  += $(easyprog)          0x09 0x0000
+menu_image  := trampoline.bin       0x00 0x1F00 H
+menu_image  += efmenu/efmenu.bin    0x08 0x0000 LH
+menu_image  += $(easyprog)          0x09 0x0000 LH
 #menu_image += waterdrop.raw        0x0f 0x0000
 #menu_image += bing.raw        0x0f 0x0000
 
@@ -54,14 +62,16 @@ menu_deps   += $(easyprog)
 ###############################################################################
 # These files are in and "initial" image only
 
-init_image 	:= images/exos.bin      0x00 0x0000
-init_image 	+= images/beast.bin     0x01 0x0000
-init_image 	+= images/ttn2crom.bin  0x02 0x0000
+init_image  := images/exos.bin              0x00 0x0000 L
+init_image  += images/beast.bin             0x01 0x0000 L
+init_image  += images/ttn2crom.bin          0x02 0x0000 L
 
-init_image 	+= directory.bin        0x10 0x0000
+init_image  += directory.bin                0x10 0x0000 L
+init_image  += images/rr38ppal.bin          0x20 0x0000 L
+init_image  += images/apower.bin            0x20 0x0000 H
+#init_image  += images/ar.bin                0x20 0x0000 L
 
-init_image 	+= images/ar.bin  	0x20 0x0000
-init_image	+= images/rr38ppal.bin	0x28 0x0000
+init_image  += images/ss522_2_pal.bin       0x28 0x0000 LH
 
 ###############################################################################
 # The menu image: Contains menu and tools
