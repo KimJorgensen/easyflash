@@ -16,6 +16,7 @@
 #define MODE_KERNAL         2
 #define MODE_FC3            3
 #define MODE_AR             4
+#define MODE_SS5            5
 #define MODE_KILL           7
 
 #define EF_DIR_BANK         0x10
