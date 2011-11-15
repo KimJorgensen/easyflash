@@ -24,7 +24,6 @@
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
-use work.cartridge_modes.all;
 
 entity ef3 is
     port ( addr:                inout std_logic_vector (15 downto 0);
@@ -63,11 +62,11 @@ end ef3;
 architecture ef3_arc of ef3 is
 
     -- Current cartridge mode
-    signal cart_mode:           cartridge_mode_type := MODE_MENU;
     signal enable_menu:         std_logic;
     signal enable_ef:           std_logic;
     signal enable_kernal:       std_logic;
     signal enable_ar:           std_logic;
+    signal enable_ss5:          std_logic;
 
     signal buttons_enabled:     std_logic := '0';
 
@@ -157,6 +156,17 @@ architecture ef3_arc of ef3 is
     signal ar_data_out:         std_logic_vector(7 downto 0);
     signal ar_data_out_valid:   std_logic;
 
+    signal ss5_flash_addr:      std_logic_vector(22 downto 0);
+    signal ss5_ram_addr:        std_logic_vector(14 downto 0);
+    signal ss5_n_game:          std_logic;
+    signal ss5_n_exrom:         std_logic;
+    signal ss5_start_reset:     std_logic;
+    signal ss5_start_freezer:   std_logic;
+    signal ss5_reset_freezer:   std_logic;
+    signal ss5_ram_read:        std_logic;
+    signal ss5_ram_write:       std_logic;
+    signal ss5_flash_read:      std_logic;
+
     signal usb_read:            std_logic;
     signal usb_write:           std_logic;
     signal usb_data_out:        std_logic_vector(7 downto 0);
@@ -164,8 +174,8 @@ architecture ef3_arc of ef3 is
 
     signal io1_addr_0x_rdy:     std_logic;
 
-    attribute KEEP : string;
-    attribute KEEP of io1_addr_0x_rdy : signal is "TRUE"; --keep buffer from being optimized out
+    --attribute KEEP : string;
+    --attribute KEEP of io1_addr_0x_rdy : signal is "TRUE"; --keep buffer from being optimized out
 
     component exp_bus_ctrl is
         port (
@@ -295,6 +305,38 @@ architecture ef3_arc of ef3 is
             flash_read:         out std_logic;
             data_out:           out std_logic_vector(7 downto 0);
             data_out_valid:     out std_logic
+        );
+    end component;
+
+    component cart_ss5 is
+        port (
+            clk:                in  std_logic;
+            n_sys_reset:        in  std_logic;
+            n_reset:            in  std_logic;
+            enable:             in  std_logic;
+            phi2:               in  std_logic;
+            n_io1:              in  std_logic;
+            n_io2:              in  std_logic;
+            n_roml:             in  std_logic;
+            n_romh:             in  std_logic;
+            n_wr:               in  std_logic;
+            bus_ready:          in  std_logic;
+            cycle_start:        in  std_logic;
+            addr:               in  std_logic_vector(15 downto 0);
+            data:               in  std_logic_vector(7 downto 0);
+            button_crt_reset:   in  std_logic;
+            button_special_fn:  in  std_logic;
+            freezer_ready:      in  std_logic;
+            flash_addr:         out std_logic_vector(22 downto 0);
+            ram_addr:           out std_logic_vector(14 downto 0);
+            n_game:             out std_logic;
+            n_exrom:            out std_logic;
+            start_reset:        out std_logic;
+            start_freezer:      out std_logic;
+            reset_freezer:      out std_logic;
+            ram_read:           out std_logic;
+            ram_write:          out std_logic;
+            flash_read:         out std_logic
         );
     end component;
 
@@ -447,6 +489,37 @@ begin
         data_out_valid          => ar_data_out_valid
     );
 
+    u_cart_ss5: cart_ss5 port map
+    (
+        clk                     => clk,
+        n_sys_reset             => n_sys_reset,
+        n_reset                 => n_reset,
+        enable                  => enable_ss5,
+        phi2                    => phi2,
+        n_io1                   => n_io1,
+        n_io2                   => n_io2,
+        n_roml                  => n_roml,
+        n_romh                  => n_romh,
+        n_wr                    => n_wr,
+        bus_ready               => bus_ready,
+        cycle_start             => cycle_start,
+        addr                    => addr,
+        data                    => data,
+        button_crt_reset        => button_crt_reset,
+        button_special_fn       => button_special_fn,
+        freezer_ready           => freezer_ready,
+        flash_addr              => ss5_flash_addr,
+        ram_addr                => ss5_ram_addr,
+        n_game                  => ss5_n_game,
+        n_exrom                 => ss5_n_exrom,
+        start_reset             => ss5_start_reset,
+        start_freezer           => ss5_start_freezer,
+        reset_freezer           => ss5_reset_freezer,
+        ram_read                => ss5_ram_read,
+        ram_write               => ss5_ram_write,
+        flash_read              => ss5_flash_read
+    );
+
     u_cart_usb: cart_usb
     port map(
         clk                     => clk,
@@ -470,26 +543,10 @@ begin
     button_crt_reset  <= buttons_enabled and button_b;
     button_special_fn <= buttons_enabled and button_c;
 
-    enable_menu     <= '1'
-        when cart_mode = MODE_MENU
-        else '0';
-
-    enable_ef       <= '1'
-        when cart_mode = MODE_EASYFLASH or cart_mode = MODE_MENU
-        else '0';
-
-    enable_kernal   <= '1'
-        when cart_mode = MODE_KERNAL
-        else '0';
-
-    enable_ar   <= '1'
-        when cart_mode = MODE_AR
-        else '0';
-
     -- unused signals and defaults
     addr <= (others => 'Z');
 
-    n_led <= freezer_ready;
+    n_led <= bus_ready; --freezer_ready;
 
     n_reset_io  <= 'Z' when n_generated_reset = '1' else '0';
     n_nmi       <= 'Z' when freezer_irq = '0'       else '0';
@@ -535,14 +592,22 @@ begin
     check_cartridge_mode: process(clk, n_sys_reset)
     begin
         if n_sys_reset = '0' then
-            cart_mode <= MODE_MENU;
+            enable_ef       <= '1';
+            enable_menu     <= '1';
+            enable_ar       <= '0';
+            enable_ss5      <= '0';
+            enable_kernal   <= '0';
             sw_start_reset  <= '0';
             kernal_set_bank <= '0';
         elsif rising_edge(clk) then
             sw_start_reset  <= '0';
             kernal_set_bank <= '0';
             if start_reset_to_menu = '1' then
-                cart_mode <= MODE_MENU;
+                enable_ef       <= '1';
+                enable_menu     <= '1';
+                enable_ar       <= '0';
+                enable_ss5      <= '0';
+                enable_kernal   <= '0';
             elsif n_wr = '0' and bus_ready = '1' and
                 n_io1 = '0' and enable_menu = '1' then
                 case addr(7 downto 0) is
@@ -551,30 +616,39 @@ begin
                         kernal_set_bank <= '1';
 
                     when x"0f" =>
+                        enable_ef       <= '0';
+                        enable_menu     <= '0';
+                        enable_ar       <= '0';
+                        enable_ss5      <= '0';
+                        enable_kernal   <= '0';
                         -- $de0f = cartridge mode
                         case data(3 downto 0) is
                             when x"0" =>
-                                cart_mode <= MODE_EASYFLASH;
+                                enable_ef <= '1';
                                 sw_start_reset <= '1';
 
                             when x"1" =>
-                                cart_mode <= MODE_EASYFLASH;
+                                enable_ef <= '1';
                                 -- without reset, hide this register only
 
                             when x"2" =>
-                                cart_mode <= MODE_KERNAL;
+                                enable_kernal <= '1';
                                 sw_start_reset <= '1';
 
                             when x"3" =>
-                                cart_mode <= MODE_FC3;
+                                -- FC not implemented
                                 sw_start_reset <= '1';
 
                             when x"4" =>
-                                cart_mode <= MODE_AR;
+                                enable_ar <= '1';
+                                sw_start_reset <= '1';
+
+                            when x"5" =>
+                                enable_ss5 <= '1';
                                 sw_start_reset <= '1';
 
                             when x"7" =>
-                                cart_mode <= MODE_DISABLED;
+                                -- everything disabled
                                 sw_start_reset <= '1';
 
                             when others => null;
@@ -589,17 +663,17 @@ begin
     ---------------------------------------------------------------------------
     -- Merge the output of all cartridges
     ---------------------------------------------------------------------------
-    ram_read        <= ef_ram_read or ar_ram_read;
-    ram_write       <= ef_ram_write or ar_ram_write;
-    flash_read      <= ef_flash_read or kernal_flash_read or ar_flash_read;
+    ram_read        <= ef_ram_read or ar_ram_read or ss5_ram_read;
+    ram_write       <= ef_ram_write or ar_ram_write or ss5_ram_write;
+    flash_read      <= ef_flash_read or kernal_flash_read or ar_flash_read or ss5_flash_read;
     flash_write     <= ef_flash_write;
-    n_exrom_out     <= ef_n_exrom and kernal_n_exrom and ar_n_exrom;
-    n_game_out      <= ef_n_game and kernal_n_game and ar_n_game;
+    n_exrom_out     <= ef_n_exrom and kernal_n_exrom and ar_n_exrom and ss5_n_exrom;
+    n_game_out      <= ef_n_game and kernal_n_game and ar_n_game and ss5_n_game;
 
     data_out        <= ef_data_out or usb_data_out or ar_data_out;
     data_out_valid  <= ef_data_out_valid or usb_data_out_valid or ar_data_out_valid;
 
-    start_reset     <= ef_start_reset or ar_start_reset or
+    start_reset     <= ef_start_reset or ar_start_reset or ss5_start_reset or
                        start_reset_to_menu or sw_start_reset;
 
     n_dma <= 'Z';
@@ -610,11 +684,13 @@ begin
 
     addr(14) <= kernal_a14;
 
-    n_exrom <= n_exrom_out; -- when ((n_exrom and n_exrom_out) = '0') else 'Z';
-
+    ---------------------------------------------------------------------------
+    --
+    ---------------------------------------------------------------------------
     set_mem_addr: process(enable_ef, ef_flash_addr, ef_ram_addr,
                           enable_kernal, kernal_flash_addr,
                           enable_ar, ar_flash_addr, ar_ram_addr,
+                          enable_ss5, ss5_flash_addr, ss5_ram_addr,
                           n_ram_cs_i)
     begin
         mem_addr <= (others => '0');
@@ -632,6 +708,12 @@ begin
                 mem_addr <= "00000000" & ar_ram_addr;
             else
                 mem_addr <= ar_flash_addr;
+            end if;
+        elsif enable_ss5 = '1' then
+            if n_ram_cs_i = '0' then
+                mem_addr <= "00000000" & ss5_ram_addr;
+            else
+                mem_addr <= ss5_flash_addr;
             end if;
         end if;
     end process;
