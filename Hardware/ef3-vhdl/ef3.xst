@@ -7,5 +7,7 @@ run
 -ofmt NGC
 -p xc9500xl
 -top ef3
--opt_mode Speed
--opt_level 1
+-opt_mode area
+-opt_level 2
+-keep_hierarchy no
+-pld_mp no
