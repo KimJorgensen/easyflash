@@ -18,6 +18,7 @@ a.out
 *.log
 *.labels
 *.err
+*.svf
 
 # Eclipse
 .csettings
@@ -43,4 +44,3 @@ EasyProg/test
 EasyProg/easyprog-*
 
 EasySDK/tools/bin2efcrt
-
