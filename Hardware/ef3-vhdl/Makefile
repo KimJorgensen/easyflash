@@ -12,6 +12,7 @@ src 		+= $(src_dir)/freezer.vhdl
 src 		+= $(src_dir)/cart_easyflash.vhdl
 src 		+= $(src_dir)/cart_kernal.vhdl
 src 		+= $(src_dir)/cart_ar.vhdl
+src 		+= $(src_dir)/cart_ss5.vhdl
 src 		+= $(src_dir)/cart_usb.vhdl
 
 uc  := $(src_dir)/$(vhdlprj).ucf
@@ -34,7 +35,7 @@ device     := $(dev_type)-$(dev_pkg)-$(dev_speed)
 device_fit := $(dev_type)-$(dev_speed)-$(dev_pkg)
 
 fit_flags  := -p $(device_fit) -ofmt abel -log fitter.log -optimize density
-fit_flags  += -power low -slew slow
+fit_flags  += -power low -slew slow -inputs 25 -pterms 20
 fit_filter_output := "^CS: block property:\|^$$"
 
 # directories to be created
