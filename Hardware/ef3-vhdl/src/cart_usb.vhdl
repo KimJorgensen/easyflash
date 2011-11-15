@@ -82,7 +82,7 @@ begin
                         data_out <= not n_usb_rxf & not n_usb_txe & "000000";
                     when others => null;
                 end case;
-            else
+            elsif false then
                 a := to_integer(unsigned(addr(4 downto 0)));
                 case a is
 	                when  0 => data_out <= x"80";
