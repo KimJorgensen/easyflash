@@ -41,8 +41,11 @@ EASYFLASH_IO_SLOT    = $de01
 ; I/O address for enabling memory configuration, /GAME and /EXROM states
 EASYFLASH_IO_CONTROL = $de02
 
+; I/O address to set the KERNAL bank
+EASYFLASH3_IO_KERNAL_BANK   = $de0e
+
 ; I/O address to set the cartridge mode
-EASYFLASH2_IO_MODE   = $de0f
+EASYFLASH3_IO_MODE          = $de0f
 
 .code
 
@@ -111,8 +114,10 @@ sbcm_code:
         ; the following code will be run at $0100
         lda tmp1
         sta EASYFLASH_IO_BANK
+        sta EASYFLASH3_IO_KERNAL_BANK
+
         lda tmp2
-        sta EASYFLASH2_IO_MODE
+        sta EASYFLASH3_IO_MODE
         ; we don't pass here normally
 sbcm_wait:
         dec $d020
@@ -141,7 +146,7 @@ sbcm_codeEnd:
 _start_program:
         pha
         lda #MODE_EF_NO_RESET
-        sta EASYFLASH2_IO_MODE          ; hides the mode register
+        sta EASYFLASH3_IO_MODE          ; hides the mode register
         lda #EASYFLASH_16K
         sta EASYFLASH_IO_CONTROL
         ldx #$00
