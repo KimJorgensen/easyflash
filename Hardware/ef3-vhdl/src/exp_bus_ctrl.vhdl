@@ -23,7 +23,6 @@
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
-use work.cartridge_modes.all;
 
 
 entity exp_bus_ctrl is
