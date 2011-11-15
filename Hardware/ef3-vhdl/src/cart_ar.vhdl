@@ -59,23 +59,6 @@ entity cart_ar is
     );
 end cart_ar;
 
--- Memory mapping of AR binary in Flash and AR RAM:
--- Address Bit                21098765432109876543210
---                            2221111111111  .
--- Bits needed for RAM/Flash:           .    .
---   RAM (32 ki * 8)                  *************** (14..0)
---   Flash (8 Mi * 8)         *********************** (22..0)
--- Used in AR mode:
---   mem_addr(22 downto 15)   000b1000                (22..15)
---   mem_addr(14 downto 13)           BB              (14..13)
---   mem_addr(12 downto 0)              AAAAAAAAAAAAA (12..0)
---
--- A    = Address from C64 bus to address 8k per bank
--- b    = AR bank(0)
--- B    = AR bank(2 downto 1) for flash
---        AR bank(1 downto 0) or "00" for RAM
--- "1000" corresponds to EF Bank 0x20
-
 architecture behav of cart_ar is
 
     signal data_out_valid_i:    std_logic;
@@ -90,10 +73,17 @@ architecture behav of cart_ar is
     signal bank:                std_logic_vector(2 downto 0);
 
     signal addr_00_01:          boolean;
+    
+    -- special mode for Nordic/Atomic Power
+    signal np_mode:             boolean;
 begin
 
     -- used to check if $00/$01 is addressed in I/O space (for $de00/$de01)
     addr_00_01 <= true when addr(7 downto 1) = "0000000" else false;
+
+    np_mode <= true when
+        ctrl_exrom = '1' and ctrl_game = '0' and ctrl_ram = '1'
+        else false;           
 
     ---------------------------------------------------------------------------
     --
@@ -103,7 +93,7 @@ begin
         start_freezer_i <= '0';
         if enable = '1' and button_special_fn = '1' then
             start_freezer_i <= '1';
-        end if; 
+        end if;
     end process;
     start_freezer <= start_freezer_i;
 
@@ -168,12 +158,12 @@ begin
         elsif rising_edge(clk) then
             if enable = '1' then
                 if start_freezer_i = '1' then
-                    bank            <= (others => '0');
-                    ctrl_unfreeze   <= '0';
-                    ctrl_ram        <= '0';
-                    ctrl_kill       <= '0';
                     ctrl_exrom      <= '0';
                     ctrl_game       <= '0';
+                    ctrl_ram        <= '0';
+                    ctrl_kill       <= '0';
+                    ctrl_unfreeze   <= '0';
+                    bank            <= (others => '0');
                 elsif ctrl_kill = '0' then
                     if bus_ready = '1' and n_io1 = '0' then
                         if n_wr = '0' then
@@ -186,7 +176,7 @@ begin
                                     ctrl_kill       <= data(2);
                                     ctrl_exrom      <= data(1);
                                     ctrl_game       <= data(0);
-
+                                    
                                 when x"01" =>
                                     -- write control register $de01
                                         bank        <= data(7) & data(4 downto 3);
@@ -212,8 +202,6 @@ begin
                     end if;
                 end if;
             else
-                ctrl_exrom <= '1';
-                ctrl_game  <= '0';
                 data_out_valid_i <= '0';
             end if; -- enable
        end if; -- clk
@@ -226,14 +214,20 @@ begin
     -- Leave GAME and EXROM in VIC-II cycles to avoid flickering when software
     -- uses the Ultimax mode. This seems to be the case with the RR loader.
     ---------------------------------------------------------------------------
-    set_game_exrom: process(enable, ctrl_exrom, ctrl_game, phi2)
+    set_game_exrom: process(enable, ctrl_exrom, ctrl_game, phi2,
+                            freezer_ready, np_mode)
     begin
-        if freezer_ready = '1' then
-            n_exrom <= '1';
-            n_game <= '0';
-        elsif phi2 = '1' and enable = '1' then
-            n_exrom <= ctrl_exrom;
-            n_game  <= not ctrl_game;
+        if enable = '1' and phi2 = '1' then
+            if freezer_ready = '1' then
+                n_exrom <= '1';
+                n_game <= '0';
+            elsif np_mode then
+                n_exrom <= '0';
+                n_game  <= '0';
+            else
+                n_exrom <= ctrl_exrom;
+                n_game  <= not ctrl_game;
+            end if;
         else
             n_exrom <= '1';
             n_game  <= '1';
@@ -244,7 +238,8 @@ begin
     --
     ---------------------------------------------------------------------------
     rw_mem: process(enable, addr, n_io1, n_io2, n_roml, n_romh, n_wr, phi2,
-                    bus_ready, ctrl_ram, ctrl_kill, ctrl_reumap, addr_00_01)
+                    bus_ready, ctrl_ram, ctrl_kill, ctrl_reumap, addr_00_01,
+                    np_mode)
     begin
         flash_read <= '0';
         ram_read   <= '0';
@@ -255,8 +250,7 @@ begin
             --              at I/O2 in normal map or
             --              at ROML
             if (n_io1 = '0' and ctrl_reumap = '1' and not addr_00_01) or
-               (n_io2 = '0' and ctrl_reumap = '0') or
-               (n_roml = '0')
+               (n_io2 = '0' and ctrl_reumap = '0')
             then
                 if n_wr = '1' then
                     if ctrl_ram = '1' then
@@ -271,31 +265,73 @@ begin
                 end if;
             end if;
 
+            if n_roml = '0' then
+                if n_wr = '1' then
+                    if ctrl_ram = '1' and not np_mode then
+                        ram_read <= '1';
+                    else
+                        flash_read <= '1';
+                    end if;
+                else
+                    if ctrl_ram = '1' and not np_mode then
+                        ram_write <= '1';
+                    end if;
+                end if;
+            end if;
+
+            -- and not np_mode?
             if ctrl_ram = '1' and addr(15 downto 13) = "100" and n_wr = '0' then
-                -- write through to cart RAM at ROML space like original AR
+                -- write through to cart RAM at $8000..$9fff like original AR
                 ram_write <= '1';
             end if;
 
-            -- ROMH is always flash
-            if n_romh = '0' and n_wr = '1' then
-                flash_read <= '1';
+            if np_mode and addr(15 downto 13) = "101" and n_wr = '0' then
+                -- write through to cart RAM at $a000..$bfff for Atomic/Nordic Power mode
+                ram_write <= '1';
             end if;
-        end if;
+
+            if n_romh = '0' then
+                if n_wr = '1' then
+                    flash_read <= '1';
+                end if;
+            end if; -- n_romh
+
+        end if; -- enable...
     end process;
 
     ---------------------------------------------------------------------------
     -- Combinatorically create the next memory address.
+    --
+    -- Memory mapping of AR binary in Flash and AR RAM:
+    -- Address Bit                21098765432109876543210
+    --                            2221111111111  .
+    -- Bits needed for RAM/Flash:           .    .
+    --   RAM (32 ki * 8)                  *************** (14..0)
+    --   Flash (8 Mi * 8)         *********************** (22..0)
+    -- Used in AR mode:
+    --   mem_addr(22 downto 15)   000010Sb                (22..15)
+    --   mem_addr(14 downto 13)           BB              (14..13)
+    --   mem_addr(12 downto 0)              AAAAAAAAAAAAA (12..0)
+    --
+    -- A    = Address from C64 bus to address 8k per bank
+    -- b    = AR bank(2)
+    -- B    = AR bank(1 downto 0) or "00" for RAM
+    -- S    = AR slot
+    -- "0000100" corresponds to EF Bank 20:0, this is the AR slot 0
+    -- "0001100" corresponds to EF Bank 20:1, this is the AR slot 1
+    --
     ---------------------------------------------------------------------------
-    create_mem_addr: process(bank, addr, n_io1, n_io2)
+    create_mem_addr: process(bank, addr, n_io1, n_io2, n_romh,
+                             np_mode)
     begin
-        flash_addr <= "000" & bank(0) & "1010" & bank(2 downto 1) & addr(12 downto 0);
-        if n_io1 = '0' or n_io2 = '0' then
-            -- no RAM banking in I/O space
-            ram_addr   <= "00" & addr(12 downto 0);
-        else
-            -- but in ROML space
-            ram_addr   <= bank(1 downto 0) & addr(12 downto 0);
-        end if;
+        flash_addr <= "0000100" & bank & addr(12 downto 0);
+
+       if n_roml = '0' then
+           -- RAM banking only in ROML space
+           ram_addr   <= bank(1 downto 0) & addr(12 downto 0);
+       else
+           ram_addr   <= "00" & addr(12 downto 0);
+       end if;
     end process;
 
 end architecture behav;
