@@ -694,26 +694,29 @@ begin
                           n_ram_cs_i)
     begin
         mem_addr <= (others => '0');
+        
+        -- Take lower address bits from C64 directly
+        mem_addr(12 downto 0) <= addr(12 downto 0);
 
         if enable_kernal = '1' then
-            mem_addr <= kernal_flash_addr;
+            mem_addr(22 downto 13) <= kernal_flash_addr(22 downto 13);
         elsif enable_ef = '1' then
             if n_ram_cs_i = '0' then
-                mem_addr <= "00000000" & ef_ram_addr;
+                mem_addr(14 downto 13) <= ef_ram_addr(14 downto 13);
             else
-                mem_addr <= ef_flash_addr;
+                mem_addr(22 downto 13) <= ef_flash_addr(22 downto 13);
             end if;
         elsif enable_ar = '1' then
             if n_ram_cs_i = '0' then
-                mem_addr <= "00000000" & ar_ram_addr;
+                mem_addr(14 downto 13) <= ar_ram_addr(14 downto 13);
             else
-                mem_addr <= ar_flash_addr;
+                mem_addr(22 downto 13) <= ar_flash_addr(22 downto 13);
             end if;
         elsif enable_ss5 = '1' then
             if n_ram_cs_i = '0' then
-                mem_addr <= "00000000" & ss5_ram_addr;
+                mem_addr(14 downto 13) <= ss5_ram_addr(14 downto 13);
             else
-                mem_addr <= ss5_flash_addr;
+                mem_addr(22 downto 13) <= ss5_flash_addr(22 downto 13);
             end if;
         end if;
     end process;
