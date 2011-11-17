@@ -90,10 +90,9 @@ architecture behav of cart_easyflash is
 
     signal slot:                std_logic_vector(2 downto 0);
     signal bank:                std_logic_vector(5 downto 0);
-    signal io_bank:             std_logic_vector(4 downto 0);
-    signal io_a19:              std_logic;
-    signal io_to_flash:         std_logic;
-
+    signal ctrl_game:           std_logic;
+    signal ctrl_exrom:          std_logic;
+    signal ctrl_no_vicii:       std_logic;
 begin
 
     ---------------------------------------------------------------------------
@@ -121,14 +120,9 @@ begin
     ---------------------------------------------------------------------------
     -- Combinatorically create the next memory address.
     ---------------------------------------------------------------------------
-    create_mem_addr: process(n_io2, n_roml, slot, bank, io_bank,
-                             io_a19, io_to_flash, addr)
+    create_mem_addr: process(n_io2, n_roml, slot, bank, addr)
     begin
-        if n_io2 = '0' then
-            flash_addr <= slot & io_a19 & bank & io_bank & addr(7 downto 0);
-        else
-            flash_addr <= slot & n_roml & bank & addr(12 downto 0);
-        end if;
+        flash_addr <= slot & n_roml & bank & addr(12 downto 0);
         ram_addr   <= "0000000" & addr(7 downto 0);
     end process;
 
@@ -150,16 +144,10 @@ begin
                              easyflash_boot, reset_to_menu)
     begin
         if n_reset = '0' then
-            n_exrom <= '1';
-            if enable = '1' then
-                n_game  <= not easyflash_boot;
-            else
-                n_game <= '1';
-            end if;
+            ctrl_exrom <= '0';
+            ctrl_game  <= easyflash_boot;
             data_out_valid_i <= '0';
-            io_to_flash <= '0';
-            io_bank <= (others => '0');
-            io_a19 <= '0';
+            ctrl_no_vicii <= '0';
             if n_sys_reset = '0' or reset_to_menu = '1' then
                 bank <= (others => '0');
                 slot <= (others => '0');
@@ -180,18 +168,14 @@ begin
 
                             when x"2" =>
                                 -- $de02
-                                n_exrom <= not data(1);
+                                ctrl_exrom <= data(1);
                                 if data(2) = '0' then
-                                    n_game <= not easyflash_boot;
+                                    ctrl_game <= easyflash_boot;
                                 else
-                                    n_game <= not data(0);
+                                    ctrl_game <= data(0);
                                 end if;
-                                io_to_flash <= data(3);
+                                ctrl_no_vicii <= data(3);
                                 -- LED!
-
-                            when x"3" =>
-                                io_bank <= data(4 downto 0);
-                                io_a19  <= data(5);
 
                             when others => null;
                         end case;
@@ -207,8 +191,6 @@ begin
                     data_out_valid_i <= '0';
                 end if;
             else
-                n_exrom <= '1';
-                n_game <= '1';
                 data_out_valid_i <= '0';
             end if; -- enable
        end if; -- clk
@@ -219,11 +201,27 @@ begin
     bank <= bank;
 
     ---------------------------------------------------------------------------
+    -- Leave GAME and EXROM in VIC-II cycles to avoid flickering when software
+    -- uses the Ultimax mode. This seems to be the case with the RR loader.
+    ---------------------------------------------------------------------------
+    set_game_exrom: process(enable, ctrl_exrom, ctrl_game, phi2,
+                            ctrl_no_vicii)
+    begin
+        if enable = '1' and (phi2 = '1' or ctrl_no_vicii = '0') then
+            n_exrom <= not ctrl_exrom;
+            n_game  <= not ctrl_game;
+        else
+            n_exrom <= '1';
+            n_game  <= '1';
+        end if;
+    end process;
+
+    ---------------------------------------------------------------------------
     --
     -- We need a special case with phi2 = '0' for C128 which doesn't set R/W
     -- correctly for Phi1 cycles.
     ---------------------------------------------------------------------------
-    rw_mem: process(enable, n_io2, n_roml, n_romh, n_wr, phi2, io_to_flash,
+    rw_mem: process(enable, n_io2, n_roml, n_romh, n_wr, phi2, ctrl_no_vicii,
                     bus_ready)
     begin
         flash_write <= '0';
@@ -234,17 +232,9 @@ begin
             if bus_ready = '1' then
                 if n_io2 = '0' then
                     if n_wr = '1' then
-                        if io_to_flash = '1' then
-                            flash_read <= '1';
-                        else
-                            ram_read <= '1';
-                        end if;
+                        ram_read <= '1';
                     else
-                        if io_to_flash = '1' then
-                            flash_write <= '1';
-                        else
-                            ram_write <= '1';
-                        end if;
+                        ram_write <= '1';
                     end if;
                 elsif n_roml = '0' or n_romh = '0' then
                     if phi2 = '0' then
