@@ -84,8 +84,14 @@ begin
     -- 32K ROM, 4 * 8K Banks
     -- 32K RAM, 4 * 8K Banks
     --
-    -- io1: (read)
-    --     cart rom
+    -- IO1 read:
+    --     Cartridge ROM from current ROML bank
+    --
+    -- ROML read:
+    --     Cartridge RAM or ROM from current ROML bank
+
+    -- ROMH read:
+    --     Cartridge ROM from current ROMH bank
     --
     -- $dexx write:
     --
@@ -151,19 +157,19 @@ begin
         if enable = '1' and ctrl_kill = '0' and bus_ready = '1' then
             if n_roml = '0' then
                 if n_wr = '1' then
-                    if ctrl_exrom = '1' then
+                    if ctrl_exrom = '0' then
                         ram_read <= '1';
                     else
                         flash_read <= '1';
                     end if;
                 else
-                    if ctrl_exrom = '1' then
+                    if ctrl_exrom = '0' then
                         ram_write <= '1';
                     end if;
                 end if;
             end if;
 
-            if n_romh = '0' or n_io2 = '0' then
+            if n_romh = '0' or n_io1 = '0' then
                 if n_wr = '1' then
                     flash_read <= '1';
                 end if;
@@ -188,13 +194,13 @@ begin
     --
     -- A    = Address from C64 bus to address 8k per bank
     -- B    = SS5 bank(1 downto 0)
-    -- L    = ROML/ROMH, 0 for ROML banks
+    -- L    = ROML/ROMH, we use A13 just as the real cartridge
     -- "000L101" corresponds to EF Bank 28
     --
     ---------------------------------------------------------------------------
     create_mem_addr: process(bank, addr, n_io1, n_io2, n_roml)
     begin
-        flash_addr <= "000" & n_roml & "1010" & bank & addr(12 downto 0);
+        flash_addr <= "000" & addr(13) & "1010" & bank & addr(12 downto 0);
         ram_addr   <= bank & addr(12 downto 0);
     end process;
 
