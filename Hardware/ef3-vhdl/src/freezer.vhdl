@@ -43,55 +43,59 @@ end freezer;
 
 architecture behav of freezer is
 
-    signal write_access_cnt:        integer range 0 to 3;
+    -- This counter has two semantics (to safe macro cells):
+    --
+    -- a) If freeze_pending is '1', it counts the write accesses
+    --    Count from 3 to 0 to find 3 consecutive write accesses which only
+    --    happen when an IRQ or NMI is started.
+    -- b) If freeze_pending is '0', it contains the state if the freezer:
+    --    0 = Idle, start_freezer can start the freezer
+    --    1 = Locked, start_freezer is ignored (to avoid double freezes)
+    --
+    signal freeze_counter:          integer range 0 to 3;
+
     signal freeze_pending:          std_logic;
 begin
 
     ---------------------------------------------------------------------------
-    -- When the freeze button is pressed during a bus read access we start
-    -- the Freeze Pending state.
-    --
-    -- Currently the Freeze Pending state is only left on reset.
+    -- When the freeze button is being pressed during a bus read access we
+    -- start the Freeze Pending state.
     ---------------------------------------------------------------------------
-    freezer_start: process(clk, n_reset, reset_freezer)
+    the_freezer: process(clk, n_reset, reset_freezer)
     begin
         if n_reset = '0' or reset_freezer = '1' then
+            freeze_counter <= 1; -- locked
+            freezer_ready <= '0';
             freeze_pending <= '0';
         elsif rising_edge(clk) then
-            if start_freezer = '1' and bus_ready = '1' and n_wr = '1' then
-                freeze_pending <= '1';
-            end if;
-        end if;
-    end process;
 
-    freezer_irq <= freeze_pending;
-
-    ---------------------------------------------------------------------------
-    -- Count from 3 to 0 to find 3 consecutive write accesses which only
-    -- happen when an IRQ or NMI is started.
-    --
-    ---------------------------------------------------------------------------
-    freezer_count: process(clk, n_reset, reset_freezer)
-    begin
-        if n_reset = '0' or reset_freezer = '1' then
-            write_access_cnt <= 3;
-            freezer_ready <= '0';
-        elsif rising_edge(clk) then
             if freeze_pending = '0' then
-                write_access_cnt <= 3;
+                if start_freezer = '0' then
+                    -- Unlock the Freezer only if the button has been released
+                    freeze_counter <= 0; -- unlocked
+                else
+                    if freeze_counter = 0 and bus_ready = '1' and n_wr = '1'
+                    then
+                        freeze_pending <= '1';
+                        freeze_counter <= 3;
+                    end if;
+                end if;
+
             elsif bus_ready = '1' and phi2 = '1' then
                 if n_wr = '0' then
-                    if write_access_cnt /= 0 then
-                        write_access_cnt <= write_access_cnt - 1;
+                    if freeze_counter /= 0 then
+                        freeze_counter <= freeze_counter - 1;
                     end if;
-                    if write_access_cnt = 1 then
+                    if freeze_counter = 1 then
                         freezer_ready <= '1';
                     end if;
                 else
-                    write_access_cnt <= 3;
+                    freeze_counter <= 3;
                 end if;
             end if;
-        end if;
+        end if; -- clk
     end process;
+
+    freezer_irq <= freeze_pending;
 
 end behav;
