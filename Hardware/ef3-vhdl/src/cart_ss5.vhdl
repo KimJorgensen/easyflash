@@ -109,25 +109,41 @@ begin
             ctrl_game       <= '0';
         elsif rising_edge(clk) then
             if enable = '1' then
-                if start_freezer_i = '1' then
+                if freezer_ready = '1' then
                     bank            <= (others => '0');
                     ctrl_kill       <= '0';
                     ctrl_exrom      <= '0';
                     ctrl_game       <= '0';
-                elsif ctrl_kill = '0' then
-                    if bus_ready = '1' and n_io1 = '0' and n_wr = '0' then
-                        -- write control register $de00
-                        bank            <= data(4) & data(2);
-                        ctrl_kill       <= data(3);
-                        ctrl_exrom      <= data(1);
-                        ctrl_game       <= data(0);
-                    end if; -- bus_ready...
+                end if;
+                
+                if ctrl_kill = '0' and bus_ready = '1' and 
+                        n_io1 = '0' and n_wr = '0' then
+                    -- write control register $de00
+                    bank            <= data(4) & data(2);
+                    ctrl_kill       <= data(3);
+                    ctrl_exrom      <= data(1);
+                    ctrl_game       <= data(0);
                 end if;
             end if; -- enable
        end if; -- clk
     end process;
 
-    reset_freezer  <= ctrl_game;
+    ---------------------------------------------------------------------------
+    -- reset_freezer needs a flip flop here, can this be optimized?
+    ---------------------------------------------------------------------------
+    check_reset_freezer: process(clk, n_reset)
+    begin
+        if n_reset = '0' then
+            reset_freezer <= '0';
+        elsif rising_edge(clk) then
+            if enable = '1' and freezer_ready = '1' and ctrl_game = '1' then
+                reset_freezer <= '1';
+            else            
+                reset_freezer <= '0';
+            end if;
+        end if; -- clk
+    end process;
+
 
     ---------------------------------------------------------------------------
     --
@@ -136,8 +152,13 @@ begin
                             freezer_ready)
     begin
         if enable = '1' then
-            n_exrom <= not ctrl_exrom;
-            n_game  <= ctrl_game;
+            if freezer_ready = '1' then
+                n_exrom <= '1';
+                n_game <= '0';
+            else
+                n_exrom <= not ctrl_exrom;
+                n_game  <= ctrl_game;
+            end if;
         else
             n_exrom <= '1';
             n_game  <= '1';
