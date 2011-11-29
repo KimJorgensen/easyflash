@@ -157,14 +157,15 @@ begin
             data_out_valid_i <= '0';
         elsif rising_edge(clk) then
             if enable = '1' then
-                if start_freezer_i = '1' then
+                if freezer_ready = '1' then
                     ctrl_exrom      <= '0';
                     ctrl_game       <= '0';
                     ctrl_ram        <= '0';
                     ctrl_kill       <= '0';
                     ctrl_unfreeze   <= '0';
                     bank            <= (others => '0');
-                elsif ctrl_kill = '0' then
+                end if;
+                if ctrl_kill = '0' then
                     if bus_ready = '1' and n_io1 = '0' then
                         if n_wr = '0' then
                             case addr(7 downto 0) is
@@ -196,14 +197,16 @@ begin
                                 data_out_valid_i <= '1';
                             end if;
                         end if;
-                    end if; -- bus_ready...
-                    if cycle_start = '1' then
-                        data_out_valid_i <= '0';
                     end if;
-                end if;
+                end if; -- enable
             else
                 data_out_valid_i <= '0';
+                ctrl_unfreeze    <= '0';
             end if; -- enable
+
+            if cycle_start = '1' then
+                data_out_valid_i <= '0';
+            end if;
        end if; -- clk
     end process;
 
@@ -279,8 +282,7 @@ begin
                 end if;
             end if;
 
-            -- and not np_mode?
-            if ctrl_ram = '1' and addr(15 downto 13) = "100" and n_wr = '0' then
+            if not np_mode and ctrl_ram = '1' and addr(15 downto 13) = "100" and n_wr = '0' then
                 -- write through to cart RAM at $8000..$9fff like original AR
                 ram_write <= '1';
             end if;
@@ -292,7 +294,15 @@ begin
 
             if n_romh = '0' then
                 if n_wr = '1' then
-                    flash_read <= '1';
+                    if np_mode then
+                        ram_read <= '1';
+                    else
+                        flash_read <= '1';
+                    end if;
+                else
+                    if np_mode then
+                        ram_write <= '1';
+                    end if;
                 end if;
             end if; -- n_romh
 
@@ -326,11 +336,11 @@ begin
     begin
         flash_addr <= "0000100" & bank & addr(12 downto 0);
 
-       if n_roml = '0' then
-           -- RAM banking only in ROML space
-           ram_addr   <= bank(1 downto 0) & addr(12 downto 0);
-       else
+       if n_io1 = '0' or n_io2 = '0' or np_mode then
+           -- no RAM banking in IO-space and in NP mode
            ram_addr   <= "00" & addr(12 downto 0);
+       else
+           ram_addr   <= bank(1 downto 0) & addr(12 downto 0);
        end if;
     end process;
 
