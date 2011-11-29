@@ -327,14 +327,14 @@ begin
     -- b    = AR bank(2)
     -- B    = AR bank(1 downto 0) or "00" for RAM
     -- S    = AR slot
-    -- "0000100" corresponds to EF Bank 20:0, this is the AR slot 0
-    -- "0001100" corresponds to EF Bank 20:1, this is the AR slot 1
+    -- "0001010" corresponds to EF Bank 10:1, this is the AR slot 0
+    -- "0001011" corresponds to EF Bank 18:1, this is the AR slot 1
     --
     ---------------------------------------------------------------------------
     create_mem_addr: process(bank, addr, n_io1, n_io2, n_romh,
                              np_mode)
     begin
-        flash_addr <= "0000100" & bank & addr(12 downto 0);
+        flash_addr <= "0001010" & bank & addr(12 downto 0);
 
        if n_io1 = '0' or n_io2 = '0' or np_mode then
            -- no RAM banking in IO-space and in NP mode

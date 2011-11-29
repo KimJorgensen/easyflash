@@ -216,12 +216,12 @@ begin
     -- A    = Address from C64 bus to address 8k per bank
     -- B    = SS5 bank(1 downto 0)
     -- L    = ROML/ROMH, we use A13 just as the real cartridge
-    -- "000L101" corresponds to EF Bank 28
+    -- "000L1000" corresponds to EF Bank 20
     --
     ---------------------------------------------------------------------------
     create_mem_addr: process(bank, addr, n_io1, n_io2, n_roml)
     begin
-        flash_addr <= "000" & addr(13) & "1010" & bank & addr(12 downto 0);
+        flash_addr <= "000" & addr(13) & "1000" & bank & addr(12 downto 0);
         ram_addr   <= bank & addr(12 downto 0);
     end process;
 
