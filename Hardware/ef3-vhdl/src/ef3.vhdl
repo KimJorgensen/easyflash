@@ -114,6 +114,8 @@ architecture ef3_arc of ef3 is
     signal n_reset:             std_logic;
     signal n_sys_reset:         std_logic;
     signal n_generated_reset:   std_logic;
+    signal start_freezer:       std_logic;
+    signal reset_freezer:       std_logic;
     signal freezer_irq:         std_logic;
     signal freezer_ready:       std_logic;
 
@@ -393,8 +395,8 @@ begin
         phi2                    => phi2,
         n_wr                    => n_wr,
         bus_ready               => bus_ready,
-        start_freezer           => ar_start_freezer,
-        reset_freezer           => ar_reset_freezer,
+        start_freezer           => start_freezer,
+        reset_freezer           => reset_freezer,
         freezer_irq             => freezer_irq,
         freezer_ready           => freezer_ready
     );
@@ -546,7 +548,7 @@ begin
     -- unused signals and defaults
     addr <= (others => 'Z');
 
-    n_led <= bus_ready; --freezer_ready;
+    n_led <= freezer_ready;
 
     n_reset_io  <= 'Z' when n_generated_reset = '1' else '0';
     n_nmi       <= 'Z' when freezer_irq = '0'       else '0';
@@ -676,6 +678,9 @@ begin
     start_reset     <= ef_start_reset or ar_start_reset or ss5_start_reset or
                        start_reset_to_menu or sw_start_reset;
 
+    start_freezer   <= ar_start_freezer or ss5_start_freezer;
+    reset_freezer   <= ar_reset_freezer or ss5_reset_freezer;
+
     n_dma <= 'Z';
 
     n_exrom <= n_exrom_out; -- when ((n_exrom and n_exrom_out) = '0') else 'Z';
@@ -694,7 +699,7 @@ begin
                           n_ram_cs_i)
     begin
         mem_addr <= (others => '0');
-        
+
         -- Take lower address bits from C64 directly
         mem_addr(12 downto 0) <= addr(12 downto 0);
 
