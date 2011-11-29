@@ -14,26 +14,25 @@
 # 0a /                       -------------->
 # .                     .
 # 0f <--------------- Sound --------------->
-#    ---------------------------------------
 # ==========================================
-# 10                    |
-# .     Directory       |
-# .     (64k reserved)  |
+# 10                    |   Action Replay
+# .     Directory       |      Slot 0
+# .     (64k reserved)  |      (64 k)
 # 17                    |
 # ==========================================
-# 18
-# 19           Final Cartridge III
-# 1a                   (?)
-# 1f
+# 18                    |   Action Replay
+# .     Reserved        |      Slot 1
+# .                     |      (64 k)
+# 1f                    |
 # ==========================================
-# 20    Action Replay   |  Action Replay
-# .        Slot 0       |     Slot 1
-# .        (64 k)       |     (64 k)
-# 27                    |
-# ==========================================
-# 28
+# 20
 # .              Super Snapsot
 # .             (128 k reserved)
+# 27
+# ==========================================
+# 28
+# .            Final Cartridge III
+# .                    (?)
 # 2f
 # ==========================================
 
@@ -67,11 +66,12 @@ init_image  += images/beast.bin             0x01 0x0000 L
 init_image  += images/ttn2crom.bin          0x02 0x0000 L
 
 init_image  += directory.bin                0x10 0x0000 L
-init_image  += images/rr38ppal.bin          0x20 0x0000 L
-init_image  += images/apower.bin            0x20 0x0000 H
-#init_image  += images/ar.bin                0x20 0x0000 L
 
-init_image  += images/ss522_2_pal.bin       0x28 0x0000 LH
+init_image  += images/rr38ppal.bin          0x10 0x0000 H
+init_image  += images/apower.bin            0x18 0x0000 H
+#init_image  += images/ar.bin                0x18 0x0000 H
+
+init_image  += images/ss522_2_pal.bin       0x20 0x0000 LH
 
 ###############################################################################
 # The menu image: Contains menu and tools
