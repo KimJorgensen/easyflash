@@ -148,8 +148,8 @@ begin
             ctrl_game  <= easyflash_boot;
             data_out_valid_i <= '0';
             ctrl_no_vicii <= '0';
+            bank <= (others => '0');
             if n_sys_reset = '0' or reset_to_menu = '1' then
-                bank <= (others => '0');
                 slot <= (others => '0');
             end if;
         elsif rising_edge(clk) then
