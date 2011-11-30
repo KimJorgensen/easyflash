@@ -144,6 +144,7 @@ architecture ef3_arc of ef3 is
     signal kernal_n_exrom:      std_logic;
     signal kernal_flash_read:   std_logic;
     signal kernal_set_bank:     std_logic;
+    signal kernal_start_reset:  std_logic;
 
     signal ar_flash_addr:       std_logic_vector(22 downto 0);
     signal ar_ram_addr:         std_logic_vector(14 downto 0);
@@ -267,10 +268,12 @@ architecture ef3_arc of ef3 is
             set_bank:           in  std_logic;
             addr:               in  std_logic_vector(15 downto 0);
             data:               in  std_logic_vector(7 downto 0);
+            button_crt_reset:   in  std_logic;
             flash_addr:         out std_logic_vector(22 downto 0);
             a14:                out std_logic;
             n_game:             out std_logic;
             n_exrom:            out std_logic;
+            start_reset:        out std_logic;
             flash_read:         out std_logic;
             hiram:              out std_logic
         );
@@ -448,10 +451,12 @@ begin
         set_bank                => kernal_set_bank,
         addr                    => addr,
         data                    => data,
+        button_crt_reset        => button_crt_reset,
         flash_addr              => kernal_flash_addr,
         a14                     => kernal_a14,
         n_game                  => kernal_n_game,
         n_exrom                 => kernal_n_exrom,
+        start_reset             => kernal_start_reset,
         flash_read              => kernal_flash_read,
         hiram                   => hiram
     );
@@ -671,7 +676,8 @@ begin
     data_out        <= ef_data_out or usb_data_out or ar_data_out;
     data_out_valid  <= ef_data_out_valid or usb_data_out_valid or ar_data_out_valid;
 
-    start_reset     <= ef_start_reset or ar_start_reset or ss5_start_reset or
+    start_reset     <= ef_start_reset or kernal_start_reset or ar_start_reset or 
+                       ss5_start_reset or
                        start_reset_to_menu or sw_start_reset;
 
     start_freezer   <= ar_start_freezer or ss5_start_freezer;
