@@ -28,7 +28,6 @@ use ieee.numeric_std.all;
 entity cart_ss5 is
     port (
         clk:                in  std_logic;
-        n_sys_reset:        in  std_logic;
         n_reset:            in  std_logic;
         enable:             in  std_logic;
         phi2:               in  std_logic;
@@ -67,6 +66,8 @@ architecture behav of cart_ss5 is
 
 begin
 
+    start_reset <= enable and button_crt_reset;
+
     ---------------------------------------------------------------------------
     --
     ---------------------------------------------------------------------------
@@ -102,9 +103,11 @@ begin
     -- Bit 0: GAME line, 0 = assert, 1 additionally exits freeze mode
     --
     ---------------------------------------------------------------------------
-    rw_control_regs: process(clk, n_reset, n_sys_reset, enable)
+    rw_control_regs: process(clk, n_reset, enable)
     begin
         if n_reset = '0' then
+            bank            <= (others => '0');
+            ctrl_kill       <= '0';
             ctrl_exrom      <= '0';
             ctrl_game       <= '0';
         elsif rising_edge(clk) then

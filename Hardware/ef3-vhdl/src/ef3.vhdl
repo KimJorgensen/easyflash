@@ -279,7 +279,6 @@ architecture ef3_arc of ef3 is
     component cart_ar is
         port (
             clk:                in  std_logic;
-            n_sys_reset:        in  std_logic;
             n_reset:            in  std_logic;
             enable:             in  std_logic;
             phi2:               in  std_logic;
@@ -313,7 +312,6 @@ architecture ef3_arc of ef3 is
     component cart_ss5 is
         port (
             clk:                in  std_logic;
-            n_sys_reset:        in  std_logic;
             n_reset:            in  std_logic;
             enable:             in  std_logic;
             phi2:               in  std_logic;
@@ -461,7 +459,6 @@ begin
     u_cart_ar: cart_ar port map
     (
         clk                     => clk,
-        n_sys_reset             => n_sys_reset,
         n_reset                 => n_reset,
         enable                  => enable_ar,
         phi2                    => phi2,
@@ -494,7 +491,6 @@ begin
     u_cart_ss5: cart_ss5 port map
     (
         clk                     => clk,
-        n_sys_reset             => n_sys_reset,
         n_reset                 => n_reset,
         enable                  => enable_ss5,
         phi2                    => phi2,
