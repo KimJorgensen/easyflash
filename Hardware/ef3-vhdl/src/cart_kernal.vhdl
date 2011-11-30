@@ -40,10 +40,12 @@ entity cart_kernal is
         set_bank:           in  std_logic;
         addr:               in  std_logic_vector(15 downto 0);
         data:               in  std_logic_vector(7 downto 0);
+        button_crt_reset:   in  std_logic;
         flash_addr:         out std_logic_vector(22 downto 0);
         a14:                out std_logic;
         n_game:             out std_logic;
         n_exrom:            out std_logic;
+        start_reset:        out std_logic;
         flash_read:         out std_logic;
         hiram:              out std_logic
     );
@@ -61,6 +63,8 @@ begin
     kernal_space_cpu_read <= true when kernal_space_addressed and
         phi2 = '1' and ba = '1' and n_wr = '1'
         else false;
+
+    start_reset <= enable and button_crt_reset;
 
     ---------------------------------------------------------------------------
     -- 
