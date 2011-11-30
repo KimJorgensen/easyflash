@@ -28,7 +28,6 @@ use ieee.numeric_std.all;
 entity cart_ar is
     port (
         clk:                in  std_logic;
-        n_sys_reset:        in  std_logic;
         n_reset:            in  std_logic;
         enable:             in  std_logic;
         phi2:               in  std_logic;
@@ -145,7 +144,7 @@ begin
     --      Bit 0: 0 (Flashmode active)
     --
     ---------------------------------------------------------------------------
-    rw_control_regs: process(clk, n_reset, n_sys_reset, enable)
+    rw_control_regs: process(clk, n_reset, enable)
     begin
         if n_reset = '0' then
             ctrl_exrom      <= '0';
