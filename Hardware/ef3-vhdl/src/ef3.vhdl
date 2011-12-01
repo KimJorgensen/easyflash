@@ -562,6 +562,13 @@ begin
             bus_ready = '1'
         else '0';
 
+    -- KERNAL bank at $de0e in menu mode
+    kernal_set_bank <= '1' when 
+            n_wr = '0' and io1_addr_0x_rdy = '1' and 
+            addr(3 downto 0) = x"e" and
+            enable_menu = '1'
+        else '0';
+
     ---------------------------------------------------------------------------
     -- The buttons will be enabled after all buttons have been released one
     -- time. This is done to prevent detection of button presses while the
@@ -601,10 +608,8 @@ begin
             enable_ss5      <= '0';
             enable_kernal   <= '0';
             sw_start_reset  <= '0';
-            kernal_set_bank <= '0';
         elsif rising_edge(clk) then
             sw_start_reset  <= '0';
-            kernal_set_bank <= '0';
             if start_reset_to_menu = '1' then
                 enable_ef       <= '1';
                 enable_menu     <= '1';
@@ -614,10 +619,6 @@ begin
             elsif n_wr = '0' and bus_ready = '1' and
                 n_io1 = '0' and enable_menu = '1' then
                 case addr(7 downto 0) is
-                    when x"0e" =>
-                        -- $de0e = KERNAL bank
-                        kernal_set_bank <= '1';
-
                     when x"0f" =>
                         enable_ef       <= '0';
                         enable_menu     <= '0';
