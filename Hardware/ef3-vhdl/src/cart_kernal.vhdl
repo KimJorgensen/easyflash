@@ -67,13 +67,13 @@ begin
     start_reset <= enable and button_crt_reset;
 
     ---------------------------------------------------------------------------
-    -- 
+    -- Note: When the bank is set, the KERNAL is _not_ yet enabled
     ---------------------------------------------------------------------------
-    set_kernal_bank: process(enable, clk)
+    set_kernal_bank: process(clk)
     begin
         -- todo: reset?
         if rising_edge(clk) then
-            if enable = '1' and set_bank = '1' then
+            if set_bank = '1' then
                 bank <= data(2 downto 0);
             end if;
         end if;
