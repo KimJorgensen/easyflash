@@ -137,7 +137,7 @@ jmpTableEnd:
 ; =============================================================================
 
 writeByte:
-            ; bank 0 must have been selected
+            ; bank 0, slot 0 must have been selected
             ; /GAME low, /EXROM high, LED on, no VIC-II
             sta EASYFLASH_IO_CONTROL
 
@@ -436,7 +436,7 @@ wcheckOK:
         clc
         ldy EAPI_WRITE_ADDR_HI
         ldx EAPI_WRITE_ADDR_LO
-        ; EAPI_WRITE_VAL still in A
+        ; EAPI_WRITE_VAL still in A <= wirklich?
         rts
 
 
