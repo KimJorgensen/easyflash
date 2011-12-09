@@ -489,7 +489,7 @@ EAPICode2:
 
 EAPICode3:
 @CodeStart:
-.incbin "obj/eapi-mx29640b-11", 2
+.incbin "obj/eapi-mx29640b-12", 2
 .res $0300 - (* - @CodeStart), $ff
 
 EAPICodeEnd:

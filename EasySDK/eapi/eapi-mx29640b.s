@@ -41,7 +41,7 @@ EAPI_RAM_SIZE           = 124
 EAPICodeBase:
         !byte $65, $61, $70, $69        ; signature "EAPI"
 
-        !pet "MX29LV640EB 1.1"
+        !pet "MX29LV640EB 1.2"
         !byte 0                         ; 16 bytes, must be 0-terminated
 
 ; =============================================================================
@@ -306,6 +306,16 @@ ciNoRamError:
 
         ; *** start of flash detection ***
         ; check for M29F160ET
+
+        ; backup slot
+        lda EASYFLASH_IO_SLOT
+        sta EAPI_SHADOW_SLOT
+
+        ; select slot 0 / bank 0
+        lda #0
+        sta EASYFLASH_IO_SLOT
+        sta EASYFLASH_IO_BANK
+
         ; cycle 1: write $AA to $AAA
         ldx #<$8aaa
         ldy #>$8aaa
@@ -497,7 +507,7 @@ sebbOK:
         dex
         bne seEraseBootBlocks
         txa
-        sta EAPI_WRITE_VAL ; restore original backup of A=0
+        sta EAPI_WRITE_VAL ; restores original backup of A=0
         php
 seNormal:
         sei
@@ -538,7 +548,7 @@ seNormal:
         ; cycle 5: write $55 to $555
         ldx #<$8555
         ldy #>$8555
-        lsr
+        lda #$55
         jsr ultimaxWrite
 
         ; activate the right slot and bank
@@ -547,12 +557,13 @@ seNormal:
         lda EAPI_WRITE_VAL
         sta EASYFLASH_IO_BANK
 
-        ; cycle 6: write $30 to base + SA
         ldx #$00
         stx EAPI_CMP_BYTE_ADDR_LO
+
+        ; cycle 6: write $30 to base + SA
         ldy EAPI_WRITE_ADDR_HI
         tya
-        cpy #$80
+        cmp #$80
         beq seskip
         ldy #$e0 ; $a0 => $e0
         lda #$a0
@@ -607,10 +618,6 @@ __EAPIResetFlash:
         ; ldx #<$8000 - don't care
         ldy #>$8000
         lda #$f0
-        jsr ultimaxWrite
-
-        ; ldx #<$e000 - don't care
-        ldy #>$e000
         jsr ultimaxWrite
 
         plp
