@@ -48,7 +48,7 @@ bin_acme += obj/sprites.bin
 
 eapi := eapi-am29f040-14
 eapi += eapi-m29w160t-03
-eapi += eapi-mx29640b-11
+eapi += eapi-mx29640b-12
 
 eapi_dir := ../EasySDK/eapi
 eapi_src := $(addprefix $(eapi_dir)/out/,$(eapi))
