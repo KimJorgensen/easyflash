@@ -74,14 +74,15 @@ void progressShow(void)
 void __fastcall__ progressSetBankState(uint8_t nBank, uint8_t nChip,
                                        uint8_t state)
 {
+    nBank &= FLASH_BANK_MASK;
     if (nChip < 2)
     {
-        m_aBlockStates[g_nSelectedSlot][nChip][nBank & FLASH_BANK_MASK] =
+        m_aBlockStates[g_nSelectedSlot][nChip][nBank] =
                 state;
-        //progressDisplayBank(nChip, nBank);
-        progressUpdateDisplay();
+        progressDisplayBank(nBank, nChip, state);
     }
 }
+
 
 
 /******************************************************************************/
