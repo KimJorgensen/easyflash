@@ -53,7 +53,7 @@ static void toggleFastLoader(void);
 static void checkEraseAll(void);
 static uint8_t returnTrue(void);
 static uint8_t ifHaveValidFlash(void);
-static uint8_t ifHaveKERNALs(void);
+static uint8_t ifEF3(void);
 static void updateFastLoaderText();
 
 /******************************************************************************/
@@ -103,13 +103,19 @@ ScreenMenu menuMain =
         {
             "Write &KERNAL to flash",
             checkWriteKERNALImage,
-            ifHaveKERNALs,
+            ifEF3,
             0
         },
         {
-            "&Check flash type",
-            (void (*)(void)) checkFlashType,
-            returnTrue,
+            "Write &AR/RR/NP to flash",
+            checkWriteARImage,
+            ifEF3,
+            0
+        },
+        {
+            "Write SS&5 to flash",
+            checkWriteSS5Image,
+            ifEF3,
             0
         },
         {
@@ -160,6 +166,12 @@ ScreenMenu menuExpert =
     &menuOptions,
     &menuHelp,
     {
+        {
+            "&Check flash type",
+            (void (*)(void)) checkFlashType,
+            returnTrue,
+            0
+        },
         {
             "Write BIN to &LOROM",
             checkWriteLOROMImage,
@@ -462,7 +474,7 @@ static uint8_t ifHaveValidFlash(void)
 /**
  * Return non-0 if the current device has KERNALs like the EF3.
  */
-static uint8_t ifHaveKERNALs(void)
+static uint8_t ifEF3(void)
 {
     return nManufacturerId == FLASH_MX29LV640EB_MFR_ID &&
            nDeviceId == FLASH_MX29LV640EB_DEV_ID;

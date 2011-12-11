@@ -18,7 +18,7 @@
 #define KEY_REPEAT_ALL      0x80
 
 /** Maximal number of menu entries, including termination entry */
-#define SCREEN_MAX_MENU_ENTRIES 8
+#define SCREEN_MAX_MENU_ENTRIES 12
 
 /** Update the screen but don't close the menu entry if this has been selected */
 #define SCREEN_MENU_ENTRY_FLAG_KEEP 1

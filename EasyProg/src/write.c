@@ -44,6 +44,15 @@
 #include "eapiglue.h"
 
 /******************************************************************************/
+/* local macros for readability */
+
+#define EP_INTERLEAVED      1
+#define EP_NON_INTERLEAVED  0
+
+#define EF3_AR_BANK     0x10
+#define EF3_SS5_BANK    0x20
+
+/******************************************************************************/
 /* Static variables */
 
 /* static to save some function call overhead */
@@ -169,6 +178,45 @@ err:
 	return CART_RV_ERR;
 }
 
+/******************************************************************************/
+/**
+ * So all preparations to write a file to flash.
+ *
+ * If this function returns CART_RV_OK, the file has been opened sucessfully.
+ */
+static uint8_t writeOpenFile(const char* pStrImageType)
+{
+    uint8_t rv;
+
+    checkFlashType();
+
+    do
+    {
+        rv = fileDlg(pStrImageType);
+        if (!rv)
+            return CART_RV_ERR;
+
+        rv = utilOpenFile(0);
+        if (rv == 1)
+            screenPrintSimpleDialog(apStrFileOpenError);
+    }
+    while (rv != OPEN_FILE_OK);
+
+    if (screenAskEraseDialog() != BUTTON_ENTER)
+    {
+        eload_close();
+        return CART_RV_ERR;
+    }
+
+    refreshMainScreen();
+    setStatus("Checking file");
+
+    // make sure the right areas of the chip are erased
+    progressInit();
+    timerStart();
+    return CART_RV_OK;
+}
+
 
 /******************************************************************************/
 /**
@@ -241,11 +289,13 @@ static uint8_t writeCrtImage(void)
 /******************************************************************************/
 /**
  * Write a BIN image from the given file to flash, either LOROM or HIROM,
- * beginning at m_nBank.
+ * beginning at nStartBank (which may have FLASH_8K_SECTOR_BIT set).
  *
  * return CART_RV_OK or CART_RV_ERR
  */
-static uint8_t __fastcall__ writeBinImage(uint8_t nChip)
+static uint8_t __fastcall__ writeBinImage(uint8_t nStartBank,
+                                          uint8_t nChip,
+                                          uint8_t interleaved)
 {
     uint16_t nOffset;
     int      nBytes;
@@ -253,6 +303,7 @@ static uint8_t __fastcall__ writeBinImage(uint8_t nChip)
     // this will show the cartridge type from the header
     refreshMainScreen();
 
+    m_nBank = nStartBank;
     nOffset = 0;
     do
     {
@@ -262,90 +313,61 @@ static uint8_t __fastcall__ writeBinImage(uint8_t nChip)
         {
             // the last block may be smaller than 265 bytes, then we write padding
             if (!flashWriteBlock(m_nBank, nChip, nOffset))
-                return CART_RV_ERR;
+                goto retError;
 
             if (!flashVerifyBlock(m_nBank, nChip, nOffset))
-                return CART_RV_ERR;
+                goto retError;
 
             nOffset += 0x100;
             if (nOffset == 0x2000)
             {
                 nOffset = 0;
-                ++m_nBank;
+                if (interleaved)
+                {
+                    if (nChip == 0)
+                        nChip = 1;
+                    else
+                    {
+                        nChip = 0;
+                        ++m_nBank;
+                    }
+                }
+                else
+                    ++m_nBank;
             }
         }
     }
     while (nBytes == 0x100);
 
     if (nOffset || m_nBank)
+    {
+        eload_close();
+        timerStop();
         return CART_RV_OK;
+    }
 
+retError:
+    eload_close();
+    timerStop();
     return CART_RV_ERR;
 }
 
 
 /******************************************************************************/
 /**
- * Write an image file to the flash.
- *
- * imageType must be one of IMAGE_TYPE_CRT, IMAGE_TYPE_LOROM, IMAGE_TYPE_HIROM,
- *                          IMAGE_TYPE_KERNAL
- */
-static uint8_t __fastcall__ checkWriteImage(uint8_t imageType)
-{
-    uint8_t  rv;
-
-    checkFlashType();
-
-    do
-    {
-        rv = fileDlg(imageType == IMAGE_TYPE_CRT ? "CRT" : "BIN");
-        if (!rv)
-            return CART_RV_ERR;
-
-        rv = utilOpenFile(0);
-        if (rv == 1)
-            screenPrintSimpleDialog(apStrFileOpenError);
-    }
-    while (rv != OPEN_FILE_OK);
-
-    if (screenAskEraseDialog() != BUTTON_ENTER)
-    {
-        eload_close();
-        return CART_RV_ERR;
-    }
-
-    refreshMainScreen();
-    setStatus("Checking file");
-
-    // make sure the right areas of the chip are erased
-    progressInit();
-    timerStart();
-
-    if (imageType == IMAGE_TYPE_CRT)
-        rv = writeCrtImage();
-    else if (imageType == IMAGE_TYPE_KERNAL)
-        rv = writeBinImage(0);
-    else
-        // m_nBank has been set by caller already;
-        rv = writeBinImage(imageType == IMAGE_TYPE_HIROM);
-
-    eload_close();
-
-    timerStop();
-    return rv;
-}
-
-
-/******************************************************************************/
-/**
- * Write a CRT image file to the flash.
+ * Write a CRT image file to flash.
  */
 void checkWriteCRTImage(void)
 {
-    if (checkAskForSlot())
+    uint8_t rv;
+
+    if (checkAskForSlot() && (writeOpenFile("CRT") == CART_RV_OK))
     {
-        if (checkWriteImage(IMAGE_TYPE_CRT) == CART_RV_OK)
+        rv = writeCrtImage();
+        eload_close();
+        timerStop();
+
+        if (rv == CART_RV_OK)
         {
             if (g_nSlots > 1 && g_nSelectedSlot != 0)
             {
@@ -360,32 +382,18 @@ void checkWriteCRTImage(void)
 
 /******************************************************************************/
 /**
- * Write a KERNAL image file to the flash.
- */
-void checkWriteKERNALImage(void)
-{
-    uint8_t nKERNAL;
-
-    slotSelect(0);
-    nKERNAL = selectKERNALSlotDialog();
-    if (nKERNAL != 0xff)
-    {
-        m_nBank = nKERNAL | FLASH_8K_SECTOR_BIT;
-        checkWriteImage(IMAGE_TYPE_KERNAL);
-        slotSaveName(screenReadInput("KERNAL Name", g_strFileName), nKERNAL);
-        screenPrintSimpleDialog(apStrWriteComplete);
-    }
-}
-
-
-/******************************************************************************/
-/**
  * Write a BIN image file to the LOROM flash.
  */
 void checkWriteLOROMImage(void)
 {
-    if (checkAskForSlot())
-        checkWriteImage(IMAGE_TYPE_LOROM);
+    uint8_t rv;
+
+    if (checkAskForSlot() && (writeOpenFile("BIN") == CART_RV_OK))
+    {
+        rv = writeBinImage(0, 0, EP_NON_INTERLEAVED);
+        if (rv == CART_RV_OK)
+            screenPrintSimpleDialog(apStrWriteComplete);
+    }
 }
 
 
@@ -395,6 +403,79 @@ void checkWriteLOROMImage(void)
  */
 void checkWriteHIROMImage(void)
 {
-    if (checkAskForSlot())
-        checkWriteImage(IMAGE_TYPE_HIROM);
+    uint8_t rv;
+
+    if (checkAskForSlot() && (writeOpenFile("BIN") == CART_RV_OK))
+    {
+        rv = writeBinImage(0, 1, EP_NON_INTERLEAVED);
+        if (rv == CART_RV_OK)
+            screenPrintSimpleDialog(apStrWriteComplete);
+    }
+}
+
+
+/******************************************************************************/
+/**
+ * Write a KERNAL image file to the flash.
+ */
+void checkWriteKERNALImage(void)
+{
+    uint8_t nKERNAL, rv;
+
+    slotSelect(0);
+    nKERNAL = selectKERNALSlotDialog();
+    if (nKERNAL != 0xff)
+    {
+        if (writeOpenFile("BIN") == CART_RV_OK)
+        {
+            rv = writeBinImage(nKERNAL | FLASH_8K_SECTOR_BIT, 0,
+                               EP_NON_INTERLEAVED);
+            if (rv == CART_RV_OK)
+            {
+                slotSaveName(screenReadInput("KERNAL Name", g_strFileName),
+                             nKERNAL);
+                screenPrintSimpleDialog(apStrWriteComplete);
+            }
+        }
+    }
+}
+
+
+/******************************************************************************/
+/**
+ * Write a AR/RR/NP image file to the flash.
+ */
+void checkWriteARImage(void)
+{
+    uint8_t nAR, rv;
+
+    slotSelect(0);
+    nAR = selectARSlotDialog();
+    if (nAR != 0xff)
+    {
+        if (writeOpenFile("BIN") == CART_RV_OK)
+        {
+            rv = writeBinImage(nAR * 8 + EF3_AR_BANK, 1, EP_NON_INTERLEAVED);
+            if (rv == CART_RV_OK)
+                screenPrintSimpleDialog(apStrWriteComplete);
+        }
+    }
+}
+
+
+/******************************************************************************/
+/**
+ * Write a SS5 image file to the flash.
+ */
+void checkWriteSS5Image(void)
+{
+    uint8_t rv;
+
+    slotSelect(0);
+    if (writeOpenFile("BIN") == CART_RV_OK)
+    {
+        rv = writeBinImage(EF3_SS5_BANK, 0, EP_INTERLEAVED);
+        if (rv == CART_RV_OK)
+            screenPrintSimpleDialog(apStrWriteComplete);
+    }
 }
