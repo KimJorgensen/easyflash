@@ -12,6 +12,7 @@
 void slotsFillEFDir(void);
 uint8_t __fastcall__ selectSlotDialog(uint8_t nSlots);
 uint8_t selectKERNALSlotDialog(void);
+uint8_t selectARSlotDialog(void);
 uint8_t __fastcall__ checkAskForSlot(void);
 void __fastcall__ slotSelect(uint8_t slot);
 void __fastcall__ slotSaveName(const char* name, char isKERNAL);

@@ -372,7 +372,7 @@ _eapiSectorErase:
 eseError:
         rts
 
-
+.if 0 ; unused
 ; =============================================================================
 ;
 ; Write a byte to the given address.
@@ -416,6 +416,7 @@ _eapiWriteFlash:
         lda #1
 ewfError:
         rts
+.endif ; not used
 
 ; =============================================================================
 ;

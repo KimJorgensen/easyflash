@@ -37,6 +37,7 @@
 #include "util.h"
 
 #define MAX_KERNALS 8
+#define MAX_ARS     2
 
 uint8_t g_nSelectedSlot;
 uint8_t g_nSlots;
@@ -131,7 +132,7 @@ uint8_t __fastcall__ selectSlotDialog(uint8_t nSlots)
 /******************************************************************************/
 /**
  * Let the user select a KERNAL slot. Return the slot number.
- * Return ~0 if the user canceled the selection.
+ * Return 0xff if the user canceled the selection.
  */
 uint8_t selectKERNALSlotDialog(void)
 {
@@ -167,6 +168,46 @@ uint8_t selectKERNALSlotDialog(void)
     }
 
     rv = selectBox(pEntries, "a KERNAL slot");
+    free(pEntries);
+    return rv;
+}
+
+
+/******************************************************************************/
+/**
+ * Let the user select a KERNAL slot. Return the slot number.
+ * Return 0xff if the user canceled the selection.
+ */
+uint8_t selectARSlotDialog(void)
+{
+    SelectBoxEntry* pEntries;
+    SelectBoxEntry* pEntry;
+    char*           pLabel;
+    uint8_t         nSlot, rv;
+
+    slotsFillEFDir();
+    pEntries = malloc((MAX_ARS + 1) * sizeof(SelectBoxEntry));
+    if (!pEntries)
+    {
+        screenPrintSimpleDialog(apStrOutOfMemory);
+        return 0;
+    }
+
+    // termination for strings with strlen() == 16
+    // and termination for list
+    memset(pEntries, 0, (FLASH_MAX_SLOTS + 1) * sizeof(SelectBoxEntry));
+
+    pEntry = pEntries;
+    for (nSlot = 1; nSlot <= MAX_ARS; ++nSlot)
+    {
+        // take care: target must be at least as large as source
+        strcpy(utilStr, "AR/RR/NP ");
+        utilAppendDecimal(nSlot);
+        strcpy(pEntry->label, utilStr);
+        ++pEntry;
+    }
+
+    rv = selectBox(pEntries, "an AR/RR/NP slot");
     free(pEntries);
     return rv;
 }
