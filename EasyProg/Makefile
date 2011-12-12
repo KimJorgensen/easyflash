@@ -110,7 +110,7 @@ obj:
 easyprog: $(obj) $(ld_config) $(eload)
 	ld65 -o $@ -m $@.map -C $(ld_config) $(obj) -L /usr/local/lib/cc65/lib \
 		--lib c64.lib --lib $(eload)
-	cat easyprog.map | grep -e "^Name\|^CODE\|^DATA\|^BSS\|^RODATA"
+	cat $@.map | grep -e "^Name\|^CODE\|^DATA\|^BSS\|^RODATA\|^LOWCODE"
 
 easyprog.prg: easyprog
 	exomizer sfx 0x080d -o $@ -q $^
