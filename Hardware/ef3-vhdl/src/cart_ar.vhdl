@@ -215,13 +215,19 @@ begin
     reset_freezer  <= ctrl_unfreeze;
 
     ---------------------------------------------------------------------------
-    -- Leave GAME and EXROM in VIC-II cycles to avoid flickering when software
+    -- When ctrl_de01_written = '1' a RR firmware is running. In this case
+    -- leave GAME and EXROM in VIC-II cycles to avoid flickering when software
     -- uses the Ultimax mode. This seems to be the case with the RR loader.
+    -- 
+    -- When there is AR firmware running (which does not write to $de01),
+    -- we do not do this, e.g. the hidden part in Pain by Agony Design uses
+    -- VIC access to cartridge RAM.
     ---------------------------------------------------------------------------
     set_game_exrom: process(enable, ctrl_exrom, ctrl_game, phi2,
+                            ctrl_de01_written,
                             freezer_ready, np_mode)
     begin
-        if enable = '1' and phi2 = '1' then
+        if enable = '1' and (phi2 = '1' or ctrl_de01_written = '0') then
             if freezer_ready = '1' then
                 n_exrom <= '1';
                 n_game <= '0';
