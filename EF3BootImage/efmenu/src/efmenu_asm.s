@@ -214,7 +214,7 @@ start_program_bank = * + 1
 _wait_for_no_key:
         ; Prepare the CIA to scan the keyboard
         ldx #$00
-        sta $dc00       ; Port A: pull down all rows
+        stx $dc00       ; Port A: pull down all rows
         stx $dc03       ; DDRB $00 = input
         dex
         stx $dc02       ; DDRA $ff = output (X is still $ff from copy loop)
