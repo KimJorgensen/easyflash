@@ -68,10 +68,10 @@ init_image  += images/ttn2crom.bin          0x02 0x0000 L
 init_image  += directory.bin                0x10 0x0000 L
 
 init_image  += images/rr38ppal.bin          0x10 0x0000 H
-init_image  += images/apower.bin            0x18 0x0000 H
-#init_image  += images/ar.bin                0x18 0x0000 H
+#init_image  += images/apower.bin            0x18 0x0000 H
+init_image  += images/ar.bin                0x18 0x0000 H
 
-init_image  += images/ss522_2_pal.bin       0x20 0x0000 LH
+#init_image  += images/ss522-2-pal.bin       0x20 0x0000 LH
 
 ###############################################################################
 # The menu image: Contains menu and tools
