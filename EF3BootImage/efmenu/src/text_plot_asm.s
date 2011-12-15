@@ -28,38 +28,20 @@
 
 ; Data import
 .import _text_plot_x
-.import _text_plot_y
+.import _text_plot_addr
+.import _text_plot_fill_len
 
 .import charset_tab_lo
 .import charset_tab_hi
 
-.export _text_plot_char
-
 ; usage of tmp space in this module
 ptr1_char_addr          = ptr1
 ptr2_pixel_addr         = ptr2
-ptr3_tmp_addr           = ptr3
+ptr3_str_addr           = ptr3
 tmp1_pixel_col          = tmp1
 tmp2_current_col        = tmp2
 tmp3_mask               = tmp3
-
-
-; =============================================================================
-; Y coordinate => address of bitmap line
-; *** 2 * 200 bytes ***
-.rodata
-y_pos_to_addr_lo:
-.repeat 25, line
-.repeat 8, n
-        .byte <(P_GFX_BITMAP + n + line * 320)
-.endrep
-.endrep
-y_pos_to_addr_hi:
-.repeat 25, line
-.repeat 8, n
-        .byte >(P_GFX_BITMAP + n + line * 320)
-.endrep
-.endrep
+tmp4_str_offset         = tmp4
 
 ; =============================================================================
 ; X coordinate => mask
@@ -69,41 +51,29 @@ x_pos_to_mask:
 
 ; =============================================================================
 ;
-; void __fastcall__ text_plot_char(char ch);
+; void __fastcall__ text_plot_str(const char* ch);
 ;
-; Plot the character ch to the bitmap at _text_plot_x/_text_plot_y.
-; No clipping here.
+; Plot the character ch to the bitmap at _text_plot_addr.
+; The parameter _text_plot_x must be consistent with _text_plot_addr.
+; No clipping here. The string must be 0-terminated and shorter then 255 chars.
 ;
 ; in:
-;       A = ch
+;       AX => str
 ;
 ; out:
 ;   -
 ;
+; =============================================================================
 .code
-_text_plot_char:
-        ; get address of character bitmap
-        tay
-        lda charset_tab_lo, y
-        sta ptr1_char_addr
-        lda charset_tab_hi, y
-        sta ptr1_char_addr + 1
+.export _text_plot_str
+_text_plot_str:
+        sta ptr3_str_addr
+        stx ptr3_str_addr + 1
 
-        ; get address of first pixel line in destination bitmap
-        ldy _text_plot_y
-        lda y_pos_to_addr_lo, y
+        ; get pointer to bitmap target
+        lda _text_plot_addr
         sta ptr2_pixel_addr
-        lda y_pos_to_addr_hi, y
-        sta ptr2_pixel_addr + 1
-
-        ; add offset of X coordinate
-        lda _text_plot_x
-        and #255 - 7                    ; 8 pixels = 1 byte
-        clc
-        adc ptr2_pixel_addr
-        sta ptr2_pixel_addr
-        lda _text_plot_x + 1
-        adc ptr2_pixel_addr + 1
+        lda _text_plot_addr + 1
         sta ptr2_pixel_addr + 1
 
         ; calculate bit mask for first pixel row
@@ -114,52 +84,59 @@ _text_plot_char:
         sta tmp3_mask
 
         ldy #0
+        sty tmp4_str_offset
+next_char:
+        ldy tmp4_str_offset
+        lda (ptr3_str_addr), y          ; load next char
+        bne :+
+        rts
+:
+        inc tmp4_str_offset
+
+        ; get address of character bitmap
+        tay
+        lda charset_tab_lo, y
+        sta ptr1_char_addr
+        lda charset_tab_hi, y
+        sta ptr1_char_addr + 1
+
+        ldy #0
         sty tmp2_current_col            ; save index of column
         lda (ptr1_char_addr), y         ; get pixels for column
 @next_column:
         sta tmp1_pixel_col              ; save pixels of column
 
-        ; restore start values for this line
-        ldy ptr2_pixel_addr
-        sty ptr3_tmp_addr
-        ldy ptr2_pixel_addr + 1
-        sty ptr3_tmp_addr + 1
-
-        ; calc number of line with simple addr inc
-        lda _text_plot_y                ; absolute Y
-        eor #$ff
-        and #$07                        ; 0 => 7, 1 => 6 etc.
-        tax
-        inx                             ; => number of lines w/ simple inc
-
         ldy #0                          ; relative Y, 0..7
+        ldx tmp3_mask
 .repeat 8, n
         ror tmp1_pixel_col              ; next bit (pixel) into C
         bcc :+                          ; no pixel => skip
-        lda tmp3_mask
-        ora (ptr3_tmp_addr), y          ; put pixel
-        sta (ptr3_tmp_addr), y
-:
-        dex                             ; simple addr inc?
-        bne :+                          ; no new 320-byte line
-        lda ptr3_tmp_addr
-        clc
-        adc #<(320 - 8)
-        sta ptr3_tmp_addr
-        lda ptr3_tmp_addr + 1
-        adc #>(320 - 8)
-        sta ptr3_tmp_addr + 1
+        txa
+        ora (ptr2_pixel_addr), y          ; put pixel
+        sta (ptr2_pixel_addr), y
 :
         iny
 .endrep
-
-        inc _text_plot_x
+        lsr tmp3_mask                   ; update mask for next row
         bne :+
-        inc _text_plot_x + 1
+        jsr new_target_byte
 :
-        lda _text_plot_x
-        and #7
-        bne @no_new_addr
+        inc tmp2_current_col            ; index of next column
+        ldy tmp2_current_col
+        lda (ptr1_char_addr), y         ; get pixels for column
+        bne @next_column
+
+        ; end_of_char:
+        lsr tmp3_mask                   ; update mask for next row
+        bne :+                          ; (for space between chars)
+        jsr new_target_byte
+:
+        jmp next_char
+
+; update pointer to next byte in X-direction and reset mask
+new_target_byte:
+        lda #$80
+        sta tmp3_mask
         lda ptr2_pixel_addr             ; advance to next byte
         clc
         adc #8
@@ -167,15 +144,35 @@ _text_plot_char:
         bcc :+
         inc ptr2_pixel_addr + 1
 :
-@no_new_addr:
-        lda tmp3_mask                   ; update mask for next row
-        lsr a
-        ror tmp3_mask
+        rts
 
-        inc tmp2_current_col            ; index of next column
-        ldy tmp2_current_col
-        lda (ptr1_char_addr), y         ; get pixels for column
-        beq @end
-        jmp @next_column
-@end:
+; =============================================================================
+;
+; void __fastcall__ text_fill_line_color(uint16_t len_col);
+;
+; Fill len bytes from text_plot_addr with color.
+;
+; in:
+;       AX => len in X, color in A
+;
+; out:
+;   -
+;
+; =============================================================================
+.code
+.export _text_fill_line_color
+_text_fill_line_color:
+        ldy _text_plot_addr
+        sty ptr1
+        ldy _text_plot_addr + 1
+        sty ptr1 + 1
+
+        stx tmp1
+        ldy tmp1
+        beq @ret
+@fill:
+        dey
+        sta (ptr1), y
+        bne @fill
+@ret:
         rts
