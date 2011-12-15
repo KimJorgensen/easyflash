@@ -42,7 +42,7 @@ all: $(name).crt
 headers := $(wildcard $(INCLUDE)/*.h)
 
 obj/%.s: src/%.c obj $(headers)
-	cc65 -t c64 -T -Or --static-locals -I $(INCLUDE) $(DEFINE) -o $@ $<
+	cc65 -t c64 -T -O --static-locals -I $(INCLUDE) $(DEFINE) -o $@ $<
 
 ###############################################################################
 obj/%.o: obj/%.s obj
@@ -75,9 +75,7 @@ obj:
 $(name).bin: $(obj) $(ld_config)
 	ld65 -o $@ -m $@.map -Ln $@.labels -C $(ld_config) $(obj) \
 		-L /usr/local/lib/cc65/lib --lib c64.lib
-ifeq "$(release)" "yes"
-	cp $@ $@-$(version).prg
-endif
+	cat $@.map | grep -e "^Name\|^CODE\|^DATA\|^BSS\|^RODATA\|^LOWCODE"
 
 .PHONY: clean
 clean:
