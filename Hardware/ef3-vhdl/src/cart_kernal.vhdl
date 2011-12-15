@@ -41,7 +41,7 @@ entity cart_kernal is
         addr:               in  std_logic_vector(15 downto 0);
         data:               in  std_logic_vector(7 downto 0);
         button_crt_reset:   in  std_logic;
-        flash_addr:         out std_logic_vector(22 downto 0);
+        flash_addr:         out std_logic_vector(19 downto 0);
         a14:                out std_logic;
         n_game:             out std_logic;
         n_exrom:            out std_logic;
@@ -80,7 +80,7 @@ begin
     end process;
 
     ---------------------------------------------------------------------------
-    -- 
+    --
     ---------------------------------------------------------------------------
     detect_hiram: process(enable, clk)
     begin

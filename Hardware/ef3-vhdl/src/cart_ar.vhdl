@@ -43,7 +43,7 @@ entity cart_ar is
         button_crt_reset:   in  std_logic;
         button_special_fn:  in  std_logic;
         freezer_ready:      in  std_logic;
-        flash_addr:         out std_logic_vector(22 downto 0);
+        flash_addr:         out std_logic_vector(19 downto 0);
         ram_addr:           out std_logic_vector(14 downto 0);
         n_game:             out std_logic;
         n_exrom:            out std_logic;
@@ -72,7 +72,7 @@ architecture behav of cart_ar is
     signal bank:                std_logic_vector(2 downto 0);
 
     signal addr_00_01:          boolean;
-    
+
     -- special mode for Nordic/Atomic Power
     signal np_mode:             boolean;
 begin
@@ -82,7 +82,7 @@ begin
 
     np_mode <= true when
         ctrl_exrom = '1' and ctrl_game = '0' and ctrl_ram = '1'
-        else false;           
+        else false;
 
     start_reset <= enable and button_crt_reset;
 
@@ -178,7 +178,7 @@ begin
                                     ctrl_kill       <= data(2);
                                     ctrl_exrom      <= data(1);
                                     ctrl_game       <= data(0);
-                                    
+
                                 when x"01" =>
                                     -- write control register $de01
                                         bank        <= data(7) & data(4 downto 3);
@@ -218,7 +218,7 @@ begin
     -- When ctrl_de01_written = '1' a RR firmware is running. In this case
     -- leave GAME and EXROM in VIC-II cycles to avoid flickering when software
     -- uses the Ultimax mode. This seems to be the case with the RR loader.
-    -- 
+    --
     -- When there is AR firmware running (which does not write to $de01),
     -- we do not do this, e.g. the hidden part in Pain by Agony Design uses
     -- VIC access to cartridge RAM.
@@ -320,28 +320,28 @@ begin
     -- Combinatorically create the next memory address.
     --
     -- Memory mapping of AR binary in Flash and AR RAM:
-    -- Address Bit                21098765432109876543210
-    --                            2221111111111  .
-    -- Bits needed for RAM/Flash:           .    .
-    --   RAM (32 ki * 8)                  *************** (14..0)
-    --   Flash (8 Mi * 8)         *********************** (22..0)
+    -- Address Bit                98765432109876543210
+    --                            1111111111  .
+    -- Bits needed for RAM/Flash:        .    .
+    --   RAM (32 ki * 8)               *************** (14..0)
+    --   Flash (8 Mi * 8)         ******************** (19..0)
     -- Used in AR mode:
-    --   mem_addr(22 downto 15)   000010Sb                (22..15)
-    --   mem_addr(14 downto 13)           BB              (14..13)
-    --   mem_addr(12 downto 0)              AAAAAAAAAAAAA (12..0)
+    --   mem_addr(19 downto 15)   010Sb                (19..15)
+    --   mem_addr(14 downto 13)        BB              (14..13)
+    --   mem_addr(12 downto 0)           AAAAAAAAAAAAA (12..0)
     --
     -- A    = Address from C64 bus to address 8k per bank
     -- b    = AR bank(2)
     -- B    = AR bank(1 downto 0) or "00" for RAM
     -- S    = AR slot
-    -- "0001010" corresponds to EF Bank 10:1, this is the AR slot 0
-    -- "0001011" corresponds to EF Bank 18:1, this is the AR slot 1
+    -- "1010" corresponds to EF Bank 10:1, this is the AR slot 0
+    -- "1011" corresponds to EF Bank 18:1, this is the AR slot 1
     --
     ---------------------------------------------------------------------------
     create_mem_addr: process(bank, addr, n_io1, n_io2, n_romh,
                              np_mode)
     begin
-        flash_addr <= "0001010" & bank & addr(12 downto 0);
+        flash_addr <= "1010" & bank & addr(12 downto 0);
 
        if n_io1 = '0' or n_io2 = '0' or np_mode then
            -- no RAM banking in IO-space and in NP mode
