@@ -45,7 +45,8 @@ entity cart_easyflash is
         io1_addr_0x_rdy:   in  std_logic;
         button_crt_reset:  in std_logic;
         button_special_fn: in std_logic;
-        flash_addr:     out std_logic_vector(22 downto 0);
+        slot:           out std_logic_vector(2 downto 0);
+        flash_addr:     out std_logic_vector(19 downto 0);
         ram_addr:       out std_logic_vector(14 downto 0);
         n_game:         out std_logic;
         n_exrom:        out std_logic;
@@ -60,21 +61,20 @@ entity cart_easyflash is
 end cart_easyflash;
 
 -- Memory mapping:
--- Bit                        21098765432109876543210
---                            2221111111111  .
--- Bits needed for RAM/Flash:           .    .
---   RAM (32 ki * 8)                  *************** (14..0)
---   Flash (8 Mi * 8)         *********************** (22..0)
+-- Bit                        98765432109876543210
+--                            1111111111  .
+-- Bits needed for RAM/Flash:        .    .
+--   RAM (32 ki * 8)               *************** (14..0)
+--   Flash (8 Mi * 8)         ******************** (19..0)
 -- Used in EF mode:
---   mem_addr(22 downto 15)   SSSLBBBB                (22..15)
---   mem_addr(14 downto 13)           MM              (14..13)
---   mem_addr(12 downto 0)              AAAAAAAAAAAAA (12..0)
+--   mem_addr(19 downto 15)   LBBBB                (19..15)
+--   mem_addr(14 downto 13)        MM              (14..13)
+--   mem_addr(12 downto 0)           AAAAAAAAAAAAA (12..0)
 --
 -- A    = Address from C64 bus to address 8k per bank
 -- B/M  = Bank number as set with $de00
 -- M    = Shared between RAM and Flash, 00 for RAM, flash_bank(1 downto 0) for Flash
 -- L    = ROML/ROMH, 0 for ROML banks
--- S    = new_slot number as set with $de01
 --
 -- Only flash_bank(1 downto 0) is saved in this entity. This is needed because
 -- these bits are used by RAM and ROM.
@@ -88,7 +88,7 @@ architecture behav of cart_easyflash is
 
     signal data_out_valid_i:    std_logic;
 
-    signal slot:                std_logic_vector(2 downto 0);
+    signal slot_i:              std_logic_vector(2 downto 0);
     signal bank:                std_logic_vector(5 downto 0);
     signal ctrl_game:           std_logic;
     signal ctrl_exrom:          std_logic;
@@ -120,20 +120,20 @@ begin
     ---------------------------------------------------------------------------
     -- Combinatorically create the next memory address.
     ---------------------------------------------------------------------------
-    create_mem_addr: process(n_io2, n_roml, slot, bank, addr)
+    create_mem_addr: process(n_io2, n_roml, slot_i, bank, addr)
     begin
-        flash_addr <= slot & n_roml & bank & addr(12 downto 0);
+        flash_addr <= n_roml & bank & addr(12 downto 0);
         ram_addr   <= "0000000" & addr(7 downto 0);
     end process;
 
     ---------------------------------------------------------------------------
     --
     ---------------------------------------------------------------------------
-    create_data_out: process(data_out_valid_i, slot)
+    create_data_out: process(data_out_valid_i, slot_i)
     begin
         data_out <= (others => '0');
         if data_out_valid_i = '1' then
-            data_out <= "00000" & slot;
+            data_out <= "00000" & slot_i;
         end if;
     end process;
 
@@ -150,7 +150,7 @@ begin
             ctrl_no_vicii <= '0';
             bank <= (others => '0');
             if n_sys_reset = '0' or reset_to_menu = '1' then
-                slot <= (others => '0');
+                slot_i <= (others => '0');
             end if;
         elsif rising_edge(clk) then
             if enable = '1' then
@@ -164,7 +164,7 @@ begin
 
                             when x"1" =>
                                 -- $de01
-                                slot <= data(2 downto 0);
+                                slot_i <= data(2 downto 0);
 
                             when x"2" =>
                                 -- $de02
@@ -197,7 +197,7 @@ begin
     end process;
 
     data_out_valid <= data_out_valid_i;
-    slot <= slot;
+    slot <= slot_i;
     bank <= bank;
 
     ---------------------------------------------------------------------------

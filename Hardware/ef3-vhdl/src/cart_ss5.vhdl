@@ -43,7 +43,7 @@ entity cart_ss5 is
         button_crt_reset:   in  std_logic;
         button_special_fn:  in  std_logic;
         freezer_ready:      in  std_logic;
-        flash_addr:         out std_logic_vector(22 downto 0);
+        flash_addr:         out std_logic_vector(19 downto 0);
         ram_addr:           out std_logic_vector(14 downto 0);
         n_game:             out std_logic;
         n_exrom:            out std_logic;
@@ -118,8 +118,8 @@ begin
                     ctrl_exrom      <= '0';
                     ctrl_game       <= '0';
                 end if;
-                
-                if ctrl_kill = '0' and bus_ready = '1' and 
+
+                if ctrl_kill = '0' and bus_ready = '1' and
                         n_io1 = '0' and n_wr = '0' then
                     -- write control register $de00
                     bank            <= data(4) & data(2);
@@ -141,7 +141,7 @@ begin
         elsif rising_edge(clk) then
             if enable = '1' and freezer_ready = '1' and ctrl_game = '1' then
                 reset_freezer <= '1';
-            else            
+            else
                 reset_freezer <= '0';
             end if;
         end if; -- clk
@@ -206,15 +206,15 @@ begin
     -- Combinatorically create the next memory address.
     --
     -- Memory mapping of SS5 binary in Flash and SS5 RAM:
-    -- Address Bit                21098765432109876543210
-    --                            2221111111111  .
-    -- Bits needed for RAM/Flash:           .    .
-    --   RAM (32 ki * 8)                  *************** (14..0)
-    --   Flash (8 Mi * 8)         *********************** (22..0)
+    -- Address Bit                98765432109876543210
+    --                            1111111111  .
+    -- Bits needed for RAM/Flash:        .    .
+    --   RAM (32 ki * 8)               *************** (14..0)
+    --   Flash (8 Mi * 8)         ******************** (19..0)
     -- Used in AR mode:
-    --   mem_addr(22 downto 15)   000L1010                (22..15)
-    --   mem_addr(14 downto 13)           BB              (14..13)
-    --   mem_addr(12 downto 0)              AAAAAAAAAAAAA (12..0)
+    --   mem_addr(19 downto 15)   L1010                (19..15)
+    --   mem_addr(14 downto 13)        BB              (14..13)
+    --   mem_addr(12 downto 0)           AAAAAAAAAAAAA (12..0)
     --
     -- A    = Address from C64 bus to address 8k per bank
     -- B    = SS5 bank(1 downto 0)
@@ -224,7 +224,7 @@ begin
     ---------------------------------------------------------------------------
     create_mem_addr: process(bank, addr, n_io1, n_io2, n_roml)
     begin
-        flash_addr <= "000" & addr(13) & "1000" & bank & addr(12 downto 0);
+        flash_addr <= addr(13) & "1000" & bank & addr(12 downto 0);
         ram_addr   <= bank & addr(12 downto 0);
     end process;
 
