@@ -487,8 +487,9 @@ EAPIEraseSector:
         stx EAPI_WRITE_ADDR_LO  ; backup of X only, no parameter
         sty EAPI_WRITE_ADDR_HI
         php
+        ldx EAPI_SHADOW_SLOT    ; slot 0?
+        bne seNormal
         cmp #0          ; bank 0?
-        ; todo: nur auf Slot 0
         bne seNormal
         cpy #$80        ; ROML?
         bne seNormal
