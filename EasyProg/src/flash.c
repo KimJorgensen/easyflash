@@ -91,11 +91,11 @@ uint8_t eraseSector(uint8_t nBank, uint8_t nChip)
 
 /******************************************************************************/
 /**
- * Erase all sectors of all chips.
+ * Erase all sectors of all chips of the current slot (or: the whole EF1).
  *
  * return 1 for success, 0 for failure
  */
-uint8_t eraseAll(void)
+uint8_t eraseSlot(void)
 {
     uint8_t nBank;
     uint8_t nChip;

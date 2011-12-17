@@ -51,6 +51,7 @@
 static void showAbout(void);
 static void toggleFastLoader(void);
 static void checkEraseAll(void);
+static void checkEraseSlot(void);
 static uint8_t returnTrue(void);
 static uint8_t ifHaveValidFlash(void);
 static uint8_t ifEF3(void);
@@ -107,7 +108,7 @@ ScreenMenu menuMain =
             0
         },
         {
-            "Write &AR/RR/NP to flash",
+            "Write A&R/RR/NP to flash",
             checkWriteARImage,
             ifEF3,
             0
@@ -119,21 +120,15 @@ ScreenMenu menuMain =
             0
         },
         {
-            "&Erase all",
+            "Erase &all",
             checkEraseAll,
             returnTrue, //ifHaveValidFlash,
             0
         },
         {
-            "&Start cartridge",
-            utilResetStartCartridge,
-            returnTrue,
-            0
-        },
-        {
-            "&Reset, cartridge off",
-            utilResetKillCartridge,
-            returnTrue,
+            "Erase &slot",
+            checkEraseSlot,
+            ifEF3,
             0
         },
         { NULL, NULL, 0, 0 }
@@ -524,15 +519,46 @@ static void toggleFastLoader(void)
  */
 static void checkEraseAll(void)
 {
+    uint8_t i;
+
     if (screenAskEraseDialog() == BUTTON_ENTER)
     {
         checkFlashType();
-        eraseAll();
+        for (i = 0; i < g_nSlots; ++i)
+        {
+            slotSelect(i);
+            eraseSlot();
+        }
 
         // remove the name, it's not valid anymore
         g_strFileName[0] =
         g_strCartName[0] = '\0';
 
+        internalCartType = INTERNAL_CART_TYPE_NONE;
+    }
+}
+
+
+/******************************************************************************/
+/**
+ * Ask the user if it is okay to erase a slot and do so if yes.
+ */
+static void checkEraseSlot(void)
+{
+    if (g_nSlots > 1)
+    {
+        if (!checkAskForSlot())
+            return;
+    }
+
+    if (screenAskEraseDialog() == BUTTON_ENTER)
+    {
+        checkFlashType();
+        eraseSlot();
+
+        // remove the name, it's not valid anymore
+        g_strFileName[0] =
+        g_strCartName[0] = '\0';
         internalCartType = INTERNAL_CART_TYPE_NONE;
     }
 }
