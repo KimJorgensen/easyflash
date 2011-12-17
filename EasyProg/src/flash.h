@@ -49,7 +49,7 @@ uint8_t chipFromOffset(uint32_t offset);
 
 uint8_t eraseSector(uint8_t nBank, uint8_t nChip);
 
-uint8_t eraseAll(void);
+uint8_t eraseSlot(void);
 
 uint8_t flashWrite(uint8_t nChip, uint16_t nOffset, uint8_t nVal);
 

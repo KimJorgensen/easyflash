@@ -16,10 +16,6 @@
 #define OPEN_FILE_TYPE_CRT     9
 #define OPEN_FILE_TYPE_PRG    10
 
-
-
-void utilResetStartCartridge(void);
-void utilResetKillCartridge(void);
 void __fastcall__ utilAppendHex1(uint8_t n);
 void __fastcall__ utilAppendHex2(uint8_t n);
 void __fastcall__ utilAppendChar(char c);

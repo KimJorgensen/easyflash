@@ -51,31 +51,6 @@ EASYFLASH_16K     = $07
 
 
 ; =============================================================================
-;
-; Prepare the cartridge for being started and reset.
-;
-; =============================================================================
-.export _utilResetStartCartridge
-_utilResetStartCartridge:
-        lda #EASYFLASH_LED | EASYFLASH_ULTIMAX
-        sta EASYFLASH_CONTROL
-        lda #0
-        sta EASYFLASH_BANK
-        jmp ($fffc)
-
-
-; =============================================================================
-;
-; Disable the cartridge and reset.
-;
-; =============================================================================
-.export _utilResetKillCartridge
-_utilResetKillCartridge:
-        lda #EASYFLASH_KILL
-        sta EASYFLASH_CONTROL
-        jmp ($fffc)
-
-; =============================================================================
 ; hex digits
 ; =============================================================================
 .rodata
