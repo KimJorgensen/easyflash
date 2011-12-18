@@ -153,18 +153,18 @@ begin
             ctrl_game  <= easyflash_boot;
             data_out_valid_i <= '0';
             ctrl_no_vicii <= '0';
-            if n_sys_reset = '0' or reset_to_menu = '1' or start_reset_i = '1' then
+            if n_sys_reset = '0' or reset_to_menu = '1' then
                 -- Slot and Bank are used for all cartridges, so reset them in
                 -- these situations only
                 slot_i <= (others => '0');
                 bank_hi_i <= (others => '0');
                 bank_lo   <= (others => '0');
-                if  then
-                    -- Reset Bank (not Slot) when current EF is restarted
-                    bank_hi_i <= (others => '0');
-                    bank_lo   <= (others => '0');
-            end if;            
             end if;
+            if start_reset_i = '1' then
+                -- Reset Bank (not Slot) when current EF is restarted
+                bank_hi_i <= (others => '0');
+                bank_lo   <= (others => '0');
+            end if;            
         elsif rising_edge(clk) then
             if enable = '1' then
                 if io1_addr_0x_rdy = '1' then
