@@ -1,4 +1,10 @@
 
+ifeq "$(release)" "yes"
+	version := 0.9.0
+else
+	version := $(shell date +%y%m%d-%H%M)
+endif
+
 here 		:= $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 synth_dir 	:= $(here)/synth
 src_dir		:= $(here)/src
@@ -41,10 +47,23 @@ fit_filter_output := "^CS: block property:\|^$$"
 # directories to be created
 dirs       := $(synth_dir) $(here)/log
 
+.PHONY: all
+ifeq "$(release)" "yes"
+all: ef3-cpld-$(version).zip
+else
 all: $(svf)
+endif
 
 ################################################################################
+ef3-cpld-$(version).zip: $(svf) README.txt
+	rm -rf ef3-cpld-$(version)
+	rm -f $@
+	mkdir ef3-cpld-$(version)
+	cp $(svf) ef3-cpld-$(version)/ef3-cpld-$(version).svf
+	cp README.txt ef3-cpld-$(version)
+	zip -v -r $@ ef3-cpld-$(version)
 
+################################################################################
 .PHONY: netlist
 netlist: $(netlist)
 $(netlist): $(xst_cfg) $(src) $(project) | $(dirs)
