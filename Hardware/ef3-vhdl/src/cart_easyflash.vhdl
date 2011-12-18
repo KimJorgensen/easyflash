@@ -46,7 +46,8 @@ entity cart_easyflash is
         button_crt_reset:  in std_logic;
         button_special_fn: in std_logic;
         slot:           out std_logic_vector(2 downto 0);
-        flash_addr:     out std_logic_vector(19 downto 0);
+        bank_hi:        out std_logic_vector(2 downto 0);
+        flash_addr:     out std_logic_vector(16 downto 0);
         ram_addr:       out std_logic_vector(14 downto 0);
         n_game:         out std_logic;
         n_exrom:        out std_logic;
@@ -67,12 +68,13 @@ end cart_easyflash;
 --   RAM (32 ki * 8)               *************** (14..0)
 --   Flash (8 Mi * 8)         ******************** (19..0)
 -- Used in EF mode:
---   mem_addr(19 downto 15)   LBBBB                (19..15)
+--   mem_addr(19 downto 15)   HHHLB                (19..15)
 --   mem_addr(14 downto 13)        MM              (14..13)
 --   mem_addr(12 downto 0)           AAAAAAAAAAAAA (12..0)
 --
 -- A    = Address from C64 bus to address 8k per bank
--- B/M  = Bank number as set with $de00
+-- H    = Bank number (high bits) as set with $de00
+-- B/M  = Bank number (low bits) as set with $de00
 -- M    = Shared between RAM and Flash, 00 for RAM, flash_bank(1 downto 0) for Flash
 -- L    = ROML/ROMH, 0 for ROML banks
 --
@@ -87,9 +89,11 @@ architecture behav of cart_easyflash is
     signal easyflash_boot:      std_logic := '1';
 
     signal data_out_valid_i:    std_logic;
+    signal start_reset_i:       std_logic;
 
     signal slot_i:              std_logic_vector(2 downto 0);
-    signal bank:                std_logic_vector(5 downto 0);
+    signal bank_hi_i:           std_logic_vector(2 downto 0);
+    signal bank_lo:             std_logic_vector(2 downto 0);
     signal ctrl_game:           std_logic;
     signal ctrl_exrom:          std_logic;
     signal ctrl_no_vicii:       std_logic;
@@ -103,26 +107,27 @@ begin
         if n_sys_reset = '0' or reset_to_menu = '1' then
             easyflash_boot <= '1';
         elsif rising_edge(clk) then
+            start_reset_i <= '0';
             if enable = '1' then
                 if button_special_fn = '1' then
                     easyflash_boot <= '0';
-                    start_reset <= '1';
+                    start_reset_i <= '1';
                 elsif button_crt_reset = '1' then
                     easyflash_boot <= '1';
-                    start_reset <= '1';
-                else
-                    start_reset <= '0';
+                    start_reset_i <= '1';
                 end if;
             end if;
         end if;
     end process;
 
+    start_reset <= start_reset_i;
+
     ---------------------------------------------------------------------------
     -- Combinatorically create the next memory address.
     ---------------------------------------------------------------------------
-    create_mem_addr: process(n_io2, n_roml, slot_i, bank, addr)
+    create_mem_addr: process(n_io2, n_roml, bank_lo, addr)
     begin
-        flash_addr <= n_roml & bank & addr(12 downto 0);
+        flash_addr <= n_roml & bank_lo & addr(12 downto 0);
         ram_addr   <= "0000000" & addr(7 downto 0);
     end process;
 
@@ -141,16 +146,24 @@ begin
     --
     ---------------------------------------------------------------------------
     rw_control_regs: process(clk, n_reset, n_sys_reset, enable,
-                             easyflash_boot, reset_to_menu)
+                             easyflash_boot, reset_to_menu, start_reset_i)
     begin
         if n_reset = '0' then
             ctrl_exrom <= '0';
             ctrl_game  <= easyflash_boot;
             data_out_valid_i <= '0';
             ctrl_no_vicii <= '0';
-            bank <= (others => '0');
-            if n_sys_reset = '0' or reset_to_menu = '1' then
+            if n_sys_reset = '0' or reset_to_menu = '1' or start_reset_i = '1' then
+                -- Slot and Bank are used for all cartridges, so reset them in
+                -- these situations only
                 slot_i <= (others => '0');
+                bank_hi_i <= (others => '0');
+                bank_lo   <= (others => '0');
+                if  then
+                    -- Reset Bank (not Slot) when current EF is restarted
+                    bank_hi_i <= (others => '0');
+                    bank_lo   <= (others => '0');
+            end if;            
             end if;
         elsif rising_edge(clk) then
             if enable = '1' then
@@ -160,7 +173,8 @@ begin
                         case addr(3 downto 0) is
                             when x"0" =>
                                 -- $de00
-                                bank <= data(5 downto 0);
+                                bank_hi_i <= data(5 downto 3);
+                                bank_lo   <= data(2 downto 0);
 
                             when x"1" =>
                                 -- $de01
@@ -198,7 +212,7 @@ begin
 
     data_out_valid <= data_out_valid_i;
     slot <= slot_i;
-    bank <= bank;
+    bank_hi <= bank_hi_i;
 
     ---------------------------------------------------------------------------
     -- Leave GAME and EXROM in VIC-II cycles to avoid flickering when software
