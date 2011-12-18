@@ -43,7 +43,7 @@ entity cart_ss5 is
         button_crt_reset:   in  std_logic;
         button_special_fn:  in  std_logic;
         freezer_ready:      in  std_logic;
-        flash_addr:         out std_logic_vector(19 downto 0);
+        flash_addr:         out std_logic_vector(16 downto 0);
         ram_addr:           out std_logic_vector(14 downto 0);
         n_game:             out std_logic;
         n_exrom:            out std_logic;
@@ -212,10 +212,11 @@ begin
     --   RAM (32 ki * 8)               *************** (14..0)
     --   Flash (8 Mi * 8)         ******************** (19..0)
     -- Used in AR mode:
-    --   mem_addr(19 downto 15)   L1010                (19..15)
+    --   mem_addr(19 downto 15)   HHHL0                (19..15)
     --   mem_addr(14 downto 13)        BB              (14..13)
     --   mem_addr(12 downto 0)           AAAAAAAAAAAAA (12..0)
     --
+    -- H    = Bank number (high bits) as set by cart_easyflash
     -- A    = Address from C64 bus to address 8k per bank
     -- B    = SS5 bank(1 downto 0)
     -- L    = ROML/ROMH, we use A13 just as the real cartridge
@@ -224,7 +225,7 @@ begin
     ---------------------------------------------------------------------------
     create_mem_addr: process(bank, addr, n_io1, n_io2, n_roml)
     begin
-        flash_addr <= addr(13) & "1000" & bank & addr(12 downto 0);
+        flash_addr <= addr(13) & '0' & bank & addr(12 downto 0);
         ram_addr   <= bank & addr(12 downto 0);
     end process;
 

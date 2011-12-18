@@ -43,7 +43,7 @@ entity cart_ar is
         button_crt_reset:   in  std_logic;
         button_special_fn:  in  std_logic;
         freezer_ready:      in  std_logic;
-        flash_addr:         out std_logic_vector(19 downto 0);
+        flash_addr:         out std_logic_vector(16 downto 0);
         ram_addr:           out std_logic_vector(14 downto 0);
         n_game:             out std_logic;
         n_exrom:            out std_logic;
@@ -326,14 +326,14 @@ begin
     --   RAM (32 ki * 8)               *************** (14..0)
     --   Flash (8 Mi * 8)         ******************** (19..0)
     -- Used in AR mode:
-    --   mem_addr(19 downto 15)   010Sb                (19..15)
+    --   mem_addr(19 downto 15)   BBB1b                (19..15)
     --   mem_addr(14 downto 13)        BB              (14..13)
     --   mem_addr(12 downto 0)           AAAAAAAAAAAAA (12..0)
     --
     -- A    = Address from C64 bus to address 8k per bank
+    -- H    = Bank number (high bits) as set by cart_easyflash
     -- b    = AR bank(2)
     -- B    = AR bank(1 downto 0) or "00" for RAM
-    -- S    = AR slot
     -- "1010" corresponds to EF Bank 10:1, this is the AR slot 0
     -- "1011" corresponds to EF Bank 18:1, this is the AR slot 1
     --
@@ -341,7 +341,7 @@ begin
     create_mem_addr: process(bank, addr, n_io1, n_io2, n_romh,
                              np_mode)
     begin
-        flash_addr <= "1010" & bank & addr(12 downto 0);
+        flash_addr <= '1' & bank & addr(12 downto 0);
 
        if n_io1 = '0' or n_io2 = '0' or np_mode then
            -- no RAM banking in IO-space and in NP mode
