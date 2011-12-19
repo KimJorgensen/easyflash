@@ -26,6 +26,10 @@ License
 Changes
 =======
 
+Version 0.9.1 - 19.12.2011
+
+- Weird glitch in A14 fixed
+
 Version 0.9.0 - 18.12.2011
 
 - First pre-release

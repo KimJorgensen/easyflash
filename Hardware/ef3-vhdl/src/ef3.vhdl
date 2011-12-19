@@ -28,7 +28,7 @@ use ieee.numeric_std.all;
 entity ef3 is
     port ( addr:                inout std_logic_vector (15 downto 0);
            data:                inout std_logic_vector (7 downto 0);
-           n_dma:               inout std_logic;
+           n_dma:               in std_logic;
            ba:                  in std_logic;
            n_roml:              in std_logic;
            n_romh:              in std_logic;
@@ -700,7 +700,7 @@ begin
 
     n_game <= n_game_out; -- when ((n_game and n_game_out) = '0') else 'Z';
 
-    addr(14) <= kernal_a14;
+    addr(14) <= '0' when kernal_a14 = '0' else 'Z';
 
     ---------------------------------------------------------------------------
     --

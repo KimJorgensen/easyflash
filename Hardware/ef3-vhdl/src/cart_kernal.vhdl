@@ -95,7 +95,7 @@ begin
                 end if;
                 if kernal_read_active and hiram_detect_ready = '1' then
                     -- ROMH reflects HIRAM now
-                    a14 <= 'Z';
+                    a14 <= '1';
                     if n_romh = '1' then
                         -- ram
                         n_game  <= '1';
@@ -109,13 +109,13 @@ begin
                     -- KERNAL read complete
                     n_game  <= '1';
                     n_exrom <= '1';
-                    a14 <= 'Z';
+                    a14 <= '1';
                     kernal_read_active <= false;
                 end if;
             else
                 n_game  <= '1';
                 n_exrom <= '1';
-                a14 <= 'Z';
+                a14 <= '1';
                 hiram <= '0';
             end if; -- enable
         end if; -- clk
