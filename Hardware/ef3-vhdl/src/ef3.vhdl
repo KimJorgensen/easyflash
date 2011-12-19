@@ -28,7 +28,7 @@ use ieee.numeric_std.all;
 entity ef3 is
     port ( addr:                inout std_logic_vector (15 downto 0);
            data:                inout std_logic_vector (7 downto 0);
-           n_dma:               in std_logic;
+           n_dma:               out std_logic;
            ba:                  in std_logic;
            n_roml:              in std_logic;
            n_romh:              in std_logic;
