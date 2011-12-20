@@ -70,7 +70,7 @@ static efmenu_entry_t ef_menu[] =
 static efmenu_entry_t special_menu[] =
 {
         { 'r',  0,  0x10,   1,  MODE_AR,           "R", "Replay Slot 1" },
-        { 'z',  0,  0x18,   1,  MODE_AR,           "Z", "Replay Slot 2" },
+        { 'y',  0,  0x18,   1,  MODE_AR,           "Y", "Replay Slot 2" },
         { 's',  0,  0x20,   1,  MODE_SS5,          "S", "Super Snapshot 5" },
         { 'p',  0,  9,      1,  MODE_EF_NO_RESET,  "P", "EasyProg" },
         { 'k',  0,  0,      1,  MODE_KILL,         "K", "Kill Cartridge" },
@@ -80,7 +80,7 @@ static efmenu_entry_t special_menu[] =
 static efmenu_t all_menus[] =
 {
         {  2,  2, 10, kernal_menu },
-        { 22, 13, 10, ef_menu },
+        { 22, 13,  9, ef_menu },
         {  2, 15,  8, special_menu },
         {  0, 0, NULL }
 };
@@ -130,6 +130,10 @@ static void show_menu(void)
     const efmenu_t* menu;
     const efmenu_entry_t* entry;
 
+    memset(P_GFX_COLOR + 24 * 40, COLOR_GRAY1 << 4 | COLOR_LIGHTBLUE, 4);
+    memset(P_GFX_BITMAP + 8 * (24 * 40), 0, 4 * 8);
+    text_plot_puts(0, 1, 24, EFVERSION);
+
     menu = all_menus;
     while (menu->pp_entries)
     {
@@ -138,8 +142,8 @@ static void show_menu(void)
         entry = menu->pp_entries;
         while (entry->key)
         {
-            text_plot_puts(menu->x_pos,     4, y, 0x2f, entry->label);
-            text_plot_puts(menu->x_pos + 2, 0, y, 0x2f, entry->name);
+            text_plot_puts(menu->x_pos,     4, y, entry->label);
+            text_plot_puts(menu->x_pos + 2, 0, y, entry->name);
 
             if (menu_entry_is_valid(entry))
                 color = COLOR_BLACK << 4 | COLOR_GRAY3;
