@@ -94,7 +94,7 @@ void slotsFillEFDir(void)
  * Let the user select a slot. Return the slot number.
  * Return 0xff if the user canceled the selection.
  */
-uint8_t __fastcall__ selectSlotDialog(uint8_t nSlots)
+uint8_t __fastcall__ selectSlotDialog(void)
 {
 	SelectBoxEntry* pEntries;
     SelectBoxEntry* pEntry;
@@ -108,11 +108,11 @@ uint8_t __fastcall__ selectSlotDialog(uint8_t nSlots)
     	return 0;
     }
 
-    // termination for strings with strlen() == 16
+    // termination for strings with strlen() == EF_DIR_ENTRY_SIZE
     // and termination for list
     memset(pEntries, 0, (FLASH_MAX_SLOTS + 1) * sizeof(SelectBoxEntry));
 
-    for (nSlot = 0; nSlot < nSlots; ++nSlot)
+    for (nSlot = 0; nSlot < g_nSlots; ++nSlot)
     {
         pEntry = pEntries + nSlot;
         // take care: target must be at least as large as source
@@ -149,7 +149,7 @@ uint8_t selectKERNALSlotDialog(void)
         return 0;
     }
 
-    // termination for strings with strlen() == 16
+    // termination for strings with strlen() == EF_DIR_ENTRY_SIZE
     // and termination for list
     memset(pEntries, 0, (FLASH_MAX_SLOTS + 1) * sizeof(SelectBoxEntry));
 
@@ -180,35 +180,15 @@ uint8_t selectKERNALSlotDialog(void)
  */
 uint8_t selectARSlotDialog(void)
 {
-    SelectBoxEntry* pEntries;
-    SelectBoxEntry* pEntry;
-    char*           pLabel;
-    uint8_t         nSlot, rv;
-
-    slotsFillEFDir();
-    pEntries = malloc((MAX_ARS + 1) * sizeof(SelectBoxEntry));
-    if (!pEntries)
+    const SelectBoxEntry aEntries[3] =
     {
-        screenPrintSimpleDialog(apStrOutOfMemory);
-        return 0;
-    }
+            { "AR/RR/NP 1", 0 },
+            { "AR/RR/NP 2", 0 },
+            { "", 0 }
+    };
+    uint8_t rv;
 
-    // termination for strings with strlen() == 16
-    // and termination for list
-    memset(pEntries, 0, (FLASH_MAX_SLOTS + 1) * sizeof(SelectBoxEntry));
-
-    pEntry = pEntries;
-    for (nSlot = 1; nSlot <= MAX_ARS; ++nSlot)
-    {
-        // take care: target must be at least as large as source
-        strcpy(utilStr, "AR/RR/NP ");
-        utilAppendDecimal(nSlot);
-        strcpy(pEntry->label, utilStr);
-        ++pEntry;
-    }
-
-    rv = selectBox(pEntries, "an AR/RR/NP slot");
-    free(pEntries);
+    rv = selectBox(aEntries, "an AR/RR/NP slot");
     return rv;
 }
 
@@ -228,7 +208,7 @@ uint8_t __fastcall__ checkAskForSlot(void)
         for (;;)
         {
             refreshMainScreen();
-            s = selectSlotDialog(g_nSlots);
+            s = selectSlotDialog();
             if (s == 0xff)
                 return 0;
 
@@ -267,7 +247,7 @@ void __fastcall__ slotSelect(uint8_t slot)
  * Read the slot directory from flash, set the name of an EF slot or a KERNAL
  * in the slot directory and write it back to flash.
  *
- * If nKERNAL is ~0, the name is written to EF Slot number g_nSelectedSlot.
+ * If nKERNAL is 0xff, the name is written to EF Slot number g_nSelectedSlot.
  * Otherwise nKERNAL contains the KERNAL slot number.
  *
  **/
@@ -296,4 +276,56 @@ void __fastcall__ slotSaveName(const char* name, uint8_t nKERNAL)
     }
     while (offset < sizeof(m_EFDir));
     g_nSelectedSlot = nSlot;
+}
+
+/******************************************************************************/
+/**
+ */
+void slotsEditDirectory(void)
+{
+    const SelectBoxEntry aEntries[3] =
+    {
+            { "KERNALs", 0 },
+            { "EasyFlash Slots", 0 },
+            { "", 0 }
+    };
+    uint8_t rv, nDir, nKERNAL;
+
+
+    nDir = selectBox(aEntries, "what to edit");
+    if (nDir == 0xff)
+        return;
+
+    for (;;)
+    {
+        if (nDir == 0)
+        {
+            nKERNAL = selectKERNALSlotDialog();
+            if (nKERNAL == 0xff)
+                return;
+
+            memset(utilStr, 0, UTIL_STR_SIZE);
+            memcpy(utilStr, m_EFDir.kernals[nKERNAL], EF_DIR_ENTRY_SIZE);
+        }
+        else
+        {
+            nKERNAL = 0xff;
+            rv = selectSlotDialog();
+            if (rv == 0xff)
+                return;
+            g_nSelectedSlot = rv;
+
+            if (g_nSelectedSlot == 0)
+            {
+                screenPrintSimpleDialog(apStrSlot0NoDir);
+                continue; // urks!
+            }
+            else
+            {
+                memset(utilStr, 0, UTIL_STR_SIZE);
+                memcpy(utilStr, m_EFDir.slots[g_nSelectedSlot], EF_DIR_ENTRY_SIZE);
+            }
+        }
+        slotSaveName(screenReadInput("Name", utilStr), nKERNAL);
+    }
 }

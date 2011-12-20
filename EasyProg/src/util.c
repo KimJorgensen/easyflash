@@ -38,7 +38,7 @@
 
 
 // globally visible string buffer for functions used here
-char utilStr[80];
+char utilStr[UTIL_STR_SIZE];
 
 // points to utilRead function to be used to read bytes from file
 unsigned int __fastcall__ (*utilRead)(void* buffer, unsigned int size);

@@ -203,6 +203,12 @@ ScreenMenu menuExpert =
             returnTrue, //ifHaveValidFlash,
             0
         },
+        {
+            "&Edit directory",
+            slotsEditDirectory,
+            ifEF3,
+            0
+        },
         { NULL, NULL, 0, 0 }
     }
 };
