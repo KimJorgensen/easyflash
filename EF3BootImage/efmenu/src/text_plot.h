@@ -7,7 +7,7 @@
 
 void __fastcall__ text_plot_puts(
         uint8_t x_pos, uint8_t x_offset, uint8_t y_pos,
-        uint8_t color, const char* str);
+        const char* str);
 
 void __fastcall__ text_set_line_color(
         uint8_t x_pos, uint8_t y_pos, uint8_t color);
