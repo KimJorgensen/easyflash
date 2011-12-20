@@ -1,6 +1,6 @@
 
 ifeq "$(release)" "yes"
-	version := 1.5.2
+	version := 1.6.0
 else
 	version := $(shell date +%y%m%d-%H%M)
 endif

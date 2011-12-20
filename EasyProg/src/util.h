@@ -6,6 +6,8 @@
 
 #define UTIL_GLOBAL_READ_LFN 2
 
+#define UTIL_STR_SIZE 80
+
 // return values for utilOpenFile
 #define OPEN_FILE_OK        0
 #define OPEN_FILE_ERR       1
@@ -43,7 +45,7 @@ extern int32_t nUtilExoBytesRemaining;
 extern const uint8_t* pFallbackDriverStart;
 extern const uint8_t* pFallbackDriverEnd;
 
-extern char utilStr[];
+extern char utilStr[UTIL_STR_SIZE];
 
 typedef struct EasySplitHeader_s
 {

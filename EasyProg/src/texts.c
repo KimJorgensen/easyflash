@@ -135,6 +135,13 @@ const char* apStrSlot0[] =
         NULL
 };
 
+const char* apStrSlot0NoDir[] =
+{
+        "This entry cannot",
+        "be modified.",
+        NULL
+};
+
 const char* apStrEraseFailed[] =
 {
         "Flash erase failed,",
