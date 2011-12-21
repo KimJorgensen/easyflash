@@ -7,7 +7,7 @@ name := efmenu
 ifneq "$(release)" "yes"
 	version := $(shell date +%y%m%d-%H%M)
 else
-	version := 1.0.0
+	version := 1.0.1
 endif
 
 ld65_version := $(shell [ `ld65 -V 2>&1 | sed -e 's/\(ld65 V\)\([0-9\.]*\)\( .*\)/\2/g; q'` \< "2.13.9" ] && echo old)
