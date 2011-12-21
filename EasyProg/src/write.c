@@ -229,6 +229,8 @@ static uint8_t writeCrtImage(void)
     uint8_t rv;
     uint8_t nBankOffset;
 
+    g_strCartName[0] = '\0';
+
     setStatus("Reading CRT image");
     if (!readCartHeader())
     {
@@ -299,6 +301,8 @@ static uint8_t __fastcall__ writeBinImage(uint8_t nStartBank,
 {
     uint16_t nOffset;
     int      nBytes;
+
+    g_strCartName[0] = '\0';
 
     // this will show the cartridge type from the header
     refreshMainScreen();
