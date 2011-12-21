@@ -232,7 +232,7 @@ uint8_t flashWriteBankFromFile(uint8_t nBank, uint8_t nChip,
 
         progressSetBankState(nBank, nChip, oldState);
 
-        // Check if EAPI has to be replaced
+        // Check if EAPI has to be replaced and check for CRT name
         if (nBank == 0 && nChip == 1)
         {
             if (nOffset == 0x1800 &&
