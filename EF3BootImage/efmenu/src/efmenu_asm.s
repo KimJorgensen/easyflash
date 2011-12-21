@@ -213,14 +213,16 @@ start_program_bank = * + 1
 .export _wait_for_no_key
 _wait_for_no_key:
         ; Prepare the CIA to scan the keyboard
+        sei
         ldx #$00
         stx $dc00       ; Port A: pull down all rows
         stx $dc03       ; DDRB $00 = input
         dex
-        stx $dc02       ; DDRA $ff = output (X is still $ff from copy loop)
+        stx $dc02       ; DDRA $ff = output
 wfnk:
         lda $dc01
         cmp #$ff        ; still a key pressed?
         bne wfnk
+        cli
         rts
 
