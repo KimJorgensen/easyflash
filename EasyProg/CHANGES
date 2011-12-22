@@ -1,4 +1,8 @@
 
+Version 1.6.2 - 22.12.2011
+- EasySplit files work again
+- Bing! when EasyProg askes for the cartridge name
+
 Version 1.6.1 - 21.12.2011
 - Initialize the cartridge name when a new CRT file is flashed
 
