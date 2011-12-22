@@ -30,11 +30,13 @@
 .import         _utilStr
 .import         _utilAskForNextFile
 .import         _getCrunchedByte
+.import         __EXOBUFFER_START__
+.import         __EXOBUFFER_SIZE__
 
 .export buffer_start_hi: absolute
 .export buffer_len_hi: absolute
-buffer_start_hi   = $80             ; see ld.cfg (EXOBUFFER)
-buffer_len_hi     = $10             ; see EASY_SPLIT_MAX_EXO_OFFSET and ld.cfg
+buffer_start_hi   = >__EXOBUFFER_START__
+buffer_len_hi     = >__EXOBUFFER_SIZE__  ; see EASY_SPLIT_MAX_EXO_OFFSET
 
 ; Kernal I/O Status Word ST
 ST                = $90
