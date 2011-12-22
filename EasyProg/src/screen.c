@@ -164,7 +164,7 @@ void screenInit(void)
  */
 void screenBing(void)
 {
-    unsigned f;
+    uint16_t f;
 
     SID.amp = 0x0f;
 
@@ -579,6 +579,7 @@ const char* __fastcall__ screenReadInput(const char* pStrTitle,
     static char strInput[FILENAME_MAX];
     char c;
 
+    screenBing();
     strcpy(strInput, pStrDefault);
     len = strlen(strInput);
 
