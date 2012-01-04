@@ -61,7 +61,6 @@ const char strChipSignature[4] = CHIP_SIGNATURE;
 uint8_t readCartHeader()
 {
     int rv;
-    uint8_t i;
 
     rv = utilRead(&cartHeader, sizeof(cartHeader));
     if (rv != sizeof(cartHeader))
