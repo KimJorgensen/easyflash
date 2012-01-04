@@ -71,15 +71,16 @@ void progressShow(void)
  * Set the state of a single bank. The display is updated automatically.
  * Only the bits in FLASH_BANK_MASK are used.
  */
-void __fastcall__ progressSetBankState(uint8_t nBank, uint8_t nChip,
+void __fastcall__ progressSetBankState(const EasyFlashAddr* pAddr,
                                        uint8_t state)
 {
-    nBank &= FLASH_BANK_MASK;
-    if (nChip < 2)
+    int8_t nBank = pAddr->nBank & FLASH_BANK_MASK;
+
+    if (pAddr->nChip < 2)
     {
-        m_aBlockStates[g_nSelectedSlot][nChip][nBank] =
+        m_aBlockStates[g_nSelectedSlot][pAddr->nChip][nBank] =
                 state;
-        progressDisplayBank(nBank, nChip, state);
+        progressDisplayBank(nBank, pAddr->nChip, state);
     }
 }
 

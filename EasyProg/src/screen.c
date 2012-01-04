@@ -41,9 +41,6 @@ const char* pStrHexDigits = "0123456789ABCDEF";
 /* Menu currently shown or NULL */
 static ScreenMenu* pCurrentMenu;
 
-/* Number of entries in the current menu. No meaning if there is no current menu. */
-static uint8_t nCurrentMenuEntries;
-
 /******************************************************************************/
 /**
  * Return 1 if the menu entry has the shortcut 'key', 0 otherwise.
@@ -523,25 +520,6 @@ uint8_t __fastcall__ screenAskEraseDialog(void)
     return screenPrintDialog(apStrAskErase, BUTTON_ENTER | BUTTON_STOP);
 }
 
-
-/******************************************************************************/
-/**
- * Print a dialog with a verify error and wait for <Stop> or <Enter>.
- */
-void __fastcall__ screenPrintVerifyError(uint8_t nBank, uint8_t nChip,
-                                         uint16_t nOffset,
-                                         uint8_t nData,
-                                         uint8_t nFlashVal)
-{
-    utilStr[0] = '\0';
-    utilAppendFlashAddr(nBank, nChip, nOffset);
-    utilAppendStr(": data ");
-    utilAppendHex2(nData);
-    utilAppendStr(" != flash ");
-    utilAppendHex2(nFlashVal);
-
-    screenPrintTwoLinesDialog("Verify error at", utilStr);
-}
 
 /******************************************************************************/
 /**

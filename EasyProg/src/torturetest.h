@@ -3,12 +3,11 @@
 #define TORTURETEST_H_
 
 #include <stdint.h>
+#include "flash.h"
 
-void __fastcall__ tortureTestFillBuffer(const uint8_t* pBuffer,
-                                        const EasyFlashAddr* pAddr);
+void __fastcall__ tortureTestFillBuffer(const EasyFlashAddr* pAddr);
 uint16_t __fastcall__ tortureTestBanking(void);
-uint16_t __fastcall__ tortureTestCompare(const uint8_t* pBuffer,
-                                         const EasyFlashAddr* pAddr);
+uint16_t __fastcall__ tortureTestCompare(const EasyFlashAddr* pAddr);
 uint8_t __fastcall__ tortureTestCheckRAM(void);
 
 void tortureTestComplete(void);

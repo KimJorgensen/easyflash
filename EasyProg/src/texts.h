@@ -13,7 +13,6 @@ extern const char* apStrAbout[];
 
 extern const char* apStrUnsupportedCRTType[];
 extern const char* apStrUnsupportedCRTData[];
-extern const char* apStrWriteCRTFailed[];
 extern const char* apStrFileTooShort[];
 extern const char* apStrFileNoEasySplit[];
 extern const char* apStrWrongFlash[];

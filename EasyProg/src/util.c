@@ -177,16 +177,16 @@ uint8_t utilAskForNextFile(void)
 /**
  *
  */
-void __fastcall__ utilAppendFlashAddr(uint8_t nBank,
-                                      uint8_t nChip,
-                                      uint16_t nOffset)
+void __fastcall__ utilAppendFlashAddr(const EasyFlashAddr* pAddr)
 {
-    utilAppendHex2(nBank & FLASH_BANK_MASK);
+    utilAppendHex2(pAddr->nSlot);
     utilAppendChar(':');
-    utilAppendHex1(nChip);
+    utilAppendHex2(pAddr->nBank & FLASH_BANK_MASK);
     utilAppendChar(':');
-    utilAppendHex2(nOffset >> 8);
-    utilAppendHex2(nOffset);
+    utilAppendHex1(pAddr->nChip);
+    utilAppendChar(':');
+    utilAppendHex2(pAddr->nOffset >> 8);
+    utilAppendHex2(pAddr->nOffset);
 }
 
 

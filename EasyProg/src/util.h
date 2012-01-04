@@ -3,6 +3,7 @@
 #define UTIL_H
 
 #include <stdint.h>
+#include "flash.h"
 
 #define UTIL_GLOBAL_READ_LFN 2
 
@@ -23,8 +24,7 @@ void __fastcall__ utilAppendHex2(uint8_t n);
 void __fastcall__ utilAppendChar(char c);
 void __fastcall__ utilAppendStr(const char* str);
 
-void __fastcall__ utilAppendFlashAddr(uint8_t nBank,
-                                      uint8_t nChip, uint16_t nOffset);
+void __fastcall__ utilAppendFlashAddr(const EasyFlashAddr* pAddr);
 void __fastcall__ utilAppendDecimal(uint16_t n);
 
 uint8_t utilOpenFile(uint8_t nPart);

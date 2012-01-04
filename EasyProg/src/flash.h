@@ -44,6 +44,16 @@
 /// Address of High ROM when being in Ultimax mode
 #define ROM1_BASE_ULTIMAX   ((uint8_t*) 0xE000)
 
+/// This structure contains an EasyFlash address 00:0:0000
+typedef struct EasyFlashAddr_s
+{
+    uint8_t     nSlot;
+    uint8_t     nBank;
+    uint8_t     nChip;
+    uint16_t    nOffset;
+}
+EasyFlashAddr;
+
 uint8_t bankFromOffset(uint32_t offset);
 uint8_t chipFromOffset(uint32_t offset);
 
@@ -51,13 +61,15 @@ uint8_t eraseSector(uint8_t nBank, uint8_t nChip);
 
 uint8_t eraseSlot(void);
 
+void __fastcall__ flashPrintVerifyError(EasyFlashAddr* pAddr,
+                                        uint8_t nData,
+                                        uint8_t nFlashVal);
+
 uint8_t flashWrite(uint8_t nChip, uint16_t nOffset, uint8_t nVal);
 
-uint8_t __fastcall__ flashWriteBlock(uint8_t nBank, uint8_t nChip,
-                                     uint16_t nOffset);
+uint8_t __fastcall__ flashWriteBlock(const EasyFlashAddr* pAddr);
 
-uint8_t __fastcall__ flashVerifyBlock(uint8_t nBank, uint8_t nChip,
-                                      uint16_t nOffset);
+uint8_t __fastcall__ flashVerifyBlock(const EasyFlashAddr* pAddr);
 
 uint8_t flashWriteBankFromFile(uint8_t nBank, uint8_t nChip,
                                 uint16_t nSize);
