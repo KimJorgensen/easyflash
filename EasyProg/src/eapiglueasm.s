@@ -154,8 +154,8 @@ _efCopyCartROM:
 ; The bank must be set up already. The whole block must be located in one bank
 ; and in one flash chip.
 ;
-; Return 0 for success, the bad flash memory address for error
-; uint8_t* __fastcall__ efVerifyFlash(uint8_t* pFlash);
+; Return 0x100 for success, the offset (0..255) for error
+; uint16_t __fastcall__ efVerifyFlash(uint8_t* pFlash);
 ;
 ; Do not call this from Ultimax mode, use normal addresses (8000/a000)
 ;
@@ -163,7 +163,7 @@ _efCopyCartROM:
 ;       flash address in AX (A = low)
 ;
 ; return:
-;       result in AX (A = low), 0 = okay, address in flash = error
+;       result in AX (A = low), 0x100 = okay, offset = error
 ;
 ; =============================================================================
 .export _efVerifyFlash
@@ -188,19 +188,14 @@ cmpaddr = * + 1
         iny
         bne l1
 
-        ; okay, return NULL
+        ; okay, return 0x100
         tya
-        tax
+        lda #1
         jmp ret4
 bad:
-        ; return bad flash address
-        ldx cmpaddr + 1     ; high byte
-        clc
+        ; return bad offset
         tya
-        adc cmpaddr         ; low byte + bad offset
-        bcc nohigh
-        inx
-nohigh:
+        ldx #0
 ret4:
         jsr _efHideROM
         ldy #EASYFLASH_KILL

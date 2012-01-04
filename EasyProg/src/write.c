@@ -85,18 +85,6 @@ static uint8_t readNextHeader()
 
 /******************************************************************************/
 /**
- * Show an error dialog because writing a CRT image failed.
- * Return CART_RV_ERR
- */
-static uint8_t writeCRTError(void)
-{
-    screenPrintSimpleDialog(apStrWriteCRTFailed);
-    return CART_RV_ERR;
-}
-
-
-/******************************************************************************/
-/**
  * Write the startup code to 00:1:xxxx. Patch it to use the right memory
  * configuration for the present cartridge type.
  *
@@ -108,6 +96,7 @@ static uint8_t writeCRTError(void)
  */
 static uint8_t __fastcall__ writeStartUpCode(uint8_t* pBankOffset)
 {
+    EasyFlashAddr addr;
     uint8_t  nConfig;
 
     // most CRT types are put on bank 1
@@ -156,21 +145,28 @@ static uint8_t __fastcall__ writeStartUpCode(uint8_t* pBankOffset)
     BLOCK_BUFFER[1] = nConfig | EASYFLASH_IO_BIT_LED;
 
     // write the startup code to bank 0, always write 2 * 256 bytes
-    if (!flashWriteBlock(0, 1, 0x1e00))
+    addr.nSlot = g_nSelectedSlot;
+    addr.nBank = 0;
+    addr.nChip = 1;
+    addr.nOffset = 0x1e00;
+    if (!flashWriteBlock(&addr))
         goto err;
 
     memcpy(BLOCK_BUFFER, startUpStart + 0x100, 0x100);
-    if (!flashWriteBlock(0, 1, 0x1f00))
+    addr.nOffset = 0x1f00;
+    if (!flashWriteBlock(&addr))
     	goto err;
 
     // write the sprites to 00:1:1800
     // keep this in sync with sprites.s
     memcpy(BLOCK_BUFFER, pSprites, 0x100);
-    if (!flashWriteBlock(0, 1, 0x1800))
+    addr.nOffset = 0x1800;
+    if (!flashWriteBlock(&addr))
         goto err;
 
     memcpy(BLOCK_BUFFER, pSprites + 0x100, 0x100);
-    if (!flashWriteBlock(0, 1, 0x1900))
+    addr.nOffset = 0x1900;
+    if (!flashWriteBlock(&addr))
         goto err;
 
     return CART_RV_OK;
@@ -299,7 +295,7 @@ static uint8_t __fastcall__ writeBinImage(uint8_t nStartBank,
                                           uint8_t nChip,
                                           uint8_t interleaved)
 {
-    uint16_t nOffset;
+    EasyFlashAddr addr;
     int      nBytes;
 
     g_strCartName[0] = '\0';
@@ -307,8 +303,10 @@ static uint8_t __fastcall__ writeBinImage(uint8_t nStartBank,
     // this will show the cartridge type from the header
     refreshMainScreen();
 
-    m_nBank = nStartBank;
-    nOffset = 0;
+    addr.nSlot = g_nSelectedSlot;
+    addr.nBank = nStartBank;
+    addr.nChip = nChip;
+    addr.nOffset = 0;
     do
     {
         nBytes = utilRead(BLOCK_BUFFER, 0x100);
@@ -316,34 +314,34 @@ static uint8_t __fastcall__ writeBinImage(uint8_t nStartBank,
         if (nBytes > 0)
         {
             // the last block may be smaller than 265 bytes, then we write padding
-            if (!flashWriteBlock(m_nBank, nChip, nOffset))
+            if (!flashWriteBlock(&addr))
                 goto retError;
 
-            if (!flashVerifyBlock(m_nBank, nChip, nOffset))
+            if (!flashVerifyBlock(&addr))
                 goto retError;
 
-            nOffset += 0x100;
-            if (nOffset == 0x2000)
+            addr.nOffset += 0x100;
+            if (addr.nOffset == 0x2000)
             {
-                nOffset = 0;
+                addr.nOffset = 0;
                 if (interleaved)
                 {
-                    if (nChip == 0)
-                        nChip = 1;
+                    if (addr.nChip == 0)
+                        addr.nChip = 1;
                     else
                     {
-                        nChip = 0;
-                        ++m_nBank;
+                        addr.nChip = 0;
+                        ++addr.nBank;
                     }
                 }
                 else
-                    ++m_nBank;
+                    ++addr.nBank;
             }
         }
     }
     while (nBytes == 0x100);
 
-    if (nOffset || m_nBank)
+    if (addr.nOffset || addr.nBank)
     {
         eload_close();
         timerStop();

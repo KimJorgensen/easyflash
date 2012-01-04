@@ -61,13 +61,6 @@ const char* apStrUnsupportedCRTData[] =
         NULL
 };
 
-const char* apStrWriteCRTFailed[] =
-{
-        "Failed to write the CRT image",
-        "to flash.",
-        NULL
-};
-
 const char* apStrFileTooShort[] =
 {
         "This file seems to be",

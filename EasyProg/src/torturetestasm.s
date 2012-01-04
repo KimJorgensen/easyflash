@@ -26,11 +26,9 @@
 
 .import         popax
 
-.import _efShowROM
-.import _efHideROM
-
-; address of buffer
-zpbuff   = ptr1
+.import         _efShowROM
+.import         _efHideROM
+.import         __BLOCK_BUFFER_START__
 
 ; address of EasyFlash address
 zpaddr   = ptr2
@@ -65,11 +63,6 @@ _tortureTestFillBuffer:
         sta zpaddr
         stx zpaddr + 1
 
-        ; get and save address of buffer
-        jsr popax
-        sta zpbuff
-        stx zpbuff + 1
-
         ; get high-byte of offset
         ldy #4
         lda (zpaddr), y
@@ -83,7 +76,7 @@ _tortureTestFillBuffer:
         lda (zpaddr), y
         dey
 fillWithBank:
-        sta (zpbuff), y
+        sta __BLOCK_BUFFER_START__, y
         iny
         iny
         bne fillWithBank
@@ -93,7 +86,7 @@ fillWithBank:
         ldy #0
 fillWithChip:
         iny
-        sta (zpbuff), y
+        sta __BLOCK_BUFFER_START__, y
         iny
         bne fillWithChip
         rts
@@ -126,7 +119,7 @@ fillConst:
         ; fill the buffer with the value in A
         ldy #0
 fillConst1:
-        sta (zpbuff), y
+        sta __BLOCK_BUFFER_START__, y
         iny
         bne fillConst1
         rts
@@ -139,7 +132,7 @@ notLT6k:
         ldy #0
 fillInc:
         tya
-        sta (zpbuff), y
+        sta __BLOCK_BUFFER_START__, y
         iny
         bne fillInc
         rts
@@ -150,7 +143,7 @@ notLT7k:
         ldx #255
 fillDec:
         txa
-        sta (zpbuff), y
+        sta __BLOCK_BUFFER_START__, y
         dex
         iny
         bne fillDec
@@ -214,8 +207,7 @@ bankError:
 ; Note: This function and all data must not be below ROM!
 ;       Therefore LOWCODE must be for code and HIRAM or BLOCK_BUFFER for data.
 ;
-; uint16_t __fastcall__ tortureTestCompare(const uint8_t* pBuffer,
-;                                          const EasyFlashAddr* pAddr);
+; uint16_t __fastcall__ tortureTestCompare(const EasyFlashAddr* pAddr);
 ;
 ; parameters:
 ;       pAddr in AX
@@ -232,11 +224,6 @@ _tortureTestCompare:
         ; remember address of EasyFlash address
         sta zpaddr
         stx zpaddr + 1
-
-        ; get and save address of buffer
-        jsr popax
-        sta zpbuff
-        stx zpbuff + 1
 
         jsr _efShowROM
 
@@ -275,7 +262,7 @@ compare:
         ldy #0
 cmp1:
         lda (zpoffs), y
-        cmp (zpbuff), y
+        cmp __BLOCK_BUFFER_START__, y
         bne different
         iny
         bne cmp1        ; Y = 0

@@ -50,7 +50,7 @@
 /**
  * Write the test data to the cartridge.
  *
- * return 1 for success, 0 for failure
+ * return 1 for success, 0 for failure/stop
  */
 static uint8_t tortureTestWriteData(void)
 {
@@ -66,12 +66,15 @@ static uint8_t tortureTestWriteData(void)
             {
                 for (addr.nOffset = 0; addr.nOffset < 0x2000; addr.nOffset += 256)
                 {
-                    tortureTestFillBuffer(BLOCK_BUFFER, &addr);
+                    tortureTestFillBuffer(&addr);
 
-                    if (!flashWriteBlock(addr.nBank, addr.nChip, addr.nOffset))
+                    if (!flashWriteBlock(&addr))
                     {
                         return 0;
                     }
+
+                    if (kbhit() && cgetc() == CH_STOP)
+                        return 0;
                 }
             }
         }
@@ -82,39 +85,45 @@ static uint8_t tortureTestWriteData(void)
 
 /******************************************************************************/
 /**
- * Verify the test data on the cartridge on the given bank.
+ * Verify the test data on the cartridge on all banks. The slot number
+ * must have been set and activated already.
  *
- * return 1 for success, 0 for failure
+ * return 1 for success, 0 for failure/stop
  */
-static uint8_t tortureTestVerify(uint8_t nBank)
+static uint8_t tortureTestVerify(void)
 {
     EasyFlashAddr   addr;
     uint16_t        rv;
     uint8_t         nData;
     uint8_t         nFlash;
 
-    addr.nBank = nBank;
+    addr.nSlot = g_nSelectedSlot;
 
-    for (addr.nChip = 0; addr.nChip < 2; ++addr.nChip)
+    for (addr.nBank = 0; addr.nBank < FLASH_NUM_BANKS; ++addr.nBank)
     {
-        for (addr.nOffset = 0; addr.nOffset < 0x2000; addr.nOffset += 256)
+        for (addr.nChip = 0; addr.nChip < 2; ++addr.nChip)
         {
-            tortureTestFillBuffer(BLOCK_BUFFER, &addr);
-
-            rv = tortureTestCompare(BLOCK_BUFFER, &addr);
-
-            if (rv != 256)
+            for (addr.nOffset = 0; addr.nOffset < 0x2000; addr.nOffset += 256)
             {
-                nData = BLOCK_BUFFER[rv];
-                if (addr.nChip)
-                    nFlash = efPeekCartROM(ROM1_BASE + addr.nOffset + rv);
-                else
-                    nFlash = efPeekCartROM(ROM0_BASE + addr.nOffset + rv);
+                tortureTestFillBuffer(&addr);
 
-                screenPrintVerifyError(addr.nBank, addr.nChip, addr.nOffset
-                        + rv, nData, nFlash);
-                return 0;
+                rv = tortureTestCompare(&addr);
+
+                if (rv != 256)
+                {
+                    nData = BLOCK_BUFFER[rv];
+                    if (addr.nChip)
+                        nFlash = efPeekCartROM(ROM1_BASE + addr.nOffset + rv);
+                    else
+                        nFlash = efPeekCartROM(ROM0_BASE + addr.nOffset + rv);
+
+                    addr.nOffset += rv;
+                    flashPrintVerifyError(&addr, nData, nFlash);
+                    return 0;
+                }
             }
+            if (kbhit() && cgetc() == CH_STOP)
+                return 0;
         }
     }
 
@@ -154,7 +163,7 @@ static uint8_t tortureTestFlashIds(void)
 static void tortureTest(uint8_t bComplete)
 {
     uint16_t rv;
-    uint16_t nLoop;
+    uint16_t nLoop, nSlot;
 
     if (bComplete)
     {
@@ -170,7 +179,8 @@ static void tortureTest(uint8_t bComplete)
         return;
 
     if (bComplete)
-    	tortureTestWriteData();
+    	if (!tortureTestWriteData())
+    	    return;
 
     for (nLoop = 0; ; ++nLoop)
     {
@@ -199,13 +209,15 @@ static void tortureTest(uint8_t bComplete)
         if (!tortureTestFlashIds())
             return;
 
-        if (!tortureTestVerify(nLoop % FLASH_NUM_BANKS))
-            return;
+        for (nSlot = 0; nSlot < g_nSlots; ++nSlot)
+        {
+            slotSelect(nSlot); // also refreshes the screen
 
-        if (kbhit() && cgetc() == CH_STOP)
-            return;
+            if (!tortureTestVerify())
+                return;
+        }
 
-        if (nLoop == FLASH_NUM_BANKS)
+        if (nLoop == 0)
             screenPrintDialog(apStrTestComplete, 0);
     }
 }

@@ -253,6 +253,7 @@ void __fastcall__ slotSelect(uint8_t slot)
  **/
 void __fastcall__ slotSaveName(const char* name, uint8_t nKERNAL)
 {
+    EasyFlashAddr addr;
     uint16_t offset;
     uint8_t  nSlot;
 
@@ -265,14 +266,17 @@ void __fastcall__ slotSaveName(const char* name, uint8_t nKERNAL)
     else
         strncpy(m_EFDir.slots[nSlot], name, sizeof(m_EFDir.slots[0]));
 
+    addr.nSlot = EF_DIR_SLOT;
+    addr.nBank = EF_DIR_BANK;
+    addr.nChip = 0;
+    addr.nOffset = 0;
     // slotsFillEFDir initialized EAPI etc. for us already
     eraseSector(EF_DIR_BANK, 0);
-    offset = 0;
     do
     {
         memcpy(BLOCK_BUFFER, ((uint8_t*) &m_EFDir) + offset, 256);
-        flashWriteBlock(EF_DIR_BANK, 0, offset);
-        offset += 256;
+        flashWriteBlock(&addr);
+        addr.nOffset += 256;
     }
     while (offset < sizeof(m_EFDir));
     g_nSelectedSlot = nSlot;

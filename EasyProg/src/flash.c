@@ -13,6 +13,7 @@
 #include "flash.h"
 #include "screen.h"
 #include "eapiglue.h"
+#include "slots.h"
 #include "progress.h"
 #include "easyprog.h"
 #include "torturetest.h"
@@ -123,43 +124,61 @@ uint8_t eraseSlot(void)
  *
  * return 1 for success, 0 for failure
  */
-uint8_t __fastcall__ flashWriteBlock(uint8_t nBank, uint8_t nChip,
-                                     uint16_t nOffset)
+uint8_t __fastcall__ flashWriteBlock(const EasyFlashAddr* pAddr)
 {
     uint16_t rv;
     uint8_t* pDest;
     uint8_t* pNormalBase;
 
     utilStr[0] = 0;
-    utilAppendFlashAddr(nBank, nChip, nOffset);
+    utilAppendFlashAddr(pAddr);
     setStatus(utilStr);
 
-    if (progressGetStateAt(nBank, nChip) == PROGRESS_UNTOUCHED)
+    if (progressGetStateAt(pAddr->nBank, pAddr->nChip) == PROGRESS_UNTOUCHED)
     {
-        if (!eraseSector(nBank, nChip))
+        if (!eraseSector(pAddr->nBank, pAddr->nChip))
         {
             screenPrintSimpleDialog(apStrEraseFailed);
             return 0;
         }
     }
 
-    eapiSetBank(nBank);
-    pNormalBase = apNormalRomBase[nChip];
+    eapiSetBank(pAddr->nBank);
+    pNormalBase = apNormalRomBase[pAddr->nChip];
 
     // when we write, we have to use the Ultimax address space
-    pDest = apUltimaxRomBase[nChip] + nOffset;
+    pDest = apUltimaxRomBase[pAddr->nChip] + pAddr->nOffset;
 
-    progressSetBankState(nBank, nChip, PROGRESS_WRITING);
+    progressSetBankState(pAddr, PROGRESS_WRITING);
     rv = eapiGlueWriteBlock(pDest);
     if (rv != 0x100)
     {
-         progressSetBankState(nBank, nChip, PROGRESS_UNTOUCHED);
+         progressSetBankState(pAddr, PROGRESS_UNTOUCHED);
          screenPrintSimpleDialog(apStrFlashWriteFailed);
          return 0;
     }
 
-    progressSetBankState(nBank, nChip, PROGRESS_PROGRAMMED);
+    progressSetBankState(pAddr, PROGRESS_PROGRAMMED);
     return 1;
+}
+
+
+/******************************************************************************/
+/**
+ * Print a dialog with a verify error and wait for <Stop> or <Enter>.
+ */
+void __fastcall__ flashPrintVerifyError(EasyFlashAddr* pAddr,
+                                        uint8_t nData,
+                                        uint8_t nFlashVal)
+{
+    utilStr[0] = '\0';
+    utilAppendFlashAddr(pAddr);
+    utilAppendStr(": data ");
+    utilAppendHex2(nData);
+    utilAppendStr(" != flash ");
+    utilAppendHex2(nFlashVal);
+
+    screenPrintTwoLinesDialog("Verify error at", utilStr);
 }
 
 
@@ -173,27 +192,28 @@ uint8_t __fastcall__ flashWriteBlock(uint8_t nBank, uint8_t nChip,
  *
  * return 1 for success (same), 0 for failure
  */
-uint8_t __fastcall__ flashVerifyBlock(uint8_t nBank, uint8_t nChip,
-                                      uint16_t nOffset)
+uint8_t __fastcall__ flashVerifyBlock(const EasyFlashAddr* pAddr)
 {
-    uint8_t* pNormalBase;
+    EasyFlashAddr addrBad;
+    uint16_t rv;
     uint8_t* pFlash;
 
-    progressSetBankState(nBank, nChip, PROGRESS_VERIFYING);
+    progressSetBankState(pAddr, PROGRESS_VERIFYING);
 
-    pNormalBase = apNormalRomBase[nChip];
-    pFlash      = pNormalBase + nOffset;
+    pFlash = apNormalRomBase[pAddr->nChip] + pAddr->nOffset;
 
-    pFlash = efVerifyFlash(pFlash);
-    if (pFlash)
+    rv = efVerifyFlash(pFlash);
+    if (rv < 0x100)
     {
-        nOffset = pFlash - pNormalBase;
-        screenPrintVerifyError(nBank, nChip, nOffset,
-                BLOCK_BUFFER[nOffset], *pFlash);
+        addrBad = *pAddr;
+        addrBad.nSlot    = g_nSelectedSlot;
+        addrBad.nOffset += rv;
+        flashPrintVerifyError(&addrBad, BLOCK_BUFFER[rv],
+                              efPeekCartROM(pFlash));
         return 0;
     }
 
-    progressSetBankState(nBank, nChip, PROGRESS_PROGRAMMED);
+    progressSetBankState(pAddr, PROGRESS_PROGRAMMED);
     return 1;
 }
 
@@ -209,6 +229,7 @@ uint8_t __fastcall__ flashVerifyBlock(uint8_t nBank, uint8_t nChip,
 uint8_t flashWriteBankFromFile(uint8_t nBank, uint8_t nChip,
                                 uint16_t nSize)
 {
+    EasyFlashAddr addr;
     uint8_t  bReplaceEAPI;
     uint8_t  oldState;
     uint16_t nOffset;
@@ -220,19 +241,24 @@ uint8_t flashWriteBankFromFile(uint8_t nBank, uint8_t nChip,
     {
         nBytes = (nSize > FLASH_WRITE_SIZE) ? FLASH_WRITE_SIZE : nSize;
 
+        addr.nSlot = g_nSelectedSlot;
+        addr.nBank = nBank;
+        addr.nChip = nChip;
+        addr.nOffset = nOffset;
+
         oldState = progressGetStateAt(nBank, nChip);
-        progressSetBankState(nBank, nChip, PROGRESS_READING);
+        progressSetBankState(&addr, PROGRESS_READING);
 
         if (utilRead(BLOCK_BUFFER, nBytes) != nBytes)
         {
             screenPrintSimpleDialog(apStrFileTooShort);
-            progressSetBankState(nBank, nChip, PROGRESS_UNTOUCHED);
+            progressSetBankState(&addr, PROGRESS_UNTOUCHED);
             return 0;
         }
 
-        progressSetBankState(nBank, nChip, oldState);
+        progressSetBankState(&addr, oldState);
 
-        // Check if EAPI has to be replaced and check for CRT name
+        // Check if EAPI has to be replaced
         if (nBank == 0 && nChip == 1)
         {
             if (nOffset == 0x1800 &&
@@ -261,10 +287,10 @@ uint8_t flashWriteBankFromFile(uint8_t nBank, uint8_t nChip,
             }
         }
 
-        if (!flashWriteBlock(nBank, nChip, nOffset))
+        if (!flashWriteBlock(&addr))
             return 0;
 
-        if (!flashVerifyBlock(nBank, nChip, nOffset))
+        if (!flashVerifyBlock(&addr))
             return 0;
 
         nSize -= nBytes;

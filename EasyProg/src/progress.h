@@ -26,6 +26,8 @@
 #ifndef PROGRESS_H_
 #define PROGRESS_H_
 
+#include "flash.h"
+
 #define PROGRESS_UNTOUCHED  0x2e // '.'
 #define PROGRESS_ERASING    0x45 // 'E'
 #define PROGRESS_READING    0x52 // 'R' /* from file */
@@ -44,7 +46,7 @@ void progressUpdateDisplay(void);
 void __fastcall__ progressDisplayBank(uint8_t nBank, uint8_t nChip,
                                       uint8_t state);
 
-void __fastcall__ progressSetBankState(uint8_t nBank, uint8_t nChip,
+void __fastcall__ progressSetBankState(const EasyFlashAddr* pAddr,
                                        uint8_t state);
 
 void __fastcall__ progressSetMultipleBanksState(uint8_t nBank, uint8_t nChip,

@@ -31,17 +31,6 @@
 
 #define EF_CART_NAME_LEN 16
 
-/// This structure contains an EasyFlash address 00:0:0000
-typedef struct EasyFlashAddr_s
-{
-    uint8_t     nSlot;
-    uint8_t     nBank;
-    uint8_t     nChip;
-    uint16_t    nOffset;
-}
-EasyFlashAddr;
-
-
 extern uint8_t g_bFastLoaderEnabled;
 extern char g_strCartName[EF_CART_NAME_LEN + 1];
 
