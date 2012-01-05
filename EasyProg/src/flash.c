@@ -197,10 +197,43 @@ uint8_t __fastcall__ flashVerifyBlock(const EasyFlashAddr* pAddr)
     EasyFlashAddr addrBad;
     uint16_t rv;
     uint8_t* pFlash;
+#ifdef EFDEBUG
+    uint16_t i;
+#endif
 
     progressSetBankState(pAddr, PROGRESS_VERIFYING);
+    eapiSetBank(pAddr->nBank);
 
     pFlash = apNormalRomBase[pAddr->nChip] + pAddr->nOffset;
+
+#ifdef EFDEBUG
+    debug_puts("Verify: ");
+    debug_hex_padded(2, pAddr->nBank);
+    debug_putc(':');
+    debug_hex_digit(pAddr->nChip);
+    debug_putc(':');
+    debug_hex_padded(4, pAddr->nOffset);
+    debug_crlf();
+
+    debug_puts("BLOCK-BUFFER:\r\n");
+    for (i = 0; i < 256; ++i)
+    {
+        debug_hex_padded(2, BLOCK_BUFFER[i]);
+        if ((i & 15) == 15)
+            debug_crlf();
+        else
+            debug_putc(' ');
+    }
+    debug_puts("Flash:\r\n");
+    for (i = 0; i < 256; ++i)
+    {
+        debug_hex_padded(2, efPeekCartROM(pFlash + i));
+        if ((i & 15) == 15)
+            debug_crlf();
+        else
+            debug_putc(' ');
+    }
+#endif
 
     rv = efVerifyFlash(pFlash);
     if (rv < 0x100)
@@ -209,7 +242,7 @@ uint8_t __fastcall__ flashVerifyBlock(const EasyFlashAddr* pAddr)
         addrBad.nSlot    = g_nSelectedSlot;
         addrBad.nOffset += rv;
         flashPrintVerifyError(&addrBad, BLOCK_BUFFER[rv],
-                              efPeekCartROM(pFlash));
+                              efPeekCartROM(pFlash + rv));
         return 0;
     }
 
