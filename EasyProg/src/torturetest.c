@@ -99,28 +99,30 @@ static uint8_t tortureTestVerify(void)
 
     addr.nSlot = g_nSelectedSlot;
 
+    debug_puts("tortureTestVerify\r\n");
+
     for (addr.nBank = 0; addr.nBank < FLASH_NUM_BANKS; ++addr.nBank)
     {
+        debug_puts("bank: ");
+        debug_hex_padded(2, addr.nBank);
+        debug_crlf();
+
         for (addr.nChip = 0; addr.nChip < 2; ++addr.nChip)
         {
+            debug_puts("chip: ");
+            debug_hex_digit(addr.nChip);
+            debug_crlf();
+
             for (addr.nOffset = 0; addr.nOffset < 0x2000; addr.nOffset += 256)
             {
+                debug_puts("offset: ");
+                debug_hex_padded(4, addr.nOffset);
+                debug_crlf();
+
                 tortureTestFillBuffer(&addr);
 
-                rv = tortureTestCompare(&addr);
-
-                if (rv != 256)
-                {
-                    nData = BLOCK_BUFFER[rv];
-                    if (addr.nChip)
-                        nFlash = efPeekCartROM(ROM1_BASE + addr.nOffset + rv);
-                    else
-                        nFlash = efPeekCartROM(ROM0_BASE + addr.nOffset + rv);
-
-                    addr.nOffset += rv;
-                    flashPrintVerifyError(&addr, nData, nFlash);
+                if (!flashVerifyBlock(&addr))
                     return 0;
-                }
             }
             if (kbhit() && cgetc() == CH_STOP)
                 return 0;
@@ -216,9 +218,6 @@ static void tortureTest(uint8_t bComplete)
             if (!tortureTestVerify())
                 return;
         }
-
-        if (nLoop == 0)
-            screenPrintDialog(apStrTestComplete, 0);
     }
 }
 
