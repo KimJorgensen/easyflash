@@ -57,5 +57,10 @@ void checkWriteHIROMImage(void);
 void checkWriteKERNALImage(void);
 void checkWriteARImage(void);
 void checkWriteSS5Image(void);
+void checkEraseAll(void);
+void checkEraseSlot(void);
+void checkEraseKERNAL(void);
+void checkEraseAR(void);
+void checkEraseSS5(void);
 
 #endif /* WRITE_H_ */

@@ -50,8 +50,6 @@
 /******************************************************************************/
 static void showAbout(void);
 static void toggleFastLoader(void);
-static void checkEraseAll(void);
-static void checkEraseSlot(void);
 static uint8_t returnTrue(void);
 static uint8_t ifHaveValidFlash(void);
 static uint8_t ifEF3(void);
@@ -128,6 +126,24 @@ ScreenMenu menuMain =
         {
             "Erase &slot",
             checkEraseSlot,
+            ifEF3,
+            0
+        },
+        {
+            "Erase KERNAL",
+            checkEraseKERNAL,
+            ifEF3,
+            0
+        },
+        {
+            "Erase AR/RR/NP",
+            checkEraseAR,
+            ifEF3,
+            0
+        },
+        {
+            "Erase SS5",
+            checkEraseSS5,
             ifEF3,
             0
         },
@@ -521,57 +537,6 @@ static void toggleFastLoader(void)
 
 /******************************************************************************/
 /**
- * Ask the user if it is okay to erase all and do so if yes.
- */
-static void checkEraseAll(void)
-{
-    uint8_t i;
-
-    if (screenAskEraseDialog() == BUTTON_ENTER)
-    {
-        checkFlashType();
-        for (i = 0; i < g_nSlots; ++i)
-        {
-            slotSelect(i);
-            eraseSlot();
-        }
-
-        // remove the name, it's not valid anymore
-        g_strFileName[0] =
-        g_strCartName[0] = '\0';
-
-        internalCartType = INTERNAL_CART_TYPE_NONE;
-    }
-}
-
-
-/******************************************************************************/
-/**
- * Ask the user if it is okay to erase a slot and do so if yes.
- */
-static void checkEraseSlot(void)
-{
-    if (g_nSlots > 1)
-    {
-        if (!checkAskForSlot())
-            return;
-    }
-
-    if (screenAskEraseDialog() == BUTTON_ENTER)
-    {
-        checkFlashType();
-        eraseSlot();
-
-        // remove the name, it's not valid anymore
-        g_strFileName[0] =
-        g_strCartName[0] = '\0';
-        internalCartType = INTERNAL_CART_TYPE_NONE;
-    }
-}
-
-
-/******************************************************************************/
-/**
  * Set the status text and update the display.
  */
 void __fastcall__ setStatus(const char* pStrStatus)
@@ -609,6 +574,17 @@ static void updateFastLoaderText()
 
 /******************************************************************************/
 /**
+ * Refresh the elapsed time value.
+ */
+void resetCartInfo(void)
+{
+    g_strFileName[0] =
+    g_strCartName[0] = '\0';
+    internalCartType = INTERNAL_CART_TYPE_NONE;
+}
+
+/******************************************************************************/
+/**
  *
  */
 int main(void)
@@ -619,14 +595,14 @@ int main(void)
     screenInit();
     progressInit();
 
-    g_strFileName[0] =
-    g_strCartName[0] = '\0';
+    debug_init();
+    debug_puts("\r\nEasyProg debug output\r\n");
+
+    resetCartInfo();
 
     g_nDrive = *(uint8_t*)0xba;
     if (g_nDrive < 8)
         g_nDrive = 8;
-
-    internalCartType = INTERNAL_CART_TYPE_NONE;
 
     g_bFastLoaderEnabled = 1;
     updateFastLoaderText();

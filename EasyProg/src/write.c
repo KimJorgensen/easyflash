@@ -481,3 +481,115 @@ void checkWriteSS5Image(void)
             screenPrintSimpleDialog(apStrWriteComplete);
     }
 }
+
+
+/******************************************************************************/
+/**
+ * Ask the user if it is okay to erase all and do so if yes.
+ */
+void checkEraseAll(void)
+{
+    uint8_t i;
+
+    if (screenAskEraseDialog() == BUTTON_ENTER)
+    {
+        checkFlashType();
+        for (i = 0; i < g_nSlots; ++i)
+        {
+            slotSelect(i);
+            eraseSlot();
+        }
+        resetCartInfo();
+    }
+}
+
+
+/******************************************************************************/
+/**
+ * Ask the user if it is okay to erase a slot and do so if yes.
+ */
+void checkEraseSlot(void)
+{
+    if (g_nSlots > 1)
+    {
+        if (!checkAskForSlot())
+            return;
+    }
+
+    if (screenAskEraseDialog() == BUTTON_ENTER)
+    {
+        checkFlashType();
+        eraseSlot();
+
+        if (g_nSelectedSlot > 0)
+        {
+            strcpy(utilStr, "Slot ");
+            utilAppendDecimal(g_nSelectedSlot);
+            slotSaveName(utilStr, 0xff);
+        }
+        resetCartInfo();
+    }
+}
+
+
+/******************************************************************************/
+/**
+ * Ask the user if it is okay to erase a KERNAL and do so if yes.
+ */
+void checkEraseKERNAL(void)
+{
+    uint8_t nKERNAL;
+
+    slotSelect(0);
+    nKERNAL = selectKERNALSlotDialog();
+    if (nKERNAL != 0xff)
+    {
+        if (screenAskEraseDialog() == BUTTON_ENTER)
+        {
+            checkFlashType();
+            eraseSector(nKERNAL | FLASH_8K_SECTOR_BIT, 0);
+            strcpy(utilStr, "KERNAL ");
+            utilAppendDecimal(nKERNAL + 1);
+            slotSaveName(utilStr, nKERNAL);
+            resetCartInfo();
+        }
+    }
+}
+
+/******************************************************************************/
+/**
+ */
+void checkEraseAR(void)
+{
+    uint8_t nAR;
+
+    slotSelect(0);
+    nAR = selectARSlotDialog();
+    if (nAR != 0xff)
+    {
+        if (screenAskEraseDialog() == BUTTON_ENTER)
+        {
+            checkFlashType();
+            eraseSector(nAR * 8 + EF3_AR_BANK, 1);
+            resetCartInfo();
+        }
+    }
+}
+
+
+/******************************************************************************/
+/**
+ */
+void checkEraseSS5(void)
+{
+    uint8_t rv;
+
+    slotSelect(0);
+    if (screenAskEraseDialog() == BUTTON_ENTER)
+    {
+        checkFlashType();
+        eraseSector(EF3_SS5_BANK, 0);
+        eraseSector(EF3_SS5_BANK, 1);
+        resetCartInfo();
+    }
+}
