@@ -7,7 +7,6 @@
 
 void __fastcall__ tortureTestFillBuffer(const EasyFlashAddr* pAddr);
 uint16_t __fastcall__ tortureTestBanking(void);
-uint16_t __fastcall__ tortureTestCompare(const EasyFlashAddr* pAddr);
 uint8_t __fastcall__ tortureTestCheckRAM(void);
 
 void tortureTestComplete(void);
