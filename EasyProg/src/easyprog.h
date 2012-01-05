@@ -26,6 +26,24 @@
 
 #include <stdint.h>
 
+
+#ifdef EFDEBUG
+#  include "print.h"
+#  define debug_init()        print_init()
+#  define debug_puts(x)       print_puts(x)
+#  define debug_putc(x)       print_putc(x)
+#  define debug_crlf()        print_crlf()
+#  define debug_hex_digit(x)  print_hex_digit(x)
+#  define debug_hex_padded(x,y) print_hex_padded(x,y)
+#else
+#  define debug_init()        do {} while(0)
+#  define debug_puts(x)       do {} while(0)
+#  define debug_putc(x)       do {} while(0)
+#  define debug_crlf()        do {} while(0)
+#  define debug_hex_digit(x)  do {} while(0)
+#  define debug_hex_padded(x,y) do {} while(0)
+#endif
+
 // If this flag is set in a menu entry, it needs a known flash type
 #define EASYPROG_MENU_FLAG_NEEDS_FLASH 1
 
@@ -39,5 +57,6 @@ uint8_t checkFlashType(void);
 void __fastcall__ setStatus(const char* pStrStatus);
 void refreshMainScreen(void);
 void refreshElapsedTime(void);
+void resetCartInfo(void);
 
 #endif /* EASYPROG_H_ */
