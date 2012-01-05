@@ -57,6 +57,7 @@ eload_buffered_byte:
 ;
 ; =============================================================================
 .export _eload_read_byte
+.align 4
 _eload_read_byte:
         jmp (eload_read_byte_fn)
 
