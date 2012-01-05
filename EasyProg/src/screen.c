@@ -182,21 +182,6 @@ void screenBing(void)
     memset(&(SID.v1), 0, 3 * sizeof(SID.v1));
 }
 
-/******************************************************************************/
-/**
- */
-void __fastcall__ screenPrintAddr(uint8_t nBank, uint8_t nChip, uint16_t nOffset)
-{
-    screenPrintHex2(nBank);
-    cputc(':');
-    if (nChip)
-        cputc('1');
-    else
-        cputc('0');
-    cputc(':');
-    screenPrintHex4(nOffset);
-}
-
 
 /******************************************************************************/
 /**
