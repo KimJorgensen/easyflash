@@ -56,12 +56,18 @@ eapi_obj := $(addprefix obj/,$(eapi))
 
 inc      := src
 inc      += eload/src
+inc      += libprint/src
+
+eload    := eload/eload.lib
+libprint := libprint/libprint.lib
 
 INCLUDE  := $(addprefix -I,$(inc))
 
 DEFINE   := -DEFVERSION=\"${version}\"
 
-eload    := eload/eload.lib
+ifeq "$(debug)" "yes"
+DEFINE   += -DEFDEBUG
+endif
 
 .PHONY: all
 ifeq "$(release)" "yes"
@@ -107,9 +113,9 @@ obj/%.bin: src/%.s obj
 obj:
 	mkdir -p $@
 
-easyprog: $(obj) $(ld_config) $(eload)
+easyprog: $(obj) $(ld_config) $(eload) $(libprint)
 	ld65 -o $@ -m $@.map -C $(ld_config) $(obj) -L /usr/local/lib/cc65/lib \
-		--lib c64.lib --lib $(eload)
+		--lib $(eload) --lib $(libprint) --lib c64.lib
 	cat $@.map | grep -e "^Name\|^CODE\|^DATA\|^BSS\|^RODATA\|^LOWCODE"
 
 easyprog.prg: easyprog
@@ -127,6 +133,9 @@ easyprog-$(version).zip: easyprog.prg CHANGES
 $(eload): force
 	$(MAKE) -C $(dir $@)
 
+$(libprint): force
+	$(MAKE) -C $(dir $@)
+
 .PHONY: force
 force:
 
@@ -135,3 +144,5 @@ clean:
 	rm -f easyprog easyprog.map easyprog.prg
 	rm -rf obj
 	$(MAKE) -C $(dir $(eload)) clean
+	$(MAKE) -C $(dir $(libprint)) clean
+	
