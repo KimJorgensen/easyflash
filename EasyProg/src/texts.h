@@ -34,7 +34,6 @@ extern const char* apStrEAPIInvalid[];
 extern const char* pStrTestFailed;
 extern const char* apStrDirFull[];
 extern const char* apStrTestEndless[];
-extern const char* apStrTestComplete[];
 extern const char* apStrDifferentFile[];
 
 #endif /* TEXTS_H_ */

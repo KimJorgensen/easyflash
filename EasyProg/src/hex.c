@@ -18,9 +18,7 @@
 /******************************************************************************/
 /* Static variables */
 
-static uint8_t nBank;
-static uint8_t nChip;
-static uint16_t nOffset;
+static EasyFlashAddr addr;
 
 /******************************************************************************/
 /**
@@ -34,25 +32,22 @@ static void hexShowBlock(void)
     uint8_t* p;
     uint16_t n;
 
-    if (nChip)
+    if (addr.nChip)
         p = ROM1_BASE;
     else
         p = ROM0_BASE;
 
-    p += nOffset;
+    p += addr.nOffset;
     eapiSetSlot(g_nSelectedSlot);
-    eapiSetBank(nBank);
+    eapiSetBank(addr.nBank);
 
+    utilStr[0] = '\0';
+    addr.nSlot = g_nSelectedSlot;
+    utilAppendFlashAddr(&addr);
     gotoxy(1, 23);
-    screenPrintAddr(nBank, nChip, nOffset);
-    if (g_nSlots > 1)
-    {
-        strcpy(utilStr, ", slot ");
-        utilAppendDecimal(g_nSelectedSlot);
-        cputs(utilStr);
-    }
+    cputs(utilStr);
 
-    n = nOffset;
+    n = addr.nOffset;
     for (y = 0; y < 16; ++y)
     {
         gotoxy(1, 3 + y);
@@ -86,16 +81,16 @@ static void hexShowBlock(void)
  */
 static void hexNextBank(void)
 {
-    if (!nChip)
+    if (!addr.nChip)
     {
-        nOffset = 0;
-        nChip = 1;
+        addr.nOffset = 0;
+        addr.nChip = 1;
     }
-    else if (nBank < FLASH_NUM_BANKS)
+    else if (addr.nBank < FLASH_NUM_BANKS)
     {
-        ++nBank;
-        nChip = 0;
-        nOffset = 0;
+        ++addr.nBank;
+        addr.nChip = 0;
+        addr.nOffset = 0;
     }
 }
 
@@ -106,16 +101,16 @@ static void hexNextBank(void)
  */
 static void hexPrevBank(uint16_t nToOffset)
 {
-    if (nChip)
+    if (addr.nChip)
     {
-        nOffset = nToOffset;
-        nChip = 0;
+        addr.nOffset = nToOffset;
+        addr.nChip = 0;
     }
-    else if (nBank > 0)
+    else if (addr.nBank > 0)
     {
-        --nBank;
-        nChip = 1;
-        nOffset = nToOffset;
+        --addr.nBank;
+        addr.nChip = 1;
+        addr.nOffset = nToOffset;
     }
 }
 
@@ -147,7 +142,7 @@ void hexViewer(void)
     utilAppendStr("/<Stop>");
     cputsxy(1, 21, utilStr);
 
-    g_nSelectedSlot = nBank = nChip = nOffset = 0;
+    memset(&addr, 0, sizeof(addr));
 
     do
     {
@@ -157,15 +152,15 @@ void hexViewer(void)
         switch (key)
         {
         case CH_CURS_DOWN:
-            if (nOffset < 0x2000 - 0x80)
-                nOffset += 0x80;
+            if (addr.nOffset < 0x2000 - 0x80)
+                addr.nOffset += 0x80;
             else
                 hexNextBank();
             break;
 
         case CH_CURS_UP:
-            if (nOffset > 0)
-                nOffset -= 0x80;
+            if (addr.nOffset > 0)
+                addr.nOffset -= 0x80;
             else
                 hexPrevBank(0x2000 - 0x80);
             break;

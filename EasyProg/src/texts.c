@@ -208,17 +208,8 @@ const char* apStrTestEndless[] =
         "This test runs endlessly.",
         "It will show a message",
         "if a problem occurs.",
-        NULL
-};
-
-const char* apStrTestComplete[] =
-{
-        "Test completed",
-        "without problems.",
-        "",
-        "Testing continues.",
-        "",
-        "Press <Stop> to abort.",
+        "After loop 0 the test has passed.",
+        "You can cancel it with <Stop>.",
         NULL
 };
 
