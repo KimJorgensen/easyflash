@@ -77,7 +77,7 @@ void slotsFillEFDir(void)
         }
         for (i = 0; i < EF_DIR_NUM_KERNALS; ++i)
         {
-            strcpy(utilStr, "Kernal ");
+            strcpy(utilStr, "KERNAL ");
             utilAppendDecimal(i + 1);
             strcpy(m_EFDir.kernals[i], utilStr);
         }
