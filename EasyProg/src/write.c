@@ -582,8 +582,6 @@ void checkEraseAR(void)
  */
 void checkEraseSS5(void)
 {
-    uint8_t rv;
-
     slotSelect(0);
     if (screenAskEraseDialog() == BUTTON_ENTER)
     {
