@@ -35,6 +35,7 @@
 #include "easyprog.h"
 #include "eload.h"
 #include "timer.h"
+#include "slots.h"
 
 
 // globally visible string buffer for functions used here
@@ -179,8 +180,11 @@ uint8_t utilAskForNextFile(void)
  */
 void __fastcall__ utilAppendFlashAddr(const EasyFlashAddr* pAddr)
 {
-    utilAppendHex2(pAddr->nSlot);
-    utilAppendChar(':');
+    if (g_nSlots > 1)
+    {
+        utilAppendHex2(pAddr->nSlot);
+        utilAppendChar(':');
+    }
     utilAppendHex2(pAddr->nBank & FLASH_BANK_MASK);
     utilAppendChar(':');
     utilAppendHex1(pAddr->nChip);
