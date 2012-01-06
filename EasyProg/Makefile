@@ -1,6 +1,6 @@
 
 ifeq "$(release)" "yes"
-	version := 1.6.2
+	version := 1.6.3
 else
 	version := $(shell date +%y%m%d-%H%M)
 endif
@@ -79,7 +79,7 @@ endif
 ###############################################################################
 # Poor men's dependencies: Let all files depend from all header files
 #
-headers := $(wildcard $(inc)/*.h)
+headers := $(foreach dir, $(inc), $(wildcard $(dir)/*.h))
 
 obj/%.s: src/%.c obj $(headers)
 	cc65 -t c64 -T -O --static-locals $(INCLUDE) $(DEFINE) -o $@ $<
