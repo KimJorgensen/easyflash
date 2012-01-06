@@ -93,9 +93,6 @@ static uint8_t tortureTestWriteData(void)
 static uint8_t tortureTestVerify(void)
 {
     EasyFlashAddr   addr;
-    uint16_t        rv;
-    uint8_t         nData;
-    uint8_t         nFlash;
 
     addr.nSlot = g_nSelectedSlot;
 
@@ -188,6 +185,12 @@ static void tortureTest(uint8_t bComplete)
     {
         strcpy(utilStr, "Test loop ");
         utilAppendDecimal(nLoop);
+        if (nLoop > 0)
+        {
+            strcat(utilStr, " - loop ");
+            utilAppendDecimal(nLoop - 1);
+            strcat(utilStr, " ok");
+        }
         setStatus(utilStr);
 
         rv = tortureTestBanking();
