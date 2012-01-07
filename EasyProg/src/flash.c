@@ -54,9 +54,18 @@ static const unsigned char aEFNameSignature[] =
  */
 uint8_t eraseSector(uint8_t nBank, uint8_t nChip)
 {
+    EasyFlashAddr addr;
     uint8_t* pUltimaxBase;
     uint8_t* pNormalBase;
     uint8_t  nBanksToErase;
+
+    addr.nSlot = g_nSelectedSlot;
+    addr.nBank = nBank;
+    addr.nChip = nChip;
+    addr.nOffset = 0;
+    strcpy(utilStr, "Erasing ");
+    utilAppendFlashAddr(&addr);
+    setStatus(utilStr);
 
     // for 64k: start erasing at the first bank of this flash sector
     nBanksToErase = 1;
