@@ -1,4 +1,11 @@
 
+Version 1.6.3 - 07.01.2012
+- New Feature: Erase KERNAL/AR/SS5
+- Torture Test fixed
+- When a slot is erased, the slot name is erased too (same for KERNALs)
+- Slot number is a part of the address if there is more then one slot,
+  e.g. 01:23:0:1200 for slot 1, bank $23, ROML, offset $1200
+
 Version 1.6.2 - 22.12.2011
 - EasySplit files work again
 - Bing! when EasyProg askes for the cartridge name
