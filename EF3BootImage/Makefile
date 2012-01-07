@@ -40,10 +40,31 @@
 # uncompressed version of EasyProg
 easyprog    := ../EasyProg/easyprog
 
+ifneq "$(release)" "yes"
+	version := $(shell date +%y%m%d-%H%M)
+else
+	version := 1.0.4
+endif
+
+dirname := ef3-menu-init-$(version)
+
 ###############################################################################
 #
-PHONY: all
+.PHONY: all
+ifeq "$(release)" "yes"
+all: ef3-menu-init-$(version).zip
+else
 all: ef3-init.crt ef3-menu.crt
+endif
+
+$(dirname).zip: ef3-init.crt ef3-menu.crt CHANGES
+	rm -rf $(dirname)
+	rm -f $@
+	mkdir $(dirname)
+	cp ef3-init.crt $(dirname)/ef3-init-$(version).crt
+	cp ef3-menu.crt $(dirname)/ef3-menu-$(version).crt
+	cp CHANGES $(dirname)
+	zip -v -r $@ $(dirname)
 
 ###############################################################################
 # These files are in "menu" image and "initial" image
@@ -100,7 +121,7 @@ mkimages: mkimages.c
 ###############################################################################
 #
 efmenu/efmenu.bin: always
-	$(MAKE) -C efmenu
+	$(MAKE) -C efmenu version=$(version)
 
 .PHONY: always
 always:
@@ -108,7 +129,7 @@ always:
 ###############################################################################
 #
 $(easyprog): always
-	$(MAKE) -C $(dir $@)
+	$(MAKE) -C $(dir $@) release=$(release)
 
 ###############################################################################
 #
