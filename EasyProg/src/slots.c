@@ -123,7 +123,7 @@ uint8_t __fastcall__ selectSlotDialog(void)
             pEntry->label[0] = '-';
     }
 
-    rv = selectBox(pEntries, "a slot to use");
+    rv = selectBox(pEntries, "a slot");
     free(pEntries);
     return rv;
 }
@@ -254,7 +254,6 @@ void __fastcall__ slotSelect(uint8_t slot)
 void __fastcall__ slotSaveName(const char* name, uint8_t nKERNAL)
 {
     EasyFlashAddr addr;
-    uint16_t offset;
     uint8_t  nSlot;
 
     nSlot = g_nSelectedSlot;
@@ -274,11 +273,11 @@ void __fastcall__ slotSaveName(const char* name, uint8_t nKERNAL)
     eraseSector(EF_DIR_BANK, 0);
     do
     {
-        memcpy(BLOCK_BUFFER, ((uint8_t*) &m_EFDir) + offset, 256);
+        memcpy(BLOCK_BUFFER, ((uint8_t*) &m_EFDir) + addr.nOffset, 256);
         flashWriteBlock(&addr);
         addr.nOffset += 256;
     }
-    while (offset < sizeof(m_EFDir));
+    while (addr.nOffset < sizeof(m_EFDir));
     g_nSelectedSlot = nSlot;
 }
 
