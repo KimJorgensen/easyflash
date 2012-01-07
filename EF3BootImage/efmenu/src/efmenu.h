@@ -51,6 +51,7 @@ typedef struct efmenu_entry_s
     uint8_t mode;
     char    label[3 + 1];
     char    name[16 + 1];
+    char    type[3 + 1];
 } efmenu_entry_t;
 
 

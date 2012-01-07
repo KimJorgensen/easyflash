@@ -44,37 +44,37 @@ static const char* m_pEFSignature = "EF-Directory V1:";
 
 static efmenu_entry_t kernal_menu[] =
 {
-        { '1',  0,  0,  0,  MODE_KERNAL,    "1", "Empty" },
-        { '2',  0,  1,  0,  MODE_KERNAL,    "2", "Empty" },
-        { '3',  0,  2,  0,  MODE_KERNAL,    "3", "Empty" },
-        { '4',  0,  3,  0,  MODE_KERNAL,    "4", "Empty" },
-        { '5',  0,  4,  0,  MODE_KERNAL,    "5", "Empty" },
-        { '6',  0,  5,  0,  MODE_KERNAL,    "6", "Empty" },
-        { '7',  0,  6,  0,  MODE_KERNAL,    "7", "Empty" },
-        { '8',  0,  7,  0,  MODE_KERNAL,    "8", "Empty" },
-        { 0, 0, 0, 0, 0, "", "" }
+        { '1',  0,  0,  0,  MODE_KERNAL,    "1", "Empty", "" },
+        { '2',  0,  1,  0,  MODE_KERNAL,    "2", "Empty", "" },
+        { '3',  0,  2,  0,  MODE_KERNAL,    "3", "Empty", "" },
+        { '4',  0,  3,  0,  MODE_KERNAL,    "4", "Empty", "" },
+        { '5',  0,  4,  0,  MODE_KERNAL,    "5", "Empty", "" },
+        { '6',  0,  5,  0,  MODE_KERNAL,    "6", "Empty", "" },
+        { '7',  0,  6,  0,  MODE_KERNAL,    "7", "Empty", "" },
+        { '8',  0,  7,  0,  MODE_KERNAL,    "8", "Empty", "" },
+        { 0, 0, 0, 0, 0, "", "", "" }
 };
 
 static efmenu_entry_t ef_menu[] =
 {
-        { 'a',  1,  0,  1,  MODE_EF,    "A", "EF Slot 1" },
-        { 'b',  2,  0,  1,  MODE_EF,    "B", "EF Slot 2" },
-        { 'c',  3,  0,  1,  MODE_EF,    "C", "EF Slot 3" },
-        { 'd',  4,  0,  1,  MODE_EF,    "D", "EF Slot 4" },
-        { 'e',  5,  0,  1,  MODE_EF,    "E", "EF Slot 5" },
-        { 'f',  6,  0,  1,  MODE_EF,    "F", "EF Slot 6" },
-        { 'g',  7,  0,  1,  MODE_EF,    "G", "EF Slot 7" },
-        { 0, 0, 0, 0, 0, "", "" }
+        { 'a',  1,  0,  1,  MODE_EF,    "A", "EF Slot 1", "" },
+        { 'b',  2,  0,  1,  MODE_EF,    "B", "EF Slot 2", "" },
+        { 'c',  3,  0,  1,  MODE_EF,    "C", "EF Slot 3", "" },
+        { 'd',  4,  0,  1,  MODE_EF,    "D", "EF Slot 4", "" },
+        { 'e',  5,  0,  1,  MODE_EF,    "E", "EF Slot 5", "" },
+        { 'f',  6,  0,  1,  MODE_EF,    "F", "EF Slot 6", "" },
+        { 'g',  7,  0,  1,  MODE_EF,    "G", "EF Slot 7", "" },
+        { 0, 0, 0, 0, 0, "", "", "" }
 };
 
 static efmenu_entry_t special_menu[] =
 {
-        { 'r',  0,  0x10,   1,  MODE_AR,           "R", "Replay Slot 1" },
-        { 'y',  0,  0x18,   1,  MODE_AR,           "Y", "Replay Slot 2" },
-        { 's',  0,  0x20,   1,  MODE_SS5,          "S", "Super Snapshot 5" },
-        { 'p',  0,  9,      1,  MODE_EF_NO_RESET,  "P", "EasyProg" },
-        { 'k',  0,  0,      1,  MODE_KILL,         "K", "Kill Cartridge" },
-        { 0, 0, 0, 0, 0, "", "" }
+        { 'r',  0,  0x10,   1,  MODE_AR,           "R", "Replay Slot 1",    "" },
+        { 'y',  0,  0x18,   1,  MODE_AR,           "Y", "Replay Slot 2",    "" },
+        { 's',  0,  0x20,   1,  MODE_SS5,          "S", "Super Snapshot 5", "" },
+        { 'p',  0,  9,      1,  MODE_EF_NO_RESET,  "P", "EasyProg",         "crt" },
+        { 'k',  0,  0,      1,  MODE_KILL,         "K", "Kill Cartridge",   "" },
+        { 0, 0, 0, 0, 0, "", "", "" }
 };
 
 static efmenu_t all_menus[] =
@@ -91,7 +91,10 @@ static efmenu_t all_menus[] =
 /**
  * Return 1 if the entry is valid. This is the case if it contains a mode
  * which always works or if at least one of the last 4 bytes in the ROM
- * location caontains != 0xff.
+ * location is not empty and does not contain the torture test pattern.
+ *
+ * Empty pattern:         ff ff ff ff
+ * Torture test pattern:  03 02 01 00
  */
 uint8_t menu_entry_is_valid(const efmenu_entry_t* entry)
 {
@@ -114,8 +117,11 @@ uint8_t menu_entry_is_valid(const efmenu_entry_t* entry)
 
     for (i = 0; i != 4; ++i)
     {
-        if (p[i] != 0xff)
+        if ((p[i] != 0xff) &&
+            (p[i] != 3 - i))
+        {
             return 1;
+        }
     }
     return 0;
 }
@@ -162,7 +168,7 @@ static void show_menu(void)
 /******************************************************************************/
 /**
  */
-static void start_menu_entry(const efmenu_entry_t* entry)
+static void __fastcall__ start_menu_entry(const efmenu_entry_t* entry)
 {
     // Wait until the key is released
     wait_for_no_key();
@@ -185,33 +191,52 @@ static void start_menu_entry(const efmenu_entry_t* entry)
 /******************************************************************************/
 /**
  */
-static void main_loop(void)
+static void __fastcall__ start_menu_entry_ex(uint8_t key, const char* type)
 {
-    uint8_t key;
     const efmenu_t* menu;
     const efmenu_entry_t* entry;
+
+    menu = all_menus;
+    while (menu->pp_entries)
+    {
+        entry = menu->pp_entries;
+        while (entry->key)
+        {
+            if (menu_entry_is_valid(entry))
+            {
+                if (key  && entry->key == key)
+                    start_menu_entry(entry);
+                if (type && strcmp(entry->type, type) == 0)
+                    start_menu_entry(entry);
+            }
+            ++entry;
+        }
+        ++menu;
+    }
+}
+
+
+/******************************************************************************/
+/**
+ */
+static void main_loop(void)
+{
+    const char* pType;
+    uint8_t key;
 
     do
     {
         if (kbhit())
         {
             key = cgetc();
-
-            menu = all_menus;
-            while (menu->pp_entries)
-            {
-                entry = menu->pp_entries;
-                while (entry->key)
-                {
-                    if (entry->key == key && menu_entry_is_valid(entry))
-                        start_menu_entry(entry);
-
-                    ++entry;
-                }
-                ++menu;
-            }
+            start_menu_entry_ex(key, NULL);
         }
-        usbCheck();
+
+        pType = usbCheckForCommand();
+        if (pType)
+        {
+            start_menu_entry_ex(0, pType);
+        }
     }
     while (1);
 }

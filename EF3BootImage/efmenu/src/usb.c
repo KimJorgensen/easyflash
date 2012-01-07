@@ -37,19 +37,48 @@
 
 static char request[12];
 
-void usbCheck(void)
+/******************************************************************************/
+/**
+ */
+static void __fastcall__ usbSendData(const uint8_t* data, uint16_t len)
+{
+    while (len)
+    {
+        if (USB_STATUS & USB_TX_READY)
+        {
+            USB_DATA = *data;
+            ++data;
+            --len;
+        }
+    }
+}
+
+
+/******************************************************************************/
+/**
+ * Check if a command arrived from USB. The format is:
+ *
+ * Len:      01234567890
+ * Command: "efstart:crt"
+ *
+ * Return NULL if there is no command complete. Return the 0-terminated file
+ * type (e.g. "crt") if it is complete.
+ */
+char* usbCheckForCommand(void)
 {
     request[11] = '\0';
-    request[0] = 'A';
 
-    memmove(request, request + 1, sizeof(request) - 1);
-    if (USB_STATUS & USB_RX_READY)
+    while (USB_STATUS & USB_RX_READY)
     {
+        memmove(request, request + 1, sizeof(request) - 1);
         request[sizeof(request) - 2] = USB_DATA;
 
         if (memcmp(request, "efstart:", 8) == 0)
         {
             ++VIC.bordercolor;
+            usbSendData("wait", 4);
+            return request + 8;
         }
     }
+    return NULL;
 }
