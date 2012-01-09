@@ -52,7 +52,8 @@ entity cart_ss5 is
         reset_freezer:      out std_logic;
         ram_read:           out std_logic;
         ram_write:          out std_logic;
-        flash_read:         out std_logic
+        flash_read:         out std_logic;
+        led:                out std_logic
     );
 end cart_ss5;
 
@@ -67,6 +68,7 @@ architecture behav of cart_ss5 is
 begin
 
     start_reset <= enable and button_crt_reset;
+    led <= enable and not ctrl_kill;
 
     ---------------------------------------------------------------------------
     --

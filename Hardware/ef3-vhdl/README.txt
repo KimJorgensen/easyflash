@@ -26,6 +26,12 @@ License
 Changes
 =======
 
+Version 0.9.2 - 09.01.2011
+
+- LED implemented
+  - In EasyFlash mode: LED controlled by software
+  - In AR/RR/NP/SS5 mode: On when cartridge is active, off when it is inactive
+
 Version 0.9.1 - 19.12.2011
 
 - Weird glitch in A14 fixed

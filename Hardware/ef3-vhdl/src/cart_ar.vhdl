@@ -54,7 +54,8 @@ entity cart_ar is
         ram_write:          out std_logic;
         flash_read:         out std_logic;
         data_out:           out std_logic_vector(7 downto 0);
-        data_out_valid:     out std_logic
+        data_out_valid:     out std_logic;
+        led:                out std_logic
     );
 end cart_ar;
 
@@ -85,6 +86,7 @@ begin
         else false;
 
     start_reset <= enable and button_crt_reset;
+    led <= enable and not ctrl_kill;
 
     ---------------------------------------------------------------------------
     --
