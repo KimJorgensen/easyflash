@@ -57,7 +57,8 @@ entity cart_easyflash is
         flash_read:     out std_logic;
         flash_write:    out std_logic;
         data_out:       out std_logic_vector(7 downto 0);
-        data_out_valid: out std_logic
+        data_out_valid: out std_logic;
+        led:            out std_logic
     );
 end cart_easyflash;
 
@@ -153,6 +154,7 @@ begin
             ctrl_game  <= easyflash_boot;
             data_out_valid_i <= '0';
             ctrl_no_vicii <= '0';
+            led <= '0';
             if n_sys_reset = '0' or reset_to_menu = '1' then
                 -- Slot and Bank are used for all cartridges, so reset them in
                 -- these situations only
@@ -164,7 +166,7 @@ begin
                 -- Reset Bank (not Slot) when current EF is restarted
                 bank_hi_i <= (others => '0');
                 bank_lo   <= (others => '0');
-            end if;            
+            end if;
         elsif rising_edge(clk) then
             if enable = '1' then
                 if io1_addr_0x_rdy = '1' then
@@ -189,7 +191,7 @@ begin
                                     ctrl_game <= data(0);
                                 end if;
                                 ctrl_no_vicii <= data(3);
-                                -- LED!
+                                led <= data(7);
 
                             when others => null;
                         end case;
@@ -206,6 +208,7 @@ begin
                 end if;
             else
                 data_out_valid_i <= '0';
+                led <= '0';
             end if; -- enable
        end if; -- clk
     end process;

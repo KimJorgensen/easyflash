@@ -143,6 +143,7 @@ architecture ef3_arc of ef3 is
     signal ef_flash_write:      std_logic;
     signal ef_data_out:         std_logic_vector(7 downto 0);
     signal ef_data_out_valid:   std_logic;
+    signal ef_led:              std_logic;
 
     signal kernal_flash_addr:   std_logic_vector(16 downto 0);
     signal kernal_a14:          std_logic;
@@ -164,6 +165,7 @@ architecture ef3_arc of ef3 is
     signal ar_flash_read:       std_logic;
     signal ar_data_out:         std_logic_vector(7 downto 0);
     signal ar_data_out_valid:   std_logic;
+    signal ar_led:              std_logic;
 
     signal ss5_flash_addr:      std_logic_vector(16 downto 0);
     signal ss5_ram_addr:        std_logic_vector(14 downto 0);
@@ -175,6 +177,7 @@ architecture ef3_arc of ef3 is
     signal ss5_ram_read:        std_logic;
     signal ss5_ram_write:       std_logic;
     signal ss5_flash_read:      std_logic;
+    signal ss5_led:             std_logic;
 
     signal usb_read:            std_logic;
     signal usb_write:           std_logic;
@@ -256,7 +259,8 @@ architecture ef3_arc of ef3 is
             flash_read:         out std_logic;
             flash_write:        out std_logic;
             data_out:           out std_logic_vector(7 downto 0);
-            data_out_valid:     out std_logic
+            data_out_valid:     out std_logic;
+            led:                out std_logic
         );
     end component;
 
@@ -316,7 +320,8 @@ architecture ef3_arc of ef3 is
             ram_write:          out std_logic;
             flash_read:         out std_logic;
             data_out:           out std_logic_vector(7 downto 0);
-            data_out_valid:     out std_logic
+            data_out_valid:     out std_logic;
+            led:                out std_logic
         );
     end component;
 
@@ -347,7 +352,8 @@ architecture ef3_arc of ef3 is
             reset_freezer:      out std_logic;
             ram_read:           out std_logic;
             ram_write:          out std_logic;
-            flash_read:         out std_logic
+            flash_read:         out std_logic;
+            led:                out std_logic
         );
     end component;
 
@@ -442,7 +448,8 @@ begin
         flash_read              => ef_flash_read,
         flash_write             => ef_flash_write,
         data_out                => ef_data_out,
-        data_out_valid          => ef_data_out_valid
+        data_out_valid          => ef_data_out_valid,
+        led                     => ef_led
     );
 
     u_cart_kernal: cart_kernal port map
@@ -500,7 +507,8 @@ begin
         ram_write               => ar_ram_write,
         flash_read              => ar_flash_read,
         data_out                => ar_data_out,
-        data_out_valid          => ar_data_out_valid
+        data_out_valid          => ar_data_out_valid,
+        led                     => ar_led
     );
 
     u_cart_ss5: cart_ss5 port map
@@ -530,7 +538,8 @@ begin
         reset_freezer           => ss5_reset_freezer,
         ram_read                => ss5_ram_read,
         ram_write               => ss5_ram_write,
-        flash_read              => ss5_flash_read
+        flash_read              => ss5_flash_read,
+        led                     => ss5_led
     );
 
     u_cart_usb: cart_usb
@@ -558,8 +567,6 @@ begin
 
     -- unused signals and defaults
     addr <= (others => 'Z');
-
-    n_led <= freezer_ready;
 
     n_reset_io  <= 'Z' when n_generated_reset = '1' else '0';
     n_nmi       <= 'Z' when freezer_irq = '0'       else '0';
@@ -693,6 +700,8 @@ begin
 
     start_freezer   <= ar_start_freezer or ss5_start_freezer;
     reset_freezer   <= ar_reset_freezer or ss5_reset_freezer;
+
+    n_led <= not (ef_led or ar_led or ss5_led);
 
     n_dma <= 'Z';
 
