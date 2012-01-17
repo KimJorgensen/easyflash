@@ -1,4 +1,4 @@
-PCBNEW-BOARD Version 1 date Mo 09 Jan 2012 21:52:48 CET
+PCBNEW-BOARD Version 1 date Di 10 Jan 2012 20:34:36 CET
 
 # Created by Pcbnew(2011-07-08 BZR 3044)-stable
 
@@ -11,7 +11,7 @@ Links 244
 NoConn 0
 Di 45729 21474 70404 66274
 Ndraw 31
-Ntrack 1743
+Ntrack 1740
 Nzone 0
 BoardThickness 630
 Nmodule 48
@@ -21,7 +21,7 @@ $EndGENERAL
 $SHEETDESCR
 Sheet A4 11700 8267
 Title "EasyFlash 3"
-Date "9 jan 2012"
+Date "10 jan 2012"
 Rev "1.2.2"
 Comp "Skoe"
 Comment1 ""
@@ -35,7 +35,7 @@ InternalUnit 0.000100 INCH
 Layers 2
 Layer[0] Rückseite signal
 Layer[15] Vorderseite signal
-TrackWidth 300
+TrackWidth 60
 TrackWidthList 80
 TrackWidthList 100
 TrackWidthList 120
@@ -5756,8 +5756,6 @@ Po 0 51991 43439 51991 43791 60 -1
 De 15 0 35 0 400800
 Po 0 60300 45020 58700 45020 60 -1
 De 15 0 35 0 400800
-Po 0 58700 45020 58440 45020 60 -1
-De 15 0 35 0 0
 Po 0 52700 46500 52700 44680 60 -1
 De 15 0 36 0 0
 Po 0 52700 46500 52950 46750 60 -1
@@ -6823,10 +6821,6 @@ De 15 0 77 0 0
 Po 0 61970 42630 61970 41480 60 -1
 De 15 0 78 0 800
 Po 0 61970 41480 62225 41225 60 -1
-De 15 0 78 0 0
-Po 0 62225 41225 62225 42375 60 -1
-De 15 0 78 0 0
-Po 0 62225 42375 61970 42630 60 -1
 De 15 0 78 0 0
 Po 0 61970 42950 61970 42630 60 -1
 De 15 0 78 0 400800
