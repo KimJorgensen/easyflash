@@ -1,6 +1,6 @@
 #!/bin/sh
 
-PROJECT=ef3-v1.2.2
+PROJECT=ef3-v1.3
 
 rm -rf $PROJECT-gerber
 mkdir $PROJECT-gerber
