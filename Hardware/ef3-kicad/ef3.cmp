@@ -1,4 +1,4 @@
-Cmp-Mod V01 Created by CvPCB (2011-05-25)-stable date = So 30 Okt 2011 22:27:59 CET
+Cmp-Mod V01 Created by CvPCB (2011-07-08 BZR 3044)-stable date = Di 17 Jan 2012 22:00:08 CET
 
 BeginCmp
 TimeStamp = /4D8A5B0C;
@@ -250,6 +250,20 @@ TimeStamp = /4DDABB5E;
 Reference = R51;
 ValeurCmp = 4_x_100;
 IdModule  = RARRAY;
+EndCmp
+
+BeginCmp
+TimeStamp = /4F15DFF0;
+Reference = R52;
+ValeurCmp = 4k7;
+IdModule  = SM0805-simple;
+EndCmp
+
+BeginCmp
+TimeStamp = /4F15DFFC;
+Reference = R53;
+ValeurCmp = 4k7;
+IdModule  = SM0805-simple;
 EndCmp
 
 BeginCmp
