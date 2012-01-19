@@ -125,18 +125,6 @@ bool WorkerThread::ConnectToEF()
         return false;
     }
 
-    /*if ((ret = ftdi_setflowctrl(&m_ftdic, SIO_DTR_DSR_HS)) != 0)
-    {
-        Log("Unable to set flow control: %d (%s)\n", ret, ftdi_get_error_string(&m_ftdic));
-        return false;
-    }*/
-
-    if ((ret = ftdi_set_baudrate(&m_ftdic, 1000000)) != 0)
-    {
-        Log("Unable to set baud rate: %d (%s)\n", ret, ftdi_get_error_string(&m_ftdic));
-        return false;
-    }
-
     return true;
 }
 
@@ -151,22 +139,25 @@ bool WorkerThread::StartHandshake()
     bool bWaiting;
     char strResponse[8];
 
+    /* Send the command as often as we get "WAIT" as response */
     do
     {
         bWaiting = false;
-        SendStartCommand(strResponse, sizeof(strResponse));
+        SendCommand("EFSTART:CRT");
+        ReceiveResponse(strResponse, sizeof(strResponse));
 
         if (strcmp(strResponse, "WAIT") == 0)
         {
             bWaiting = true;
-            WaitForCont();
         }
     }
     while (bWaiting);
 
-    if (strcmp(strResponse, "WAIT") == 0)
-
-
+    if (strResponse[0] == '\0')
+    {
+        Log("No response\n");
+        return false;
+    }
 
     return true;
 }
@@ -176,16 +167,13 @@ bool WorkerThread::StartHandshake()
 /**
  *
  */
-void WorkerThread::SendStartCommand(char* pResponse, int sizeResponse)
+void WorkerThread::SendCommand(const char* pRequestStr)
 {
     int         ret;
     unsigned char strResponse[8];
-    const char* pRequestStr;
     size_t      nRequestLen;
 
-    pRequestStr = "EFSTART:CRT";
     nRequestLen = strlen(pRequestStr);
-    pResponse[0] = '\0';
 
     Log("Send command: %s\n", pRequestStr);
     // Send request
@@ -194,20 +182,6 @@ void WorkerThread::SendStartCommand(char* pResponse, int sizeResponse)
     {
         Log("Write failed: %d (%s - %s)\n", ret, ftdi_get_error_string(&m_ftdic),
                 ret < 0 ? strerror(-ret) : "unknown cause");
-    }
-
-    // Check response
-    wxMilliSleep(100);
-    ret = ftdi_read_data(&m_ftdic, (unsigned char*)pResponse, sizeResponse - 1);
-    if (ret < 0)
-    {
-        Log("Write failed: %d (%s - %s)\n", ret, ftdi_get_error_string(&m_ftdic),
-                ret < 0 ? strerror(-ret) : "unknown cause");
-    }
-    else if (ret > 0)
-    {
-        pResponse[ret] = 0;
-        Log("Response: %s\n", pResponse);
     }
 }
 
@@ -216,38 +190,30 @@ void WorkerThread::SendStartCommand(char* pResponse, int sizeResponse)
 /**
  *
  */
-void WorkerThread::WaitForCont(void)
+void WorkerThread::ReceiveResponse(char* pResponse, int sizeResponse)
 {
-    int         ret;
-    unsigned char strResponse[8];
-#if 0
-    pRequestStr = "EFSTART:CRT";
-    nRequestLen = strlen(pRequestStr);
-    pResponse[0] = '\0';
+    int  ret, retry;
 
-    Log("Send command: %s\n", pRequestStr);
-    // Send request
-    ret = ftdi_write_data(&m_ftdic, (unsigned char*)pRequestStr, nRequestLen);
-    if (ret != nRequestLen)
-    {
-        Log("Write failed: %d (%s - %s)\n", ret, ftdi_get_error_string(&m_ftdic),
-                ret < 0 ? strerror(-ret) : "unknown cause");
-    }
+    /* 100 * 0.1 s = 10 s */
+    retry = 100;
 
-    // Check response
-    wxMilliSleep(100);
-    ret = ftdi_read_data(&m_ftdic, (unsigned char*)pResponse, sizeResponse - 1);
-    if (ret < 0)
+    do
     {
-        Log("Write failed: %d (%s - %s)\n", ret, ftdi_get_error_string(&m_ftdic),
-                ret < 0 ? strerror(-ret) : "unknown cause");
+        wxMilliSleep(100);
+        pResponse[0] = '\0';
+        ret = ftdi_read_data(&m_ftdic, (unsigned char*)pResponse, sizeResponse - 1);
+        if (ret < 0)
+        {
+            Log("Read failed: %d (%s - %s)\n", ret, ftdi_get_error_string(&m_ftdic),
+                    ret < 0 ? strerror(-ret) : "unknown cause");
+        }
+        else if (ret > 0)
+        {
+            pResponse[ret] = 0;
+            Log("Response: %s\n", pResponse);
+        }
     }
-    else if (ret > 0)
-    {
-        pResponse[ret] = 0;
-        Log("Response: %s\n", pResponse);
-    }
-#endif
+    while (ret == 0 && --retry);
 }
 
 
@@ -267,5 +233,3 @@ void WorkerThread::Log(const char* pStrFormat, ...)
     str[sizeof(str) - 1] = '\0';
     LogText(wxString(str, wxConvUTF8));
 }
-
-
