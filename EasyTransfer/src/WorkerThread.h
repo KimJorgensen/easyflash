@@ -47,6 +47,8 @@ protected:
     void LogText(const wxString& str);
     bool ConnectToEF();
     bool StartHandshake();
+    void SendStartCommand(char* pResponse, int sizeResponse);
+    void WaitForCont(void);
 
     wxEvtHandler* m_pEventHandler;
     wxString m_stringInputFileName;
