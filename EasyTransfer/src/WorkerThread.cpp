@@ -119,17 +119,17 @@ bool WorkerThread::ConnectToEF()
         return false;
     }
 
-    if ((ret = ftdi_usb_open(&m_ftdic, 0x0403, 0x6001)) < 0)
+    if ((ret = ftdi_usb_open(&m_ftdic, 0x0403, 0x8738)) < 0)
     {
         Log("Unable to open ftdi device: %d (%s)\n", ret, ftdi_get_error_string(&m_ftdic));
         return false;
     }
 
-    if ((ret = ftdi_setflowctrl(&m_ftdic, SIO_DTR_DSR_HS)) != 0)
+    /*if ((ret = ftdi_setflowctrl(&m_ftdic, SIO_DTR_DSR_HS)) != 0)
     {
         Log("Unable to set flow control: %d (%s)\n", ret, ftdi_get_error_string(&m_ftdic));
         return false;
-    }
+    }*/
 
     if ((ret = ftdi_set_baudrate(&m_ftdic, 1000000)) != 0)
     {
@@ -141,48 +141,113 @@ bool WorkerThread::ConnectToEF()
 }
 
 
+
 /*****************************************************************************/
 /**
  *
  */
 bool WorkerThread::StartHandshake()
 {
+    bool bWaiting;
+    char strResponse[8];
+
+    do
+    {
+        bWaiting = false;
+        SendStartCommand(strResponse, sizeof(strResponse));
+
+        if (strcmp(strResponse, "WAIT") == 0)
+        {
+            bWaiting = true;
+            WaitForCont();
+        }
+    }
+    while (bWaiting);
+
+    if (strcmp(strResponse, "WAIT") == 0)
+
+
+
+    return true;
+}
+
+
+/*****************************************************************************/
+/**
+ *
+ */
+void WorkerThread::SendStartCommand(char* pResponse, int sizeResponse)
+{
     int         ret;
     unsigned char strResponse[8];
     const char* pRequestStr;
     size_t      nRequestLen;
 
-    Log("Waiting for answer from EasyFlash...\n");
-
-    pRequestStr = "EFSTART:";
+    pRequestStr = "EFSTART:CRT";
     nRequestLen = strlen(pRequestStr);
-    do
+    pResponse[0] = '\0';
+
+    Log("Send command: %s\n", pRequestStr);
+    // Send request
+    ret = ftdi_write_data(&m_ftdic, (unsigned char*)pRequestStr, nRequestLen);
+    if (ret != nRequestLen)
     {
-        // Send request
-        /*ret = ftdi_write_data(&m_ftdic, (unsigned char*)pRequestStr, nRequestLen);
-        if (ret != nRequestLen)
-        {
-            Log("Write failed: %d (%s - %s)\n", ret, ftdi_get_error_string(&m_ftdic),
+        Log("Write failed: %d (%s - %s)\n", ret, ftdi_get_error_string(&m_ftdic),
                 ret < 0 ? strerror(-ret) : "unknown cause");
-        }*/
-
-        // Check response
-        ret = ftdi_read_data(&m_ftdic, strResponse, sizeof(strResponse));
-        if (ret < 0)
-        {
-            Log("Write failed: %d (%s - %s)\n", ret, ftdi_get_error_string(&m_ftdic),
-                ret < 0 ? strerror(-ret) : "unknown cause");
-        }
-        else if (ret > 0)
-        {
-            Log("Response OK\n");
-        }
-        else
-            Log("Nothing\n");
     }
-    while (1);
 
-    return true;
+    // Check response
+    wxMilliSleep(100);
+    ret = ftdi_read_data(&m_ftdic, (unsigned char*)pResponse, sizeResponse - 1);
+    if (ret < 0)
+    {
+        Log("Write failed: %d (%s - %s)\n", ret, ftdi_get_error_string(&m_ftdic),
+                ret < 0 ? strerror(-ret) : "unknown cause");
+    }
+    else if (ret > 0)
+    {
+        pResponse[ret] = 0;
+        Log("Response: %s\n", pResponse);
+    }
+}
+
+
+/*****************************************************************************/
+/**
+ *
+ */
+void WorkerThread::WaitForCont(void)
+{
+    int         ret;
+    unsigned char strResponse[8];
+#if 0
+    pRequestStr = "EFSTART:CRT";
+    nRequestLen = strlen(pRequestStr);
+    pResponse[0] = '\0';
+
+    Log("Send command: %s\n", pRequestStr);
+    // Send request
+    ret = ftdi_write_data(&m_ftdic, (unsigned char*)pRequestStr, nRequestLen);
+    if (ret != nRequestLen)
+    {
+        Log("Write failed: %d (%s - %s)\n", ret, ftdi_get_error_string(&m_ftdic),
+                ret < 0 ? strerror(-ret) : "unknown cause");
+    }
+
+    // Check response
+    wxMilliSleep(100);
+    ret = ftdi_read_data(&m_ftdic, (unsigned char*)pResponse, sizeResponse - 1);
+    if (ret < 0)
+    {
+        Log("Write failed: %d (%s - %s)\n", ret, ftdi_get_error_string(&m_ftdic),
+                ret < 0 ? strerror(-ret) : "unknown cause");
+    }
+    else if (ret > 0)
+    {
+        pResponse[ret] = 0;
+        Log("Response: %s\n", pResponse);
+    }
+#endif
 }
 
 
