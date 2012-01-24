@@ -29,18 +29,10 @@
 #
 check_uninstall :=
 
-# old installation names/paths
-check_uninstall += /usr/local/share/applications/$(app_name).desktop
-check_uninstall += /usr/local/share/$(app_name)
-check_uninstall += /usr/local/bin/$(app_name)
-check_uninstall += /usr/share/applications/$(app_name).desktop
-check_uninstall += /usr/share/$(app_name)
-check_uninstall += /usr/bin/$(app_name)
-
 # current installation names/paths
-check_uninstall += $(desktop_inst_dir)/$(app_name).desktop
-check_uninstall += $(res_inst_dir)/$(app_name)
-check_uninstall += $(doc_inst_dir)/$(app_name)
+check_uninstall += $(desktop_inst_dir)/$(prj_name).desktop
+check_uninstall += $(res_inst_dir)/$(prj_name)
+check_uninstall += $(doc_inst_dir)/$(prj_name)
 check_uninstall += $(bin_inst_dir)/$(app_name)
 
 uninstall_entries := $(sort $(foreach x,$(check_uninstall),$(wildcard $(x))))
@@ -93,10 +85,10 @@ ifneq "$(shell id -u)" "0"
 endif
 	mkdir -p $(bin_inst_dir)
 	cp $(outdir)/$(app_name) $(bin_inst_dir)
-	mkdir -p $(res_inst_dir)/$(app_name)
-	cp -r  $(outdir)/res $(res_inst_dir)/$(app_name)
-	mkdir -p $(doc_inst_dir)/$(app_name)
-	cp $(outdoc) $(doc_inst_dir)/$(app_name)
+	mkdir -p $(res_inst_dir)/$(prj_name)
+	cp -r  $(outdir)/res $(res_inst_dir)/$(prj_name)
+	mkdir -p $(doc_inst_dir)/$(prj_name)
+	cp $(outdoc) $(doc_inst_dir)/$(prj_name)
 	mkdir -p $(desktop_inst_dir)
-	cp $(srcdir)/../res/$(app_name).desktop $(desktop_inst_dir)
+	cp $(srcdir)/../res/$(prj_name).desktop $(desktop_inst_dir)
 	@echo Done.

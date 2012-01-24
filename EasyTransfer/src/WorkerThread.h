@@ -48,7 +48,10 @@ protected:
     bool ConnectToEF();
     bool StartHandshake();
     void SendCommand(const char* pRequestStr);
-    void ReceiveResponse(char* pResponse, int sizeResponse);
+    bool SendFile(void);
+    void ReceiveResponse(unsigned char* pResponse,
+                         int sizeResponse,
+                         int timeoutSecs);
 
     wxEvtHandler* m_pEventHandler;
     wxString m_stringInputFileName;
