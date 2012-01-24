@@ -347,8 +347,6 @@ _eapiSetSlot:
 ; =============================================================================
 .export _eapiSectorErase
 _eapiSectorErase:
-        jsr _efShowROM
-
         lda _g_nSelectedSlot
         jsr EAPISetSlot
 
@@ -356,6 +354,7 @@ _eapiSectorErase:
         txa
         tay
 
+        jsr _efShowROM
         jsr EAPIGetBank
         jsr EAPIEraseSector
         jsr _efHideROM
@@ -384,8 +383,6 @@ eseError:
 ; =============================================================================
 .export _eapiWriteFlash
 _eapiWriteFlash:
-        jsr _efShowROM
-
         ; remember value
         pha
 
@@ -403,6 +400,7 @@ _eapiWriteFlash:
 
         pla
 
+        jsr _efShowROM
         jsr EAPIWriteFlash
         jsr _efHideROM
         lda #0
