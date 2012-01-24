@@ -25,12 +25,15 @@
 
 cross          := i586-mingw32msvc
 wx-version     := wxMSW-2.8.12
-wx-archive-dir := $(here)/archive
 wx-build-dir   := wx-build
 wx-prefix      := /opt/cross/$(cross)-$(wx-version)
 
 # after adding some paths to this it will be used as PATH
 path          := $(PATH)
+
+# to be used in top-level Makefile
+cxxflags      += $(shell $(wx-prefix)/bin/wx-config --static=yes --cxxflags)
+libs          += $(shell $(wx-prefix)/bin/wx-config --libs)
 
 ###############################################################################
 # Rules to check the cross compiling environment
@@ -45,6 +48,7 @@ out/check-environment.ok:
 
 .PHONY: check-wx
 check-wx:
+	$(host)-gcc --help > /dev/null
 	$(wx-prefix)/bin/wx-config --version > /dev/null || $(MAKE) no-wx
 
 .PHONY: no-wx
@@ -63,7 +67,7 @@ no-wx:
 	$(warning become a pain in the ass to get the config running.)
 	$(warning )
 	$(warning You can install it using this makefile by invoking:)
-	$(warning make install-wxwidgets)
+	$(warning make win32=yes install-wxwidgets)
 	$(warning This needs you to be a sudoer, because some commands use sudo)
 	$(warning ========================================================================)
 	$(error stop.)
@@ -88,11 +92,11 @@ $(wx-build-dir)/$(wx-version)/3-installed: $(wx-build-dir)/$(wx-version)/2-compi
 	touch $@
 
 # unpack wxwidgets
-$(wx-build-dir)/$(wx-version): $(wx-archive-dir)/$(wx-version).tar.bz2
+$(wx-build-dir)/$(wx-version): $(archive_dir)/$(wx-version).tar.bz2
 	mkdir -p $(wx-build-dir)
-	tar xjf $(wx-archive-dir)/$(wx-version).tar.bz2 -C $(wx-build-dir)
+	tar xjf $(archive_dir)/$(wx-version).tar.bz2 -C $(wx-build-dir)
 
 # download wxwidgets
-$(wx-archive-dir)/$(wx-version).tar.bz2:
-	mkdir -p $(wx-archive-dir)
-	cd $(wx-archive-dir) && wget "http://downloads.sourceforge.net/wxwindows/$(wx-version).tar.bz2"
+$(archive_dir)/$(wx-version).tar.bz2:
+	mkdir -p $(archive_dir)
+	cd $(archive_dir) && wget "http://downloads.sourceforge.net/wxwindows/$(wx-version).tar.bz2"

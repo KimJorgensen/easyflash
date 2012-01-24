@@ -83,22 +83,20 @@ void* WorkerThread::Entry()
     uint16_t      crc;
     size_t        i, size;
     uint8_t*      p;
-    bool          error;
 
     Log("Input:  %s\n",
             (const char*) m_stringInputFileName.mb_str());
 
-    error = false;
     if (!ConnectToEF())
-        error = true;
+        return NULL;
 
-    if (error || !StartHandshake())
-        error = true;
+    if (!StartHandshake())
+        return NULL;
 
-    if (error)
-        Log("An error occurred, sorry :(\n");
-    else
-        Log("\n\\o/\nREADY.\n\n");
+    if (!SendFile())
+        return NULL;
+
+    Log("\n\\o/\nREADY.\n\n");
 
     LogComplete();
     return NULL;
@@ -125,6 +123,9 @@ bool WorkerThread::ConnectToEF()
         return false;
     }
 
+    ftdi_usb_reset(&m_ftdic);
+    ftdi_usb_purge_buffers(&m_ftdic);
+
     return true;
 }
 
@@ -137,29 +138,46 @@ bool WorkerThread::ConnectToEF()
 bool WorkerThread::StartHandshake()
 {
     bool bWaiting;
-    char strResponse[8];
+    unsigned char strResponse[20];
 
     /* Send the command as often as we get "WAIT" as response */
     do
     {
         bWaiting = false;
         SendCommand("EFSTART:CRT");
-        ReceiveResponse(strResponse, sizeof(strResponse));
+        ReceiveResponse(strResponse, sizeof(strResponse), 20);
 
-        if (strcmp(strResponse, "WAIT") == 0)
+        if (strResponse[0] == 0)
+            return false;
+
+        if (strcmp((char*)strResponse, "WAIT") == 0)
         {
+            Log("Waiting...\n");
             bWaiting = true;
         }
     }
     while (bWaiting);
 
-    if (strResponse[0] == '\0')
+    Log("Running...\n");
+
+    if (strcmp((char*)strResponse, "BTYP") == 0)
     {
-        Log("No response\n");
+        Log("(%s) Client doesn't support this file type or action.\n", strResponse);
+        return false;
+    }
+    else if (strcmp((char*)strResponse, "LOAD") == 0)
+    {
+        Log("(%s) Start to send data.\n", strResponse);
+        return true;
+    }
+    else
+    {
+        Log("Unknown response: \"%s\"\n", strResponse);
         return false;
     }
 
-    return true;
+
+    return false;
 }
 
 
@@ -190,30 +208,80 @@ void WorkerThread::SendCommand(const char* pRequestStr)
 /**
  *
  */
-void WorkerThread::ReceiveResponse(char* pResponse, int sizeResponse)
+bool WorkerThread::SendFile(void)
 {
-    int  ret, retry;
+    uint8_t     buffer[128];
+    wxFile*     pFile;
+    int         ret, count, rest;
 
-    /* 100 * 0.1 s = 10 s */
-    retry = 100;
+    pFile = new wxFile(m_stringInputFileName, wxFile::read);
+    if (!pFile->IsOpened())
+    {
+        Log("Error: Cannot open %s for reading\n",
+                (const char*) m_stringInputFileName.mb_str());
+        delete pFile;
+        return false;
+    }
 
     do
     {
-        wxMilliSleep(100);
+        count = pFile->Read(buffer, 128);
+        rest = count;
+        while (rest > 0)
+        {
+            ret = ftdi_write_data(&m_ftdic, (unsigned char*)buffer, rest);
+            if (ret < 0)
+            {
+                Log("Write failed: %d (%s - %s)\n", ret, ftdi_get_error_string(&m_ftdic),
+                        ret < 0 ? strerror(-ret) : "unknown cause");
+                delete pFile;
+                return false;
+            }
+            rest -= ret;
+        }
+    }
+    while (count > 0);
+    return true;
+}
+
+
+/*****************************************************************************/
+/**
+ * Try to receive a response. Return the response (0-terminated) or an empty
+ * string of there was no response.
+ */
+void WorkerThread::ReceiveResponse(unsigned char* pResponse,
+                                   int sizeResponse,
+                                   int timeoutSecs)
+{
+    int  ret, retry, i;
+
+    /* in 100 ms units */
+    retry = timeoutSecs;
+
+    do
+    {
+        wxMilliSleep(1000);
         pResponse[0] = '\0';
-        ret = ftdi_read_data(&m_ftdic, (unsigned char*)pResponse, sizeResponse - 1);
+        ret = ftdi_read_data(&m_ftdic, pResponse, sizeResponse - 1);
         if (ret < 0)
         {
+            pResponse[0] = 0;
             Log("Read failed: %d (%s - %s)\n", ret, ftdi_get_error_string(&m_ftdic),
                     ret < 0 ? strerror(-ret) : "unknown cause");
+            return;
         }
         else if (ret > 0)
         {
             pResponse[ret] = 0;
-            Log("Response: %s\n", pResponse);
+            Log("Got response: \"%s\".\n", (char*) pResponse);
+            return;
         }
     }
     while (ret == 0 && --retry);
+
+    Log("Time out.\n", ret, retry);
+    pResponse[0] = 0;
 }
 
 
