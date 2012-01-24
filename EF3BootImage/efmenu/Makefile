@@ -19,6 +19,7 @@ obj += obj/crt0.o
 obj += obj/efmenu.o
 obj += obj/efmenu_asm.o
 obj += obj/usb.o
+obj += obj/usb_asm.o
 obj += obj/gfx.o
 obj += obj/charset.o
 obj += obj/text_plot.o

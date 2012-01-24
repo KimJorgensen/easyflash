@@ -207,7 +207,10 @@ static void __fastcall__ start_menu_entry_ex(uint8_t key, const char* type)
                 if (key  && entry->key == key)
                     start_menu_entry(entry);
                 if (type && strcmp(entry->type, type) == 0)
+                {
+                    usbSendResponseWAIT();
                     start_menu_entry(entry);
+                }
             }
             ++entry;
         }
