@@ -63,6 +63,37 @@ _usbDiscardBuffer:
 ; =============================================================================
 .export _usbReadFile
 _usbReadFile:
+        ; check for 256 bytes
+        cpx #1
+        bne @not256
+        cmp #0
+        bne @not256
+
+        ; optimized case: 256 bytes
+        ; =========================
+        jsr popax
+        sta ptr2
+        stx ptr2 + 1            ; Save buffer
+
+        ldy #0                  ; bytesread = 0
+@Loop1:
+        bit USB_STATUS
+        bpl @Loop1
+        lda USB_DATA
+
+        ;cpx #0
+        ;bne @End               ; EOF
+        sta (ptr2), y           ; Save read byte
+
+        iny
+        bne @Loop1
+
+        lda #0
+        ldx #1                  ; return bytesread
+        rts
+
+        ; =========================
+@not256:
         eor #$ff
         sta ptr1
         txa
