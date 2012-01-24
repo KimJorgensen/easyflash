@@ -220,3 +220,10 @@ const char* apStrDifferentFile[] =
         "file.",
         NULL
 };
+
+const char* apStrFlashFromUSB[] =
+{
+        "Do you want to write",
+        "a cartridge file from USB?",
+        NULL
+};

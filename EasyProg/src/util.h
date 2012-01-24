@@ -27,6 +27,8 @@ void __fastcall__ utilAppendStr(const char* str);
 void __fastcall__ utilAppendFlashAddr(const EasyFlashAddr* pAddr);
 void __fastcall__ utilAppendDecimal(uint16_t n);
 
+void utilOpenFileFromUSB(void);
+
 uint8_t utilOpenFile(uint8_t nPart);
 
 void utilReadSelectNormalFile(void);

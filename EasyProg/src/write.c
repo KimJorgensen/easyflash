@@ -177,8 +177,9 @@ err:
 /******************************************************************************/
 /**
  * So all preparations to write a file to flash.
+ * If pStrImageType points to "U", read the file from USB.
  *
- * If this function returns CART_RV_OK, the file has been opened sucessfully.
+ * If this function returns CART_RV_OK, the file has been opened successfully.
  */
 static uint8_t writeOpenFile(const char* pStrImageType)
 {
@@ -186,20 +187,28 @@ static uint8_t writeOpenFile(const char* pStrImageType)
 
     checkFlashType();
 
-    do
+    if (strcmp(pStrImageType, "U") == 0)
     {
-        rv = fileDlg(pStrImageType);
-        if (!rv)
-            return CART_RV_ERR;
-
-        rv = utilOpenFile(0);
-        if (rv == 1)
-            screenPrintSimpleDialog(apStrFileOpenError);
+        utilOpenFileFromUSB();
     }
-    while (rv != OPEN_FILE_OK);
+    else
+    {
+        do
+        {
+            rv = fileDlg(pStrImageType);
+            if (!rv)
+                return CART_RV_ERR;
+
+            rv = utilOpenFile(0);
+            if (rv == 1)
+                screenPrintSimpleDialog(apStrFileOpenError);
+        }
+        while (rv != OPEN_FILE_OK);
+    }
 
     if (screenAskEraseDialog() != BUTTON_ENTER)
     {
+        /* todo: ??? */
         eload_close();
         return CART_RV_ERR;
     }
@@ -364,6 +373,33 @@ void checkWriteCRTImage(void)
     uint8_t rv;
 
     if (checkAskForSlot() && (writeOpenFile("CRT") == CART_RV_OK))
+    {
+        rv = writeCrtImage();
+        eload_close();
+        timerStop();
+
+        if (rv == CART_RV_OK)
+        {
+            if (g_nSlots > 1 && g_nSelectedSlot != 0)
+            {
+                slotSaveName(screenReadInput("Cartridge Name", g_strCartName),
+                    ~0);
+            }
+            screenPrintSimpleDialog(apStrWriteComplete);
+        }
+    }
+}
+
+
+/******************************************************************************/
+/**
+ * todo: merge functions!
+ */
+void checkWriteCRTImageFromUSB(void)
+{
+    uint8_t rv;
+
+    if (checkAskForSlot() && (writeOpenFile("U") == CART_RV_OK))
     {
         rv = writeCrtImage();
         eload_close();

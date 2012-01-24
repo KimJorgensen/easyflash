@@ -35,5 +35,6 @@ extern const char* pStrTestFailed;
 extern const char* apStrDirFull[];
 extern const char* apStrTestEndless[];
 extern const char* apStrDifferentFile[];
+extern const char* apStrFlashFromUSB[];
 
 #endif /* TEXTS_H_ */
