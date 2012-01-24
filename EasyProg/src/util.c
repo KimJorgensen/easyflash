@@ -36,6 +36,7 @@
 #include "eload.h"
 #include "timer.h"
 #include "slots.h"
+#include "usb.h"
 
 
 // globally visible string buffer for functions used here
@@ -171,6 +172,17 @@ uint8_t utilAskForNextFile(void)
     timerCont();
     refreshMainScreen();
     return 1;
+}
+
+
+/******************************************************************************/
+/**
+ *
+ */
+void utilOpenFileFromUSB(void)
+{
+    usbSendResponseLOAD();
+    utilRead = usbReadFile;
 }
 
 

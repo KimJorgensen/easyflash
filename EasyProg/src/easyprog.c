@@ -44,6 +44,7 @@
 #include "slots.h"
 #include "sprites.h"
 #include "util.h"
+#include "usb.h"
 
 #undef SHOW_HEAP_FREE
 
@@ -583,6 +584,32 @@ void resetCartInfo(void)
     internalCartType = INTERNAL_CART_TYPE_NONE;
 }
 
+
+/******************************************************************************/
+/**
+ * Refresh the elapsed time value.
+ */
+void execUSBCmd(const char* pStrUSBCmd)
+{
+    if (strcmp(pStrUSBCmd, "crt") == 0)
+    {
+        if (screenPrintDialog(apStrFlashFromUSB, BUTTON_ENTER | BUTTON_STOP) ==
+                BUTTON_ENTER)
+        {
+            checkWriteCRTImageFromUSB();
+        }
+        else
+        {
+            usbSendResponseSTOP();
+        }
+    }
+    else
+    {
+        usbSendResponseBTYP();
+    }
+}
+
+
 /******************************************************************************/
 /**
  *
@@ -590,6 +617,7 @@ void resetCartInfo(void)
 int main(void)
 {
     char key;
+    const char* pStrUSBCmd;
 
     timerInitTOD();
     screenInit();
@@ -619,24 +647,35 @@ int main(void)
     {
         setStatus("Ready. Press <m> for Menu.");
 
-        key = cgetc();
-        switch (key)
+        if (kbhit())
         {
-        case 'm':
-            execMenu(&menuMain);
-            break;
+            key = cgetc();
+            switch (key)
+            {
+            case 'm':
+                execMenu(&menuMain);
+                break;
 
-        case 'o':
-            execMenu(&menuOptions);
-            break;
+            case 'o':
+                execMenu(&menuOptions);
+                break;
 
-        case 'e':
-            execMenu(&menuExpert);
-            break;
+            case 'e':
+                execMenu(&menuExpert);
+                break;
 
-        case 'h':
-            execMenu(&menuHelp);
-            break;
+            case 'h':
+                execMenu(&menuHelp);
+                break;
+            }
+        }
+        else
+        {
+            pStrUSBCmd = usbCheckForCommand();
+            if (pStrUSBCmd)
+            {
+                execUSBCmd(pStrUSBCmd);
+            }
         }
     }
     return 0;

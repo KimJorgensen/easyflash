@@ -52,6 +52,7 @@
 #define EASYFLASH_IO_ULTIMAX (EASYFLASH_IO_BIT_MEMCTRL | EASYFLASH_IO_BIT_GAME)
 
 void checkWriteCRTImage(void);
+void checkWriteCRTImageFromUSB(void);
 void checkWriteLOROMImage(void);
 void checkWriteHIROMImage(void);
 void checkWriteKERNALImage(void);
