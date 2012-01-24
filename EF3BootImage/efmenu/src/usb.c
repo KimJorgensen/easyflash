@@ -24,8 +24,6 @@
 #include <string.h>
 #include <c64.h>
 
-#include "memcfg.h"
-#include "efmenu.h"
 #include "usb.h"
 
 #define USB_ID      *((uint8_t*) 0xde08)
@@ -36,6 +34,7 @@
 #define USB_TX_READY 0x40
 
 static char request[12];
+
 
 /******************************************************************************/
 /**
@@ -75,10 +74,25 @@ char* usbCheckForCommand(void)
 
         if (memcmp(request, "efstart:", 8) == 0)
         {
-            ++VIC.bordercolor;
-            usbSendData("wait", 4);
             return request + 8;
         }
     }
     return NULL;
+}
+
+void usbSendResponseWAIT(void)
+{
+    usbSendData("wait", 4);
+}
+
+
+void usbSendResponseLOAD(void)
+{
+    usbSendData("load", 4);
+}
+
+
+void usbSendResponseBTYP(void)
+{
+    usbSendData("btyp", 4);
 }
