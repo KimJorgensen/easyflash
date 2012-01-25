@@ -1,6 +1,8 @@
 syntax: glob
 obj/*
 out/*
+out_win32/*
+archive/*
 a.out
 *.tar.*
 *~
