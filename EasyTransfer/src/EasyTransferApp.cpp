@@ -37,6 +37,27 @@
 
 IMPLEMENT_APP(EasyTransferApp);
 
+static const wxCmdLineEntryDesc aCmdLineDesc[] =
+{
+#if 0
+     {
+             wxCMD_LINE_SWITCH, wxT("h"), wxT("help"),
+             wxT("display help on the command line parameters"),
+             wxCMD_LINE_VAL_NONE, wxCMD_LINE_OPTION_HELP
+     },
+     {
+             wxCMD_LINE_PARAM, NULL, NULL,
+             wxT("filename"),
+             wxCMD_LINE_VAL_STRING, wxCMD_LINE_OPTION_MANDATORY
+     },
+     {
+             wxCMD_LINE_SWITCH, wxT("s"), wxT("silent"),
+             wxT("disables the GUI")
+     },
+#endif
+     { wxCMD_LINE_NONE }
+};
+
 /*****************************************************************************/
 EasyTransferApp::EasyTransferApp()
 {
@@ -58,6 +79,10 @@ bool EasyTransferApp::OnInit()
     size_t i;
     wxIcon icon(easytransfer_xpm);
 
+    // call default behaviour (mandatory)
+    if (!wxApp::OnInit())
+        return false;
+
     m_pMainFrame = new EasyTransferMainFrame(NULL, _T("EasyTransfer " VERSION));
     m_pMainFrame->SetIcon(icon);
     m_pMainFrame->Show();
@@ -66,3 +91,32 @@ bool EasyTransferApp::OnInit()
     return true;
 }
 
+
+/*****************************************************************************/
+void EasyTransferApp::OnInitCmdLine(wxCmdLineParser& parser)
+{
+    parser.SetDesc(aCmdLineDesc);
+    // must refuse '/' as parameter starter or cannot use "/path" style paths
+    parser.SetSwitchChars (wxT("-"));
+}
+
+
+/*****************************************************************************/
+bool EasyTransferApp::OnCmdLineParsed(wxCmdLineParser& parser)
+{
+    //silent_mode = parser.Found(wxT("s"));
+
+    // to get at your unnamed parameters use
+    wxArrayString files;
+    for (int i = 0; i < parser.GetParamCount(); i++)
+    {
+            files.Add(parser.GetParam(i));
+    }
+
+    // and other command line parameters
+
+    // then do what you need with them.
+
+    return wxApp::OnCmdLineParsed(parser);
+    //return true; ??
+}

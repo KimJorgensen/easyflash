@@ -31,11 +31,14 @@ class wxFilePickerCtrl;
 class wxFileDirPickerEvent;
 class wxButton;
 class wxTextCtrl;
+class wxGauge;
 
 class WorkerThread;
 
 BEGIN_DECLARE_EVENT_TYPES()
-    DECLARE_EVENT_TYPE(wxEVT_EASY_SPLIT_LOG, -1)
+    DECLARE_EVENT_TYPE(wxEVT_EASY_TRANSFER_LOG,      -1)
+    DECLARE_EVENT_TYPE(wxEVT_EASY_TRANSFER_PROGRESS, -1)
+    DECLARE_EVENT_TYPE(wxEVT_EASY_TRANSFER_COMPLETE, -1)
 END_DECLARE_EVENT_TYPES()
 
 class EasyTransferMainFrame: public wxFrame
@@ -52,12 +55,15 @@ protected:
     void DoIt();
     void OnButton(wxCommandEvent& event);
     void OnLog(wxCommandEvent& event);
+    void OnProgress(wxCommandEvent& event);
+    void OnComplete(wxCommandEvent& event);
     void OnFilePickerChanged(wxFileDirPickerEvent& event);
 
     wxFilePickerCtrl*   m_pInputFilePicker;
     wxButton*           m_pButtonStart;
     wxButton*           m_pButtonQuit;
     wxTextCtrl*         m_pTextCtrlLog;
+    wxGauge*            m_pProgress;
 
     WorkerThread*       m_pWorkerThread;
 };

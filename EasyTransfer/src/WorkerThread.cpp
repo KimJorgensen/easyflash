@@ -53,29 +53,6 @@ WorkerThread::~WorkerThread()
     m_pTheWorkerThread = NULL;
 }
 
-/*****************************************************************************/
-void WorkerThread::LogText(const wxString& str)
-{
-    wxCommandEvent event(wxEVT_EASY_SPLIT_LOG);
-    event.SetString(str);
-    event.SetInt(0);
-    m_pEventHandler->AddPendingEvent(event);
-}
-
-
-/*****************************************************************************/
-/*
- * Tell the main thread that we're done.
- */
-void WorkerThread::LogComplete(void)
-{
-    wxCommandEvent event(wxEVT_EASY_SPLIT_LOG);
-
-    event.SetInt(1); // done!
-
-    m_pEventHandler->AddPendingEvent(event);
-}
-
 
 /*****************************************************************************/
 void* WorkerThread::Entry()
@@ -87,6 +64,8 @@ void* WorkerThread::Entry()
     Log("Input:  %s\n",
             (const char*) m_stringInputFileName.mb_str());
 
+    SetProgress(12);
+
     if (!ConnectToEF())
         return NULL;
 
@@ -97,9 +76,56 @@ void* WorkerThread::Entry()
         return NULL;
 
     Log("\n\\o/\nREADY.\n\n");
-
-    LogComplete();
+    Complete();
     return NULL;
+}
+
+
+/*****************************************************************************/
+void WorkerThread::LogText(const wxString& str)
+{
+    wxCommandEvent event(wxEVT_EASY_TRANSFER_LOG);
+    event.SetString(str);
+    m_pEventHandler->AddPendingEvent(event);
+}
+
+
+/*****************************************************************************/
+/*
+ * Tell the main thread that we're done.
+ */
+void WorkerThread::Complete(void)
+{
+    wxCommandEvent event(wxEVT_EASY_TRANSFER_COMPLETE);
+    m_pEventHandler->AddPendingEvent(event);
+}
+
+
+/*****************************************************************************/
+/*
+ */
+void WorkerThread::LogFTDIError(int ret)
+{
+    Log("USB operation failed: %d (%s - %s)\n", ret,
+            ftdi_get_error_string(&m_ftdic),
+            ret < 0 ? strerror(-ret) : "unknown cause");
+}
+
+
+/*****************************************************************************/
+/*
+ * Tell the main thread that we're done.
+ */
+void WorkerThread::SetProgress(int percent)
+{
+    if (percent < 0)
+        percent = 0;
+    if (percent > 100)
+        percent = 100;
+
+    wxCommandEvent event(wxEVT_EASY_TRANSFER_PROGRESS);
+    event.SetInt(percent);
+    m_pEventHandler->AddPendingEvent(event);
 }
 
 
@@ -129,6 +155,37 @@ bool WorkerThread::ConnectToEF()
     return true;
 }
 
+
+/*****************************************************************************/
+/**
+ * Read the given number of bytes from USB. Do not return before the whole
+ * number of bytes has been received.
+ *
+ * Return true on success, false otherwise.
+ */
+bool WorkerThread::ReadFromUSB(unsigned char* pBuffer, int nBytes)
+{
+    int nRead, ret;
+
+    nRead = 0;
+    do
+    {
+        ret = ftdi_read_data(&m_ftdic, pBuffer + nRead, nBytes - nRead);
+
+        if (ret < 0)
+        {
+            LogFTDIError(ret);
+            return false;
+        }
+
+        if (ret == 0)
+            wxMilliSleep(50);
+
+        nRead += ret;
+    }
+    while (nRead < nBytes);
+    return true;
+}
 
 
 /*****************************************************************************/
@@ -210,9 +267,12 @@ void WorkerThread::SendCommand(const char* pRequestStr)
  */
 bool WorkerThread::SendFile(void)
 {
-    uint8_t     buffer[128];
-    wxFile*     pFile;
-    int         ret, count, rest;
+    unsigned char sizeBuffer[2];
+    unsigned char buffer[256];
+    int           nBytesReq;
+    wxFile*       pFile;
+    wxFileOffset  nFileSize;
+    int           ret, count, rest;
 
     pFile = new wxFile(m_stringInputFileName, wxFile::read);
     if (!pFile->IsOpened())
@@ -222,25 +282,60 @@ bool WorkerThread::SendFile(void)
         delete pFile;
         return false;
     }
+    nFileSize = pFile->Length();
 
     do
     {
-        count = pFile->Read(buffer, 128);
-        rest = count;
-        while (rest > 0)
+        /* read the number of bytes requested by the client (0..256) */
+        if (!ReadFromUSB(sizeBuffer, 2))
         {
-            ret = ftdi_write_data(&m_ftdic, (unsigned char*)buffer, rest);
-            if (ret < 0)
+            delete pFile;
+            return false;
+        }
+        nBytesReq = sizeBuffer[0] + sizeBuffer[1] * 256;
+
+        Log("Client requested %d bytes\n", nBytesReq);
+        if (nBytesReq > 256)
+        {
+            Log("Error: Client requested too many bytes (%d)\n", nBytesReq);
+            delete pFile;
+            return false;
+        }
+        if (nBytesReq > 0)
+        {
+            if (pFile->Eof())
+                count = 0;
+            else
+                count = pFile->Read(buffer, nBytesReq);
+
+            sizeBuffer[0] = count & 0xff;
+            sizeBuffer[1] = count >> 8;
+            // send length indication
+            Log("Send %d bytes\n", count);
+            ret = ftdi_write_data(&m_ftdic, sizeBuffer, 2);
+            if (ret != 2)
             {
-                Log("Write failed: %d (%s - %s)\n", ret, ftdi_get_error_string(&m_ftdic),
-                        ret < 0 ? strerror(-ret) : "unknown cause");
+                LogFTDIError(ret);
                 delete pFile;
                 return false;
             }
-            rest -= ret;
+            // send payload
+            if (count)
+            {
+                ret = ftdi_write_data(&m_ftdic, buffer, count);
+                if (ret != count)
+                {
+                    LogFTDIError(ret);
+                    delete pFile;
+                    return false;
+                }
+            }
         }
+        SetProgress((int)(100 * (pFile->Tell() + 1) / nFileSize));
     }
-    while (count > 0);
+    while (nBytesReq > 0);
+
+    delete pFile;
     return true;
 }
 

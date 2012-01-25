@@ -40,6 +40,8 @@ public:
     EasyTransferApp();
     virtual ~EasyTransferApp();
     virtual bool OnInit();
+    virtual void OnInitCmdLine(wxCmdLineParser& parser);
+    virtual bool OnCmdLineParsed(wxCmdLineParser& parser);
 
 protected:
     EasyTransferMainFrame*    m_pMainFrame;

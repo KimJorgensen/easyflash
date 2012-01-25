@@ -79,6 +79,7 @@ ifeq ($(debug), yes)
 else
     ccflags       += -O2
     cxxflags      += -O2
+    ldflags       += -Wl,--strip-all
 endif
 
 ifneq "$(release)" "yes"
