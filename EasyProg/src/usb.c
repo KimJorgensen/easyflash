@@ -89,20 +89,53 @@ char* usbCheckForCommand(void)
 // points to utilRead function to be used to read bytes from file
 unsigned int __fastcall__ usbReadFile(void* buffer, unsigned int size)
 {
-    unsigned int n_bytes;
+    unsigned int nBytes, nRemaining, nXferBytes;
     uint8_t* p;
 
-    n_bytes = 0;
     p = buffer;
-    while (n_bytes < size)
+    nRemaining = size;
+    nBytes = 0;
+    while (nRemaining > 0)
     {
-        if (USB_STATUS & USB_RX_READY)
+        if (nRemaining > 256)
+            nXferBytes = 256;
+        else
+            nXferBytes = nRemaining;
+
+        // send number of bytes requested
+        // todo: check FIFO state
+        USB_DATA = nXferBytes & 0xff;
+        USB_DATA = nXferBytes >> 8;
+
+        // read number of bytes available
+        while ((USB_STATUS & USB_RX_READY) == 0)
+        {}
+        nXferBytes = USB_DATA;
+        while ((USB_STATUS & USB_RX_READY) == 0)
+        {}
+        nXferBytes |= USB_DATA << 8;
+
+        if (nXferBytes == 0)
         {
+            // todo: check FIFO state
+            // request 0 bytes == CLOSE
+            USB_DATA = 0;
+            USB_DATA = 0;
+            return nBytes;
+        }
+
+        nBytes += nXferBytes;
+        nRemaining -= nXferBytes;
+
+        while (nXferBytes--)
+        {
+            while ((USB_STATUS & USB_RX_READY) == 0)
+            {}
             *p++ = USB_DATA;
-            ++n_bytes;
         }
     }
-    return n_bytes;
+
+    return nBytes;
 }
 #endif
 
