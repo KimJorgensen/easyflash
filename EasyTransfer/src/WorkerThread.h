@@ -38,14 +38,17 @@ public:
     WorkerThread(wxEvtHandler* pEventHandler, const wxString& stringInputFileName);
     virtual ~WorkerThread();
 
-    void Log(const char* pStrFormat, ...);
-    void LogComplete(void);
-
     static WorkerThread* m_pTheWorkerThread;
 protected:
     virtual void* Entry();
+    void Log(const char* pStrFormat, ...);
+    void LogComplete(void);
     void LogText(const wxString& str);
+    void LogFTDIError(int ret);
+    void SetProgress(int percent);
+    void Complete(void);
     bool ConnectToEF();
+    bool ReadFromUSB(unsigned char* pBuffer, int nBytes);
     bool StartHandshake();
     void SendCommand(const char* pRequestStr);
     bool SendFile(void);
