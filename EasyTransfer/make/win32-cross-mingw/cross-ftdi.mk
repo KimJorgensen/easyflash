@@ -27,8 +27,12 @@ libftdi_dir   := $(archive_dir)/libftdi-1.0-HEAD-9330b12
 # to be used in top-level Makefile
 cxxflags      += -I $(tmp_install)/include/libusb-1.0 
 cxxflags      += -I $(tmp_install)/include/libftdi
-libs          += -L $(tmp_install)/lib -L $(tmp_install)/bin 
-libs          += -l ftdi
+cflags        += -I $(tmp_install)/include/libusb-1.0 
+cflags        += -I $(tmp_install)/include/libftdi
+cxxlibs       += -L $(tmp_install)/lib -L $(tmp_install)/bin 
+cxxlibs       += -l ftdi
+clibs         += -L $(tmp_install)/lib -L $(tmp_install)/bin 
+clibs         += -l ftdi
 
 ftdiopt := -DDOCUMENTATION=OFF -DEXAMPLES=OFF -DFTDIPP=OFF -DFTDI_EEPROM=OFF
 ftdiopt += -DPYTHON_BINDINGS=OFF

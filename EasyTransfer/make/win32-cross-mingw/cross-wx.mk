@@ -29,11 +29,11 @@ wx-build-dir   := wx-build
 wx-prefix      := /opt/cross/$(cross)-$(wx-version)
 
 # after adding some paths to this it will be used as PATH
-path          := $(PATH)
+path           := $(PATH)
 
 # to be used in top-level Makefile
-cxxflags      += $(shell $(wx-prefix)/bin/wx-config --static=yes --cxxflags)
-libs          += $(shell $(wx-prefix)/bin/wx-config --libs)
+cxxflags       += $(shell $(wx-prefix)/bin/wx-config --static=yes --cxxflags)
+cxxlibs        += $(shell $(wx-prefix)/bin/wx-config --libs)
 
 ###############################################################################
 # Rules to check the cross compiling environment

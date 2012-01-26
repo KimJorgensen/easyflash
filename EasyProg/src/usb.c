@@ -39,6 +39,7 @@ static char request[12];
  * 6:39 Anfang
  * 5:39 Asm
  * 5:17 Asm256
+ * 5:46 mit Flow Control (5:30 ohne Statuszeile)
  */
 
 /******************************************************************************/
@@ -89,50 +90,38 @@ char* usbCheckForCommand(void)
 // points to utilRead function to be used to read bytes from file
 unsigned int __fastcall__ usbReadFile(void* buffer, unsigned int size)
 {
-    unsigned int nBytes, nRemaining, nXferBytes;
+    unsigned int nBytes, nXferBytes;
     uint8_t* p;
 
     p = buffer;
-    nRemaining = size;
-    nBytes = 0;
-    while (nRemaining > 0)
+
+    // send number of bytes requested
+    while ((USB_STATUS & USB_TX_READY) == 0)
+    {}
+    USB_DATA = size & 0xff;
+    while ((USB_STATUS & USB_TX_READY) == 0)
+    {}
+    USB_DATA = size >> 8;
+
+    // read number of bytes available
+    while ((USB_STATUS & USB_RX_READY) == 0)
+    {}
+    nXferBytes = USB_DATA;
+    while ((USB_STATUS & USB_RX_READY) == 0)
+    {}
+    nXferBytes |= USB_DATA << 8;
+
+    if (nXferBytes == 0)
     {
-        if (nRemaining > 256)
-            nXferBytes = 256;
-        else
-            nXferBytes = nRemaining;
+        // 0 bytes == EOF
+        return nBytes;
+    }
 
-        // send number of bytes requested
-        // todo: check FIFO state
-        USB_DATA = nXferBytes & 0xff;
-        USB_DATA = nXferBytes >> 8;
-
-        // read number of bytes available
+    while (nXferBytes--)
+    {
         while ((USB_STATUS & USB_RX_READY) == 0)
         {}
-        nXferBytes = USB_DATA;
-        while ((USB_STATUS & USB_RX_READY) == 0)
-        {}
-        nXferBytes |= USB_DATA << 8;
-
-        if (nXferBytes == 0)
-        {
-            // todo: check FIFO state
-            // request 0 bytes == CLOSE
-            USB_DATA = 0;
-            USB_DATA = 0;
-            return nBytes;
-        }
-
-        nBytes += nXferBytes;
-        nRemaining -= nXferBytes;
-
-        while (nXferBytes--)
-        {
-            while ((USB_STATUS & USB_RX_READY) == 0)
-            {}
-            *p++ = USB_DATA;
-        }
+        *p++ = USB_DATA;
     }
 
     return nBytes;

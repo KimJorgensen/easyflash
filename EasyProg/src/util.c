@@ -47,7 +47,7 @@ unsigned int __fastcall__ (*utilRead)(void* buffer, unsigned int size);
 
 
 /******************************************************************************/
-/** Local data: Put here to reduce code size */
+/** Local data */
 
 // This header is read by utilCheckFileHeader which is called by utilOpenFile.
 // It can be used to identify the file type.
@@ -68,6 +68,8 @@ static const char aEasySplitSignature[8] =
         0x65, 0x61, 0x73, 0x79, 0x73, 0x70, 0x6c, 0x74
 };
 
+static uint8_t bUseUSB;
+
 /******************************************************************************/
 /* prototypes */
 static uint8_t utilCheckFileHeader(void);
@@ -85,11 +87,22 @@ static void utilComplainWrongPart(uint8_t nPart);
  * split or it may be the first part of a split file. Otherwise it must be the
  * right split file > 0.
  *
+ * If nPart is UTIL_USE_USB the file will be read from USB in this case no
+ * splitting is allowed.
+ *
  * OPEN_FILE_OK, OPEN_FILE_ERR, OPEN_FILE_WRONG
  */
 uint8_t utilOpenFile(uint8_t nPart)
 {
     uint8_t type;
+
+    if (nPart == UTIL_USE_USB)
+    {
+        usbSendResponseLOAD();
+        utilRead = usbReadFile;
+        bUseUSB = 1;
+    }
+    bUseUSB = 0;
 
     if (g_bFastLoaderEnabled)
         eload_set_drive_check_fastload(g_nDrive);
@@ -128,6 +141,18 @@ uint8_t utilOpenFile(uint8_t nPart)
     return OPEN_FILE_OK;
 }
 
+
+/******************************************************************************/
+/**
+ *
+ */
+void utilCloseFile(void)
+{
+    if (bUseUSB)
+        usbCloseFile();
+    else
+        eload_close();
+}
 
 /******************************************************************************/
 /**
@@ -172,17 +197,6 @@ uint8_t utilAskForNextFile(void)
     timerCont();
     refreshMainScreen();
     return 1;
-}
-
-
-/******************************************************************************/
-/**
- *
- */
-void utilOpenFileFromUSB(void)
-{
-    usbSendResponseLOAD();
-    utilRead = usbReadFile;
 }
 
 

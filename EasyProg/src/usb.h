@@ -15,6 +15,8 @@ void usbSendResponseSTOP(void);
 void usbSendResponseLOAD(void);
 void usbSendResponseBTYP(void);
 
+/* these functions can be used after usbSendResponseLOAD(): */
 unsigned int __fastcall__ usbReadFile(void* buffer, unsigned int size);
+void usbCloseFile(void);
 
 #endif /* USB_H_ */

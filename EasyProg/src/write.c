@@ -189,7 +189,7 @@ static uint8_t writeOpenFile(const char* pStrImageType)
 
     if (strcmp(pStrImageType, "U") == 0)
     {
-        utilOpenFileFromUSB();
+        utilOpenFile(UTIL_USE_USB);
     }
     else
     {
@@ -208,8 +208,7 @@ static uint8_t writeOpenFile(const char* pStrImageType)
 
     if (screenAskEraseDialog() != BUTTON_ENTER)
     {
-        /* todo: ??? */
-        eload_close();
+        utilCloseFile();
         return CART_RV_ERR;
     }
 
@@ -352,13 +351,13 @@ static uint8_t __fastcall__ writeBinImage(uint8_t nStartBank,
 
     if (addr.nOffset || addr.nBank)
     {
-        eload_close();
+        utilCloseFile();
         timerStop();
         return CART_RV_OK;
     }
 
 retError:
-    eload_close();
+    utilCloseFile();
     timerStop();
     return CART_RV_ERR;
 }
@@ -375,7 +374,7 @@ void checkWriteCRTImage(void)
     if (checkAskForSlot() && (writeOpenFile("CRT") == CART_RV_OK))
     {
         rv = writeCrtImage();
-        eload_close();
+        utilCloseFile();
         timerStop();
 
         if (rv == CART_RV_OK)
@@ -402,7 +401,7 @@ void checkWriteCRTImageFromUSB(void)
     if (checkAskForSlot() && (writeOpenFile("U") == CART_RV_OK))
     {
         rv = writeCrtImage();
-        eload_close();
+        utilCloseFile();
         timerStop();
 
         if (rv == CART_RV_OK)

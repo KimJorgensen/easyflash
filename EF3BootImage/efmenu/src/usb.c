@@ -65,9 +65,11 @@ static void __fastcall__ usbSendData(const uint8_t* data, uint16_t len)
  */
 char* usbCheckForCommand(void)
 {
+    uint8_t guard = 0;
+
     request[11] = '\0';
 
-    while (USB_STATUS & USB_RX_READY)
+    while ((USB_STATUS & USB_RX_READY) && --guard)
     {
         memmove(request, request + 1, sizeof(request) - 1);
         request[sizeof(request) - 2] = USB_DATA;

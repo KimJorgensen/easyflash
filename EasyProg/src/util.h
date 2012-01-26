@@ -9,6 +9,8 @@
 
 #define UTIL_STR_SIZE 80
 
+#define UTIL_USE_USB 254
+
 // return values for utilOpenFile
 #define OPEN_FILE_OK        0
 #define OPEN_FILE_ERR       1
@@ -30,6 +32,7 @@ void __fastcall__ utilAppendDecimal(uint16_t n);
 void utilOpenFileFromUSB(void);
 
 uint8_t utilOpenFile(uint8_t nPart);
+void utilCloseFile(void);
 
 void utilReadSelectNormalFile(void);
 unsigned int __fastcall__ utilKernalRead(void* buffer,

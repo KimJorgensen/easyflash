@@ -91,29 +91,11 @@ _usbReadFile:
 
         jsr popax
         sta @storeAddr + 1
-        stx @storeAddr + 2      ; Save buffer
+        stx @storeAddr + 2      ; Save buffer address
 
-        lda #0
-        sta ptr3
-        sta ptr3 + 1            ; 0 bytes transfered so far
-
-@loadLoop:
-        ; still bytes to load?
-        lda ptr3 + 1
-        cmp ptr1 + 1
-        bne @LoadCont
-        lda ptr3
-        cmp ptr1
-        beq @end
-@LoadCont:
-        ldx #0                  ; prepare XY = 256
-        ldy #1
-        lda ptr1 + 1            ; At least 256 bytes remaining?
-        bne @atLeast256Needed
-        ldx ptr1                ; XY = rest (less than 256)
-        ldy #0
-@atLeast256Needed:
-        wait_usb_tx_ok          ; request 1..256 bytes (from XY)
+        ldx ptr1
+        ldy ptr1 + 1
+        wait_usb_tx_ok          ; request bytes (from XY)
         stx USB_DATA
         wait_usb_tx_ok
         sty USB_DATA
@@ -121,125 +103,55 @@ _usbReadFile:
         ; get number of bytes actually there
         ; todo: we should check if this is more than we asked for
         wait_usb_rx_ok
-        lda USB_DATA            ; low byte
-        sta ptr2                ; xfer size in ptr2
-        clc
-        adc ptr3                ; add to bytes transfered so far
-        sta ptr3
+        ldx USB_DATA            ; low byte
+        stx ptr2                ; xfer size in ptr2
         wait_usb_rx_ok
-        lda USB_DATA            ; high byte
-        sta ptr2 + 1            ; xfer size in ptr2
-        adc ptr3 + 1            ; add to bytes transfered so far
-        sta ptr3 + 1
-
-        ; subtract xfer size from remaining size
-        sec
-        lda ptr1
-        sbc ptr2
-        sta ptr1
-        lda ptr1 + 1
-        sbc ptr2 + 1
-        sta ptr1 + 1
-
-        ; todo: optimize the following lines
-        ldx ptr2
-        ldy ptr2 + 1            ; get xfer size
-
-        cpy #1                  ; high byte == 1 means 256 bytes
-        beq @getBytes           ; (low byte == 0 in this case)
-        cpx #0
+        ldy USB_DATA            ; high byte
+        sty ptr2 + 1            ; xfer size in ptr2
+        bne @loadCont
+        cpx #0                  ; check for EOF
         beq @end                ; 0 bytes == EOF
+@loadCont:
+        txa
+        eor #$ff
+        tax
+        tya
+        eor #$ff
+        tay                     ; calc -size - 1
+        jmp @incCounter         ; inc to get -size
+
 @getBytes:
-        ; x contains number of bytes to be xfered (low byte)
+        ; xy contains number of bytes to be xfered (x = low byte)
         wait_usb_rx_ok
         lda USB_DATA
 @storeAddr:
-        sta $eeee
+        sta $beef
         inc @storeAddr + 1
-        bne :+
+        bne @incCounter
         inc @storeAddr + 2
-:
-        dex
+@incCounter:
+        inx
+        bne @getBytes
+        iny
         bne @getBytes
 @end:
-        lda ptr3
-        ldx ptr3 + 1            ; return number of bytes transfered
+        lda ptr2
+        ldx ptr2 + 1            ; return number of bytes transfered
         rts
+.endproc
 
 
-.if 1 = 0
-        ; check for 256 bytes
-        cpx #1
-        bne @not256
-        cmp #0
-        bne @not256
-
-        ; optimized case: 256 bytes
-        ; =========================
-        jsr popax
-        sta ptr2
-        stx ptr2 + 1            ; Save buffer
-
-        ldy #0                  ; bytesread = 0
-@Loop1:
-        bit USB_STATUS
-        bpl @Loop1
-        lda USB_DATA
-
-        ;cpx #0
-        ;bne @End               ; EOF
-        sta (ptr2), y           ; Save read byte
-
-        iny
-        bne @Loop1
-
+; =============================================================================
+;
+; void usbCloseFile(void);
+;
+; =============================================================================
+.proc   _usbCloseFile
+.export _usbCloseFile
+_usbCloseFile:
         lda #0
-        ldx #1                  ; return bytesread
-        rts
-
-        ; =========================
-@not256:
-        eor #$ff
-        sta ptr1
-        txa
-        eor #$ff
-        sta ptr1 + 1            ; Save -size-1
-
-        jsr popax
-        sta ptr2
-        stx ptr2 + 1            ; Save buffer
-
-        lda #$00                ; bytesread = 0
-        sta ptr3
-        sta ptr3 + 1
-        beq @Read3              ; Branch always
-
-@Loop:
-        bit USB_STATUS
-        bpl @Loop
-        lda USB_DATA
-
-        ldx #0
-        ;cpx #0
-        ;bne @End                ; EOF
-        sta (ptr2, x)           ; Save read byte
-
-        inc ptr2
-        bne @Read2
-        inc ptr2 + 1            ; ++buffer;
-@Read2:
-        inc ptr3
-        bne @Read3
-        inc ptr3 + 1            ; ++bytesread;
-@Read3:
-        inc ptr1
-        bne @Loop
-        inc ptr1 + 1
-        bne @Loop
-@End:
-        lda ptr3
-        ldx ptr3 + 1            ; return bytesread;
-
-        rts
-.endif
+        wait_usb_tx_ok
+        sta USB_DATA
+        wait_usb_tx_ok
+        sta USB_DATA
 .endproc
