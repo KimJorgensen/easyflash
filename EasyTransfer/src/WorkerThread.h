@@ -29,9 +29,6 @@
 #include <stdarg.h>
 #include <stdint.h>
 
-#include <ftdi.h>
-
-
 class WorkerThread : public wxThread
 {
 public:
@@ -41,24 +38,13 @@ public:
     static WorkerThread* m_pTheWorkerThread;
 protected:
     virtual void* Entry();
-    void Log(const char* pStrFormat, ...);
-    void LogComplete(void);
-    void LogText(const wxString& str);
-    void LogFTDIError(int ret);
-    void SetProgress(int percent);
-    void Complete(void);
-    bool ConnectToEF();
-    bool ReadFromUSB(unsigned char* pBuffer, int nBytes);
-    bool StartHandshake();
-    void SendCommand(const char* pRequestStr);
-    bool SendFile(void);
-    void ReceiveResponse(unsigned char* pResponse,
-                         int sizeResponse,
-                         int timeoutSecs);
+
+    static void LogComplete(void);
+    static void LogText(const char* pStr);
+    static void LogProgress(int percent);
 
     wxEvtHandler* m_pEventHandler;
     wxString m_stringInputFileName;
-    struct ftdi_context m_ftdic;
 };
 
 #endif /* WORKERTHREAD_H_ */

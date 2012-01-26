@@ -131,8 +131,8 @@ sbcm_codeEnd:
 ; Set the EF ROM bank, copy 16k to 0x0801 and run that program by jumping to
 ; 0x080d.
 ;
-; The program in flash contains two byte start address, we ignore it and skip
-; these two bytes. That's why the copy starts from $8002.
+; The program in flash contains two byte start address, we copy them to
+; $07ff to get a faster copy loop.
 ;
 ;
 ; void __fastcall__ start_program(uint8_t bank);
@@ -147,6 +147,8 @@ _start_program:
         pha
         lda #MODE_EF_NO_RESET
         sta EASYFLASH3_IO_MODE          ; hides the mode register
+        lda #0
+        sta $d011                       ; disable VIC-II output
         lda #EASYFLASH_16K
         sta EASYFLASH_IO_CONTROL
         ldx #$00
@@ -157,36 +159,53 @@ _start_program:
         bne :-
         pla
         sta start_program_bank
+
+        lda #<$07ff
+        sta ptr1
+        lda #>$07ff                     ; 2 bytes more = start address
+        sta ptr1 + 1                    ; ptr1 = target
+
+        lda #<$8000
+        sta ptr2
+        lda #>$8000
+        sta ptr2 + 1                    ; ptr2 = source
+
         jmp $c000
+
 start_program_code:
 .org $c000
         sei
-        ldy #32 * 4             ; number of blocks to copy
-        ldx #0
+        ldx #32 * 4                     ; number of blocks to copy
+        ldy #0
 start_program_bank = * + 1
 @loop:
         lda #0
         sta EASYFLASH_IO_BANK
 @copy:
 @i1:
-        lda $8002
-@i2:
-        sta $0801
-        inc @i2 + 1
-        bne @nhi
-        inc @i2 + 2
-@nhi:
-        inc @i1 + 1
+        lda (ptr2), y
+        sta (ptr1), y
+        iny
+        lda (ptr2), y
+        sta (ptr1), y
+        iny
+        lda (ptr2), y
+        sta (ptr1), y
+        iny
+        lda (ptr2), y
+        sta (ptr1), y
+        iny
         bne @copy
-        inc @i1 + 2
-        lda @i1 + 2
-        cmp #$c0
+        inc ptr1 + 1                    ; inc high byte of target
+        inc ptr2 + 1
+        lda ptr2 + 1
+        cmp #$c0                        ; wrap $c000 => $8000
         bne @noBankInc
-        inc start_program_bank
+        inc start_program_bank          ; next bank
         lda #$80
-        sta @i1 + 2
+        sta ptr2 + 1
 @noBankInc:
-        dey
+        dex
         bne @loop
 
         lda #EASYFLASH_KILL

@@ -52,8 +52,8 @@
 static void showAbout(void);
 static void toggleFastLoader(void);
 static uint8_t returnTrue(void);
-static uint8_t ifHaveValidFlash(void);
-static uint8_t ifEF3(void);
+static uint8_t haveValidFlash(void);
+static uint8_t isEF3(void);
 static void updateFastLoaderText();
 
 /******************************************************************************/
@@ -97,25 +97,25 @@ ScreenMenu menuMain =
         {
             "&Write CRT to flash",
             checkWriteCRTImage,
-            ifHaveValidFlash,
+            haveValidFlash,
             0
         },
         {
             "Write &KERNAL to flash",
             checkWriteKERNALImage,
-            ifEF3,
+            isEF3,
             0
         },
         {
             "Write A&R/RR/NP to flash",
             checkWriteARImage,
-            ifEF3,
+            isEF3,
             0
         },
         {
             "Write SS&5 to flash",
             checkWriteSS5Image,
-            ifEF3,
+            isEF3,
             0
         },
         {
@@ -127,25 +127,25 @@ ScreenMenu menuMain =
         {
             "Erase &slot",
             checkEraseSlot,
-            ifEF3,
+            isEF3,
             0
         },
         {
             "Erase KERNAL",
             checkEraseKERNAL,
-            ifEF3,
+            isEF3,
             0
         },
         {
             "Erase AR/RR/NP",
             checkEraseAR,
-            ifEF3,
+            isEF3,
             0
         },
         {
             "Erase SS5",
             checkEraseSS5,
-            ifEF3,
+            isEF3,
             0
         },
         { NULL, NULL, 0, 0 }
@@ -223,7 +223,7 @@ ScreenMenu menuExpert =
         {
             "&Edit directory",
             slotsEditDirectory,
-            ifEF3,
+            isEF3,
             0
         },
         { NULL, NULL, 0, 0 }
@@ -483,7 +483,7 @@ static uint8_t returnTrue(void)
 /**
  * Return non-0 if the flash is okay and we have a driver which supports it.
  */
-static uint8_t ifHaveValidFlash(void)
+static uint8_t haveValidFlash(void)
 {
     return nManufacturerId | nDeviceId;
 }
@@ -492,7 +492,7 @@ static uint8_t ifHaveValidFlash(void)
 /**
  * Return non-0 if the current device has KERNALs like the EF3.
  */
-static uint8_t ifEF3(void)
+static uint8_t isEF3(void)
 {
     return nManufacturerId == FLASH_MX29LV640EB_MFR_ID &&
            nDeviceId == FLASH_MX29LV640EB_DEV_ID;
@@ -597,6 +597,7 @@ void execUSBCmd(const char* pStrUSBCmd)
                 BUTTON_ENTER)
         {
             checkWriteCRTImageFromUSB();
+            refreshMainScreen();
         }
         else
         {
@@ -669,7 +670,7 @@ int main(void)
                 break;
             }
         }
-        else
+        else if (isEF3())
         {
             pStrUSBCmd = usbCheckForCommand();
             if (pStrUSBCmd)

@@ -6,13 +6,17 @@ Linux and similar systems
 
 1. install libwxgtk2.8-dev or whatever name it has on your system. This will
    hopefully also install all other dependencies like libwxbase2.8-dev
+   install libftdi-dev and libusb-dev
 
 2. compile it (as normal user) using these commands:
 
-   cd make/gcc-default
    make
 
-3. install it (optional, as root) using this command:
+   If you need the command line tool only, you can use:
+
+   make ef3xfer
+
+3. NOT WORKING YET: install it (optional, as root) using this command:
 
    sudo make install
 
@@ -23,20 +27,15 @@ Windows
 
 If you got a binary, just click on it one or two times.
 
-The official release for Windows is built on Linux using a cross compiler
-This is done like described in the Linux section above, except that the
-Makefile resides in make/win32-cross-mingw. It does also contain a target to
-cross-build wxWidgets.
-
 Mac OS X
 ========
 
-Todo, should work similar as a Linux build.
+Should work similar as a Linux build.
 
 Other platforms
 ===============
 
-It may be possible to compile EasyTransfer on other platforms. The most 
+It may be possible to compile EasyTransfer on other platforms. The most
 important precondition is that wxWidgets runs on that box. You can check
 it on following page: http://wiki.wxwidgets.org/Supported_Platforms
 

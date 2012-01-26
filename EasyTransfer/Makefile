@@ -34,11 +34,14 @@ world: all
 prj_name      := easytransfer
 
 cxxflags      := 
-libs          :=
+cflags        := 
+clibs         :=
+cxxlibs       :=
 ldflags       :=
 
 ifeq ($(win32), yes)
     app_name      := EasyTransfer.exe
+    ef3xfer_name  := ef3xfer.exe
     host          := i686-w64-mingw32
     cxx           := $(host)-c++
     cc            := $(host)-gcc
@@ -46,38 +49,25 @@ ifeq ($(win32), yes)
     archive_fmt   := zip
 else
     app_name      := easytransfer
+    ef3xfer_name  := ef3xfer
     cxx           := c++
     cc            := gcc
     outbase       := $(top_dir)/out
-    cxxflags      := $(shell wx-config --cxxflags)
-    libs          := $(shell wx-config --libs) -lftdi -lpthread
+    cxxflags      += $(shell wx-config --cxxflags)
+    cxxlibs       += $(shell wx-config --libs) -lftdi -lpthread
+    clibs         += -lftdi 
     archive_fmt   := tar.bz2
 endif
 
 archive_dir   := $(top_dir)/archive
 
-# Where to install intermediate libs
-tmp_install   := $(outbase)/tmp-install
-
-# Where to install on "make install"?
-inst_prefix   := /usr/local
-
-bin_inst_dir  := $(inst_prefix)/bin
-res_inst_dir  := $(inst_prefix)/share
-doc_inst_dir  := $(inst_prefix)/share/doc
-desktop_inst_dir := $(inst_prefix)/share/applications
-
-outdir        := $(outbase)/$(prj_name)
-objdir        := $(outbase)/obj
-srcdir        := src
-
 ifeq ($(debug), yes)
     outbase       := $(outbase)_debug
-    ccflags       += -g
+    cflags        += -g
     cxxflags      += -g
     ldflags       += -g
 else
-    ccflags       += -O2
+    cflags        += -O2
     cxxflags      += -O2
     ldflags       += -Wl,--strip-all
 endif
@@ -89,6 +79,21 @@ else
 	version        := 1.0.0
 	version_suffix := -$(version)
 endif
+
+outdir        := $(outbase)/$(prj_name)
+objdir        := $(outbase)/obj
+srcdir        := src
+
+# Where to install intermediate libs
+tmp_install   := $(outbase)/tmp-install
+
+# Where to install on "make install"?
+inst_prefix   := /usr/local
+
+bin_inst_dir  := $(inst_prefix)/bin
+res_inst_dir  := $(inst_prefix)/share
+doc_inst_dir  := $(inst_prefix)/share/doc
+desktop_inst_dir := $(inst_prefix)/share/applications
 
 cflags    += -DVERSION=\"$(version)\"
 cflags    += -I$(objdir)
@@ -111,6 +116,7 @@ src :=
 src += EasyTransferApp.cpp
 src += EasyTransferMainFrame.cpp
 src += WorkerThread.cpp
+src += ef3xfer.c
 src += easytransfer.png
 
 # resource files to be built/copied
@@ -171,17 +177,27 @@ pre_deps := libftdi
 endif
 
 $(outbase)/$(prj_name)$(version_suffix).tar.bz2: \
-		$(outdir)/$(app_name) $(outres) $(outdoc) $(outdll)
+		$(outdir)/$(app_name) $(outdir)/$(ef3xfer_name) \
+		$(outres) $(outdoc) $(outdll)
 	rm -f $@
 	cd $(dir $@) && tar cjf $(notdir $@) $(prj_name)
 
 $(outbase)/$(prj_name)$(version_suffix).zip: \
-		$(outdir)/$(app_name) $(outres) $(outdoc) $(outdll)
+		$(outdir)/$(app_name) $(outdir)/$(ef3xfer_name) \
+		$(outres) $(outdoc) $(outdll)
 	rm -f $@
 	cd $(dir $@) && zip -r $(notdir $@) $(prj_name)
 
 $(outdir)/$(app_name): $(obj) | $(outdir) check-environment
-	$(cxx) $(ldflags) $(obj) -o $@ $(libs)
+	$(cxx) $(ldflags) $(obj) -o $@ $(cxxlibs)
+
+# quick and dirty: command line tool
+.PHONY: ef3xfer
+ef3xfer: $(outdir)/$(ef3xfer_name)
+$(outdir)/$(ef3xfer_name): src/ef3xfer_main.c src/ef3xfer.c src/ef3xfer.h \
+						 | $(outdir) check-environment
+	$(cc) $(ldflags) $(cflags) -o $@ src/ef3xfer_main.c src/ef3xfer.c $(clibs)
+
 
 $(outdir) $(objdir):
 	mkdir -p $@
@@ -190,7 +206,7 @@ $(objdir)/%.o: $(srcdir)/%.cpp $(headers) | $(objdir) check-environment
 	$(cxx) -c $(cxxflags) -o $@ $<
 
 $(objdir)/%.o: $(srcdir)/%.c $(headers) | $(objdir) check-environment
-	$(cc) -c $(ccflags) $(INCLUDE) -o $@ $<
+	$(cc) -c $(cflags) -o $@ $<
 
 $(objdir)/%.xpm: $(srcdir)/../res/%.png | $(objdir) check-environment
 	convert $< $@.tmp.xpm
