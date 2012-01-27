@@ -29,6 +29,8 @@
 #include <stdlib.h>
 #include <cbm.h>
 
+#include <ef3usb.h>
+
 #include "easyprog.h"
 #include "cart.h"
 #include "screen.h"
@@ -44,7 +46,6 @@
 #include "slots.h"
 #include "sprites.h"
 #include "util.h"
-#include "usb.h"
 
 #undef SHOW_HEAP_FREE
 
@@ -601,12 +602,12 @@ void execUSBCmd(const char* pStrUSBCmd)
         }
         else
         {
-            usbSendResponseSTOP();
+            ef3usb_send_str("stop");
         }
     }
     else
     {
-        usbSendResponseBTYP();
+        ef3usb_send_str("btyp");
     }
 }
 
@@ -672,7 +673,7 @@ int main(void)
         }
         else if (isEF3())
         {
-            pStrUSBCmd = usbCheckForCommand();
+            pStrUSBCmd = ef3usb_check_cmd();
             if (pStrUSBCmd)
             {
                 execUSBCmd(pStrUSBCmd);

@@ -42,22 +42,6 @@ static char request[12];
  * 5:46 mit Flow Control (5:30 ohne Statuszeile)
  */
 
-/******************************************************************************/
-/**
- */
-static void __fastcall__ usbSendData(const uint8_t* data, uint16_t len)
-{
-    while (len)
-    {
-        if (USB_STATUS & USB_TX_READY)
-        {
-            USB_DATA = *data;
-            ++data;
-            --len;
-        }
-    }
-}
-
 
 /******************************************************************************/
 /**
@@ -85,48 +69,6 @@ char* usbCheckForCommand(void)
     }
     return NULL;
 }
-
-#if 0
-// points to utilRead function to be used to read bytes from file
-unsigned int __fastcall__ usbReadFile(void* buffer, unsigned int size)
-{
-    unsigned int nBytes, nXferBytes;
-    uint8_t* p;
-
-    p = buffer;
-
-    // send number of bytes requested
-    while ((USB_STATUS & USB_TX_READY) == 0)
-    {}
-    USB_DATA = size & 0xff;
-    while ((USB_STATUS & USB_TX_READY) == 0)
-    {}
-    USB_DATA = size >> 8;
-
-    // read number of bytes available
-    while ((USB_STATUS & USB_RX_READY) == 0)
-    {}
-    nXferBytes = USB_DATA;
-    while ((USB_STATUS & USB_RX_READY) == 0)
-    {}
-    nXferBytes |= USB_DATA << 8;
-
-    if (nXferBytes == 0)
-    {
-        // 0 bytes == EOF
-        return nBytes;
-    }
-
-    while (nXferBytes--)
-    {
-        while ((USB_STATUS & USB_RX_READY) == 0)
-        {}
-        *p++ = USB_DATA;
-    }
-
-    return nBytes;
-}
-#endif
 
 
 void usbSendResponseWAIT(void)

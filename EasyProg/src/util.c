@@ -27,6 +27,8 @@
 #include <conio.h>
 #include <stdio.h>
 
+#include <ef3usb.h>
+
 #include "util.h"
 #include "flash.h"
 #include "filedlg.h"
@@ -36,7 +38,6 @@
 #include "eload.h"
 #include "timer.h"
 #include "slots.h"
-#include "usb.h"
 
 
 // globally visible string buffer for functions used here
@@ -98,8 +99,8 @@ uint8_t utilOpenFile(uint8_t nPart)
 
     if (nPart == UTIL_USE_USB)
     {
-        usbSendResponseLOAD();
-        utilRead = usbReadFile;
+        ef3usb_send_str("load");
+        utilRead = ef3usb_fread;
         bUseUSB = 1;
     }
     bUseUSB = 0;
@@ -149,7 +150,7 @@ uint8_t utilOpenFile(uint8_t nPart)
 void utilCloseFile(void)
 {
     if (bUseUSB)
-        usbCloseFile();
+        ef3usb_fclose();
     else
         eload_close();
 }
