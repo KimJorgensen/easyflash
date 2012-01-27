@@ -33,8 +33,6 @@ obj += obj/hex.o
 obj += obj/torturetest.o
 obj += obj/write.o
 obj += obj/util.o
-obj += obj/usb.o
-obj += obj/usb_asm.o
 
 ld65_version := $(shell [ `ld65 -V 2>&1 | sed -e 's/\(ld65 V\)\([0-9\.]*\)\( .*\)/\2/g; q'` \< "2.13.9" ] && echo old)
 
@@ -59,9 +57,11 @@ eapi_obj := $(addprefix obj/,$(eapi))
 inc      := src
 inc      += eload/src
 inc      += libprint/src
+inc      += ../libs/libef3usb/src
 
-eload    := eload/eload.lib
-libprint := libprint/libprint.lib
+eload     := eload/eload.lib
+libprint  := libprint/libprint.lib
+libef3usb := ../libs/libef3usb/libef3usb.lib
 
 INCLUDE  := $(addprefix -I,$(inc))
 
@@ -115,9 +115,9 @@ obj/%.bin: src/%.s obj
 obj:
 	mkdir -p $@
 
-easyprog: $(obj) $(ld_config) $(eload) $(libprint)
+easyprog: $(obj) $(ld_config) $(eload) $(libprint) $(libef3usb)
 	ld65 -o $@ -m $@.map -C $(ld_config) $(obj) -L /usr/local/lib/cc65/lib \
-		--lib $(eload) --lib $(libprint) --lib c64.lib
+		--lib $(eload) --lib $(libprint) --lib $(libef3usb) --lib c64.lib
 	cat $@.map | grep -e "^Name\|^CODE\|^DATA\|^BSS\|^RODATA\|^LOWCODE"
 
 easyprog.prg: easyprog
@@ -136,6 +136,9 @@ $(eload): force
 	$(MAKE) -C $(dir $@)
 
 $(libprint): force
+	$(MAKE) -C $(dir $@)
+
+$(libef3usb): force
 	$(MAKE) -C $(dir $@)
 
 .PHONY: force
