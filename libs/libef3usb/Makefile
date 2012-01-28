@@ -9,6 +9,7 @@ obj += obj/ef3usb_discard_rx.o
 obj += obj/ef3usb_send_data.o
 obj += obj/ef3usb_send_str.o
 obj += obj/ef3usb_fread.o
+obj += obj/ef3usb_fload.o
 obj += obj/ef3usb_fclose.o
 
 .PHONY: all

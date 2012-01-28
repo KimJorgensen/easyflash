@@ -14,6 +14,7 @@ void              ef3usb_discard_rx(void);
 
 /* these functions can be used after usbSendResponseLOAD(): */
 unsigned int __fastcall__ ef3usb_fread(void* buffer, unsigned int size);
+void*                     ef3usb_fload(void);
 void                      ef3usb_fclose(void);
 
 #endif /* USB_H_ */
