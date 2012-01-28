@@ -26,10 +26,11 @@
 #include <conio.h>
 #include <c64.h>
 
+#include <ef3usb.h>
+
 #include "text_plot.h"
 #include "memcfg.h"
 #include "efmenu.h"
-#include "usb.h"
 
 
 // from gfx.s
@@ -74,6 +75,7 @@ static efmenu_entry_t special_menu[] =
         { 's',  0,  0x20,   1,  MODE_SS5,          "S", "Super Snapshot 5", "" },
         { 'p',  0,  9,      1,  MODE_EF_NO_RESET,  "P", "EasyProg",         "crt" },
         { 'k',  0,  0,      1,  MODE_KILL,         "K", "Kill Cartridge",   "" },
+        { 'u',  0,  0x0b,   1,  MODE_EF,           "U", "USB Tool",         "prg" },
         { 0, 0, 0, 0, 0, "", "", "" }
 };
 
@@ -208,7 +210,7 @@ static void __fastcall__ start_menu_entry_ex(uint8_t key, const char* type)
                     start_menu_entry(entry);
                 if (type && strcmp(entry->type, type) == 0)
                 {
-                    usbSendResponseWAIT();
+                    ef3usb_send_str("wait");
                     start_menu_entry(entry);
                 }
             }
@@ -235,7 +237,7 @@ static void main_loop(void)
             start_menu_entry_ex(key, NULL);
         }
 
-        pType = usbCheckForCommand();
+        pType = ef3usb_check_cmd();
         if (pType)
         {
             start_menu_entry_ex(0, pType);

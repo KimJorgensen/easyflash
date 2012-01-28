@@ -12,6 +12,7 @@
 # 08   <----------- Boot menu ------------->
 # 09 \ <----------- EasyProg
 # 0a /                       -------------->
+# 0b   <----------- USB tool -------------->
 # .                     .
 # 0f <--------------- Sound --------------->
 # ==========================================
@@ -72,12 +73,14 @@ $(dirname).zip: ef3-init.crt ef3-menu.crt CHANGES
 menu_image  := trampoline.bin       0x00 0x1F00 H
 menu_image  += efmenu/efmenu.bin    0x08 0x0000 LH
 menu_image  += $(easyprog)          0x09 0x0000 LH
+menu_image  += usbtool/usbtool.bin  0x0b 0x0000 LH
 #menu_image += waterdrop.raw        0x0f 0x0000
 #menu_image += bing.raw        0x0f 0x0000
 
 menu_deps   := trampoline.bin
 menu_deps   += efmenu/efmenu.bin
 menu_deps   += $(easyprog)
+menu_deps   += usbtool/usbtool.bin
 
 ###############################################################################
 # These files are in and "initial" image only
@@ -128,6 +131,11 @@ always:
 
 ###############################################################################
 #
+usbtool/usbtool.bin: always
+	$(MAKE) -C usbtool version=$(version)
+
+###############################################################################
+#
 $(easyprog): always
 	$(MAKE) -C $(dir $@) release=$(release)
 
@@ -143,6 +151,7 @@ clean:
 	-rm -f mkimages
 	-rm -f directory.bin
 	-make -C efmenu clean
+	-make -C usbtool clean
 
 ###############################################################################
 # create a .crt image from a .bin image
