@@ -12,12 +12,14 @@
 extern "C" {
 #endif
 
+#define EF3XFER_RESP_SIZE (4 + 1)
+
 void ef3xfer_set_callbacks(
         void (*custom_log_str)(const char* str),
         void (*custom_log_progress)(int percent),
         void (*custom_log_complete)(void));
 
-void ef3xfer_transfer(const char* p_str_filename);
+void ef3xfer_transfer(const char* p_filename, const char* p_str_type);
 
 #ifdef __cplusplus
 }

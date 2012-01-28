@@ -30,6 +30,7 @@
 #include "ef3xfer.h"
 
 static void usage(const char* p_str_prg);
+static const char* guess_type(const char* p_filename);
 static void log_str_stdout(const char* str);
 static void log_progress_stdout(int percent);
 static void log_complete_stdout(void);
@@ -38,7 +39,8 @@ static void log_complete_stdout(void);
 /*****************************************************************************/
 int main(int argc, char** argv)
 {
-    const char* p_str_filename = NULL;
+    const char* p_str_type = NULL;
+    const char* p_filename = NULL;
     int i;
 
     /* default callback functions for stdout */
@@ -52,27 +54,47 @@ int main(int argc, char** argv)
             usage(argv[0]);
             return 0;
         }
+        if (strcmp(argv[i], "-c") == 0 || strcmp(argv[i], "--crt") == 0)
+        {
+            p_str_type = "CRT";
+        }
+        if (strcmp(argv[i], "-p") == 0 || strcmp(argv[i], "--prg") == 0)
+        {
+            p_str_type = "PRG";
+        }
         else if (argv[i][0] == '-')
         {
             fprintf(stderr, "Unknown option: %s\n", argv[i]);
             return 1;
         }
-        else if (p_str_filename == NULL)
-            p_str_filename = argv[i];
+        else if (p_filename == NULL)
+            p_filename = argv[i];
         else
         {
             fprintf(stderr, "Too many arguments: %s\n", argv[i]);
             return 1;
         }
     }
-    if (p_str_filename == NULL)
+    if (p_filename == NULL)
     {
         fprintf(stderr, "Error: No file name\n");
         return 1;
     }
 
-    ef3xfer_transfer(p_str_filename);
+    if (p_str_type == NULL)
+    {
+        p_str_type = guess_type(p_filename);
+    }
+    if (p_str_type == NULL)
+    {
+        fprintf(stderr,
+                "Error: File type not specified and not recognized.\n");
+        return 1;
+    }
+
+    ef3xfer_transfer(p_filename, p_str_type);
 }
+
 
 /*****************************************************************************/
 static void usage(const char* p_str_prg)
@@ -83,9 +105,37 @@ static void usage(const char* p_str_prg)
     printf("Usage: %s [options] filename\n", p_str_prg);
     printf("Options:\n"
            "  -h, --help     print this and exit\n"
+           "  -c  --crt      flash a cartridge image\n"
+           "  -p  --prg      start a program file\n"
+           "\nIf no option is given, the program type is guessed from "
+           "the file name suffix.\n"
            "\n"
           );
 }
+
+
+/*****************************************************************************/
+static const char* guess_type(const char* p_filename)
+{
+    const char* p_suffix;
+    int len;
+
+    len = strlen(p_filename);
+    if (len < 4)
+        return NULL;
+
+    len -= 4;
+    p_suffix = p_filename + len;
+
+    if (strcasecmp(p_suffix, ".crt") == 0)
+        return "CRT";
+
+    if (strcasecmp(p_suffix, ".prg") == 0)
+        return "PRG";
+
+    return NULL;
+}
+
 
 /*****************************************************************************/
 static void log_str_stdout(const char* str)

@@ -115,7 +115,6 @@ EasyTransferMainFrame::EasyTransferMainFrame(wxFrame* parent, const wxString& ti
             wxDefaultPosition, wxDefaultSize,
             ACTION_COUNT, aStrActions, 1);
     pMainSizer->Add(pBoxAction, 1, wxEXPAND);
-    pBoxAction->Enable(ACTION_START_PRG_EF, false);
     pBoxAction->Enable(ACTION_START_PRG_KILL, false);
     pBoxAction->Enable(ACTION_WRITE_D64, false);
 

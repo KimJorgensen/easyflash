@@ -37,11 +37,11 @@ static void log_printf(const char* p_str_format, ...);
 static int connect_ftdi(void);
 static int read_from_ftdi(unsigned char* p_buffer, int size);
 static int write_to_ftdi(unsigned char* p_buffer, int size);
-static int start_handshake(void);
+static int do_handshake(const char* p_str_type);
 static void send_command(const char* p_str_request);
-static void receive_response(unsigned char* p_resp, int size_resp,
+static void receive_response(unsigned char* p_resp,
                              int timeout_secs);
-static int send_file(const char* p_str_filename);
+static int send_file(const char* p_filename);
 
 /* function pointers which can be overridden from external apps */
 static void (*log_str)(const char* str);
@@ -61,21 +61,21 @@ void ef3xfer_set_callbacks(
 }
 
 /*****************************************************************************/
-void ef3xfer_transfer(const char* p_str_filename)
+void ef3xfer_transfer(const char* p_filename, const char* p_str_type)
 {
     uint16_t      crc;
     size_t        i, size;
     uint8_t*      p;
 
-    log_printf("Input:  %s\n", p_str_filename);
+    log_printf("Input:  %s\n", p_filename);
 
     if (!connect_ftdi())
         return;
 
-    if (!start_handshake())
+    if (!do_handshake(p_str_type))
         return;
 
-    if (!send_file(p_str_filename))
+    if (!send_file(p_filename))
         return;
 
     log_printf("\n\\o/\nREADY.\n\n");
@@ -219,17 +219,26 @@ static int write_to_ftdi(unsigned char* p_buffer, int size)
 /**
  *
  */
-static int start_handshake(void)
+static int do_handshake(const char* p_str_type)
 {
     int waiting;
-    unsigned char str_response[20];
+    char          str_command[20];
+    unsigned char str_response[EF3XFER_RESP_SIZE + 1];
 
+    if (strlen(p_str_type) != 3)
+    {
+        log_printf("Error: Bad type \"%s\"\n", p_str_type);
+        return 0;
+    }
+
+    strcpy(str_command, "EFSTART:");
+    strcat(str_command, p_str_type);
     /* Send the command as often as we get "WAIT" as response */
     do
     {
         waiting = 0;
-        send_command("EFSTART:CRT");
-        receive_response(str_response, sizeof(str_response), 20);
+        send_command(str_command);
+        receive_response(str_response, 30);
 
         if (str_response[0] == 0)
             return 0;
@@ -275,7 +284,7 @@ static void send_command(const char* p_str_request)
     unsigned char str_response[8];
     size_t        size_request;
 
-    size_request = strlen(p_str_request);
+    size_request = strlen(p_str_request) + 1;
 
     log_printf("Send command: %s\n", p_str_request);
     // Send request
@@ -295,7 +304,7 @@ static void send_command(const char* p_str_request)
  * Try to receive a response. Return the response (0-terminated) or an empty
  * string of there was no response.
  */
-static void receive_response(unsigned char* p_resp, int size_resp,
+static void receive_response(unsigned char* p_resp,
                              int timeout_secs)
 {
     int  ret, retry, i;
@@ -304,16 +313,8 @@ static void receive_response(unsigned char* p_resp, int size_resp,
     do
     {
         sleep(1); // todo: schoener machen
-        p_resp[0] = '\0';
-        ret = ftdi_read_data(&m_ftdic, p_resp, size_resp - 1);
-        if (ret < 0)
-        {
-            p_resp[0] = 0;
-            log_printf("Read failed: %d (%s - %s)\n", ret, ftdi_get_error_string(&m_ftdic),
-                    ret < 0 ? strerror(-ret) : "unknown cause");
-            return;
-        }
-        else if (ret > 0)
+        ret = read_from_ftdi(p_resp, EF3XFER_RESP_SIZE);
+        if (ret)
         {
             p_resp[ret] = 0;
             log_printf("Got response: \"%s\".\n", (char*) p_resp);
@@ -331,7 +332,7 @@ static void receive_response(unsigned char* p_resp, int size_resp,
 /**
  *
  */
-static int send_file(const char* p_str_filename)
+static int send_file(const char* p_filename)
 {
     static unsigned char a_buffer[0x10000]; /* <= yay! */
     unsigned char a_buffer_size[2];
@@ -340,10 +341,10 @@ static int send_file(const char* p_str_filename)
     long          size_file;
     int           ret, count, rest;
 
-    fp = fopen(p_str_filename, "rb");
+    fp = fopen(p_filename, "rb");
     if (fp == NULL)
     {
-        log_printf("Error: Cannot open %s for reading\n", p_str_filename);
+        log_printf("Error: Cannot open %s for reading\n", p_filename);
         return 0;
     }
     /* todo: use fstat */
