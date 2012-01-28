@@ -18,17 +18,20 @@ obj :=
 obj += obj/crt0.o
 obj += obj/efmenu.o
 obj += obj/efmenu_asm.o
-obj += obj/usb.o
-obj += obj/usb_asm.o
 obj += obj/gfx.o
 obj += obj/charset.o
 obj += obj/text_plot.o
 obj += obj/text_plot_asm.o
 obj += obj/sound.o
 
-INCLUDE  := src
+inc      := src
+inc      += ../../libs/libef3usb/src
+
+INCLUDE  := $(addprefix -I,$(inc))
 
 DEFINE   := -DEFVERSION=\"${version}\"
+
+libef3usb := ../../libs/libef3usb/libef3usb.lib
 
 .PHONY: all
 all: $(name).crt
@@ -36,7 +39,7 @@ all: $(name).crt
 ###############################################################################
 # Poor men's dependencies: Let all files depend from all header files
 #
-headers := $(wildcard $(INCLUDE)/*.h)
+headers := $(foreach dir, $(inc), $(wildcard $(dir)/*.h))
 
 obj/%.s: src/%.c obj $(headers)
 	cc65 -t c64 -T -O --static-locals -I $(INCLUDE) $(DEFINE) -o $@ $<
@@ -66,11 +69,20 @@ obj/charset.s: src/charset.sed obj
 	../../EasySDK/tools/bin2efcrt $< $@
 
 ###############################################################################
+#
+$(libef3usb): force
+	$(MAKE) -C $(dir $@)
+
+.PHONY: force
+force:
+
+###############################################################################
 obj:
 	mkdir -p $@
 
-$(name).bin: $(obj) $(ld_config)
+$(name).bin: $(obj) $(ld_config) $(libef3usb)
 	ld65 -o $@ -m $@.map -Ln $@.labels -C $(ld_config) $(obj) \
+		--lib $(libef3usb) \
 		-L /usr/local/lib/cc65/lib --lib c64.lib
 	cat $@.map | grep -e "^Name\|^CODE\|^DATA\|^BSS\|^RODATA\|^LOWCODE"
 
