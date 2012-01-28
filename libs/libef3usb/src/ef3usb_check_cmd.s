@@ -63,10 +63,12 @@ _ef3usb_check_for_command:
         ; success, retrun the string behind "efstart:"
         lda #<(cmd_buffer + 8)
         ldx #>(cmd_buffer + 8)
+        rts
 @end:
         lda #0
         tax
         rts
+
 @efstart_str:
         .byte   $45,$46,$53,$54,$41,$52,$54,$3A  ; "efstart:"
 .endproc

@@ -8,44 +8,46 @@
 size_zp      = ptr1
 xfer_size_zp = ptr2
 p_buff_zp    = ptr3
+start_addr   = ptr4
 m_size_hi    = tmp1
 
 .include "ef3usb_macros.s"
 
 ; =============================================================================
 ;
-; unsigned int __fastcall__ ef3usb_fread(void* buffer, unsigned int size);
+; unsigned void* ef3usb_fload(void);
 ;
-; Reads up to "size" bytes from USB to "buffer".
-; Returns the number of bytes actually read, 0 if there are no bytes left
-; (EOF).
+; Load a file from USB to its start address (taken from the first two bytes).
+; Return its start address. ptr1 contains the size on return.
 ;
 ; =============================================================================
-.proc   _ef3usb_fread
-.export _ef3usb_fread
-_ef3usb_fread:
-        sta size_zp
-        stx size_zp + 1         ; Save size
+.proc   _ef3usb_fload
+.export _ef3usb_fload
+_ef3usb_fload:
+;        sta size_zp
+;        stx size_zp + 1         ; Save size
 
-        jsr popax
-        sta p_buff_zp
-        stx p_buff_zp + 1       ; Save buffer address
+;        jsr popax
+;        sta p_buff_zp
+;        stx p_buff_zp + 1       ; Save buffer address
 
-        ldx size_zp
-        ldy size_zp + 1
+;       ldx size_zp
+;        ldy size_zp + 1
+        lda #$ff                ; request 64k data
         wait_usb_tx_ok          ; request bytes (from XY)
-        stx USB_DATA
+        sta USB_DATA
         wait_usb_tx_ok
-        sty USB_DATA
+        sta USB_DATA
 
         ; get number of bytes actually there
-        ; todo: we should check if this is more than we asked for
         wait_usb_rx_ok
         ldx USB_DATA            ; low byte of transfer size
         stx xfer_size_zp
+        stx size_zp
         wait_usb_rx_ok
         ldy USB_DATA            ; high byte of transfer size
         sty xfer_size_zp + 1
+        sty size_zp + 1
 
         bne @loadCont
         cpx #0                  ; check for EOF
@@ -57,8 +59,26 @@ _ef3usb_fread:
         tya
         eor #$ff
         sta m_size_hi           ; calc -size - 1
+
+        txa
+        clc
+        adc #3                  ; calc -size, add 2 more bytes (start addr)
+        tax
+        lda m_size_hi
+        adc #0
+        sta m_size_hi
+        beq @end                ; file too short?
+
+        wait_usb_rx_ok          ; read start address
+        lda USB_DATA
+        sta p_buff_zp
+        sta start_addr
+        wait_usb_rx_ok
+        lda USB_DATA
+        sta p_buff_zp + 1
+        sta start_addr + 1
+
         ldy #0
-        jmp @incCounter         ; inc to get -size
 @getBytes:
         ; xy contains number of bytes to be xfered (x = low byte)
         wait_usb_rx_ok
@@ -73,7 +93,7 @@ _ef3usb_fread:
         inc m_size_hi
         bne @getBytes
 @end:
-        lda xfer_size_zp
-        ldx xfer_size_zp + 1            ; return number of bytes transfered
+        lda start_addr
+        ldx start_addr + 1
         rts
 .endproc
