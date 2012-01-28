@@ -62,7 +62,7 @@ void* WorkerThread::Entry()
     size_t        i, size;
     uint8_t*      p;
 
-    ef3xfer_transfer(m_stringInputFileName.mb_str());
+    ef3xfer_transfer(m_stringInputFileName.mb_str(), "CRT");
     return NULL;
 }
 
