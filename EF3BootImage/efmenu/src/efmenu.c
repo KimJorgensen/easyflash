@@ -75,8 +75,13 @@ static efmenu_entry_t special_menu[] =
         { 's',  0,  0x20,   1,  MODE_SS5,          "S", "Super Snapshot 5", "" },
         { 'p',  0,  9,      1,  MODE_EF_NO_RESET,  "P", "EasyProg",         "crt" },
         { 'k',  0,  0,      1,  MODE_KILL,         "K", "Kill Cartridge",   "" },
-        { 'u',  0,  0x0b,   1,  MODE_EF,           "U", "USB Tool",         "prg" },
         { 0, 0, 0, 0, 0, "", "", "" }
+};
+
+static efmenu_entry_t hidden_menu[] =
+{
+        { '?',  0,  0x0b,   1,  MODE_EF,           "?", "USB Tool",         "prg" },
+        { '?',  0,  0x0b,   1,  MODE_EF,           "?", "USB Tool",         "d64" },
 };
 
 static efmenu_t all_menus[] =
@@ -84,7 +89,8 @@ static efmenu_t all_menus[] =
         {  2,  2, 10, kernal_menu },
         { 22, 13,  9, ef_menu },
         {  2, 15,  8, special_menu },
-        {  0, 0, NULL }
+        {  0,  0,  0, hidden_menu },
+        {  0,  0,  0, NULL }
 };
 
 
@@ -145,22 +151,25 @@ static void show_menu(void)
     menu = all_menus;
     while (menu->pp_entries)
     {
-        y = menu->y_pos + 1;
-
-        entry = menu->pp_entries;
-        while (entry->key)
+        if (menu->n_max_entries) /* hidden otherwise */
         {
-            text_plot_puts(menu->x_pos,     4, y, entry->label);
-            text_plot_puts(menu->x_pos + 2, 0, y, entry->name);
+            y = menu->y_pos + 1;
 
-            if (menu_entry_is_valid(entry))
-                color = COLOR_BLACK << 4 | COLOR_GRAY3;
-            else
-                color = COLOR_GRAY2 << 4 | COLOR_GRAY3;
-            text_set_line_color(menu->x_pos, y, color);
+            entry = menu->pp_entries;
+            while (entry->key)
+            {
+                text_plot_puts(menu->x_pos,     4, y, entry->label);
+                text_plot_puts(menu->x_pos + 2, 0, y, entry->name);
 
-            ++y;
-            ++entry;
+                if (menu_entry_is_valid(entry))
+                    color = COLOR_BLACK << 4 | COLOR_GRAY3;
+                else
+                    color = COLOR_GRAY2 << 4 | COLOR_GRAY3;
+                text_set_line_color(menu->x_pos, y, color);
+
+                ++y;
+                ++entry;
+            }
         }
         ++menu;
     }
