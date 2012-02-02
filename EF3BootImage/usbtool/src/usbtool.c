@@ -7,7 +7,6 @@
 
 #include "usbtool.h"
 
-
 static void start_prg()
 {
     void* p_start_addr;
@@ -38,9 +37,15 @@ int main(void)
             ef3usb_send_str("load");
             start_prg();
         }
+        else if (strcmp(p_str_cmd, "d64") == 0)
+        {
+            write_disk_d64();
+        }
+        else
+        {
+            ef3usb_send_str("etyp");
+        }
     }
 
-    for (;;)
-        ++*(unsigned char*)0xd020;
     return 0;
 }
