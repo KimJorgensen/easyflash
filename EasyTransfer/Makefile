@@ -117,7 +117,13 @@ src += EasyTransferApp.cpp
 src += EasyTransferMainFrame.cpp
 src += WorkerThread.cpp
 src += ef3xfer.c
+src += ef3xfer_d64.c
 src += easytransfer.png
+
+ef3xfer_src :=
+ef3xfer_src += ef3xfer_main.c
+ef3xfer_src += ef3xfer.c
+ef3xfer_src += ef3xfer_d64.c
 
 # resource files to be built/copied
 res := easytransfer.png
@@ -149,6 +155,8 @@ src_c   := $(filter %.c,$(src))
 obj     += $(addprefix $(objdir)/, $(src_c:.c=.o))
 src_png := $(filter %.png,$(src))
 xpm     := $(addprefix $(objdir)/, $(src_png:.png=.xpm))
+
+ef3xfer_obj := $(addprefix $(objdir)/, $(ef3xfer_src:.c=.o))
 
 outdll  := $(addprefix $(outdir)/, $(dll))
 
@@ -194,9 +202,8 @@ $(outdir)/$(app_name): $(obj) | $(outdir) check-environment
 # quick and dirty: command line tool
 .PHONY: ef3xfer
 ef3xfer: $(outdir)/$(ef3xfer_name)
-$(outdir)/$(ef3xfer_name): src/ef3xfer_main.c src/ef3xfer.c src/ef3xfer.h \
-						 | $(outdir) check-environment
-	$(cc) $(ldflags) $(cflags) -o $@ src/ef3xfer_main.c src/ef3xfer.c $(clibs)
+$(outdir)/$(ef3xfer_name): $(ef3xfer_obj) | $(outdir) check-environment
+	$(cc) $(ldflags) $(cflags) -o $@ $(ef3xfer_obj) $(clibs)
 
 
 $(outdir) $(objdir):
