@@ -28,20 +28,17 @@
 #include <stdint.h>
 
 #include <ftdi.h>
+
 #include "ef3xfer.h"
+#include "ef3xfer_internal.h"
 
 static struct ftdi_context m_ftdic;
 
-static void log_ftdi_error(int reason);
-static void log_printf(const char* p_str_format, ...);
-static int connect_ftdi(void);
-static int read_from_ftdi(unsigned char* p_buffer, int size);
-static int write_to_ftdi(unsigned char* p_buffer, int size);
 static int do_handshake(const char* p_str_type);
 static void send_command(const char* p_str_request);
 static void receive_response(unsigned char* p_resp,
                              int timeout_secs);
-static int send_file(const char* p_filename);
+static int send_file(FILE* fp);
 
 /* function pointers which can be overridden from external apps */
 static void (*log_str)(const char* str);
@@ -63,22 +60,52 @@ void ef3xfer_set_callbacks(
 /*****************************************************************************/
 void ef3xfer_transfer(const char* p_filename, const char* p_str_type)
 {
+    FILE*         fp;
     uint16_t      crc;
     size_t        i, size;
     uint8_t*      p;
 
-    log_printf("Input:  %s\n", p_filename);
+    ef3xfer_log_printf("Input:  %s\n", p_filename);
 
-    if (!connect_ftdi())
+    fp = fopen(p_filename, "rb");
+    if (fp == NULL)
+    {
+        ef3xfer_log_printf("Error: Cannot open %s for reading\n", p_filename);
+        return 0;
+    }
+
+    /* todo: do this after the file has been checked */
+    if (!ef3xfer_connect_ftdi())
+    {
+        fclose(fp);
         return;
+    }
 
     if (!do_handshake(p_str_type))
+    {
+        fclose(fp);
         return;
+    }
 
-    if (!send_file(p_filename))
-        return;
+    if (strcmp(p_str_type, "D64") == 0)
+    {
+        if (!ef3xfer_d64_write(fp))
+        {
+            fclose(fp);
+            return;
+        }
+    }
+    else
+    {
+        if (!send_file(fp))
+        {
+            fclose(fp);
+            return;
+        }
+    }
 
-    log_printf("\n\\o/\nREADY.\n\n");
+    fclose(fp);
+    ef3xfer_log_printf("\n\\o/\nREADY.\n\n");
     log_complete();
 }
 
@@ -86,7 +113,7 @@ void ef3xfer_transfer(const char* p_filename, const char* p_str_type)
 /*****************************************************************************/
 /*
  */
-static void log_ftdi_error(int reason)
+void ef3xfer_log_ftdi_error(int reason)
 {
     const char* p_str_cause;
 
@@ -95,7 +122,7 @@ static void log_ftdi_error(int reason)
     else
         p_str_cause = "unknown cause";
 
-    log_printf("USB operation failed: %d (%s - %s)\n", reason,
+    ef3xfer_log_printf("USB operation failed: %d (%s - %s)\n", reason,
             ftdi_get_error_string(&m_ftdic),
             p_str_cause);
 }
@@ -105,7 +132,7 @@ static void log_ftdi_error(int reason)
 /**
  *
  */
-static void log_printf(const char* p_str_format, ...)
+void ef3xfer_log_printf(const char* p_str_format, ...)
 {
     va_list args;
     char str[200];
@@ -123,19 +150,19 @@ static void log_printf(const char* p_str_format, ...)
 /**
  *
  */
-static int connect_ftdi(void)
+int ef3xfer_connect_ftdi(void)
 {
     int ret;
 
     if (ftdi_init(&m_ftdic) < 0)
     {
-        log_printf("Failed to initialize FTDI library\n");
+        ef3xfer_log_printf("Failed to initialize FTDI library\n");
         return 0;
     }
 
     if ((ret = ftdi_usb_open(&m_ftdic, 0x0403, 0x8738)) < 0)
     {
-        log_printf("Unable to open ftdi device: %d (%s)\n", ret,
+        ef3xfer_log_printf("Unable to open ftdi device: %d (%s)\n", ret,
                 ftdi_get_error_string(&m_ftdic));
         return 0;
     }
@@ -154,7 +181,7 @@ static int connect_ftdi(void)
  *
  * Return size on success, 0 otherwise.
  */
-static int read_from_ftdi(unsigned char* p_buffer, int size)
+int ef3xfer_read_from_ftdi(unsigned char* p_buffer, int size)
 {
     int n_read, ret;
 
@@ -165,7 +192,7 @@ static int read_from_ftdi(unsigned char* p_buffer, int size)
 
         if (ret < 0)
         {
-            log_ftdi_error(ret);
+            ef3xfer_log_ftdi_error(ret);
             return 0;
         }
 
@@ -187,7 +214,7 @@ static int read_from_ftdi(unsigned char* p_buffer, int size)
  *
  * Return size on success, 0 otherwise.
  */
-static int write_to_ftdi(unsigned char* p_buffer, int size)
+int ef3xfer_write_to_ftdi(unsigned char* p_buffer, int size)
 {
     int block_size;
     int n_written, ret;
@@ -204,7 +231,7 @@ static int write_to_ftdi(unsigned char* p_buffer, int size)
 
         if (ret < 0)
         {
-            log_ftdi_error(ret);
+            ef3xfer_log_ftdi_error(ret);
             return 0;
         }
 
@@ -227,7 +254,7 @@ static int do_handshake(const char* p_str_type)
 
     if (strlen(p_str_type) != 3)
     {
-        log_printf("Error: Bad type \"%s\"\n", p_str_type);
+        ef3xfer_log_printf("Error: Bad type \"%s\"\n", p_str_type);
         return 0;
     }
 
@@ -245,27 +272,27 @@ static int do_handshake(const char* p_str_type)
 
         if (strcmp((char*)str_response, "WAIT") == 0)
         {
-            log_printf("Waiting...\n");
+            ef3xfer_log_printf("Waiting...\n");
             waiting = 1;
         }
     }
     while (waiting);
 
-    log_printf("Running...\n");
+    ef3xfer_log_printf("Running...\n");
 
     if (strcmp((char*)str_response, "BTYP") == 0)
     {
-        log_printf("(%s) Client doesn't support this file type or action.\n", str_response);
+        ef3xfer_log_printf("(%s) Client doesn't support this file type or action.\n", str_response);
         return 0;
     }
     else if (strcmp((char*)str_response, "LOAD") == 0)
     {
-        log_printf("(%s) Start to send data.\n", str_response);
+        ef3xfer_log_printf("(%s) Start to send data.\n", str_response);
         return 1;
     }
     else
     {
-        log_printf("Unknown response: \"%s\"\n", str_response);
+        ef3xfer_log_printf("Unknown response: \"%s\"\n", str_response);
         return 0;
     }
 
@@ -286,14 +313,14 @@ static void send_command(const char* p_str_request)
 
     size_request = strlen(p_str_request) + 1;
 
-    log_printf("Send command: %s\n", p_str_request);
+    ef3xfer_log_printf("Send command: %s\n", p_str_request);
     // Send request
     ret = ftdi_write_data(&m_ftdic, (unsigned char*)p_str_request,
                           size_request);
 
     if (ret != size_request)
     {
-        log_printf("Write failed: %d (%s - %s)\n", ret, ftdi_get_error_string(&m_ftdic),
+        ef3xfer_log_printf("Write failed: %d (%s - %s)\n", ret, ftdi_get_error_string(&m_ftdic),
                 ret < 0 ? strerror(-ret) : "unknown cause");
     }
 }
@@ -313,17 +340,17 @@ static void receive_response(unsigned char* p_resp,
     do
     {
         sleep(1); // todo: schoener machen
-        ret = read_from_ftdi(p_resp, EF3XFER_RESP_SIZE);
+        ret = ef3xfer_read_from_ftdi(p_resp, EF3XFER_RESP_SIZE);
         if (ret)
         {
             p_resp[ret] = 0;
-            log_printf("Got response: \"%s\".\n", (char*) p_resp);
+            ef3xfer_log_printf("Got response: \"%s\".\n", (char*) p_resp);
             return;
         }
     }
     while (ret == 0 && --retry);
 
-    log_printf("Time out.\n", ret, retry);
+    ef3xfer_log_printf("Time out.\n", ret, retry);
     p_resp[0] = 0;
 }
 
@@ -332,21 +359,14 @@ static void receive_response(unsigned char* p_resp,
 /**
  *
  */
-static int send_file(const char* p_filename)
+static int send_file(FILE* fp)
 {
     static unsigned char a_buffer[0x10000]; /* <= yay! */
     unsigned char a_buffer_size[2];
     int           n_bytes_req;
-    FILE*         fp;
     long          size_file;
     int           ret, count, rest;
 
-    fp = fopen(p_filename, "rb");
-    if (fp == NULL)
-    {
-        log_printf("Error: Cannot open %s for reading\n", p_filename);
-        return 0;
-    }
     /* todo: use fstat */
     fseek(fp, 0, SEEK_END);
     size_file = ftell(fp);
@@ -355,9 +375,8 @@ static int send_file(const char* p_filename)
     do
     {
         /* read the number of bytes requested by the client (0..256) */
-        if (!read_from_ftdi(a_buffer_size, 2))
+        if (!ef3xfer_read_from_ftdi(a_buffer_size, 2))
         {
-            fclose(fp);
             return 0;
         }
         n_bytes_req = a_buffer_size[0] + a_buffer_size[1] * 256;
@@ -374,17 +393,15 @@ static int send_file(const char* p_filename)
             a_buffer_size[0] = count & 0xff;
             a_buffer_size[1] = count >> 8;
             // send length indication
-            ret = write_to_ftdi(a_buffer_size, 2);
+            ret = ef3xfer_write_to_ftdi(a_buffer_size, 2);
             if (ret != 2)
             {
-                fclose(fp);
                 return 0;
             }
             // send payload
-            ret = write_to_ftdi(a_buffer, count);
+            ret = ef3xfer_write_to_ftdi(a_buffer, count);
             if (ret != count)
             {
-                fclose(fp);
                 return 0;
             }
         }
@@ -393,6 +410,5 @@ static int send_file(const char* p_filename)
     }
     while (n_bytes_req > 0);
 
-    fclose(fp);
     return 1;
 }

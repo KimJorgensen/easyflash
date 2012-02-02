@@ -133,6 +133,9 @@ static const char* guess_type(const char* p_filename)
     if (strcasecmp(p_suffix, ".prg") == 0)
         return "PRG";
 
+    if (strcasecmp(p_suffix, ".d64") == 0)
+        return "D64";
+
     return NULL;
 }
 
