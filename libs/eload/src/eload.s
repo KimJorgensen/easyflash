@@ -29,6 +29,8 @@
 .importzp       tmp1, tmp2, tmp3
 .importzp       ptr1
 
+.import eload_dev
+
 .import eload_dos_close
 .import eload_set_read_byte_fn
 .import eload_read_byte_from_buffer
@@ -68,7 +70,7 @@ _eload_open_read:
         stx ptr1 + 1
         lda #0
         sta ST                  ; set status to OK
-        lda $ba                 ; set drive to listen
+        lda eload_dev           ; set drive to listen
         jsr LISTEN
         lda #$f0                ; open + secondary addr 0
         jsr SECOND
@@ -88,7 +90,7 @@ _eload_open_read:
         bne @fail
 
         ; Check if the file is readable
-        lda $ba
+        lda eload_dev
         jsr TALK
         lda #$60                ; talk + secondary addr 0
         jsr TKSA
@@ -128,7 +130,7 @@ _eload_open_read:
         jsr eload_set_read_byte_fn
 
         ; send TALK so we can read the bytes afterwards
-        lda $ba
+        lda eload_dev
         jsr TALK
         lda #$60
         jsr TKSA

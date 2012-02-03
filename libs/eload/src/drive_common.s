@@ -118,22 +118,9 @@ write_sector:
         iny
         bne :-
 
-        ; check buffer ==========
-        ldy #0
-@check:
-        tya
-        cmp drivebuffer, y
-        bne bad_data
-        dey
-        bne @check
-        ; check buffer ==========
-
         pla
         jsr drv_writesector
         bcs @ret
         lda #ELOAD_OK
 @ret:
         jmp senddone        ; send OK or error
-
-bad_data:
-        jmp blink_fast

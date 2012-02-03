@@ -59,8 +59,11 @@ cmdbytes        = 32   ; number of bytes in one M-W command
 
 .bss
 
-.export loader_drivetype
-loader_drivetype:
+.export eload_dev
+eload_dev:
+        .res 1
+
+drivetype:
         .res 1
 cmd_addr:
         .res 2
@@ -119,9 +122,9 @@ drive_code_init_sizes:
 ; =============================================================================
 .export _eload_set_drive_check_fastload
 _eload_set_drive_check_fastload:
-        sta $ba
+        sta eload_dev
         jsr drive_detect
-        sta loader_drivetype
+        sta drivetype
         ldx #0
         rts
 
@@ -140,9 +143,9 @@ _eload_set_drive_check_fastload:
 ; =============================================================================
 .export _eload_set_drive_disable_fastload
 _eload_set_drive_disable_fastload:
-        sta $ba
+        sta eload_dev
         lda #drivetype_unknown
-        sta loader_drivetype
+        sta drivetype
         rts
 
 ; =============================================================================
@@ -163,7 +166,7 @@ _eload_set_drive_disable_fastload:
 ; =============================================================================
 .export _eload_drive_is_fast
 _eload_drive_is_fast:
-        ldx loader_drivetype
+        ldx drivetype
         lda drive_codes + 1,x
         tax
         rts
@@ -190,7 +193,7 @@ _eload_prepare_drive:
         jsr start_code
 
         ; no final drive code needed for sd2iec
-        lda loader_drivetype
+        lda drivetype
         cmp #drivetype_sd2iec
         beq @no_drive_code
 
@@ -214,7 +217,7 @@ _eload_prepare_drive:
         rts
 
 set_code_ptr_code_size:
-        lda loader_drivetype
+        lda drivetype
         asl
         tay
         lda drive_codes + 1, y          ; ptr to send_code for detected drive
@@ -226,7 +229,7 @@ set_code_ptr_code_size:
         lda drive_codes, y
         sta code_ptr
 
-        ldy loader_drivetype
+        ldy drivetype
         lda drive_code_init_sizes, y
         sta code_len
         rts
@@ -309,7 +312,6 @@ start_code:
         jsr UNLSN
 
         ldy #10                 ; delay
-        ldx #0
 :       dex
         bne :-
         dey
