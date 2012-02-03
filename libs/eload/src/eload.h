@@ -14,7 +14,7 @@
 
 /**
  * Set the device number for the drive to be used, and check the drive type.
- * The drive number is stored in $BA, the drive type is stored internally.
+ * The drive number and the drive type are stored internally.
  *
  * Return the drive type (see drivetype.s).
  */
@@ -23,7 +23,7 @@ int  __fastcall__ eload_set_drive_check_fastload(uint8_t dev);
 /**
  * Set the device number for the drive to be used and set its type to
  * "unknown". This disables the fast loader.
- * The drive number is stored in $BA.
+ * The drive number and the drive type are stored internally.
  */
 void __fastcall__ eload_set_drive_disable_fastload(uint8_t dev);
 
