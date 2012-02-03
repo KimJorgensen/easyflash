@@ -25,6 +25,8 @@
 
 .include "kernal.s"
 
+.import eload_dev
+
 .bss
 dos_command:
         .res 1
@@ -45,13 +47,13 @@ eload_dos_open_listen_cmd:
 
 ; =============================================================================
 ;
-; Send LISTEN to the drive FA and open the secondary address in SA.
+; Send LISTEN to a drive and open the secondary address in SA.
 ; The caller can use CIOUT or eload_dos_send_data and finally jsr UNLSN and
 ; eload_dos_cmd_close. Note that for SA 15 no close is needed.
 ;
 ; parameters:
-;       FA      drive number
-;       SA      secondary address $00..$0f
+;       eload_dev   device number (FA)
+;       SA          secondary address $00..$0f
 ;
 ; return:
 ;       C       flag set when an error occured
@@ -67,14 +69,14 @@ eload_dos_open_listen:
         lda #$60            ; open
         sta dos_command
 send_listen_sa:
-        lda FA
+        lda eload_dev
         jsr LISTEN
         jsr check_err
         bcs ret_err
         lda SA
         ora dos_command
         jsr SECOND
-        jmp check_err
+        ; jmp check_err -- fall through
 
 
 ; =============================================================================
@@ -92,6 +94,7 @@ send_listen_sa:
 ;       A
 ;
 ; =============================================================================
+        ; note: fall through from eload_dos_open_listen
 check_err:
         sec
         lda ST
@@ -135,11 +138,11 @@ ret:
 
 ; =============================================================================
 ;
-; Send TALK to the drive FA and the secondary address SA.
+; Send TALK to a drive and the secondary address SA.
 ; The caller must jsr UNTALK after he has read enough data.
 ;
 ; parameters:
-;       FA      drive number
+;       eload_dev   device number (FA)
 ;       SA      secondary address $00..$0f
 ;
 ; return:
@@ -151,7 +154,7 @@ ret:
 ; =============================================================================
 .export eload_dos_send_talk
 eload_dos_send_talk:
-        lda FA
+        lda eload_dev
         jsr TALK
         jsr check_err
         bcs ret
@@ -172,10 +175,10 @@ eload_dos_unlisten_close:
 
 ; =============================================================================
 ;
-; Close the secondary address in SA on the drive FA.
+; Close the secondary address in SA on a drive.
 ;
 ; parameters:
-;       FA      drive number
+;       eload_dev   device number (FA)
 ;       SA      secondary address $00..$0f
 ;
 ; return:
