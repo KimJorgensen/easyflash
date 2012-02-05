@@ -594,16 +594,16 @@ void execUSBCmd(const char* pStrUSBCmd)
 {
     if (strcmp(pStrUSBCmd, "crt") == 0)
     {
-        if (screenPrintDialog(apStrFlashFromUSB, BUTTON_ENTER | BUTTON_STOP) ==
-                BUTTON_ENTER)
+        /*if (screenPrintDialog(apStrFlashFromUSB, BUTTON_ENTER | BUTTON_STOP) ==
+                BUTTON_ENTER)*/
         {
             checkWriteCRTImageFromUSB();
             refreshMainScreen();
         }
-        else
+        /*else
         {
             ef3usb_send_str("stop");
-        }
+        }*/
     }
     else
     {
