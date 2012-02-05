@@ -25,6 +25,7 @@
 
 #include <string.h>
 #include <unistd.h>
+#include <6502.h>
 #include <cbm.h>
 #include <c64.h>
 #include <conio.h>
@@ -192,7 +193,7 @@ static void test_write_sector(void)
     VIC.ctrl1 &= 0xef;
     while (VIC.rasterline != 255)
     {}
-
+    SEI();
 
     for (t = 1; t < 36; ++t)
     {
@@ -205,11 +206,10 @@ static void test_write_sector(void)
         else
             lim = 21;
 
-        cclearxy(0, 10, 40);
         i = 0;
         for (s = lim; s; --s)
         {
-            i += 8;
+            i += 7;
             if (i >= lim)
                 i = i - lim;
 
@@ -221,6 +221,7 @@ static void test_write_sector(void)
 
     // enable VIC-II DMA
     VIC.ctrl1 |= 0x10;
+    CLI();
 
     eload_close();
     for(;;);

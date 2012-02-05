@@ -23,6 +23,7 @@ _eload_write_sector:
         stx trk_tmp             ; track
         sta sec_tmp             ; sector
 
+        sei
         lda #4                  ; command: write sector
         jsr eload_send
         lda trk_tmp
@@ -45,6 +46,7 @@ _eload_write_sector:
         bne :-
 
         jsr eload_recv
+        cli
         ldx #0
         rts
 

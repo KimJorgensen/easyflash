@@ -7,11 +7,10 @@
 ; =============================================================================
 ;
 ; Send 256 bytes to the drive over the fast protocol. Do not wait for any
-; VIC-II DMA.
+; VIC-II DMA. This version does not use SEI/CLI, the caller must care for it.
 ;
 ; Used internally only.
 ;
-; Uses SEI/CLI.
 ;
 ; parameters:
 ;       Pointer in AX
@@ -35,11 +34,17 @@ eload_send256_nodma:
         ora #$38
         sta $dd02
 
-        sei
-
         ldy #0
 @next_byte:
         lda (ptr3), y
+
+        ; hier ca. 2 mal
+@waitdrv:
+        bit $dd00       ; wait for drive to signal ready to receive
+        bvs @waitdrv    ; with CLK low
+
+        ldx #$20        ; pull DATA low to acknowledge
+        stx $dd00
 
         pha
         lsr
@@ -47,20 +52,14 @@ eload_send256_nodma:
         lsr
         lsr
         tax
+        lda #$00
 
-@waitdrv:
-        bit $dd00       ; wait for drive to signal ready to receive
-        bvs @waitdrv    ; with CLK low
-
-        lda #$20        ; pull DATA low to acknowledge
-        sta $dd00
-
+        ; hier ca. 0 mal
 @wait2:
         bit $dd00       ; wait for drive to release CLK
         bvc @wait2
 
-        lda #$00        ; release DATA to signal that data is coming
-        sta $dd00
+        sta $dd00       ; release DATA to signal that data is coming
 
         lda sendtab,x   ; 4
         sta $dd00       ; 8     send bits 7 and 5
@@ -90,6 +89,4 @@ eload_send256_nodma:
         bne @next_byte  ;       Z from iny
 
         stx $dd02
-
-        cli
         rts

@@ -7,8 +7,7 @@
 ; =============================================================================
 ;
 ; Send a byte to the drive over the fast protocol. Used internally only.
-;
-; Uses SEI/CLI.
+; This version does not use SEI/CLI, the caller must care for it.
 ;
 ; parameters:
 ;       Byte in A
@@ -47,8 +46,6 @@ eload_send:
         bit $dd00       ; wait for drive to release CLK
         bvc @wait2
 
-        sei
-
 eload_send_waitbadline:
         lda $d011       ; wait until a badline won't screw up
         clc             ; the timing
@@ -86,5 +83,4 @@ eload_send_nobadline:
         ldy #$3f        ; 53
         sta $dd00       ; 57    restore $dd00 and $dd02
         sty $dd02
-        cli
         rts

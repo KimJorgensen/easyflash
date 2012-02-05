@@ -33,7 +33,7 @@ drv_load_code:
         sty zpptr
         ldx #4                  ; number of blocks to transfer
 @next_byte:
-        jsr drv_recv
+        jsr drv_recv_with_init
         sta (zpptr), y
         iny
         bne @next_byte
@@ -127,16 +127,20 @@ exit_1:
 ; Returns with I-flag set (SEI).
 ;
 ; =============================================================================
+
+drv_recv_with_init:
+        ; initialize recv code
+        lda serport
+        and #$60                ; <= needed?
+        asl
+        eor serport
+        and #$e0
+        sta eor_correction
 drv_recv:
         lda #$08                ; CLK low to signal that we're receiving
         sta serport
 
-        lda serport             ; get EOR mask for data
-        asl
-        eor serport
-        and #$e0
-        sta @eor
-
+        ; hier ca. 1 mal
         lda #$01
 :
         bit serport             ; wait for DATA low
@@ -148,6 +152,7 @@ drv_recv:
         lda #0                  ; release CLK
         sta serport
 
+        ; hier ca. 1 mal
         lda #$01
 :
         bit serport             ; wait for DATA high
@@ -169,7 +174,7 @@ drv_recv:
         eor serport             ; 37..43    get bits 3 and 1
 
         asl
-@eor = * + 1
+eor_correction = * + 1
         eor #$5e
         nop                     ; 43..
         eor serport             ; 47..53    get bits 2 and 0

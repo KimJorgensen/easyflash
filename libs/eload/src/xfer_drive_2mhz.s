@@ -33,7 +33,7 @@
 load_common_code:
         ldx #<drive_code_common_len
 @next_byte:
-        jsr recv
+        jsr drv_recv_with_init
         sta drive_common_start - 1, x
         dex
         bne @next_byte
@@ -139,15 +139,17 @@ exit_2:
 ; Returns with I-flag set (SEI).
 ;
 ; =============================================================================
-recv:
-        lda #$08                ; CLK low to signal that we're receiving
-        sta serport
-
-        lda serport             ; get EOR mask for data
+drv_recv_with_init:
+        ; initialize recv code
+        lda serport
+        and #$60                ; <= needed?
         asl
         eor serport
         and #$e0
-        sta @eor
+        sta eor_correction
+recv:
+        lda #$08                ; CLK low to signal that we're receiving
+        sta serport
 
         lda #$01
 :
@@ -187,7 +189,7 @@ recv:
 
         asl                     ; 83..
 
-@eor = * + 1
+eor_correction = * + 1
         eor #$5e                ; 85..
 
                                 ; 93..
