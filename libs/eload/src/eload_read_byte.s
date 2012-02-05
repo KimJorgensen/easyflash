@@ -123,9 +123,14 @@ eload_read_byte_fast:
 @return:
         dec eload_ctr
         ; return value x = 0 from ST above
-        jmp eload_recv
-@nextblock:
+        sei
         jsr eload_recv
+        cli
+        rts
+@nextblock:
+        sei
+        jsr eload_recv
+        cli
         beq set_eof
         sta eload_ctr
         cmp #$ff        ; error flag

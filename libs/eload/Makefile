@@ -58,7 +58,7 @@ test.d64: eload_test.prg
 	c1541 -format test,td d64 $@ 8 \
 		-write eload_test.prg etest
 
-eload_test.prg: obj/eload_test.o test/ld.cfg eload.lib
+eload_test.prg: obj/eload_test.o eload.lib
 	ld65 -o $@ -m $@.map -t c64 -L /usr/local/lib/cc65/lib \
 		obj/eload_test.o \
 		--lib eload.lib --lib c64.lib

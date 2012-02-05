@@ -266,6 +266,7 @@ wait_sync:
         bit $1c00               ; sync found?
         bmi @wait               ; no => wait
         lda $1c01               ; the byte
+        inc test2
         clv                     ; clear byte ready (V)
         rts
 @timeout:
@@ -346,8 +347,8 @@ update_disk_info:
         sta retry_udi_cnt
 @retry:
         ldy #$b0                ; seek sector job code
-        ldx #18
-        lda #0                  ; Track 18, sector 0
+        ldx job_track_backup
+        lda job_sector_backup
         jsr exec_this_job
         bcc @ret
 

@@ -201,6 +201,7 @@ _eload_prepare_drive:
         jsr set_code_ptr_code_size
         ldy #0
         ldx #4                          ; number of blocks to transfer
+        sei
 :
         lda (code_ptr), y
         sty tmp1
@@ -211,6 +212,7 @@ _eload_prepare_drive:
         inc code_ptr + 1
         dex
         bne :-
+        cli
 
 @no_drive_code:
         clc

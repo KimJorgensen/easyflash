@@ -114,9 +114,11 @@ _eload_open_read:
         dex
         bne @delay
 
+        sei
         lda #1                  ; command: load
         jsr eload_send
         jsr eload_recv         ; status / number of bytes
+        cli
 
         sta eload_ctr
         cmp #$ff
@@ -174,8 +176,6 @@ eload_recv:
         lda $dd00
         bmi @wait1
 
-        sei
-
 @eload_recv_waitbadline:
         lda $d011               ; wait until a badline won't screw up
         clc                     ; the timing
@@ -214,6 +214,5 @@ eload_recv:
 @eor:
         eor #$00
         eor $dd00               ; 44 - b6 b7
-        cli
         rts
 
