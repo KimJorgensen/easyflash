@@ -2,43 +2,45 @@
 .importzp   tmp3, ptr3
 .import     sendtab
 
-.export     eload_send256_nodma
+.export     eload_send_nodma
 
 ; =============================================================================
 ;
-; Send 256 bytes to the drive over the fast protocol. Do not wait for any
-; VIC-II DMA. This version does not use SEI/CLI, the caller must care for it.
+; Send up to 256 bytes to the drive over the fast protocol. The last byte is
+; sent first.
+;
+; Do not wait for any VIC-II DMA. This version does not use SEI/CLI, the
+; caller must care for it.
 ;
 ; Used internally only.
 ;
-;
 ; parameters:
-;       Pointer in AX
+;       AX  pointer to data
+;       Y   number of bytes (1 for 256=0)
 ;
 ; return:
 ;       -
 ;
 ; changes:
-;   A, Y,
+;   A, X, Y
 ;
 ; =============================================================================
-eload_send256_nodma:
+eload_send_nodma:
         sta ptr3
         stx ptr3 + 1
 
         lda $dd00
+        sta tmp3
         and #7
         sta $dd00
-        sta tmp3        ; <= mhhh?
         eor #$07
         ora #$38
         sta $dd02
 
-        ldy #0
 @next_byte:
+        dey
         lda (ptr3), y
 
-        ; hier ca. 2 mal
 @waitdrv:
         bit $dd00       ; wait for drive to signal ready to receive
         bvs @waitdrv    ; with CLK low
@@ -54,7 +56,6 @@ eload_send256_nodma:
         tax
         lda #$00
 
-        ; hier ca. 0 mal
 @wait2:
         bit $dd00       ; wait for drive to release CLK
         bvc @wait2
@@ -83,10 +84,10 @@ eload_send256_nodma:
         nop             ; 46
         ldx #$3f        ; 48    (for $dd02 below)
         lda tmp3        ; 51
-        iny             ; 53
+        cpy #0          ; 53
         sta $dd00       ; 57    restore $dd00
 
-        bne @next_byte  ;       Z from iny
+        bne @next_byte  ;       Z from cpy
 
         stx $dd02
         rts

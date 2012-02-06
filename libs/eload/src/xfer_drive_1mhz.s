@@ -27,19 +27,17 @@
 ;
 ; =============================================================================
 drv_load_code:
-        ldy #>drv_code_start    ; point to drive code start
-        sty zpptr + 1
+        lda #<drv_code_start
+        ldx #>drv_code_start
         ldy #0
-        sty zpptr
-        ldx #4                  ; number of blocks to transfer
-@next_byte:
-        jsr drv_recv_with_init
-        sta (zpptr), y
-        iny
-        bne @next_byte
-        inc zpptr + 1
-        dex
-        bne @next_byte
+        jsr drv_recv            ; 1st block
+        lda #3                  ; remaining blocks
+        sta job_track           ; tmp
+@next:
+        inc buff_ptr + 1
+        jsr drv_recv_to_ptr
+        dec job_track
+        bne @next
         rts
 
 
@@ -124,11 +122,30 @@ exit_1:
 
 ; =============================================================================
 ;
+; Load Y bytes to AX. The first byte will be stored to the highest
+; address.
+;
+; parameters:
+;       Y           number of bytes (1 for 256=0)
+;
+; return:
+;       buff_ptr    set to AX
+;       A           last byte transfered
+;       Y           0
+;
+; changes:
+;       A, X, Y
+;
 ; Returns with I-flag set (SEI).
 ;
 ; =============================================================================
-
-drv_recv_with_init:
+drv_recv_to_buffer:
+        lda #<buffer
+        ldx #>buffer
+drv_recv:
+        sta buff_ptr
+        stx buff_ptr + 1
+drv_recv_to_ptr:
         ; initialize recv code
         lda serport
         and #$60                ; <= needed?
@@ -136,7 +153,8 @@ drv_recv_with_init:
         eor serport
         and #$e0
         sta eor_correction
-drv_recv:
+
+@next_byte:
         lda #$08                ; CLK low to signal that we're receiving
         sta serport
 
@@ -170,13 +188,17 @@ drv_recv:
         asl
         asl
         asl                     ; 27..
-        cmp ($00,x)             ; 33..
+        nop
+        nop
+        nop                     ; 33..
         eor serport             ; 37..43    get bits 3 and 1
 
         asl
-eor_correction = * + 1
-        eor #$5e
-        nop                     ; 43..
+        eor eor_correction      ; 43..      not on zeropage (abs addressing)
         eor serport             ; 47..53    get bits 2 and 0
+
+        dey
+        sta (buff_ptr), y
+        bne @next_byte
 
         rts
