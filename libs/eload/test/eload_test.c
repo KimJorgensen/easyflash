@@ -171,6 +171,7 @@ static void test_read(void)
 static void test_write_sector(void)
 {
     static uint8_t block[256];
+    static uint8_t gcr[305];
     uint8_t drv;
     unsigned i, t, s, ret, lim;
 
@@ -209,12 +210,12 @@ static void test_write_sector(void)
         i = 0;
         for (s = lim; s; --s)
         {
-            i += 7;
+            i += 5;
             if (i >= lim)
                 i = i - lim;
 
             //ret = eload_write_sector((t << 8) | i, block);
-            ret = eload_write_sector_nodma((t << 8) | i, block);
+            ret = eload_write_sector_nodma((t << 8) | i, gcr);
             //*((uint8_t*)0x0400 + 10 * 40 + i) = '0' + ret;
         }
     }
