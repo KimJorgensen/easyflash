@@ -5,10 +5,13 @@
 
     .import         popax
 
-    .import eload_send256_nodma
+    .import eload_send_nodma
     .import eload_send
     .import eload_recv
     .import _eload_prepare_drive
+
+gcr_overflow_size = 69
+
 
 ; =============================================================================
 ;
@@ -25,21 +28,47 @@ _eload_write_sector_nodma:
         sta sec_tmp             ; sector
 
         lda #4                  ; command: write sector
-        jsr eload_send
-        lda trk_tmp
-        jsr eload_send
-        lda sec_tmp
+        sta job
+        lda #<job
+        ldx #>job
+        ldy #1
         jsr eload_send
 
+        lda #<trk_tmp
+        ldx #>trk_tmp
+        ldy #2
+        jsr eload_send
+
+        ; this will go to the GCR overflow buffer $1bb
         lda block_tmp
         ldx block_tmp + 1
-        jsr eload_send256_nodma
+        ldy #gcr_overflow_size
+        jsr eload_send_nodma
+
+        lda block_tmp + 1
+        adc #0
+        sta block_tmp + 1
+
+        ; this will go to the main buffer
+        clc
+        lda block_tmp
+        adc #gcr_overflow_size
+        tay
+        lda block_tmp + 1
+        adc #0
+        tax
+        tya
+        ldy #0
+        jsr eload_send_nodma
 
         jsr eload_recv
         ldx #0
         rts
 
 .bss
+; keep the order of these three bytes
+job:
+        .res 1
 trk_tmp:
         .res 1
 sec_tmp:

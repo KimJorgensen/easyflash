@@ -62,6 +62,8 @@ current_track   = $22
 
 gcr_tmp         = $24
 
+buff_ptr        = $30
+
 head_step_ctr   = $4a
 
 zptmp               = $c1
@@ -72,7 +74,9 @@ retry_sec_cnt       = $c5       ; retry counter for searching sectors
 retry_udi_cnt       = $c6       ; retry counter for update_disk_info
 retry_sh_cnt        = $c7       ; retry counter for search_header
 
-drivebuffer         = $0700
+eor_correction      = $103      ; not on zeropage (need abs addressing)
+
+buffer              = $0700
 
 .export drv_start
 drv_start:
@@ -133,7 +137,7 @@ drv_readsector:
 
 ; sector write subroutine. Returns clc if successful, sec if error
 ; X/A = T/S
-drv_writesector:
+drv_writesector: ; 03d8
         jsr set_job_backup_ts
         jsr restore_orig_job_ts
 
@@ -141,16 +145,6 @@ drv_writesector:
         lda #0
         sta test2
         jsr prepare_read
-
-        lda #<drivebuffer
-        sta $30                 ; buffer addr low
-        lda #>drivebuffer
-        sta $2e                 ; buffer addr high
-        sta $31
-        jsr $f5e9               ; calc checksum
-        sta $3a
-        jsr $f78f               ; convert block to GCR
-
         jsr search_header
         bcs @ret                ; error: code in A already
         ldx #8                  ; skip 9 bytes after header
@@ -182,7 +176,7 @@ drv_writesector:
         bne @write_data_1
 
 @write_data_2:
-        lda drivebuffer, y
+        lda buffer, y
 :
         bvc :-                  ; wait for byte ready
         clv                     ; clear byte ready (V)

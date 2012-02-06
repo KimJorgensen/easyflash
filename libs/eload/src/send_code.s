@@ -199,18 +199,16 @@ _eload_prepare_drive:
 
         ; upload the full drive code using the fast protocol
         jsr set_code_ptr_code_size
-        ldy #0
-        ldx #4                          ; number of blocks to transfer
+        lda #4                          ; number of blocks to transfer
+        sta tmp1
         sei
 :
-        lda (code_ptr), y
-        sty tmp1
+        lda code_ptr
+        ldx code_ptr + 1
+        ldy #0
         jsr eload_send
-        ldy tmp1
-        iny
-        bne :-
         inc code_ptr + 1
-        dex
+        dec tmp1
         bne :-
         cli
 

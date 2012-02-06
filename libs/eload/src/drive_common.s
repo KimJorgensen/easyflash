@@ -25,6 +25,9 @@
 
 .include "eload_macros.s"
 
+gcr_overflow_size = 69
+gcr_overflow_buff = $01bb
+
 ; =============================================================================
 ;
 ; load file
@@ -43,9 +46,9 @@ loadchain:
         jmp error
 :
         ldx #254                ; send 254 bytes (full sector)
-        lda drivebuffer         ; last sector?
+        lda buffer              ; last sector?
         bne :+
-        ldx drivebuffer + 1     ; send number of bytes in sector (1-254)
+        ldx buffer + 1          ; send number of bytes in sector (1-254)
         dex
 :
         stx @buflen
@@ -56,7 +59,7 @@ loadchain:
 @send:
         txa
         pha
-        lda drivebuffer + 2,x
+        lda buffer + 2,x
         jsr drv_send
         pla
         tax
@@ -66,9 +69,9 @@ loadchain:
         bne @send
 
         ; load next t/s in chain into x/a or exit loop if EOF
-        ldx drivebuffer
+        ldx buffer
         beq @done
-        lda drivebuffer + 1
+        lda buffer + 1
         jmp @sendsector
 @done:
         lda #0
@@ -79,7 +82,8 @@ loadchain:
 ; =============================================================================
 drv_main:
         cli                     ; allow IRQs when waiting
-        jsr drv_recv            ; get command byte, exit if ATN goes low
+        ldy #1
+        jsr drv_recv_to_buffer  ; get command byte, exit if ATN goes low
 
         cmp #1                  ; load a file
         beq load
@@ -106,19 +110,21 @@ drv_sendtbl:
         .byte $0a, $02, $08, $00
 
 ; =============================================================================
-write_sector:
+write_sector: ; 05db
+        ldy #2
+        lda #<job_track         ; receive track and secor
+        ldx #>job_track
         jsr drv_recv
-        tax                 ; X = trk
-        jsr drv_recv
-        pha                 ; A = sec
-        ldy #0
-:
-        jsr drv_recv
-        sta drivebuffer, y
-        iny
-        bne :-
 
-        pla
+        ; receive 69 + 256 bytes of GCR encodec track
+        ldy #gcr_overflow_size
+        lda #<gcr_overflow_buff
+        ldx #>gcr_overflow_buff
+        jsr drv_recv            ; 69 bytes
+        jsr drv_recv_to_buffer  ; 256 bytes (Y = 0 from prev call)
+
+        ldx job_track
+        lda job_sector
         jsr drv_writesector
         bcs @ret
         lda #ELOAD_OK
