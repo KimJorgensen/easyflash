@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
+#include <6502.h>
 #include <c64.h>
 
 #include <ef3usb.h>
@@ -24,6 +25,8 @@
 #define DISK_STATUS_ID_MISMATCH      0x0b /* Id mismatch */
 #define DISK_STATUS_NO_DISK          0x0f /* Disk not inserted */
 
+#define D64_MAX_SECTORS 21 /* 0..20 */
+#define GCR_BPS 325
 
 /******************************************************************************/
 /**
@@ -62,7 +65,7 @@ void write_disk_d64(void)
 {
     static uint8_t a_status[2];
     static uint8_t a_ts[2 + 22];
-    static uint8_t a_track_data[21][256];
+    static uint8_t a_track_data[D64_MAX_SECTORS][GCR_BPS];
     uint8_t i, n_track, n_sector;
 
     puts("\nd64 writer started");
@@ -78,6 +81,7 @@ void write_disk_d64(void)
     eload_prepare_drive();
     puts("Drive ready");
 
+    SEI();
     // disable VIC-II DMA
     VIC.ctrl1 &= 0xef;
     while (VIC.rasterline != 255)
@@ -94,7 +98,7 @@ void write_disk_d64(void)
             break;
 
         /* load the number of sectors for this track */
-        ef3usb_receive_data(a_track_data, a_ts[1] * 256);
+        ef3usb_receive_data(a_track_data, a_ts[1] * GCR_BPS);
 
         n_track = a_ts[0];
         i = 2;
@@ -108,4 +112,5 @@ void write_disk_d64(void)
 
     // enable VIC-II DMA
     VIC.ctrl1 |= 0x10;
+    CLI();
 }
