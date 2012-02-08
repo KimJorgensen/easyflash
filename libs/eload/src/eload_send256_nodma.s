@@ -19,7 +19,7 @@
 ;       Y   number of bytes (1 for 256=0)
 ;
 ; return:
-;       -
+;       Y = 0
 ;
 ; changes:
 ;   A, X, Y

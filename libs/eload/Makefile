@@ -28,6 +28,11 @@ obj += obj/eload_read.o
 obj += obj/eload_write_sector.o
 obj += obj/eload_write_sector_nodma.o
 
+test_obj :=
+test_obj += obj/crt0.o
+test_obj += obj/eload_test.o
+test_obj += obj/gcr.o
+
 
 .PHONY: all
 all: eload.lib 
@@ -58,10 +63,9 @@ test.d64: eload_test.prg
 	c1541 -format test,td d64 $@ 8 \
 		-write eload_test.prg etest
 
-eload_test.prg: obj/eload_test.o eload.lib
-	ld65 -o $@ -m $@.map -t c64 -L /usr/local/lib/cc65/lib \
-		obj/eload_test.o \
-		--lib eload.lib --lib c64.lib
+eload_test.prg: $(test_obj) eload.lib
+	ld65 -o $@ -m $@.map -C test/ld.cfg -L /usr/local/lib/cc65/lib \
+		$(test_obj) --lib eload.lib --lib c64.lib
 
 clean:
 	rm -rf obj
