@@ -32,6 +32,9 @@
 
 #include "eload.h"
 
+// from gcr.s:
+void __fastcall__ convert_block_to_gcr(uint8_t* p_dst, uint8_t* p_src);
+
 #define TEST_DATA_SIZE       8192
 #define ELOAD_TEST_FILE_NAME "eload-test-file"
 
@@ -171,9 +174,9 @@ static void test_read(void)
 static void test_write_sector(void)
 {
     static uint8_t block[256];
-    static uint8_t gcr[305];
-    uint8_t drv;
-    unsigned i, t, s, ret, lim;
+    static uint8_t gcr[325];
+    uint8_t drv, t, s, lim;
+    unsigned i, ret;
 
     drv = get_drive_number();
 
@@ -186,9 +189,9 @@ static void test_write_sector(void)
     {
         block[i] = i;
     }
-    eload_prepare_drive();
+    convert_block_to_gcr(gcr, block);
 
-    clrscr();
+    eload_prepare_drive();
 
     // disable VIC-II DMA
     VIC.ctrl1 &= 0xef;

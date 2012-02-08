@@ -45,21 +45,15 @@ _eload_write_sector_nodma:
         ldy #gcr_overflow_size
         jsr eload_send_nodma
 
-        lda block_tmp + 1
-        adc #0
-        sta block_tmp + 1
-
         ; this will go to the main buffer
+        ldx block_tmp + 1
         clc
         lda block_tmp
         adc #gcr_overflow_size
-        tay
-        lda block_tmp + 1
-        adc #0
-        tax
-        tya
-        ldy #0
-        jsr eload_send_nodma
+        bcc :+
+        inx
+:
+        jsr eload_send_nodma    ; Y still 0 = 256 bytes
 
         jsr eload_recv
         ldx #0
