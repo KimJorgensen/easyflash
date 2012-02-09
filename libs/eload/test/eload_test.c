@@ -175,7 +175,7 @@ static void test_write_sector(void)
 {
     static uint8_t block[256];
     static uint8_t gcr[325];
-    uint8_t drv, t, s, lim;
+    uint8_t drv, t, s, lim, interleave;
     unsigned i, ret;
 
     drv = get_drive_number();
@@ -191,16 +191,19 @@ static void test_write_sector(void)
     }
     convert_block_to_gcr(gcr, block);
 
-    eload_prepare_drive();
-
     // disable VIC-II DMA
     VIC.ctrl1 &= 0xef;
     while (VIC.rasterline != 255)
     {}
     SEI();
 
+    eload_prepare_drive();
+
+    SEI();
+
     for (t = 1; t < 36; ++t)
     {
+        interleave = 4;
         if (t >= 31)
             lim = 17;
         else if (t >= 24)
@@ -213,7 +216,8 @@ static void test_write_sector(void)
         i = 0;
         for (s = lim; s; --s)
         {
-            i += 5;
+            i += interleave;
+
             if (i >= lim)
                 i = i - lim;
 

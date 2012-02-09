@@ -23,6 +23,7 @@
  ;
 
 .include "eload_macros.s"
+.include "config.s"
 
 .export drive_code_1541
 drive_code_1541  = *

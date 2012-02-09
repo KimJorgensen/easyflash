@@ -82,8 +82,10 @@ loadchain:
 ; =============================================================================
 drv_main:
         cli                     ; allow IRQs when waiting
+        jsr drv_wait_rx
+
         ldy #1
-        jsr drv_recv_to_buffer  ; get command byte, exit if ATN goes low
+        jsr drv_recv_to_buffer  ; get command byte
 
         cmp #1                  ; load a file
         beq load
