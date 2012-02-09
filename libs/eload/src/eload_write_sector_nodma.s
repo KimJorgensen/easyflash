@@ -32,12 +32,12 @@ _eload_write_sector_nodma:
         lda #<job
         ldx #>job
         ldy #1
-        jsr eload_send
+        jsr eload_send_nodma
 
         lda #<trk_tmp
         ldx #>trk_tmp
         ldy #2
-        jsr eload_send
+        jsr eload_send_nodma
 
         ; this will go to the GCR overflow buffer $1bb
         lda block_tmp

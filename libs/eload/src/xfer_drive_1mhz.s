@@ -40,6 +40,30 @@ drv_load_code:
         bne @next
         rts
 
+; =============================================================================
+;
+; Signal with CLK low that we are ready and wait until the C64 signals that it
+; wants to send data. Return after SEI.
+;
+; Exit the drive code on ATN.
+;
+; changes:
+;       A
+;
+; =============================================================================
+drv_wait_rx:
+        lda #$08                ; CLK low to signal that we're receiving
+        sta serport
+
+        lda #$01
+:
+        bit serport             ; wait for DATA low
+        bmi @exit               ; exit if ATN goes low
+        beq :-
+        sei
+        rts
+@exit:
+        jmp drv_exit
 
 ; =============================================================================
 ;
@@ -146,6 +170,8 @@ drv_recv:
         sta buff_ptr
         stx buff_ptr + 1
 drv_recv_to_ptr:
+        jsr drv_wait_rx
+
         ; initialize recv code
         lda serport
         and #$60                ; <= needed?
@@ -154,11 +180,16 @@ drv_recv_to_ptr:
         and #$e0
         sta eor_correction
 
+        lda #0                  ; release CLK
+        sta serport
+
+; =============================================================================
+.if eload_use_fast_tx = 0
+
 @next_byte:
         lda #$08                ; CLK low to signal that we're receiving
         sta serport
 
-        ; hier ca. 1 mal
         lda #$01
 :
         bit serport             ; wait for DATA low
@@ -170,7 +201,6 @@ drv_recv_to_ptr:
         lda #0                  ; release CLK
         sta serport
 
-        ; hier ca. 1 mal
         lda #$01
 :
         bit serport             ; wait for DATA high
@@ -202,3 +232,45 @@ drv_recv_to_ptr:
         bne @next_byte
 
         rts
+; =============================================================================
+.else ; eload_use_fast_tx
+;                                                    .
+; bit pair timing           11111111112222222222333333333344444444445555555555
+; (us)            012345678901234567890123456789012345678901234567890123456789
+; PAL write       S       7         6         3          2           X
+;                         5         4         1          0
+; NTSC write      S       7         6         3        2           X
+;                         5         4         1        0
+
+; drive read       ssssss    777777    666666    333333    222222
+
+@next_byte:
+        lda #$01                ; 54..
+:
+        bit serport             ;           wait for DATA high
+        bne :-                  ; t = 3..9
+
+        nop
+        nop                     ;  7..
+        lda serport             ; 11..17    get bits 7 and 5
+
+        asl
+        nop
+        nop                     ; 17..
+        eor serport             ; 21..27    get bits 6 and 4
+
+        asl
+        asl
+        asl                     ; 27..
+        eor serport             ; 31..37    get bits 3 and 1
+
+        asl
+        eor eor_correction      ; 37..      not on zeropage (abs addressing)
+        eor serport             ; 41..47    get bits 2 and 0
+
+        dey                     ; 43..
+        sta (buff_ptr), y       ; 49..
+
+        bne @next_byte          ; 52*..
+        rts
+.endif

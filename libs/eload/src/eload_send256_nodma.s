@@ -1,8 +1,11 @@
 
 .importzp   tmp3, ptr3
 .import     sendtab
+.import     sendtab75, sendtab64, sendtab31, sendtab20
 
 .export     eload_send_nodma
+
+.include "config.s"
 
 ; =============================================================================
 ;
@@ -36,6 +39,8 @@ eload_send_nodma:
         eor #$07
         ora #$38
         sta $dd02
+; =============================================================================
+.if eload_use_fast_tx = 0
 
 @next_byte:
         dey
@@ -91,3 +96,52 @@ eload_send_nodma:
 
         stx $dd02
         rts
+; =============================================================================
+.else ; eload_use_fast_tx
+
+@waitdrv:
+        bit $dd00       ; wait for drive to signal ready to receive
+        bvs @waitdrv    ; with CLK low
+
+        ldx #$20        ; pull DATA low
+        stx $dd00
+@wait2:
+        bit $dd00       ; wait for drive to release CLK
+        bvc @wait2
+
+        dey
+@next_byte:
+        lda (ptr3), y   ; 58..59
+        tax             ; 60..61
+
+        lda #$00        ; 62..63
+        sta $dd00       ; 66=0  release DATA to signal that data is coming
+
+        lda sendtab75,x ; 4
+        sta $dd00       ; 8     send bits 7 and 5
+
+        nop             ; 10
+        lda sendtab64,x ; 14
+        sta $dd00       ; 18    send bits 6 and 4
+
+        nop             ; 20
+        lda sendtab31,x ; 24
+        sta $dd00       ; 28    send bits 3 and 1
+
+        nop             ; 30
+        lda sendtab20,x ; 34
+        sta $dd00       ; 38    send bits 2 and 0
+
+        dey             ; 40
+        ldx #$3f        ; 42    (for $dd02 below)
+        lda #$20        ; 44
+        cpy #$ff        ; 46
+        sta $dd00       ; 50    pull DATA low
+
+        bne @next_byte  ; 53*   from cpy
+
+        lda tmp3
+        sta $dd00       ;       restore $dd00, $dd02
+        stx $dd02
+        rts
+.endif
