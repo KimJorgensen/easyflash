@@ -191,6 +191,7 @@ drv_writesector: ; 03d8
         sta $1c0c               ; read mode
         clc                     ; mark for success
 @ret:
+        jsr $f98f               ; prepare motor off (doesn't change C)
         rts
 
 
@@ -342,8 +343,8 @@ update_disk_info:
         sta retry_udi_cnt
 @retry:
         ldy #$b0                ; seek sector job code
-        ldx job_track_backup
-        lda job_sector_backup
+        ldx #1
+        lda #0
         jsr exec_this_job
         bcc @ret
 
@@ -372,14 +373,14 @@ prepare_read:
         lda $1c00
         and #$04                ; motor on?
         bne :+
-        lda $1c00
-        ora #$0c                ; switch motor and LED on
-        sta $1c00
-        ldy #200                ; motor off: wait duration 200
+        lda $3d
+        sta $3e                 ; set flag for motor running
+        jsr $f97e               ; switch motor on
+        ldy #250                ; motor was off: wait for a while
         jsr wait_a_moment       ; wait when motor was off
 :
         lda $1c00
-        ora #$0c                ; switch LED on
+        ora #$08                ; switch LED on
         and #$9f                ; update bitrate
         ldy current_track
         cpy #31                 ; track >= 31: keep rate %00
@@ -419,7 +420,7 @@ move_head_direct:
         lda head_step_ctr
         beq @ret                ; 0 => no steps
         jsr $fa2e               ; head step
-        ldy #12
+        ldy #8
         jsr wait_a_moment
         jmp @next_step
 @ret:
@@ -427,7 +428,7 @@ move_head_direct:
         rts
 
 
-
+.if 0
 blink:
         lda $1c00
         eor #$08                ; LED invertieren
@@ -445,17 +446,7 @@ blink_fast:
         ldy #50
         jsr wait_a_moment
         beq blink_fast          ; always
-
-
-; return: Z set
-wait_a_moment:
-        ldx #0                  ; wait about Y * 1.3 ms
-:
-        dex
-        bne :-
-        dey
-        bne :-
-        rts
+.endif
 
 .include "drive_common.s"
 

@@ -132,3 +132,23 @@ write_sector: ; 05db
         lda #ELOAD_OK
 @ret:
         jmp senddone        ; send OK or error
+
+; =============================================================================
+;
+; Wait about Y * 1.3 ms
+;
+; parameters:
+;       Y time factor
+;
+; return:
+;       Z flag set
+;
+; =============================================================================
+wait_a_moment:
+        ldx #0
+:
+        dex
+        bne :-
+        dey
+        bne :-
+        rts
