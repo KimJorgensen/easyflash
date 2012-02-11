@@ -283,7 +283,7 @@ static int send_d64(uint8_t* p_buffer,
         for (i = 0; i < n_spt; ++i)
         {
             encode_sector_to_gcr(gcr, p_buffer + offset + i * 256);
-            if (!ef3xfer_write_to_ftdi(p_gcr_buffer, n_spt * GCR_BPS))
+            if (!ef3xfer_write_to_ftdi(p_gcr_buffer, GCR_BPS))
                 return 0;
         }
     }
