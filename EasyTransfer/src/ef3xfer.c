@@ -210,7 +210,7 @@ int ef3xfer_read_from_ftdi(unsigned char* p_buffer, int size)
 /*****************************************************************************/
 /**
  * Write the given number of bytes from USB. Do not return before the whole
- * number of bytes has been written or an error occured.
+ * number of bytes has been written or an error occurred.
  *
  * Return size on success, 0 otherwise.
  */
