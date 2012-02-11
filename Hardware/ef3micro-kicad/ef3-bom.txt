@@ -30,8 +30,8 @@ U5                 |  1 | 256-kbit (32 K x 8) 3.3 V 55 ns SRAM - sTSOP-28
                    |    | FuEl: CY7C1399BN-12ZXC
                    |    | FuEl: CY7C1399BN-15ZXI
 -------------------+----+------------------------------------------------------
-U6                 |  1 | 74LVC14 or 74LVX14 Schmitt Trigger SOIC-14
-                   |    | FuEl: 74LVC14AD,118
+U6                 |  1 | 74LVC14 or 74LVX14 Schmitt Trigger TSSOP-14
+                   |    | FuEl: 74LVC14APW,118
 -------------------+----+------------------------------------------------------
 U50                |  1 | FT245RL USB Full Speed to Parallel FIFO - SSOP-28
                    |    | FuEl: FT245RL-REEL

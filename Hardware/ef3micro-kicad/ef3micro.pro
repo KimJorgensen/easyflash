@@ -1,4 +1,4 @@
-update=Fr 07 Okt 2011 23:07:01 CEST
+update=Sa 11 Feb 2012 11:39:53 CET
 version=1
 last_client=pcbnew
 [cvpcb]
@@ -96,7 +96,7 @@ DrawLar=50
 EdgeLar=10
 TxtLar=120
 MSegLar=50
-LastNetListRead=ef3.net
+LastNetListRead=ef3micro.net
 [pcbnew/libraries]
 LibDir=
 LibName1=sockets
