@@ -1,4 +1,4 @@
-Cmp-Mod V01 Created by CvPCB (2011-07-08 BZR 3044)-stable date = Di 17 Jan 2012 22:00:08 CET
+Cmp-Mod V01 Created by CvPCB (2011-07-08 BZR 3044)-stable date = Sa 11 Feb 2012 14:01:04 CET
 
 BeginCmp
 TimeStamp = /4D8A5B0C;
@@ -144,7 +144,7 @@ BeginCmp
 TimeStamp = /4D8903E9;
 Reference = J1;
 ValeurCmp = EXPANSION_PORT;
-IdModule  = expansion_port;
+IdModule  = expansion_port_small;
 EndCmp
 
 BeginCmp
@@ -326,7 +326,7 @@ BeginCmp
 TimeStamp = /4DE01424;
 Reference = U6;
 ValeurCmp = 74LVC14;
-IdModule  = SO14E;
+IdModule  = SSOP14;
 EndCmp
 
 BeginCmp
