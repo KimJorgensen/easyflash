@@ -11,8 +11,6 @@ else
 endif
 bin2efcrt = ../../EasySDK/tools/bin2efcrt
 
-ld_config := src/ld.cfg
-
 obj :=
 obj += obj/usbtool.o
 obj += obj/usbtool_prg.o
@@ -69,14 +67,14 @@ force:
 obj:
 	mkdir -p $@
 
-$(name).bin: obj/crt0.o $(obj) $(ld_config) $(libef3usb) $(libeload)
-	ld65 -o $@ -m $@.map -C $(ld_config) obj/crt0.o $(obj) \
+$(name).bin: obj/crt0.crt.o $(obj) src/ld.crt.cfg $(libef3usb) $(libeload)
+	ld65 -o $@ -m $@.map -C src/ld.crt.cfg obj/crt0.crt.o $(obj) \
 		--lib  $(libef3usb) $(libeload) \
 		-L /usr/local/lib/cc65/lib --lib c64.lib
 	cat $@.map | grep -e "^Name\|^CODE\|^DATA\|^BSS\|^RODATA\|^LOWCODE"
 
-$(name).prg: $(obj) $(libef3usb) $(libeload)
-	ld65 -o $@ -m $@.map -t c64 $(obj) \
+$(name).prg: obj/crt0.prg.o $(obj) src/ld.prg.cfg $(libef3usb) $(libeload)
+	ld65 -o $@ -m $@.map -C src/ld.prg.cfg obj/crt0.prg.o $(obj) \
 		--lib  $(libef3usb) $(libeload) \
 		-L /usr/local/lib/cc65/lib --lib c64.lib
 	cat $@.map | grep -e "^Name\|^CODE\|^DATA\|^BSS\|^RODATA\|^LOWCODE"
