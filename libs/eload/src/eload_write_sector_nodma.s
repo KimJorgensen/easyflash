@@ -6,7 +6,6 @@
     .import         popax
 
     .import eload_send_nodma
-    .import eload_send
     .import eload_recv
     .import _eload_prepare_drive
 
@@ -26,6 +25,9 @@ _eload_write_sector_nodma:
         jsr popax
         stx trk_tmp             ; track
         sta sec_tmp             ; sector
+
+        php                     ; to backup the interrupt flag
+        sei
 
         lda #4                  ; command: write sector
         sta job
@@ -57,6 +59,7 @@ _eload_write_sector_nodma:
 
         jsr eload_recv
         ldx #0
+        plp                 ; to restore the interrupt flag
         rts
 
 .bss

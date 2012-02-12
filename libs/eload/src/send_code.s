@@ -36,7 +36,7 @@
 .export _eload_prepare_drive
 
 .import drive_detect
-.import eload_send_nodma
+.import eload_send
 
 .import drv_start
 
@@ -206,7 +206,7 @@ _eload_prepare_drive:
         lda code_ptr
         ldx code_ptr + 1
         ldy #0
-        jsr eload_send_nodma
+        jsr eload_send
         inc code_ptr + 1
         dec tmp1
         bne :-

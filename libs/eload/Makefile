@@ -17,7 +17,7 @@ obj += obj/drive_detect.o
 obj += obj/eload.o
 
 obj += obj/eload_send.o
-obj += obj/eload_send256_nodma.o
+obj += obj/eload_send_nodma.o
 obj += obj/eload_sendtab.o
 
 obj += obj/eload_read_byte.o
