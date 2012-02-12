@@ -81,7 +81,7 @@ convert_block_to_gcr:
 @last:
         lda parity
         sta gcr_bin + 1
-        lda 0               ; parity and 0 0
+        lda #0              ; parity and 0 0
         sta gcr_bin + 2
         sta gcr_bin + 3
         jmp convert_4_to_gcr
