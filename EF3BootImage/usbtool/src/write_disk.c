@@ -2,7 +2,6 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
-#include <6502.h>
 #include <c64.h>
 
 #include <ef3usb.h>
@@ -66,7 +65,7 @@ void write_disk_d64(void)
     static uint8_t a_status[2];
     static uint8_t a_ts[2 + 22];
     static uint8_t a_track_data[D64_MAX_SECTORS][GCR_BPS];
-    uint8_t i, n_track, n_sector;
+    uint8_t i, n_track, n_sector, rv;
 
     puts("\nd64 writer started");
     ef3usb_send_str("load");
@@ -78,10 +77,10 @@ void write_disk_d64(void)
         return;
     }
 
+    printf("Preparing drive... ");
     eload_prepare_drive();
-    puts("Drive ready");
+    puts("ok");
 
-    SEI();
     // disable VIC-II DMA
     VIC.ctrl1 &= 0xef;
     while (VIC.rasterline != 255)
@@ -104,13 +103,16 @@ void write_disk_d64(void)
         i = 2;
         while ((n_sector = a_ts[i]) != 0xff)
         {
-            eload_write_sector_nodma((n_track << 8) | n_sector,
+            rv = eload_write_sector_nodma((n_track << 8) | n_sector,
                                      a_track_data[n_sector]);
+            /* todo: send return value */
             ++i;
         }
     }
 
+    eload_close();
+    puts("Disk written\n\n");
+
     // enable VIC-II DMA
     VIC.ctrl1 |= 0x10;
-    CLI();
 }
