@@ -150,7 +150,7 @@ exit_1:
 ; address.
 ;
 ; parameters:
-;       Y           number of bytes (1 for 256=0)
+;       Y           number of bytes (1 to 256=0)
 ;
 ; return:
 ;       buff_ptr    set to AX

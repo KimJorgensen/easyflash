@@ -9,6 +9,9 @@
     .import eload_recv
     .import _eload_prepare_drive
 
+gcr_overflow_size = 69
+
+
 ; =============================================================================
 ;
 ; uint8_t __fastcall__ eload_write_sector(unsigned ts, uint8_t* block);
@@ -23,34 +26,46 @@ _eload_write_sector:
         stx trk_tmp             ; track
         sta sec_tmp             ; sector
 
+        php                     ; to backup the interrupt flag
         sei
+
         lda #4                  ; command: write sector
-        jsr eload_send
-        lda trk_tmp
-        jsr eload_send
-        lda sec_tmp
+        sta job
+        lda #<job
+        ldx #>job
+        ldy #1
         jsr eload_send
 
+        lda #<trk_tmp
+        ldx #>trk_tmp
+        ldy #2
+        jsr eload_send
+
+        ; this will go to the GCR overflow buffer $1bb
         lda block_tmp
-        sta ptr2
-        lda block_tmp + 1
-        sta ptr2 + 1
-
-        ldy #0
-:
-        lda (ptr2), y
-        sty tmp1
+        ldx block_tmp + 1
+        ldy #gcr_overflow_size
         jsr eload_send
-        ldy tmp1
-        iny
-        bne :-
+
+        ; this will go to the main buffer
+        ldx block_tmp + 1
+        clc
+        lda block_tmp
+        adc #gcr_overflow_size
+        bcc :+
+        inx
+:
+        jsr eload_send    	; Y still 0 = 256 bytes
 
         jsr eload_recv
-        cli
         ldx #0
+        plp                 ; to restore the interrupt flag
         rts
 
 .bss
+; keep the order of these three bytes
+job:
+        .res 1
 trk_tmp:
         .res 1
 sec_tmp:
