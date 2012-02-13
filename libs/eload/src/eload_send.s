@@ -12,7 +12,7 @@
 ; Send up to 256 bytes to the drive over the fast protocol. The last byte is
 ; sent first.
 ;
-; This version does not use SEI/CLI, the caller must care for it.
+; This function does not use SEI/CLI, the caller must care for it.
 ;
 ; Used internally only.
 ;
