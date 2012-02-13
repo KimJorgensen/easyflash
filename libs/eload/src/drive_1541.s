@@ -186,9 +186,7 @@ drv_writesector: ; 03d8
         bne @write_data_2
 :
         bvc :-                  ; wait for byte ready (last byte)
-        lda $1c0c
-        ora #$e0                ; %110x => %111x
-        sta $1c0c               ; read mode
+        jsr $fe00               ; head to read mode
         clc                     ; mark for success
 @ret:
         jsr $f98f               ; prepare motor off (doesn't change C)
@@ -420,7 +418,7 @@ move_head_direct:
         lda head_step_ctr
         beq @ret                ; 0 => no steps
         jsr $fa2e               ; head step
-        ldy #8
+        ldy #7
         jsr wait_a_moment
         jmp @next_step
 @ret:
