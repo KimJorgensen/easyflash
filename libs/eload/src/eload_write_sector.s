@@ -55,7 +55,8 @@ _eload_write_sector:
         bcc :+
         inx
 :
-        jsr eload_send    	; Y still 0 = 256 bytes
+        iny                 ; Y = 0xff => 0 = 256 bytes
+        jsr eload_send
 
         jsr eload_recv
         ldx #0
