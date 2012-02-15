@@ -27,6 +27,20 @@
 #define D64_MAX_SECTORS 21 /* 0..20 */
 #define GCR_BPS 325
 
+typedef struct transfer_disk_ts_s
+{
+    uint8_t track;
+    uint8_t sector;
+}
+transfer_disk_ts_t;
+
+typedef struct transfer_disk_status_s
+{
+    uint8_t             magic;
+    uint8_t             status;
+    transfer_disk_ts_t  ts;
+} transfer_disk_status_t;
+
 /******************************************************************************/
 /**
  *
@@ -53,6 +67,20 @@ static uint8_t init_eload(uint8_t drv)
     return type;
 }
 
+static void __fastcall__ send_status(uint8_t status,
+                                     uint8_t n_track,
+                                     uint8_t n_sector)
+{
+    static transfer_disk_status_t st;
+
+    st.magic = DISK_STATUS_MAGIC;
+    st.status = status;
+    st.ts.track = n_track;
+    st.ts.sector = n_sector;
+
+    ef3usb_send_data(&st, sizeof(st));
+}
+
 
 /******************************************************************************/
 /**
@@ -62,10 +90,11 @@ static uint8_t init_eload(uint8_t drv)
  */
 void write_disk_d64(void)
 {
-    static uint8_t a_status[2];
-    static uint8_t a_ts[2 + 22];
-    static uint8_t a_track_data[D64_MAX_SECTORS][GCR_BPS];
-    uint8_t i, n_track, n_sector, rv;
+    static transfer_disk_ts_t ts;
+    static transfer_disk_ts_t prev_ts;
+    static uint8_t a_sector_data[GCR_BPS];
+    uint8_t rv, b_first_sector;
+    int i;
 
     puts("\nd64 writer started");
     ef3usb_send_str("load");
@@ -81,34 +110,42 @@ void write_disk_d64(void)
     eload_prepare_drive();
     puts("ok");
 
+    /* Send initial "OK" */
+    send_status(DISK_STATUS_OK, 0, 0);
+
     // disable VIC-II DMA
     VIC.ctrl1 &= 0xef;
     while (VIC.rasterline != 255)
     {}
 
-    for (;;)
+    /* download current sector while previous sector is being written to disk */
+    b_first_sector = 1;
+    do
     {
-        a_status[0] = DISK_STATUS_MAGIC;
-        a_status[1] = DISK_STATUS_OK;
-        ef3usb_send_data(a_status, 2);
-
-        ef3usb_receive_data(a_ts, sizeof(a_ts));
-        if (a_ts[1] == 0)
-            break;
-
-        /* load the number of sectors for this track */
-        ef3usb_receive_data(a_track_data, a_ts[1] * GCR_BPS);
-
-        n_track = a_ts[0];
-        i = 2;
-        while ((n_sector = a_ts[i]) != 0xff)
+        /* Receive sector */
+        ef3usb_receive_data(&ts, sizeof(ts));
+        if (ts.track != 0) /* track == 0 => end */
         {
-            rv = eload_write_sector_nodma((n_track << 8) | n_sector,
-                                     a_track_data[n_sector]);
-            /* todo: send return value */
-            ++i;
+            ef3usb_receive_data(a_sector_data, GCR_BPS);
         }
+
+        /* Send status for last sector written, if any */
+        if (!b_first_sector)
+        {
+            rv = eload_recv_status();
+            /* todo: unify status codes */
+            send_status(DISK_STATUS_OK, prev_ts.track, prev_ts.sector);
+        }
+        b_first_sector = 0;
+
+        /* Write sector, if any */
+        if (ts.track)
+        {
+            eload_write_sector_nodma((ts.track << 8) | ts.sector, a_sector_data);
+        }
+        prev_ts = ts;
     }
+    while (prev_ts.track);
 
     eload_close();
     puts("Disk written\n\n");
