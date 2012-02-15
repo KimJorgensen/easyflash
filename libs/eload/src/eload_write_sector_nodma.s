@@ -14,7 +14,7 @@ gcr_overflow_size = 69
 
 ; =============================================================================
 ;
-; uint8_t __fastcall__ eload_write_sector(unsigned ts, uint8_t* block);
+; void __fastcall__ eload_write_sector(unsigned ts, uint8_t* block);
 ;
 ; =============================================================================
 .export _eload_write_sector_nodma
@@ -58,9 +58,7 @@ _eload_write_sector_nodma:
         iny                     ; Y = 0xff => 0 = 256 bytes
         jsr eload_send_nodma
 
-        jsr eload_recv
-        ldx #0
-        plp                 ; to restore the interrupt flag
+        plp                     ; to restore the interrupt flag
         rts
 
 .bss

@@ -40,6 +40,11 @@ int __fastcall__ eload_open_read(const char* name);
 int eload_read_byte(void);
 unsigned int __fastcall__ eload_read(void* buffer, unsigned int size);
 
+/**
+ * Receive the status byte for the previous asynchronous message, e.g. for
+ * eload_write_sector.
+ */
+uint8_t eload_recv_status(void);
 
 /**
  * Close the current file and cancel the drive code, if any.
@@ -55,7 +60,7 @@ void eload_close(void);
  */
 void eload_prepare_drive(void);
 
-uint8_t __fastcall__ eload_write_sector(unsigned ts, uint8_t* block);
-uint8_t __fastcall__ eload_write_sector_nodma(unsigned ts, uint8_t* block);
+void __fastcall__ eload_write_sector(unsigned ts, uint8_t* block);
+void __fastcall__ eload_write_sector_nodma(unsigned ts, uint8_t* block);
 
 #endif /* ELOAD_H_ */
