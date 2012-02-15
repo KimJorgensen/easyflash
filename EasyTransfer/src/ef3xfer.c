@@ -181,14 +181,15 @@ int ef3xfer_connect_ftdi(void)
  *
  * Return size on success, 0 otherwise.
  */
-int ef3xfer_read_from_ftdi(unsigned char* p_buffer, int size)
+int ef3xfer_read_from_ftdi(void* p_buffer, int size)
 {
+    unsigned char* p = p_buffer;
     int n_read, ret;
 
     n_read = 0;
     do
     {
-        ret = ftdi_read_data(&m_ftdic, p_buffer + n_read, size - n_read);
+        ret = ftdi_read_data(&m_ftdic, p + n_read, size - n_read);
 
         if (ret < 0)
         {
@@ -214,8 +215,9 @@ int ef3xfer_read_from_ftdi(unsigned char* p_buffer, int size)
  *
  * Return size on success, 0 otherwise.
  */
-int ef3xfer_write_to_ftdi(unsigned char* p_buffer, int size)
+int ef3xfer_write_to_ftdi(const void* p_buffer, int size)
 {
+    unsigned char* p = (unsigned char*) p_buffer; /* <= meh */
     int block_size;
     int n_written, ret;
 
@@ -227,7 +229,7 @@ int ef3xfer_write_to_ftdi(unsigned char* p_buffer, int size)
         else
             block_size = size - n_written;
 
-        ret = ftdi_write_data(&m_ftdic, p_buffer + n_written, block_size);
+        ret = ftdi_write_data(&m_ftdic, p + n_written, block_size);
 
         if (ret < 0)
         {

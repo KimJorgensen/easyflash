@@ -18,7 +18,6 @@
 #define D64_BUFFER_SIZE (D64_SIZE_35_TRACKS + 1)
 
 #define GCR_BPS 325
-#define GCR_MAX_TRACK_BUFFER_SIZE (D64_MAX_SECTORS * GCR_BPS)
 
 #define DISK_STATUS_MAGIC            0x52
 
@@ -34,6 +33,19 @@
 #define DISK_STATUS_ID_MISMATCH      0x0b /* Id mismatch */
 #define DISK_STATUS_NO_DISK          0x0f /* Disk not inserted */
 
+typedef struct transfer_disk_ts_s
+{
+    uint8_t track;
+    uint8_t sector;
+}
+transfer_disk_ts_t;
+
+typedef struct transfer_disk_status_s
+{
+    uint8_t             magic;
+    uint8_t             status;
+    transfer_disk_ts_t  ts;
+} transfer_disk_status_t;
 
 static const uint8_t a_sectors_per_track[D64_MAX_TRACKS] =
 {
@@ -123,7 +135,7 @@ static unsigned drive_checksum(const uint8_t* p_data, unsigned len)
  * sector       sector
  */
 void encode_sector_to_gcr(uint8_t* p_dst,
-                           const uint8_t* p_src)
+                          const uint8_t* p_src)
 {
     unsigned n_in, n_out;
     uint8_t bin[8];
@@ -196,34 +208,32 @@ void encode_sector_to_gcr(uint8_t* p_dst,
  */
 static int check_c64_response(void)
 {
-    uint8_t a_from_c64[2];
+    transfer_disk_status_t st;
 
     /* read the status from C-64 */
-    if (!ef3xfer_read_from_ftdi(a_from_c64, 2))
+    if (!ef3xfer_read_from_ftdi(&st, sizeof(st)))
     {
         return 0;
     }
 
-    if (a_from_c64[0] == 0)
+    if (st.magic == 0)
     {
         ef3xfer_log_printf("Close request received.\n");
         return 0;
     }
 
-    if (a_from_c64[0] != DISK_STATUS_MAGIC)
+    if (st.magic != DISK_STATUS_MAGIC)
     {
         ef3xfer_log_printf("Invalid data from C-64.\n");
         return 0;
     }
 
-    if (a_from_c64[0] == DISK_STATUS_MAGIC &&
-        a_from_c64[1] != DISK_STATUS_OK)
+    if (st.status != DISK_STATUS_OK)
     {
-        ef3xfer_log_printf("C-64 reported error code $%02X.\n",
-                           a_from_c64[1]);
+        ef3xfer_log_printf("C-64 reported error $%02X at %d:%d.\n",
+                           st.status, st.ts.track, st.ts.sector);
         return 0;
     }
-
     return 1;
 }
 
@@ -235,64 +245,67 @@ static int send_d64(uint8_t* p_buffer,
                     uint8_t* p_gcr_buffer,
                     int n_num_tracks)
 {
-    uint8_t a_ts[2 + 22];
+    transfer_disk_ts_t ts;
     uint8_t gcr[GCR_BPS];
     uint8_t a_sector_state[D64_MAX_SECTORS];
     long    offset;
-    int     n_sectors_left, n_spt, n_interleave, i;
-    int     n_track;            /* <= one-based */
-    int     n_sector;           /* <= zero-based */
+    int     n_sectors_left, n_sectors, n_interleave, i;
+    int     b_first_sector;
 
-
-    n_interleave = 7;
-
-    for (n_track = 1; n_track <= n_num_tracks; ++n_track)
-    {
-        ef3xfer_log_printf("Track %2d\n", n_track);
-
-        n_sectors_left = a_sectors_per_track[n_track - 1];
-        n_spt = n_sectors_left;
-
-        a_ts[0] = n_track;
-        a_ts[1] = n_sectors_left;
-
-        /* build sector order table */
-        memset(a_sector_state, 0, sizeof(a_sector_state));
-        n_sector = 0;
-        i = 2;
-        while (n_sectors_left)
-        {
-            n_sector = (n_sector + n_interleave) % n_spt;
-            while (a_sector_state[n_sector])
-                n_sector = (n_sector + 1) % n_spt;
-
-            a_sector_state[n_sector] = 1;
-            a_ts[i++] = n_sector;
-
-            --n_sectors_left;
-        }
-        a_ts[i] = 0xff; // <= end mark
-
-        if (!check_c64_response())
-            return 0;
-
-        if (!ef3xfer_write_to_ftdi(a_ts, sizeof(a_ts)))
-            return 0;
-
-        offset = a_track_offset_in_d64[n_track - 1] * 256;
-        for (i = 0; i < n_spt; ++i)
-        {
-            encode_sector_to_gcr(gcr, p_buffer + offset + i * 256);
-            if (!ef3xfer_write_to_ftdi(p_gcr_buffer, GCR_BPS))
-                return 0;
-        }
-    }
-
-    /* end mark */
-    memset(a_ts, 0, sizeof(a_ts));
-    if (!ef3xfer_write_to_ftdi(a_ts, sizeof(a_ts)))
+    /* Wait for initial "OK" */
+    if (!check_c64_response())
         return 0;
 
+    n_interleave = 4;
+    b_first_sector = 1;
+    for (ts.track = 1; ts.track <= n_num_tracks; ++ts.track)
+    {
+        ef3xfer_log_printf("Track %2d", ts.track);
+
+        n_sectors_left = a_sectors_per_track[ts.track - 1];
+        n_sectors = n_sectors_left;
+
+        /* Send sectors, one by one */
+        memset(a_sector_state, 0, sizeof(a_sector_state));
+        ts.sector = 0;
+        while (n_sectors_left)
+        {
+            /* Search next untransferred sector */
+            ts.sector = (ts.sector + n_interleave) % n_sectors;
+            while (a_sector_state[ts.sector])
+                ts.sector = (ts.sector + 1) % n_sectors;
+
+            offset = (a_track_offset_in_d64[ts.track - 1] + ts.sector) * 256;
+
+            encode_sector_to_gcr(p_gcr_buffer, p_buffer + offset);
+
+            /* Send track and sector numbers */
+            if (!ef3xfer_write_to_ftdi(&ts, sizeof(ts)))
+                return 0;
+
+            if (!ef3xfer_write_to_ftdi(p_gcr_buffer, GCR_BPS))
+                return 0;
+
+            ef3xfer_log_printf(".");
+
+            /* no response after the 1st sector has been sent */
+            if (!b_first_sector)
+                if (!check_c64_response())
+                    return 0;
+            b_first_sector = 0;
+
+            a_sector_state[ts.sector] = 1;
+            --n_sectors_left;
+        }
+        ef3xfer_log_printf("\n");
+    }
+
+    /* track == 0 => end mark */
+    ts.track = 0;
+    if (!ef3xfer_write_to_ftdi(&ts, sizeof(ts)))
+        return 0;
+
+    /* this is the response for the last sector written */
     return check_c64_response();
 }
 
@@ -306,23 +319,23 @@ int ef3xfer_d64_write(FILE* fp)
     uint8_t*    p_buffer;
     uint8_t*    p_gcr_buffer;
     int         n_tracks;
-    long        size_file;
+    long        file_size;
     int         ret;
 
     p_buffer = malloc(D64_BUFFER_SIZE);
     if (!p_buffer)
         return 0;
 
-    p_gcr_buffer = malloc(GCR_MAX_TRACK_BUFFER_SIZE);
+    p_gcr_buffer = malloc(GCR_BPS);
     if (!p_gcr_buffer)
     {
         free(p_buffer);
         return 0;
     }
 
-    size_file = fread(p_buffer, 1, D64_BUFFER_SIZE, fp);
+    file_size = fread(p_buffer, 1, D64_BUFFER_SIZE, fp);
 
-    if (size_file != D64_SIZE_35_TRACKS)
+    if (file_size != D64_SIZE_35_TRACKS)
     {
         ef3xfer_log_printf(
                 "Error: Only d64 files with 35 tracks are supported "
