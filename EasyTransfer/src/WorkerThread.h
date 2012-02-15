@@ -32,8 +32,10 @@
 class WorkerThread : public wxThread
 {
 public:
-    WorkerThread(wxEvtHandler* pEventHandler, const wxString& stringInputFileName);
+    WorkerThread(wxEvtHandler* pEventHandler);
     virtual ~WorkerThread();
+
+    void SetFileName(const wxString& str);
 
     static WorkerThread* m_pTheWorkerThread;
 protected:
@@ -46,5 +48,11 @@ protected:
     wxEvtHandler* m_pEventHandler;
     wxString m_stringInputFileName;
 };
+
+/*****************************************************************************/
+inline void WorkerThread::SetFileName(const wxString& str)
+{
+    m_stringInputFileName = str;
+}
 
 #endif /* WORKERTHREAD_H_ */

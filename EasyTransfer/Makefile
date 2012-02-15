@@ -116,6 +116,9 @@ src :=
 src += EasyTransferApp.cpp
 src += EasyTransferMainFrame.cpp
 src += WorkerThread.cpp
+src += TabStartPRG.cpp
+src += TabWriteCRT.cpp
+src += TabWriteDisk.cpp
 src += ef3xfer.c
 src += ef3xfer_d64.c
 src += easytransfer.png
@@ -135,9 +138,14 @@ doc := CHANGES COPYING README
 dll :=
 ifeq "$(win32)" "yes"
 #dll += mingwm10.dll
-dll += libftdi.dll
-dll += libusb-1.0.dll
+dll += $(outdir)/libftdi.dll
+dll += $(outdir)/libusb-1.0.dll
 endif
+
+# source archives to be copied (LGPL libs)
+src_archives :=
+src_archives += $(outdir)/libftdi-1.0-HEAD-9330b12.tar.gz
+src_archives += $(outdir)/libusb-pbatard-HEAD-bb43370.tar.bz2
 
 ###############################################################################
 ###############################################################################
@@ -157,8 +165,6 @@ src_png := $(filter %.png,$(src))
 xpm     := $(addprefix $(objdir)/, $(src_png:.png=.xpm))
 
 ef3xfer_obj := $(addprefix $(objdir)/, $(ef3xfer_src:.c=.o))
-
-outdll  := $(addprefix $(outdir)/, $(dll))
 
 outres  := $(addprefix $(outdir)/res/, $(res))
 
@@ -186,13 +192,14 @@ endif
 
 $(outbase)/$(prj_name)$(version_suffix).tar.bz2: \
 		$(outdir)/$(app_name) $(outdir)/$(ef3xfer_name) \
-		$(outres) $(outdoc) $(outdll)
+		$(outres) $(outdoc) $(dll)
 	rm -f $@
 	cd $(dir $@) && tar cjf $(notdir $@) $(prj_name)
 
+# for windows we compile and archive binaries
 $(outbase)/$(prj_name)$(version_suffix).zip: \
 		$(outdir)/$(app_name) $(outdir)/$(ef3xfer_name) \
-		$(outres) $(outdoc) $(outdll)
+		$(outres) $(outdoc) $(dll) $(src_archives)
 	rm -f $@
 	cd $(dir $@) && zip -r $(notdir $@) $(prj_name)
 
@@ -229,13 +236,16 @@ $(outdir)/%: $(srcdir)/../%
 $(outdir)/%.txt: $(srcdir)/../%
 	cat $< | unix2dos > $@
 
-$(outbase)/$(prj_name)/mingwm10.dll: /usr/share/doc/mingw32-runtime/mingwm10.dll.gz
-	gunzip -c $^ > $@
+#$(outbase)/$(prj_name)/mingwm10.dll: /usr/share/doc/mingw32-runtime/mingwm10.dll.gz
+#	gunzip -c $^ > $@
 
-$(outbase)/$(prj_name)/libftdi.dll: $(tmp_install)/bin/libftdi.dll
+$(outdir)/%.dll: $(tmp_install)/bin/%.dll
 	cp $^ $@
 
-$(outbase)/$(prj_name)/libusb-1.0.dll: $(tmp_install)/bin/libusb-1.0.dll
+$(outdir)/%.tar.bz2: $(archive_dir)/%.tar.bz2
+	cp $^ $@
+
+$(outdir)/%.tar.gz: $(archive_dir)/%.tar.gz
 	cp $^ $@
 
 ###############################################################################

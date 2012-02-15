@@ -25,31 +25,16 @@
 #include <wx/button.h>
 #include <wx/slider.h>
 #include <wx/filepicker.h>
-#include <wx/radiobox.h>
-#include <wx/radiobut.h>
+#include <wx/notebook.h>
 #include <wx/gauge.h>
 
 #include "EasyTransferApp.h"
 #include "EasyTransferMainFrame.h"
 #include "WorkerThread.h"
 
-
-typedef enum easytransfer_action_e
-{
-        ACTION_WRITE_CRT,
-        ACTION_START_PRG_EF,
-        ACTION_START_PRG_KILL,
-        ACTION_WRITE_D64,
-        ACTION_COUNT // <= number of actions
-} easytransfer_action_t;
-
-static const wxString aStrActions[] =
-{
-    _("Write CRT to cartridge"),
-    _("Start program (enable EasyFlash)"),
-    _("Start program (disable cartridge)"),
-    _("Write disk image to disk"),
-};
+#include "TabStartPRG.h"
+#include "TabWriteCRT.h"
+#include "TabWriteDisk.h"
 
 
 DEFINE_EVENT_TYPE(wxEVT_EASY_TRANSFER_LOG)
@@ -63,12 +48,6 @@ DEFINE_EVENT_TYPE(wxEVT_EASY_TRANSFER_COMPLETE)
  * | -pMainSizer------------------------------------------------ |
  * | |                            |                            | |
  * | --------------------------------------------------------- | |
- * | |                            |                            | |
- * | ----------------------------------------------------------- |
- * | |                            |                            | |
- * | ----------------------------------------------------------- |
- * | |                            |                            | |
- * | ----------------------------------------------------------- |
  * | |                            |                            | |
  * | ----------------------------------------------------------- |
  * |                                                             |
@@ -88,35 +67,28 @@ EasyTransferMainFrame::EasyTransferMainFrame(wxFrame* parent, const wxString& ti
     wxBoxSizer*         pOuterSizer;
     wxFlexGridSizer*    pMainSizer;
     wxBoxSizer*         pButtonSizer;
-    wxRadioBox*         pBoxAction;
 
     wxPanel *pPanel = new wxPanel(this, wxID_ANY, wxDefaultPosition,
             wxDefaultSize, wxTAB_TRAVERSAL);
 
     pOuterSizer = new wxBoxSizer(wxVERTICAL);
 
+    m_pNotebook = new wxNotebook(pPanel, wxID_ANY);
+    pOuterSizer->Add(m_pNotebook, 0, wxEXPAND | wxALL, 20);
+
+    m_pTabStartPRG = new TabStartPRG(m_pNotebook);
+    m_pNotebook->AddPage(m_pTabStartPRG, wxT("Start PRG"));
+
+    m_pTabWriteCRT = new TabWriteCRT(m_pNotebook);
+    m_pNotebook->AddPage(m_pTabWriteCRT, wxT("Write CRT"));
+
+    m_pTabWriteDisk = new TabWriteDisk(m_pNotebook);
+    m_pNotebook->AddPage(m_pTabWriteDisk, wxT("Write Disk"));
+
+
     pMainSizer = new wxFlexGridSizer(5, 2, 8, 8);
     pMainSizer->AddGrowableCol(1);
     pOuterSizer->Add(pMainSizer, 0, wxEXPAND | wxALL, 20);
-
-    // Input file
-    pText = new wxStaticText(pPanel, wxID_ANY, _("Input File"));
-    pMainSizer->Add(pText, 0, wxALIGN_CENTER_VERTICAL | wxALIGN_RIGHT);
-    m_pInputFilePicker = new wxFilePickerCtrl(pPanel, wxID_ANY, wxEmptyString,
-            _("Select a file"), _("*"), wxDefaultPosition, wxDefaultSize,
-            wxFLP_USE_TEXTCTRL | wxFLP_OPEN | wxFLP_FILE_MUST_EXIST);
-    m_pInputFilePicker->SetMinSize(wxSize(300, m_pInputFilePicker->GetMinSize().GetHeight()));
-    pMainSizer->Add(m_pInputFilePicker, 1, wxEXPAND);
-
-    // Action Radio Box
-    pText = new wxStaticText(pPanel, wxID_ANY, _("Action"));
-    pMainSizer->Add(pText, 0, wxALIGN_CENTER_VERTICAL | wxALIGN_RIGHT);
-    pBoxAction = new wxRadioBox(pPanel, wxID_ANY, _("Action"),
-            wxDefaultPosition, wxDefaultSize,
-            ACTION_COUNT, aStrActions, 1);
-    pMainSizer->Add(pBoxAction, 1, wxEXPAND);
-    pBoxAction->Enable(ACTION_START_PRG_KILL, false);
-    pBoxAction->Enable(ACTION_WRITE_D64, false);
 
     // Progress
     pText = new wxStaticText(pPanel, wxID_ANY, _("Progress"));
@@ -124,7 +96,6 @@ EasyTransferMainFrame::EasyTransferMainFrame(wxFrame* parent, const wxString& ti
     m_pProgress = new wxGauge(pPanel, wxID_ANY, 100);
     pMainSizer->Add(m_pProgress, 1, wxEXPAND);
 
-    pMainSizer->AddSpacer(10);
     pMainSizer->AddSpacer(10);
 
     // Start Button etc.
@@ -147,7 +118,6 @@ EasyTransferMainFrame::EasyTransferMainFrame(wxFrame* parent, const wxString& ti
     pOuterSizer->SetSizeHints(this);
 
     Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(EasyTransferMainFrame::OnButton));
-    Connect(wxEVT_COMMAND_FILEPICKER_CHANGED, wxFileDirPickerEventHandler(EasyTransferMainFrame::OnFilePickerChanged));
 
     Connect(wxEVT_EASY_TRANSFER_LOG,      wxCommandEventHandler(EasyTransferMainFrame::OnLog));
     Connect(wxEVT_EASY_TRANSFER_PROGRESS, wxCommandEventHandler(EasyTransferMainFrame::OnProgress));
@@ -158,27 +128,28 @@ EasyTransferMainFrame::EasyTransferMainFrame(wxFrame* parent, const wxString& ti
 /*****************************************************************************/
 void EasyTransferMainFrame::OnButton(wxCommandEvent& event)
 {
+    wxWindow* pWindow;
+
     if (event.GetEventObject() == m_pButtonStart)
     {
-        if (m_pInputFilePicker->GetPath().size())
-            DoIt();
+        /*if (m_pInputFilePicker->GetPath().size())
+            DoIt();*/
+        pWindow = m_pNotebook->GetCurrentPage();
+        if (pWindow)
+        {
+            pWindow->AddPendingEvent(event);
+        }
     }
     else if (event.GetEventObject() == m_pButtonQuit)
     {
-        if (m_pWorkerThread)
+        /*if (m_pWorkerThread)
         {
             m_pWorkerThread->Kill();
             delete m_pWorkerThread;
             m_pWorkerThread = NULL;
-        }
+        }*/
         Close();
     }
-}
-
-
-/*****************************************************************************/
-void EasyTransferMainFrame::OnFilePickerChanged(wxFileDirPickerEvent& event)
-{
 }
 
 
@@ -204,6 +175,7 @@ void EasyTransferMainFrame::OnProgress(wxCommandEvent& event)
 /*****************************************************************************/
 void EasyTransferMainFrame::OnComplete(wxCommandEvent& event)
 {
+    EnableMyControls(true);
     if (m_pWorkerThread)
     {
         m_pWorkerThread->Wait();
@@ -216,8 +188,20 @@ void EasyTransferMainFrame::OnComplete(wxCommandEvent& event)
 /*****************************************************************************/
 void EasyTransferMainFrame::EnableMyControls(bool bEnable)
 {
-    m_pInputFilePicker->Enable(bEnable);
+    m_pNotebook->Enable(bEnable);
     m_pButtonStart->Enable(bEnable);
+}
+
+
+/*****************************************************************************/
+WorkerThread* EasyTransferMainFrame::GetWorkerThread()
+{
+    if (!m_pWorkerThread)
+    {
+        m_pWorkerThread = new WorkerThread(this);
+    }
+
+    return m_pWorkerThread;
 }
 
 
@@ -233,9 +217,6 @@ void EasyTransferMainFrame::DoIt()
         EnableMyControls(false);
 
         m_pTextCtrlLog->SetValue(_(""));
-        m_pWorkerThread = new WorkerThread(
-                this,
-                m_pInputFilePicker->GetPath());
         m_pWorkerThread->Create();
         m_pWorkerThread->Run();
     }

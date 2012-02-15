@@ -27,13 +27,16 @@
 #include <wx/frame.h>
 
 class wxSlider;
-class wxFilePickerCtrl;
-class wxFileDirPickerEvent;
 class wxButton;
 class wxTextCtrl;
 class wxGauge;
+class wxNotebook;
 
 class WorkerThread;
+
+class TabStartPRG;
+class TabWriteCRT;
+class TabWriteDisk;
 
 BEGIN_DECLARE_EVENT_TYPES()
     DECLARE_EVENT_TYPE(wxEVT_EASY_TRANSFER_LOG,      -1)
@@ -48,18 +51,22 @@ public:
             const wxString& title);
 
     void LoadDoc(const wxString& name);
-    void FixFocus();
+    WorkerThread* GetWorkerThread();
+    void DoIt();
 
 protected:
     void EnableMyControls(bool bEnable);
-    void DoIt();
     void OnButton(wxCommandEvent& event);
     void OnLog(wxCommandEvent& event);
     void OnProgress(wxCommandEvent& event);
     void OnComplete(wxCommandEvent& event);
-    void OnFilePickerChanged(wxFileDirPickerEvent& event);
 
-    wxFilePickerCtrl*   m_pInputFilePicker;
+    wxNotebook*         m_pNotebook;
+
+    TabStartPRG*        m_pTabStartPRG;
+    TabWriteCRT*        m_pTabWriteCRT;
+    TabWriteDisk*       m_pTabWriteDisk;
+
     wxButton*           m_pButtonStart;
     wxButton*           m_pButtonQuit;
     wxTextCtrl*         m_pTextCtrlLog;
