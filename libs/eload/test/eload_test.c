@@ -175,7 +175,7 @@ static void test_write_sector(void)
 {
     static uint8_t block[256];
     static uint8_t gcr[325];
-    uint8_t drv, t, s, lim, interleave;
+    uint8_t drv, t, s, lim, rest, interleave;
     unsigned i, ret;
 
     drv = get_drive_number();
@@ -192,7 +192,7 @@ static void test_write_sector(void)
     convert_block_to_gcr(gcr, block);
 
     // disable VIC-II DMA
-    VIC.ctrl1 &= 0xef;
+    //VIC.ctrl1 &= 0xef;
     while (VIC.rasterline != 255)
     {}
     SEI();
@@ -213,22 +213,34 @@ static void test_write_sector(void)
         else
             lim = 21;
 
-        i = 0;
-        for (s = lim; s; --s)
+        s = 0;
+        for (rest = lim; rest; --rest)
         {
-            i += interleave;
+	        /* fixme: hier fehlt was! */
+            s += interleave;
 
-            if (i >= lim)
-                i = i - lim;
+            if (s >= lim)
+                s = s - lim;
+
+        clrscr();
+        for (i = 0; i < 325; i += 16)
+        {
+           cprintf("%02x%02x%02x%02x %02x%02x%02x%02x %02x%02x%02x%02x %02x%02x%02x%02x\n\r",
+                  gcr[i +  0], gcr[i +  1], gcr[i +  2], gcr[i +  3],
+                  gcr[i +  4], gcr[i +  5], gcr[i +  6], gcr[i +  7],
+                  gcr[i +  8], gcr[i +  9], gcr[i + 10], gcr[i + 11],
+                  gcr[i + 12], gcr[i + 13], gcr[i + 14], gcr[i + 15]);
+        }
 
             //ret = eload_write_sector((t << 8) | i, block);
-            ret = eload_write_sector_nodma((t << 8) | i, gcr);
-            //*((uint8_t*)0x0400 + 10 * 40 + i) = '0' + ret;
+            eload_write_sector/*_nodma*/((t << 8) | s, gcr);
+            ret = eload_recv_status();
+            //*((uint8_t*)0x0400 + 10 * 40 + s) = '0' + ret;
         }
     }
 
     // enable VIC-II DMA
-    VIC.ctrl1 |= 0x10;
+    //VIC.ctrl1 |= 0x10;
     CLI();
 
     eload_close();
