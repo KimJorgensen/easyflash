@@ -39,10 +39,9 @@
 WorkerThread* WorkerThread::m_pTheWorkerThread;
 
 /*****************************************************************************/
-WorkerThread::WorkerThread(wxEvtHandler* pEventHandler,
-        const wxString& stringInputFileName) :
+WorkerThread::WorkerThread(wxEvtHandler* pEventHandler) :
     wxThread(wxTHREAD_JOINABLE), m_pEventHandler(pEventHandler),
-            m_stringInputFileName(stringInputFileName)
+            m_stringInputFileName(_T(""))
 {
     m_pTheWorkerThread = this;
     ef3xfer_set_callbacks(LogText, LogProgress, LogComplete);
@@ -63,6 +62,8 @@ void* WorkerThread::Entry()
     uint8_t*      p;
 
     ef3xfer_transfer(m_stringInputFileName.mb_str(), "CRT");
+    LogComplete();
+
     return NULL;
 }
 
