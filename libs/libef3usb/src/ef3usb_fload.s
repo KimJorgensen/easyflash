@@ -9,7 +9,6 @@ size_zp      = ptr1
 xfer_size_zp = ptr2
 p_buff_zp    = ptr3
 start_addr   = ptr4
-m_size_hi    = tmp1
 
 .include "ef3usb_macros.s"
 
@@ -24,15 +23,9 @@ m_size_hi    = tmp1
 .proc   _ef3usb_fload
 .export _ef3usb_fload
 _ef3usb_fload:
-;        sta size_zp
-;        stx size_zp + 1         ; Save size
+        php
+        sei
 
-;        jsr popax
-;        sta p_buff_zp
-;        stx p_buff_zp + 1       ; Save buffer address
-
-;       ldx size_zp
-;        ldy size_zp + 1
         lda #$ff                ; request 64k data
         wait_usb_tx_ok          ; request bytes (from XY)
         sta USB_DATA
@@ -42,11 +35,9 @@ _ef3usb_fload:
         ; get number of bytes actually there
         wait_usb_rx_ok
         ldx USB_DATA            ; low byte of transfer size
-        stx xfer_size_zp
         stx size_zp
         wait_usb_rx_ok
         ldy USB_DATA            ; high byte of transfer size
-        sty xfer_size_zp + 1
         sty size_zp + 1
 
         bne @loadCont
@@ -58,15 +49,15 @@ _ef3usb_fload:
         tax
         tya
         eor #$ff
-        sta m_size_hi           ; calc -size - 1
+        sta xfer_size_zp + 1    ; calc -size - 1
 
         txa
         clc
         adc #3                  ; calc -size, add 2 more bytes (start addr)
-        tax
-        lda m_size_hi
+        sta xfer_size_zp
+        lda xfer_size_zp + 1
         adc #0
-        sta m_size_hi
+        sta xfer_size_zp + 1
         beq @end                ; file too short?
 
         wait_usb_rx_ok          ; read start address
@@ -78,21 +69,30 @@ _ef3usb_fload:
         sta p_buff_zp + 1
         sta start_addr + 1
 
+        lda $01
+        sta tmp1
+
         ldy #0
 @getBytes:
-        ; xy contains number of bytes to be xfered (x = low byte)
         wait_usb_rx_ok
         lda USB_DATA
+        ldx #$33                ; hide I/O
+        stx $01
         sta (p_buff_zp), y
+        ldx #$37                ; show I/O
+        stx $01
         iny
         bne @incCounter
         inc p_buff_zp + 1
 @incCounter:
-        inx
+        inc xfer_size_zp
         bne @getBytes
-        inc m_size_hi
+        inc xfer_size_zp + 1
         bne @getBytes
 @end:
+        lda tmp1
+        sta $01
+        plp
         lda start_addr
         ldx start_addr + 1
         rts
