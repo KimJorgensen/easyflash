@@ -20,4 +20,5 @@ _ef3usb_close_file:
         sta USB_DATA
         wait_usb_tx_ok
         sta USB_DATA
+        rts
 .endproc
