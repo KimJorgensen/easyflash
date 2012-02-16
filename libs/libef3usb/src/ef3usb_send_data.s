@@ -14,7 +14,7 @@ m_size_hi    = tmp1
 
 ; =============================================================================
 ;
-; void __fastcall__ ef3usb_send_data(const uint8_t* data, uint16_t len);
+; void __fastcall__ ef3usb_send_data(const void* data, uint16_t len);
 ;
 ; =============================================================================
 .proc   _ef3usb_send_data

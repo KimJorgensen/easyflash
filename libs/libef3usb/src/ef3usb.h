@@ -14,7 +14,7 @@ char* ef3usb_check_cmd(void);
 
 uint16_t __fastcall__ ef3usb_receive_data(void* buffer, uint16_t size);
 
-void __fastcall__ ef3usb_send_data(const uint8_t* data, uint16_t len);
+void __fastcall__ ef3usb_send_data(const void* data, uint16_t len);
 
 void __fastcall__ ef3usb_send_str(const char* p);
 
