@@ -50,5 +50,6 @@ void TabStartPRG::OnButton(wxCommandEvent& event)
     pWorkerThread = pMainFrame->GetWorkerThread();
 
     pWorkerThread->SetFileName(m_pInputFilePicker->GetPath());
+    pWorkerThread->SetTransferType(_("PRG"));
     pMainFrame->DoIt();
 }
