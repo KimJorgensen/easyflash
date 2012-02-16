@@ -50,5 +50,6 @@ void TabWriteCRT::OnButton(wxCommandEvent& event)
     pWorkerThread = pMainFrame->GetWorkerThread();
 
     pWorkerThread->SetFileName(m_pInputFilePicker->GetPath());
+    pWorkerThread->SetTransferType(_("CRT"));
     pMainFrame->DoIt();
 }

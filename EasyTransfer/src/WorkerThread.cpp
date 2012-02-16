@@ -61,7 +61,8 @@ void* WorkerThread::Entry()
     size_t        i, size;
     uint8_t*      p;
 
-    ef3xfer_transfer(m_stringInputFileName.mb_str(), "CRT");
+    ef3xfer_transfer(m_stringInputFileName.mb_str(),
+                     m_stringTransferType.mb_str());
     LogComplete();
 
     return NULL;

@@ -36,6 +36,7 @@ public:
     virtual ~WorkerThread();
 
     void SetFileName(const wxString& str);
+    void SetTransferType(const wxString& str);
 
     static WorkerThread* m_pTheWorkerThread;
 protected:
@@ -47,12 +48,19 @@ protected:
 
     wxEvtHandler* m_pEventHandler;
     wxString m_stringInputFileName;
+    wxString m_stringTransferType;
 };
 
 /*****************************************************************************/
 inline void WorkerThread::SetFileName(const wxString& str)
 {
     m_stringInputFileName = str;
+}
+
+/*****************************************************************************/
+inline void WorkerThread::SetTransferType(const wxString& str)
+{
+    m_stringTransferType = str;
 }
 
 #endif /* WORKERTHREAD_H_ */
