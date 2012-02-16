@@ -4,6 +4,7 @@
 .import     popa, popax
 
 .import _ef3usb_fload
+.import _ef3usb_fclose
 
 .include "ef3usb_macros.s"
 
@@ -30,7 +31,17 @@ _usbtool_prg_load_and_run:
         sta start_addr
         stx start_addr + 1
 
-        ; todo: set end address in ZP
+		; set end addr + 1 to $2d and $ae
+        clc
+        adc ptr1
+        sta $2d
+        sta $ae
+        txa
+        adc ptr1 + 1
+        sta $2e
+        sta $af
+
+        jsr _ef3usb_fclose
 
         ; start the program
         ; looks like BASIC?
