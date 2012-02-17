@@ -7,10 +7,17 @@
 
 #include <stdint.h>
 
-#define ELOAD_OK                0
-#define ELOAD_ERR_NO_SYNC       1
-#define ELOAD_SECTOR_NOT_FOUND  2
-#define ELOAD_HEADER_NOT_FOUND  3
+/* These error codes are the same as the ones for 1541 job codes */
+#define DISK_STATUS_OK               0x01 /* Everything OK */
+#define DISK_STATUS_HEADER_NOT_FOUND 0x02 /* Header block not found */
+#define DISK_STATUS_SYNC_NOT_FOUND   0x03 /* SYNC not found */
+#define DISK_STATUS_DATA_NOT_FOUND   0x04 /* Data block not found */
+#define DISK_STATUS_DATA_CHK_ERR     0x05 /* Checksum error in data block */
+#define DISK_STATUS_VERIFY_ERR       0x07 /* Verify error */
+#define DISK_STATUS_WRITE_PROTECTED  0x08 /* Disk write protected */
+#define DISK_STATUS_HEADER_CHK_ERR   0x09 /* Checksum error in header block */
+#define DISK_STATUS_ID_MISMATCH      0x0b /* Id mismatch */
+#define DISK_STATUS_NO_DISK          0x0f /* Disk not inserted */
 
 /**
  * Set the device number for the drive to be used, and check the drive type.

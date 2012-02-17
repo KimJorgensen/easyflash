@@ -114,15 +114,11 @@ drive_code_init_size_1541  = * - drv_code_start
 ; contain everything to transfer the rest of the code using the fast protocol.
 ; ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-;drv_writesector:
-;        ldy #$90
-;        bne job_common
-
 ; sector read subroutine. Returns clc if successful, sec if error
-; X/A = T/S
+; job_track, job_sector are set
 drv_readsector:
         ldy #$80                ; read sector job code
-        jsr set_job_backup
+        jsr set_job_backup_ts
 
         ldy #retries            ; retry counter
 @retry:
@@ -137,14 +133,10 @@ drv_readsector:
 
 
 ; sector write subroutine. Returns clc if successful, sec if error
-; X/A = T/S
+; job_track, job_sector are set
 drv_writesector: ; 03d8
-        jsr set_job_backup_ts
-        jsr restore_orig_job_ts
+        jsr backup_ts
 
-        sta test1
-        lda #0
-        sta test2
         jsr prepare_read
         jsr search_header
         bcs @ret                ; error: code in A already
@@ -189,14 +181,18 @@ drv_writesector: ; 03d8
         jsr $fe00               ; head to read mode
         clc                     ; mark for success
 @ret:
+        pha
         jsr $f98f               ; prepare motor off (doesn't change C)
+        pla
         rts
 
 
-set_job_backup:
-        sty job_code_backup
 set_job_backup_ts:
-        stx job_track_backup
+        sty job_code_backup
+backup_ts:
+        lda job_track
+        sta job_track_backup
+        lda job_sector
         sta job_sector_backup
         rts
 

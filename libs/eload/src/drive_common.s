@@ -40,6 +40,8 @@ load:
         lda prev_file_sect
 loadchain:
 @sendsector:
+        sta job_sector
+        stx job_track
         jsr drv_readsector
         bcc :+
         lda #$ff                ; send read error
@@ -93,7 +95,7 @@ drv_main:
         cmp #4
         beq write_sector
 
-        lda #$ff                ; unknown command
+        lda #ELOAD_UNKNOWN_CMD  ; unknown command
 senddone:
 error:
         jsr drv_send
@@ -125,8 +127,6 @@ write_sector: ; 05db
         jsr drv_recv            ; 69 bytes
         jsr drv_recv_to_buffer  ; 256 bytes (Y = 0 from prev call)
 
-        ldx job_track
-        lda job_sector
         jsr drv_writesector
         bcs @ret
         lda #ELOAD_OK

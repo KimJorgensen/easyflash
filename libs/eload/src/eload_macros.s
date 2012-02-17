@@ -1,9 +1,12 @@
 
 .ifndef ELOAD_OK
 
-ELOAD_OK                =  0
-ELOAD_ERR_NO_SYNC       =  1
-ELOAD_SECTOR_NOT_FOUND  =  2
-ELOAD_HEADER_NOT_FOUND  =  3
+; These error codes are the same as the ones for 1541 job codes
+ELOAD_OK                =  1
+ELOAD_HEADER_NOT_FOUND  =  2
+ELOAD_ERR_NO_SYNC       =  3
+ELOAD_SECTOR_NOT_FOUND  =  4
+
+ELOAD_UNKNOWN_CMD       =  255
 
 .endif
