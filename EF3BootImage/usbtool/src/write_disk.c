@@ -12,18 +12,6 @@
 
 #define DISK_STATUS_MAGIC            0x52
 
-/* These error codes are the same as the ones for 1541 job codes */
-#define DISK_STATUS_OK               0x01 /* Everything OK */
-#define DISK_STATUS_HEADER_NOT_FOUND 0x02 /* Header block not found */
-#define DISK_STATUS_SYNC_NOT_FOUND   0x03 /* SYNC not found */
-#define DISK_STATUS_DATA_NOT_FOUND   0x04 /* Data block not found */
-#define DISK_STATUS_DATA_CHK_ERR     0x05 /* Checksum error in data block */
-#define DISK_STATUS_VERIFY_ERR       0x07 /* Verify error */
-#define DISK_STATUS_WRITE_PROTECTED  0x08 /* Disk write protected */
-#define DISK_STATUS_HEADER_CHK_ERR   0x09 /* Checksum error in header block */
-#define DISK_STATUS_ID_MISMATCH      0x0b /* Id mismatch */
-#define DISK_STATUS_NO_DISK          0x0f /* Disk not inserted */
-
 #define D64_MAX_SECTORS 21 /* 0..20 */
 #define GCR_BPS 325
 
@@ -133,8 +121,9 @@ void write_disk_d64(void)
         if (!b_first_sector)
         {
             rv = eload_recv_status();
-            /* todo: unify status codes */
-            send_status(DISK_STATUS_OK, prev_ts.track, prev_ts.sector);
+            send_status(rv, prev_ts.track, prev_ts.sector);
+            if (rv != DISK_STATUS_OK)
+                break;
         }
         b_first_sector = 0;
 
@@ -148,7 +137,10 @@ void write_disk_d64(void)
     while (prev_ts.track);
 
     eload_close();
-    puts("Disk written\n\n");
+    if (rv == DISK_STATUS_OK)
+        puts("Disk written\n\n");
+    else
+        printf("Error %d at %d:%d\n\n", rv, prev_ts.track, prev_ts.sector);
 
     // enable VIC-II DMA
     VIC.ctrl1 |= 0x10;
