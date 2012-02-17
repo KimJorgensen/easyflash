@@ -218,22 +218,23 @@ static int check_c64_response(void)
 
     if (st.magic == 0)
     {
-        ef3xfer_log_printf("Close request received.\n");
+        ef3xfer_log_printf("\nClose request received.\n");
         return 0;
     }
 
     if (st.magic != DISK_STATUS_MAGIC)
     {
-        ef3xfer_log_printf("Invalid data from C-64.\n");
+        ef3xfer_log_printf("\nInvalid data from C-64.\n");
         return 0;
     }
 
     if (st.status != DISK_STATUS_OK)
     {
-        ef3xfer_log_printf("C-64 reported error $%02X at %d:%d.\n",
+        ef3xfer_log_printf("\nError %d at track %d, sector %d.\n",
                            st.status, st.ts.track, st.ts.sector);
         return 0;
     }
+
     return 1;
 }
 
