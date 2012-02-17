@@ -321,7 +321,7 @@ search_header:
 @wrong_header:
         dec retry_sec_cnt
         bpl @retry
-        lda ELOAD_SECTOR_NOT_FOUND
+        lda #ELOAD_SECTOR_NOT_FOUND
 @no_sync:
         ; appearently we are on the wrong track or on no track at all
         dec retry_sh_cnt        ; retries left?
