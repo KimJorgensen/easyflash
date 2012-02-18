@@ -24,6 +24,7 @@
 
 .include "kernal.s"
 .include "drivetype.s"
+.include "eload_macros.s"
 
 .importzp       ptr1, ptr2, ptr3, ptr4
 .importzp       tmp1, tmp2, tmp3, tmp4
@@ -45,14 +46,13 @@
 ;.import drive_code_1581
 .import drive_code_sd2iec
 
-.import drive_code_init_size_1541
-;.import drive_code_size_1571
-;.import drive_code_size_1581
-.import drive_code_init_size_sd2iec
+.import drive_code_1541_util
+.import drive_code_1541_write
 
 
 code_ptr        = ptr1
 code_len        = ptr2
+table_ptr       = ptr3
 
 cmdbytes        = 32   ; number of bytes in one M-W command
 
@@ -68,6 +68,9 @@ drivetype:
 cmd_addr:
         .res 2
 cmd_len:
+        .res 1
+
+current_drv_overlay:
         .res 1
 
 .rodata
@@ -93,17 +96,29 @@ drive_codes:
         .addr drive_code_sd2iec         ; sd2iec
         .addr 0
 
-drive_code_init_sizes:
-        .byte 0
-        .byte 0
-        .byte <drive_code_init_size_1541
-        .byte <drive_code_init_size_1541     ; 1570
-        .byte <drive_code_init_size_1541     ; for now
-        .byte 0 ;<drive_code_size_1581
-        .byte 0
-        .byte 0
-        .byte <drive_code_init_size_sd2iec   ; sd2iec
-        .byte 0
+drive_codes_util:
+        .addr 0
+        .addr 0
+        .addr drive_code_1541_util
+        .addr drive_code_1541_util      ; 1570
+        .addr drive_code_1541_util      ; for now
+        .addr 0; drive_code_1581
+        .addr 0
+        .addr 0
+        .addr 0
+        .addr 0
+
+drive_codes_write:
+        .addr 0
+        .addr 0
+        .addr drive_code_1541_write
+        .addr drive_code_1541_write     ; 1570
+        .addr drive_code_1541_write     ; for now
+        .addr 0; drive_code_1581
+        .addr 0
+        .addr 0
+        .addr 0
+        .addr 0
 
 .code
 
@@ -183,23 +198,29 @@ _eload_drive_is_fast:
 ; =============================================================================
 .export _eload_prepare_drive
 _eload_prepare_drive:
-        jsr set_code_ptr_code_size
+        lda #ELOAD_OVERLAY_NONE
+        sta current_drv_overlay
+        lda #<drive_codes
+        ldx #>drive_codes
+        jsr set_code_ptr
         lda #<$0300                     ; where to upload the code to
         sta cmd_addr
         lda #>$0300
         sta cmd_addr + 1
 
-        jsr send_code
-        jsr start_code
+        jsr send_code_slow              ; send initial drive code with KERNAL
+        jsr start_code                  ; and start it
 
         ; no final drive code needed for sd2iec
         lda drivetype
         cmp #drivetype_sd2iec
         beq @no_drive_code
 
-        ; upload the full drive code using the fast protocol
-        jsr set_code_ptr_code_size
-        lda #4                          ; number of blocks to transfer
+        ; upload 2 blocks of drive code using the fast protocol
+        lda #<drive_codes_util
+        ldx #>drive_codes_util
+        jsr set_code_ptr
+        lda #2                          ; number of blocks to transfer
         sta tmp1
         sei
 :
@@ -210,36 +231,71 @@ _eload_prepare_drive:
         inc code_ptr + 1
         dec tmp1
         bne :-
+
+        lda #ELOAD_OVERLAY_WRITE
+        jsr eload_upload_drive_overlay
+
         cli
 
 @no_drive_code:
         clc
         rts
 
-set_code_ptr_code_size:
+; =============================================================================
+;
+; Set code_ptr according to the current drive type to the start address
+; of the drive code
+;
+; Parameters:
+;       AX      points to the drive code table to be used
+;
+; =============================================================================
+set_code_ptr:
+        sta table_ptr
+        stx table_ptr + 1
         lda drivetype
         asl
         tay
-        lda drive_codes + 1, y          ; ptr to send_code for detected drive
-        sta code_ptr + 1
-        bne :+
-        sec                             ; fail if there's no code
-        rts
-:
-        lda drive_codes, y
+        lda (table_ptr), y          ; ptr to send_code for detected drive
         sta code_ptr
-
-        ldy drivetype
-        lda drive_code_init_sizes, y
-        sta code_len
+        iny
+        lda (table_ptr), y
+        sta code_ptr + 1
         rts
 
 ; =============================================================================
 ;
-; Send code, 32 bytes at a time
+; Upload a new drive code overlay. If one is running already, exit it first
+; by sending job $00 $00 $00. The caller must disable IRQs.
+;
+; Parameters:
+;       A       one of ELOAD_OVERLAY_*
 ;
 ; =============================================================================
-send_code:
+.export eload_upload_drive_overlay
+eload_upload_drive_overlay:
+        ldx current_drv_overlay
+        beq @dont_exit
+@dont_exit:
+        sta current_drv_overlay
+        ;cmp #ELOAD_OVERLAY_WRITE ; todo
+        lda #<drive_codes_write
+        ldx #>drive_codes_write
+        jsr set_code_ptr
+        lda code_ptr
+        ldx code_ptr + 1
+        ldy #0
+        jmp eload_send
+
+
+; =============================================================================
+;
+; Send 255 bytes of code using KERNAL, 32 bytes at a time
+;
+; =============================================================================
+send_code_slow:
+        lda #255
+        sta code_len
 @next:
         lda #cmdbytes       ; at least 32 bytes left?
         sta cmd_len
