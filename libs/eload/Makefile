@@ -5,10 +5,11 @@ inc += src/drivetype.s
 inc += src/kernal.s
 inc += src/xfer_drive_1mhz.s
 inc += src/xfer_drive_2mhz.s
-inc += src/drive_common.s
 
 obj := 
 obj += obj/drive_1541.o
+obj += obj/drive_1541_util.o
+obj += obj/drive_1541_write.o
 #obj += obj/drive_1571.o
 #obj += obj/drive_1581.o
 obj += obj/drive_sd2iec.o

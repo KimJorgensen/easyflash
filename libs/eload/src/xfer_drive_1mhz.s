@@ -25,23 +25,6 @@
 
 ; =============================================================================
 ;
-; =============================================================================
-drv_load_code:
-        lda #<drv_code_start
-        ldx #>drv_code_start
-        ldy #0
-        jsr drv_recv            ; 1st block
-        lda #3                  ; remaining blocks
-        sta job_track           ; tmp
-@next:
-        inc buff_ptr + 1
-        jsr drv_recv_to_ptr
-        dec job_track
-        bne @next
-        rts
-
-; =============================================================================
-;
 ; Signal with CLK low that we are ready and wait until the C64 signals that it
 ; wants to send data. Return after SEI.
 ;
@@ -144,6 +127,38 @@ drv_send:
 exit_1:
         jmp drv_exit
 
+drv_sendtbl:
+        ; 0 0 0 0 b0 b2 b1 b3
+        .byte $0f, $07, $0d, $05
+        .byte $0b, $03, $09, $01
+        .byte $0e, $06, $0c, $04
+        .byte $0a, $02, $08, $00
+
+; =============================================================================
+;
+; Receive 2 * 256 bytes of drive code to $0400
+;
+; =============================================================================
+drv_load_code:
+        lda #<$0400
+        ldx #>$0400
+        ldy #0
+        jsr recv                ; 1st block
+        inc buff_ptr + 1
+        jsr recv_to_ptr         ; 2nd block
+        rts
+
+; =============================================================================
+;
+; Receive 256 bytes of overlay code to $0600
+;
+; =============================================================================
+drv_load_overlay:
+        lda #<$0600
+        ldx #>$0600
+        ldy #0
+        beq recv ; always
+
 ; =============================================================================
 ;
 ; Load Y bytes to AX. The first byte will be stored to the highest
@@ -163,13 +178,13 @@ exit_1:
 ; Returns with I-flag set (SEI).
 ;
 ; =============================================================================
-drv_recv_to_buffer:
+recv_to_buffer:
         lda #<buffer
         ldx #>buffer
-drv_recv:
+recv:
         sta buff_ptr
         stx buff_ptr + 1
-drv_recv_to_ptr:
+recv_to_ptr:
         jsr drv_wait_rx         ; does SEI
 
         ; initialize recv code

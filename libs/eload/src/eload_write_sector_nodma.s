@@ -29,16 +29,11 @@ _eload_write_sector_nodma:
         php                     ; to backup the interrupt flag
         sei
 
-        lda #4                  ; command: write sector
+        lda #1                  ; command: write sector
         sta job
         lda #<job
         ldx #>job
-        ldy #1
-        jsr eload_send_nodma
-
-        lda #<trk_tmp
-        ldx #>trk_tmp
-        ldy #2
+        ldy #3
         jsr eload_send_nodma
 
         ; this will go to the GCR overflow buffer $1bb

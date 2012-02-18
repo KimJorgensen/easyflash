@@ -29,16 +29,11 @@ _eload_write_sector:
         php                     ; to backup the interrupt flag
         sei
 
-        lda #4                  ; command: write sector
+        lda #1                  ; command: write sector
         sta job
         lda #<job
         ldx #>job
-        ldy #1
-        jsr eload_send
-
-        lda #<trk_tmp
-        ldx #>trk_tmp
-        ldy #2
+        ldy #3
         jsr eload_send
 
         ; this will go to the GCR overflow buffer $1bb
@@ -55,10 +50,10 @@ _eload_write_sector:
         bcc :+
         inx
 :
-        iny                 ; Y = 0xff => 0 = 256 bytes
+        iny                     ; Y = 0xff => 0 = 256 bytes
         jsr eload_send
 
-        plp                 ; to restore the interrupt flag
+        plp                     ; to restore the interrupt flag
         rts
 
 .bss
