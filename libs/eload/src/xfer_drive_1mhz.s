@@ -170,7 +170,7 @@ drv_recv:
         sta buff_ptr
         stx buff_ptr + 1
 drv_recv_to_ptr:
-        jsr drv_wait_rx
+        jsr drv_wait_rx         ; does SEI
 
         ; initialize recv code
         lda serport

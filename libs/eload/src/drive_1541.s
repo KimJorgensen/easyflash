@@ -50,9 +50,6 @@ zpptr           = job_track     ; two bytes used as pointer (when no job)
 
 stack           = $8b
 
-test1           = $10
-test2           = $11
-
 iddrv0          = $12           ; disk drive id
 header_id       = $16           ; disk id
 header_track    = $18
@@ -115,10 +112,10 @@ drive_code_init_size_1541  = * - drv_code_start
 ; ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 ; sector read subroutine. Returns clc if successful, sec if error
-; job_track, job_sector are set
+; X/A = T/S
 drv_readsector:
         ldy #$80                ; read sector job code
-        jsr set_job_backup_ts
+        jsr set_job_ts_backup
 
         ldy #retries            ; retry counter
 @retry:
@@ -133,9 +130,9 @@ drv_readsector:
 
 
 ; sector write subroutine. Returns clc if successful, sec if error
-; job_track, job_sector are set
+; X/A = T/S
 drv_writesector: ; 03d8
-        jsr backup_ts
+        jsr set_ts_backup
 
         jsr prepare_read
         jsr search_header
@@ -186,48 +183,6 @@ drv_writesector: ; 03d8
         pla
         rts
 
-
-set_job_backup_ts:
-        sty job_code_backup
-backup_ts:
-        lda job_track
-        sta job_track_backup
-        lda job_sector
-        sta job_sector_backup
-        rts
-
-; Interrupts must be disabled when this is called, because we set the job code
-; first.
-restore_orig_job:
-        lda job_code_backup
-        sta job_code
-restore_orig_job_ts:
-        lda job_track_backup
-        sta job_track
-        lda job_sector_backup
-        sta job_sector
-        rts
-
-
-exec_this_job:
-        sty job_code
-        stx job_track
-        sta job_sector
-exec_current_job:
-        cli
-@wait:
-        lda job_code            ; let the job run in IRQ
-        bmi @wait
-        sei
-
-        ldx header_id           ; check for disk ID change
-        stx iddrv0
-        ldx header_id + 1
-        stx iddrv0 + 1
-
-        cmp #2                  ; check status
-        rts                     ; C = error state, A = error code
-
 ; =============================================================================
 ;
 ; Wait for sync from the drive. Return C clear if sync was found, C set
@@ -256,7 +211,6 @@ wait_sync:
         bit $1c00               ; sync found?
         bmi @wait               ; no => wait
         lda $1c01               ; the byte
-        inc test2
         clv                     ; clear byte ready (V)
         rts
 @timeout:
