@@ -40,8 +40,6 @@ load:
         lda prev_file_sect
 loadchain:
 @sendsector:
-        sta job_sector
-        stx job_track
         jsr drv_readsector
         bcc :+
         lda #$ff                ; send read error
@@ -84,7 +82,7 @@ loadchain:
 ; =============================================================================
 drv_main:
         cli                     ; allow IRQs when waiting
-        jsr drv_wait_rx
+        jsr drv_wait_rx         ; does SEI when data is signaled
 
         ldy #1
         jsr drv_recv_to_buffer  ; get command byte
@@ -127,11 +125,77 @@ write_sector: ; 05db
         jsr drv_recv            ; 69 bytes
         jsr drv_recv_to_buffer  ; 256 bytes (Y = 0 from prev call)
 
+        ldx job_track
+        lda job_sector
         jsr drv_writesector
         bcs @ret
         lda #ELOAD_OK
 @ret:
         jmp senddone        ; send OK or error
+
+; =============================================================================
+;
+; Execute the job in Y (job code), X (track) and A (sector)
+;
+; Return C set and error code in A in case of an error.
+;
+; =============================================================================
+
+exec_this_job:
+        sty job_code
+        stx job_track
+        sta job_sector
+        ; fall through
+
+; =============================================================================
+;
+; Execute the job in job_code/job_track/job_sector
+;
+; Return C set and error code in A in case of an error.
+;
+; =============================================================================
+exec_current_job:
+        cli
+@wait:
+        lda job_code            ; let the job run in IRQ
+        bmi @wait
+        sei
+
+        ldx header_id           ; check for disk ID change
+        stx iddrv0
+        ldx header_id + 1
+        stx iddrv0 + 1
+
+        cmp #2                  ; check status
+        rts                     ; C = error state, A = error code
+
+; =============================================================================
+;
+; Set Y/X/A to backup of job code, track and sector
+;
+; =============================================================================
+set_job_ts_backup:
+        sty job_code_backup
+set_ts_backup:
+        stx job_track_backup
+        sta job_sector_backup
+        rts
+
+; =============================================================================
+;
+; Copy job code, track and sector from backup to current job.
+;
+; changes: A
+;
+; =============================================================================
+restore_orig_job:
+        lda job_track_backup
+        sta job_track
+        lda job_sector_backup
+        sta job_sector
+        lda job_code_backup
+        sta job_code
+        rts
 
 ; =============================================================================
 ;
