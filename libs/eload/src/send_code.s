@@ -46,7 +46,9 @@
 ;.import drive_code_1581
 .import drive_code_sd2iec
 
-.import drive_code_1541_util
+.import drive_code_init_size_1541
+.import drive_code_init_size_sd2iec
+
 .import drive_code_1541_write
 
 
@@ -96,17 +98,17 @@ drive_codes:
         .addr drive_code_sd2iec         ; sd2iec
         .addr 0
 
-drive_codes_util:
-        .addr 0
-        .addr 0
-        .addr drive_code_1541_util
-        .addr drive_code_1541_util      ; 1570
-        .addr drive_code_1541_util      ; for now
-        .addr 0; drive_code_1581
-        .addr 0
-        .addr 0
-        .addr 0
-        .addr 0
+drive_code_init_sizes:
+        .byte 0
+        .byte 0
+        .byte <drive_code_init_size_1541
+        .byte <drive_code_init_size_1541     ; 1570
+        .byte <drive_code_init_size_1541     ; for now
+        .byte 0 ;<drive_code_size_1581
+        .byte 0
+        .byte 0
+        .byte <drive_code_init_size_sd2iec   ; sd2iec
+        .byte 0
 
 drive_codes_write:
         .addr 0
@@ -217,20 +219,9 @@ _eload_prepare_drive:
         beq @no_drive_code
 
         ; upload 2 blocks of drive code using the fast protocol
-        lda #<drive_codes_util
-        ldx #>drive_codes_util
-        jsr set_code_ptr
-        lda #2                          ; number of blocks to transfer
-        sta tmp1
-        sei
-:
-        lda code_ptr
-        ldx code_ptr + 1
-        ldy #0
-        jsr eload_send
-        inc code_ptr + 1
-        dec tmp1
-        bne :-
+        lda #<drive_codes
+        ldx #>drive_codes
+        jsr set_ptr_and_upload
 
         lda #ELOAD_OVERLAY_WRITE
         jsr eload_upload_drive_overlay
@@ -244,7 +235,8 @@ _eload_prepare_drive:
 ; =============================================================================
 ;
 ; Set code_ptr according to the current drive type to the start address
-; of the drive code
+; of the drive code. Additionally code_init_size is written to code_len,
+; which may not by needed by all callers, but who cares...
 ;
 ; Parameters:
 ;       AX      points to the drive code table to be used
@@ -256,6 +248,8 @@ set_code_ptr:
         lda drivetype
         asl
         tay
+        lda drive_code_init_sizes, y
+        sta code_len
         lda (table_ptr), y          ; ptr to send_code for detected drive
         sta code_ptr
         iny
@@ -281,21 +275,28 @@ eload_upload_drive_overlay:
         ;cmp #ELOAD_OVERLAY_WRITE ; todo
         lda #<drive_codes_write
         ldx #>drive_codes_write
+set_ptr_and_upload:
         jsr set_code_ptr
+        lda #2                          ; number of blocks to transfer
+        sta tmp1
+        sei ; ???
+:
         lda code_ptr
         ldx code_ptr + 1
         ldy #0
-        jmp eload_send
-
+        jsr eload_send
+        inc code_ptr + 1
+        dec tmp1
+        bne :-
+        cli ; ???
+		rts
 
 ; =============================================================================
 ;
-; Send 255 bytes of code using KERNAL, 32 bytes at a time
+; Send code, 32 bytes at a time
 ;
 ; =============================================================================
 send_code_slow:
-        lda #255
-        sta code_len
 @next:
         lda #cmdbytes       ; at least 32 bytes left?
         sta cmd_len

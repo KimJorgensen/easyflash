@@ -227,7 +227,35 @@ static void test_write_sector(void)
 
     // enable VIC-II DMA
     VIC.ctrl1 |= 0x10;
-    CLI();
+
+    eload_close();
+}
+
+
+static void test_format(void)
+{
+    uint8_t drv;
+    unsigned i, ret, t;
+
+    drv = get_drive_number();
+
+    if (init_eload(drv) == 0)
+    {
+        return;
+    }
+
+    eload_prepare_drive();
+
+    clrscr();
+    for (i = 0; i < 5; i++)
+    {
+        cputs("formatting...");
+        eload_format();
+        ret = eload_recv_status();
+        t =  eload_recv_status();
+        t |= eload_recv_status() << 8;
+        cprintf("result: %d, %d\n\r", ret, t);
+    }
 
     eload_close();
     for(;;);
@@ -254,6 +282,8 @@ int main(void)
             test_read();
         else if (key == 's')
             test_write_sector();
+        else if (key == 'f')
+            test_format();
 
     } while (key != CH_STOP);
 

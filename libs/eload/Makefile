@@ -8,7 +8,6 @@ inc += src/xfer_drive_2mhz.s
 
 obj := 
 obj += obj/drive_1541.o
-obj += obj/drive_1541_util.o
 obj += obj/drive_1541_write.o
 #obj += obj/drive_1571.o
 #obj += obj/drive_1581.o
@@ -21,6 +20,7 @@ obj += obj/eload_send.o
 obj += obj/eload_send_nodma.o
 obj += obj/eload_sendtab.o
 obj += obj/eload_recv.o
+obj += obj/eload_format.o
 
 obj += obj/eload_read_byte.o
 obj += obj/eload_close.o
