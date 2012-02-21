@@ -229,6 +229,29 @@ drv_1541_update_disk_info:
 @ret:
         jmp drv_1541_restore_orig_job
 
+
+; =============================================================================
+;
+; Create a GCR encoded header at gcr_tmp. Use following input:
+; header_id, job_track, job_sector.
+;
+; =============================================================================
+.export drv_1541_create_gcr_header
+drv_1541_create_gcr_header:
+        lda iddrv0              ; collect header data
+        sta header_id
+        lda iddrv0 + 1
+        sta header_id + 1
+        lda job_track
+        sta header_track
+        lda job_sector
+        sta header_sector
+        eor header_id
+        eor header_id + 1
+        eor header_track
+        sta header_parity
+        jmp $f934               ; header to GCR
+
 ; =============================================================================
 ;
 ; Move head from current_track to job_track. Update current_track.
