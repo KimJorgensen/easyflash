@@ -9,7 +9,8 @@ prev_file_sect  = $026f
 job_code        = $04
 job_track       = $0e
 job_sector      = $0f
-zpptr           = job_track     ; two bytes used as pointer (when no job)
+
+zpptr           = $10           ; two bytes used as pointer
 
 stack           = $8b
 

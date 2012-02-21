@@ -36,12 +36,13 @@ test_obj += obj/crt0.o
 test_obj += obj/eload_test.o
 test_obj += obj/gcr.o
 
+disk_type := g64
 
 .PHONY: all
 all: eload.lib 
 
 .PHONY: test
-test: test.d64
+test: test.$(disk_type)
 
 obj/%.o: src/%.s obj $(inc)
 	ca65 -I src -t c64 -o $@ $<
@@ -62,8 +63,8 @@ eload.lib: $(obj)
 	rm -f $@
 	ar65 a $@ $(obj)
 
-test.d64: eload_test.prg
-	c1541 -format test,td d64 $@ 8 \
+test.$(disk_type): eload_test.prg
+	c1541 -format test,td $(disk_type) $@ 8 \
 		-write eload_test.prg etest
 
 eload_test.prg: $(test_obj) eload.lib

@@ -37,6 +37,7 @@
 .import drv_1541_move_head
 .import drv_1541_move_head_direct
 .import drv_1541_update_disk_info
+.import drv_1541_create_gcr_header
 
 .export drive_code_1541_write
 drive_code_1541_write  = *
@@ -149,6 +150,10 @@ send_and_loop:
 ;
 ; =============================================================================
 
+timeout:
+        lda #ELOAD_ERR_NO_SYNC
+        jmp send_and_loop
+
 format_disk:
         ; switch on motor, set bitrate for track 1, bump
         lda #1
@@ -162,7 +167,7 @@ format_disk:
         jsr $fe00               ; head to read mode
 
         ; count bytes per track, should be about 7692 on track 1
-        ldy #5                  ; start at overhead of this code
+        ldy #5                  ; start at overhead of this code (todo: fine tune)
         ldx #0                  ; instead of 0
 @count:
         nop                     ;  2   loop with 26 cycles = 1 byte
@@ -170,22 +175,127 @@ format_disk:
         iny                     ;  2   inc low byte of counter
         bne :+                  ;  3
         inx                     ;      inc high byte of counter
-        beq @timeout
+        beq timeout
 :
         bit $1c00               ;  4   sync found?
         bmi @count              ;  3   no => wait and count
         clv                     ; clear byte ready (V)
-        sty job_track           ; tmp use: bytes low
-        lda #ELOAD_OK
-        bvc @send
-@timeout:
-        lda #ELOAD_ERR_NO_SYNC
-@send:
-        jsr drv_1541_send       ; send OK or error
-        lda job_track
-        jsr drv_1541_send       ; bytes per track low
-        txa
-        jmp send_and_loop       ; bytes per track high
+
+        ; now X/Y contain the number of bytes on this track
+
+        ; === prepare up to 21 GCR encoded sectors in our buffer ===
+        lda #1
+        sta job_track
+        lda #0                  ; start at T/S 1,0
+        sta job_sector
+        sta zpptr
+        lda #$07
+        sta zpptr + 1           ; point to $0700
+@next_header:
+        jsr drv_1541_create_gcr_header
+        ldx #0                  ; read GCR index
+@copy_header:
+        lda gcr_tmp, x          ; copy GCR header
+        ldy #0
+        sta (zpptr), y          ; to buffer
+        inc zpptr
+        inx
+        cpx #10
+        bne @copy_header
+
+        inc job_sector
+        lda job_sector
+        cmp #21
+        bne @next_header
+
+        ; === write the track ===
+        jsr $fe0e               ; Write $55 10240 times
+        lda #21                 ; number of sectors
+        sta job_sector
+        ldy #0
+        sty zpptr               ; start at buffer again
+        dey
+        clv
+:
+        bvc :-
+        clv
+@write_next_sector:
+        ; y is #$ff here
+        sty $1c01               ; write $ff = sync
+        ldy #5                  ; header sync
+:
+        bvc :-
+        clv
+        dey
+        bne :-
+
+        ; y is 0 now
+        ldx #10
+@write_header:
+        lda (zpptr), y
+        sta $1c01               ; write header
+:
+        bvc :-
+        clv
+        inc zpptr
+        dex
+        bne @write_header
+
+        lda #$55
+        sta $1c01
+        ldy #8                  ; 9 * 0x55 header gap
+:
+        bvc :-
+        clv
+        dey
+        bpl :-                  ; y is #$ff after this loop
+
+        sty $1c01
+        ldy #5                  ; data block sync
+:
+        bvc :-
+        clv
+        dey
+        bne :-
+
+        ldx #4                  ; index to GCR snippet
+@next1:
+        lda gcr_snippet_1, x    ; write part of block with checksum
+        sta $1c01
+:
+        bvc :-
+        clv
+        dex
+        bpl @next1
+
+        ldy #64                 ; number of repititions
+@next2:
+        ldx #4                  ; index to GCR snippet
+@next3:
+        lda gcr_snippet_2, x    ; rest of the block (contains 0 only)
+        sta $1c01
+:
+        bvc :-
+        clv
+        dex
+        bpl @next3
+        dey
+        bne @next2
+
+        lda #$55
+        sta $1c01
+        ldy #5                  ; 6 * 0x55 inter sector gap
+:
+        bvc :-
+        clv
+        dey
+        bpl :-                  ; y is #$ff after this loop
+
+        dec job_sector
+        bne @write_next_sector
+        jsr $fe00               ; head to read mode
+
+    jmp *
 
 
 ; =============================================================================
@@ -207,19 +317,7 @@ drv_1541_search_header:
         sta retry_sh_cnt
 @retry_new_track:
         jsr drv_1541_prepare_read
-        lda iddrv0              ; collect header data
-        sta header_id
-        lda iddrv0 + 1
-        sta header_id + 1
-        lda job_track
-        sta header_track
-        lda job_sector
-        sta header_sector
-        eor header_id
-        eor header_id + 1
-        eor header_track
-        sta header_parity
-        jsr $f934               ; header to GCR
+        jsr drv_1541_create_gcr_header
 
         lda #90                 ; retry counter for current track
         sta retry_sec_cnt
@@ -255,17 +353,25 @@ drv_1541_search_header:
 
 
 
-.export write_sync
 write_sync:
         lda #$ff
-        sta $1c01               ; write $ff = sync
         ldy #5
+write_data:
+        sta $1c01               ; write $ff = sync
 :
         bvc :-                  ; wait for byte ready
         clv                     ; clear byte ready (V)
         dey
         bne :-
         rts
+
+
+
+gcr_snippet_1:
+        .byte $4a, $29, $a5, $d4, $55       ; backwards, contains the checksum
+
+gcr_snippet_2:
+        .byte $4a, $29, $a5, $94, $52       ; backwards, contains zeros
 
 drive_code_1541_write_size  = * - drive_code_1541_write_start
 .assert drive_code_1541_write_size <= 512, error, "drive_code_1541_write_size"
