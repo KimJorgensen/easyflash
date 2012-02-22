@@ -159,42 +159,54 @@ drv_delay:
 
 ; =============================================================================
 ;
+; Switch on motor and LED, wait in case the motor was off, prepare read mode
+; with the right speed for current_track, set speed_zone and sect_per_trk.
 ;
 ; parameters:
 ;       -
 ;
 ; return:
+;       -
 ;
 ; changes:
+;       A, X, Y
 ;
 ; =============================================================================
 .export drv_1541_prepare_read
 drv_1541_prepare_read:
         lda $1c00
         and #$04                ; motor on?
-        bne :+
+        bne @motor_is_on
         lda $3d
         sta $3e                 ; set flag for motor running
         jsr $f97e               ; switch motor on
         ldy #250                ; motor was off: wait for a while
         jsr drv_delay           ; wait when motor was off
-:
+@motor_is_on:
+        ; calculate speed zone and sectors per track
+        ldx #4
+        lda current_track
+@check_zone:
+        cmp $fed6, x            ; compare with track number
+        dex
+        beq @end_check          ; in case it's > 35
+        bcs @check_zone
+@end_check:
+        stx speed_zone
+        lda $fed1, x            ; get number of sectors per track
+        sta $43                 ; and save
+        txa
+        asl
+        asl
+        asl
+        asl
+        asl
+        sta $44                 ; speed zone bits
+
         lda $1c00
         ora #$08                ; switch LED on
         and #$9f                ; update bitrate
-        ldy current_track
-        cpy #31                 ; track >= 31: keep rate %00
-        bcs @rate_ok
-        cpy #25
-        bcc @lt25
-        ora #$20                ; track >= 25: bit rate %01
-        bne @rate_ok
-@lt25:
-        ora #$40                ; track >= 18: bit rate %10
-        cpy #18
-        bcs @rate_ok
-        ora #$60                ; otherwise: bit rate %11
-@rate_ok:
+        ora $44
         sta $1c00
 
         jsr $fe00               ; head to read mode

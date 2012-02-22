@@ -6,7 +6,6 @@
     .import         popax
 
     .import eload_send
-    .import eload_recv
     .import _eload_prepare_drive
 
 gcr_overflow_size = 69
@@ -33,7 +32,7 @@ _eload_write_sector:
         sta job
         lda #<job
         ldx #>job
-        ldy #3
+        ldy #4                  ; eload-jobs have always 4 bytes
         jsr eload_send
 
         ; this will go to the GCR overflow buffer $1bb

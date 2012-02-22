@@ -10,6 +10,8 @@ job_code        = $04
 job_track       = $0e
 job_sector      = $0f
 
+speed_zone      = $06
+status          = $08           ; two bytes for status return
 zpptr           = $10           ; two bytes used as pointer
 
 stack           = $8b
@@ -26,6 +28,7 @@ gcr_tmp         = $24
 
 buff_ptr        = $30
 
+sect_per_trk    = $43
 head_step_ctr   = $4a
 
 zptmp               = $c1

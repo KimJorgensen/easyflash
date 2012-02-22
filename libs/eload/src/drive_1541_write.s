@@ -53,17 +53,13 @@ drive_code_1541_write_start      = *
 
 loop:
         cli                     ; allow IRQs when waiting
-        ldy #3                  ; receive job to buffer (does SEI when rx)
+        ldy #4                  ; receive job to buffer (does SEI when rx)
         jsr drv_1541_recv_to_buffer
 
         lda buffer              ; job
 
         cmp #1
         bne @not_wr_sector
-
-        ldx buffer + 1
-        lda buffer + 2
-        jsr drv_1541_set_ts_backup
         jmp write_sector
 
 @not_wr_sector:
@@ -76,6 +72,16 @@ loop:
 ret:
         rts
 
+send_status_and_loop:
+; send the return value from A and two bytes of status
+        jsr drv_1541_send
+        lda status
+        jsr drv_1541_send
+        lda status + 1
+        jsr drv_1541_send
+        jmp loop
+
+
 ; =============================================================================
 ;
 ; Write a GCR sector to disk. Returns clc if successful, sec if error
@@ -83,6 +89,10 @@ ret:
 ;
 ; =============================================================================
 write_sector:
+        ldx buffer + 1
+        lda buffer + 2
+        jsr drv_1541_set_ts_backup
+
         ; receive 69 + 256 bytes of GCR encodec track
         ldy #gcr_overflow_size
         lda #<gcr_overflow_buff
@@ -95,7 +105,7 @@ write_sector:
         jsr drv_1541_prepare_read
         jsr drv_1541_search_header
 
-        bcs @ret                ; error: code in A already
+        bcs motor_off_and_ret   ; error: code in A already
         ldx #8                  ; skip 9 bytes after header
 @skip9:
         bvc @skip9              ; wait for byte ready
@@ -113,26 +123,21 @@ write_sector:
         ldy #$bb
 @write_data_1:
         lda $0100, y
-:
-        bvc :-                  ; wait for byte ready
-        clv                     ; clear byte ready (V)
+        wait_byte_ready
         sta $1c01               ; write data byte
         iny
         bne @write_data_1
 
 @write_data_2:
         lda buffer, y
-:
-        bvc :-                  ; wait for byte ready
-        clv                     ; clear byte ready (V)
+        wait_byte_ready
         sta $1c01               ; write data byte
         iny
         bne @write_data_2
-:
-        bvc :-                  ; wait for byte ready (last byte)
+        wait_byte_ready
         jsr $fe00               ; head to read mode
         clc                     ; mark for success
-@ret:
+motor_off_and_ret:
         pha
         jsr $f98f               ; prepare motor off (doesn't change C)
         pla
@@ -141,8 +146,7 @@ write_sector:
         lda #ELOAD_OK
 :
 send_and_loop:
-        jsr drv_1541_send       ; send OK or error
-        jmp loop
+        jmp send_status_and_loop
 
 
 ; =============================================================================
@@ -155,6 +159,15 @@ timeout:
         jmp send_and_loop
 
 format_disk:
+        ; buffer content: | eload-job 2 | tracks | id1 | id2 |
+        ldx buffer + 1
+        inx
+        stx end_track
+        lda buffer + 2
+        sta iddrv0
+        lda buffer + 3
+        sta iddrv0 + 1
+
         ; switch on motor, set bitrate for track 1, bump
         lda #1
         sta current_track       ; we'll be on track 1
@@ -167,7 +180,7 @@ format_disk:
         jsr $fe00               ; head to read mode
 
         ; count bytes per track, should be about 7692 on track 1
-        ldy #5                  ; start at overhead of this code (todo: fine tune)
+        ldy #6                  ; start at overhead of this code
         ldx #0                  ; instead of 0
 @count:
         nop                     ;  2   loop with 26 cycles = 1 byte
@@ -182,79 +195,79 @@ format_disk:
         clv                     ; clear byte ready (V)
 
         ; now X/Y contain the number of bytes on this track
+        sty status
+        stx status + 1
 
-        ; === prepare up to 21 GCR encoded sectors in our buffer ===
         lda #1
-        sta job_track
+        sta job_track           ; start at track 1
+format_next_track:
+        jsr drv_1541_move_head
+        ; === prepare up to 21 GCR encoded sectors in our buffer ===
+        jsr drv_1541_prepare_read
+
         lda #0                  ; start at T/S 1,0
         sta job_sector
-        sta zpptr
+        sta @header_ptr
         lda #$07
-        sta zpptr + 1           ; point to $0700
 @next_header:
         jsr drv_1541_create_gcr_header
         ldx #0                  ; read GCR index
 @copy_header:
         lda gcr_tmp, x          ; copy GCR header
         ldy #0
-        sta (zpptr), y          ; to buffer
-        inc zpptr
+@header_ptr = * + 1
+        sta buffer              ; will be modified
+        inc @header_ptr
         inx
         cpx #10
         bne @copy_header
 
         inc job_sector
         lda job_sector
-        cmp #21
+        cmp sect_per_trk
         bne @next_header
 
         ; === write the track ===
         jsr $fe0e               ; Write $55 10240 times
-        lda #21                 ; number of sectors
-        sta job_sector
+        lda sect_per_trk        ; number of sectors
+        sta job_sector          ; Not the actual sector number but sector count
         ldy #0
-        sty zpptr               ; start at buffer again
+        sty zptmp               ; offset into header buffer
         dey
         clv
-:
-        bvc :-
-        clv
-@write_next_sector:
+        wait_byte_ready
+write_next_sector:
         ; y is #$ff here
         sty $1c01               ; write $ff = sync
-        ldy #5                  ; header sync
+        ldy #5                  ; header sync (5 * $ff)
 :
-        bvc :-
-        clv
+        wait_byte_ready
         dey
         bne :-
 
-        ; y is 0 now
         ldx #10
+        ldy zptmp               ; offset into header buffer
 @write_header:
-        lda (zpptr), y
+        lda buffer, y
         sta $1c01               ; write header
-:
-        bvc :-
-        clv
-        inc zpptr
+        wait_byte_ready
+        iny
         dex
         bne @write_header
+        sty zptmp               ; offset into header buffer
 
         lda #$55
         sta $1c01
         ldy #8                  ; 9 * 0x55 header gap
 :
-        bvc :-
-        clv
+        wait_byte_ready
         dey
-        bpl :-                  ; y is #$ff after this loop
+        bpl :-                  ; Y is #$ff after this loop
 
         sty $1c01
         ldy #5                  ; data block sync
 :
-        bvc :-
-        clv
+        wait_byte_ready
         dey
         bne :-
 
@@ -262,41 +275,46 @@ format_disk:
 @next1:
         lda gcr_snippet_1, x    ; write part of block with checksum
         sta $1c01
-:
-        bvc :-
-        clv
+        wait_byte_ready
         dex
         bpl @next1
 
-        ldy #64                 ; number of repititions
+        ldy #64                 ; 64 * 5 GCR bytes (64 * 4 = 256 bin)
 @next2:
         ldx #4                  ; index to GCR snippet
 @next3:
         lda gcr_snippet_2, x    ; rest of the block (contains 0 only)
         sta $1c01
-:
-        bvc :-
-        clv
+        wait_byte_ready
         dex
         bpl @next3
         dey
         bne @next2
 
+        dec job_sector
+        beq @end                ; don't write the last gap to make sure that
+                                ; that sector 0 is not damaged
         lda #$55
         sta $1c01
         ldy #5                  ; 6 * 0x55 inter sector gap
 :
-        bvc :-
-        clv
+        wait_byte_ready
         dey
-        bpl :-                  ; y is #$ff after this loop
-
-        dec job_sector
-        bne @write_next_sector
+        bpl :-                  ; Y is #$ff after this loop
+        bmi write_next_sector   ; always
+@end:
         jsr $fe00               ; head to read mode
 
-    jmp *
-
+        inc job_track
+        lda job_track
+end_track = * + 1
+        cmp #36
+        beq @end_format
+        jmp format_next_track
+@end_format:
+        jsr $f98f               ; prepare motor off (doesn't change C)
+        lda #ELOAD_OK
+        jmp send_status_and_loop
 
 ; =============================================================================
 ;
