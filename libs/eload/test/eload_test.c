@@ -175,8 +175,9 @@ static void test_write_sector(void)
 {
     static uint8_t block[256];
     static uint8_t gcr[325];
+    static uint8_t status[3];
     uint8_t drv, t, s, lim, rest, interleave;
-    unsigned i, ret;
+    unsigned i;
 
     drv = get_drive_number();
 
@@ -220,8 +221,8 @@ static void test_write_sector(void)
                 s = s - lim;
 
             eload_write_sector_nodma((t << 8) | s, gcr);
-            ret = eload_recv_status();
-            //*((uint8_t*)0x0400 + 10 * 40 + s) = '0' + ret;
+            eload_recv_status(status);
+            *((uint8_t*)0x0400 + 10 * 40 + s) = '0' + status[0];
         }
     }
 
@@ -234,8 +235,9 @@ static void test_write_sector(void)
 
 static void test_format(void)
 {
+    static uint8_t status[3];
     uint8_t drv;
-    unsigned i, ret, t;
+    unsigned i;
 
     drv = get_drive_number();
 
@@ -250,11 +252,10 @@ static void test_format(void)
     for (i = 0; i < 5; i++)
     {
         cputs("formatting...");
-        eload_format();
-        ret = eload_recv_status();
-        t =  eload_recv_status();
-        t |= eload_recv_status() << 8;
-        cprintf("result: %d, %d\n\r", ret, t);
+        eload_format(40, 0x1234);
+        eload_recv_status(status);
+        cprintf("result: %d, %d\n\r", status[0],
+                status[1] | (status[2] << 8));
     }
 
     eload_close();

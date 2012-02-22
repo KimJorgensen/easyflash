@@ -48,10 +48,10 @@ int eload_read_byte(void);
 unsigned int __fastcall__ eload_read(void* buffer, unsigned int size);
 
 /**
- * Receive the status byte for the previous asynchronous message, e.g. for
- * eload_write_sector.
+ * Receive the status bytes for the previous asynchronous job, e.g. for
+ * eload_write_sector. status must point to 4 bytes of memory.
  */
-uint8_t eload_recv_status(void);
+void __fastcall__ eload_recv_status(uint8_t* status);
 
 /**
  * Close the current file and cancel the drive code, if any.
@@ -69,6 +69,6 @@ void eload_prepare_drive(void);
 
 void __fastcall__ eload_write_sector(unsigned ts, uint8_t* block);
 void __fastcall__ eload_write_sector_nodma(unsigned ts, uint8_t* block);
-void __fastcall__ eload_format(void);
+void __fastcall__ eload_format(uint8_t n_tracks, uint16_t id);
 
 #endif /* ELOAD_H_ */

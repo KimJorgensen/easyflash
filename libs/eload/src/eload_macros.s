@@ -14,4 +14,12 @@ ELOAD_OVERLAY_NONE    = 0
 ELOAD_OVERLAY_READ    = 1
 ELOAD_OVERLAY_WRITE   = 2
 
+
+
+; Byte ready check for drive code
+.macro wait_byte_ready
+    bvc *
+    clv
+.endmacro
+
 .endif
