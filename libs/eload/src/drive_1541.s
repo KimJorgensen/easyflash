@@ -331,6 +331,14 @@ drv_1541_move_head_direct:
         jsr activate_soe        ; deactivated by jsr $fa2e
         rts
 
+.export drv_1541_bump
+drv_1541_bump:
+        lda $1c00               ; init stepper position 0
+        and #$fc
+        sta $1c00
+        lda #256 - 88           ; must be dividable by 4
+        jmp drv_1541_move_head_direct
+
 .if 0
 blink:
         lda $1c00

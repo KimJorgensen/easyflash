@@ -34,7 +34,7 @@
 .import drv_1541_send
 .import drv_1541_wait_sync
 .import drv_1541_move_head
-.import drv_1541_move_head_direct
+.import drv_1541_bump
 .import drv_1541_search_header
 .import drv_1541_create_gcr_header
 
@@ -172,11 +172,10 @@ format_disk:
         sta iddrv0 + 1
 
         ; switch on motor, set bitrate for track 1, bump
-        lda #1
+        lda #1                  ; move this to bump function?
         sta current_track       ; we'll be on track 1
         jsr drv_1541_prepare_read
-        lda #256 - 90           ; 90 / 2 = 45 tracks
-        jsr drv_1541_move_head_direct
+        jsr drv_1541_bump
 
         jsr write_gap_track     ; Write a track full of $55
         jsr write_sync          ; and sync
