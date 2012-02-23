@@ -9,6 +9,10 @@
 
 #include "usbtool.h"
 
+/* buffers used in this module */
+static uint8_t options[4];
+static uint8_t status[3];
+
 
 #define DISK_STATUS_MAGIC            0x52
 
@@ -87,7 +91,11 @@ void write_disk_d64(void)
     puts("\nd64 writer started");
     ef3usb_send_str("load");
 
-    if (init_eload(8) == 0)
+    ef3usb_receive_data(options, sizeof(options));
+    printf("Options: %02x %02x %02x %02x\n",
+            options[0], options[1], options[2], options[3]);
+
+    if (init_eload(options[0]) == 0)
     {
         ef3usb_fclose();
         puts("exit");
@@ -98,8 +106,21 @@ void write_disk_d64(void)
     eload_prepare_drive();
     puts("ok");
 
-    /* Send initial "OK" */
-    send_status(DISK_STATUS_OK, 0, 0);
+    if (options[1]) /* Number of tracks to be formatted */
+    {
+        eload_format(options[1], (options[2] | options[3] << 8));
+        puts("formatting... ");
+        eload_recv_status(status);
+        printf("result: %d, %d\n", status[0], status[1] | (status[2] << 8));
+
+        /* Send status and bytes per track */
+        send_status(status[0], status[1], status[2]);
+    }
+    else
+    {
+        /* Send initial "OK" */
+        send_status(DISK_STATUS_OK, 0, 0);
+    }
 
     // disable VIC-II DMA
     VIC.ctrl1 &= 0xef;
@@ -120,9 +141,9 @@ void write_disk_d64(void)
         /* Send status for last sector written, if any */
         if (!b_first_sector)
         {
-            rv = eload_recv_status();
-            send_status(rv, prev_ts.track, prev_ts.sector);
-            if (rv != DISK_STATUS_OK)
+            eload_recv_status(status);
+            send_status(status[0], prev_ts.track, prev_ts.sector);
+            if (status[0] != DISK_STATUS_OK)
                 break;
         }
         b_first_sector = 0;

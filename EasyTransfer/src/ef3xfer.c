@@ -34,7 +34,6 @@
 
 static struct ftdi_context m_ftdic;
 
-static int do_handshake(const char* p_str_type);
 static void send_command(const char* p_str_request);
 static void receive_response(unsigned char* p_resp,
                              int timeout_secs);
@@ -58,7 +57,8 @@ void ef3xfer_set_callbacks(
 }
 
 /*****************************************************************************/
-void ef3xfer_transfer(const char* p_filename, const char* p_str_type)
+void ef3xfer_transfer(const char* p_filename,
+                      const char* p_str_type)
 {
     FILE*         fp;
     uint16_t      crc;
@@ -81,27 +81,16 @@ void ef3xfer_transfer(const char* p_filename, const char* p_str_type)
         return;
     }
 
-    if (!do_handshake(p_str_type))
+    if (!ef3xfer_do_handshake(p_str_type))
     {
         fclose(fp);
         return;
     }
 
-    if (strcmp(p_str_type, "D64") == 0)
+    if (!send_file(fp))
     {
-        if (!ef3xfer_d64_write(fp))
-        {
-            fclose(fp);
-            return;
-        }
-    }
-    else
-    {
-        if (!send_file(fp))
-        {
-            fclose(fp);
-            return;
-        }
+        fclose(fp);
+        return;
     }
 
     fclose(fp);
@@ -248,7 +237,7 @@ int ef3xfer_write_to_ftdi(const void* p_buffer, int size)
 /**
  *
  */
-static int do_handshake(const char* p_str_type)
+int ef3xfer_do_handshake(const char* p_str_type)
 {
     int waiting;
     char          str_command[20];
