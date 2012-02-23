@@ -27,7 +27,6 @@
 .include "drive_1541_inc.s"
 
 .import drv_1541_prepare_read
-.import drv_1541_set_ts_backup
 .import drv_1541_restore_orig_job
 .import drv_1541_exec_this_job
 .import drv_1541_recv_to_buffer
@@ -36,8 +35,12 @@
 .import drv_1541_wait_sync
 .import drv_1541_move_head
 .import drv_1541_move_head_direct
-.import drv_1541_update_disk_info
+.import drv_1541_search_header
 .import drv_1541_create_gcr_header
+
+; number of used bytes on track 1 for all sectors incl.
+; sync, header, header gap, sync, data block
+track_1_net_bytes = 21 * (5 + 10 + 9 + 5 + 325)
 
 .export drive_code_1541_write
 drive_code_1541_write  = *
@@ -85,13 +88,13 @@ send_status_and_loop:
 ; =============================================================================
 ;
 ; Write a GCR sector to disk. Returns clc if successful, sec if error
-; T/S have been set using drv_1541_set_ts_backup
 ;
 ; =============================================================================
 write_sector:
-        ldx buffer + 1
+        lda buffer + 1
+        sta job_track_backup
         lda buffer + 2
-        jsr drv_1541_set_ts_backup
+        sta job_sector_backup
 
         ; receive 69 + 256 bytes of GCR encodec track
         ldy #gcr_overflow_size
@@ -117,7 +120,7 @@ write_sector:
         and #$df                ; %111x => %110x
         sta $1c0c               ; write mode
 
-        ; todo: gap too large?!
+        ; todo: gap too large?
         jsr write_sync
 
         ldy #$bb
@@ -175,7 +178,7 @@ format_disk:
         lda #256 - 90           ; 90 / 2 = 45 tracks
         jsr drv_1541_move_head_direct
 
-        jsr $fe0e               ; Write $55 10240 times
+        jsr write_gap_track     ; Write a track full of $55
         jsr write_sync          ; and sync
         jsr $fe00               ; head to read mode
 
@@ -194,18 +197,52 @@ format_disk:
         bmi @count              ;  3   no => wait and count
         clv                     ; clear byte ready (V)
 
-        ; now X/Y contain the number of bytes on this track
-        sty status
+        sty status              ; YX = number of bytes on this track
         stx status + 1
 
+        ; subtract the number of needed bytes from track length
+        tya
+        sec
+        sbc #<track_1_net_bytes
+        tay
+        txa
+        sbc #>track_1_net_bytes
+        tax
+        tya                     ; AX = all inter sector gap bytes on track 1
+
+        ; divide the number of remaining bytes by number of sectors of track 1
+        ldy #0
+@divide:
+        sec
+        sbc sect_per_trk
+        bcs :+
+        dex
+        bmi @divide_end
+:
+        iny                     ; Y = quotient = gap per sector for track 1..17
+        jmp @divide
+@divide_end:
+        sty gcr_overflow_buff + 3   ; gap for speed zone 3
+        iny
+        sty gcr_overflow_buff       ; gap for speed zone 0
+        tya
+        clc
+        adc #3
+        sta gcr_overflow_buff + 1   ; gap for speed zone 1
+        adc #5
+        sta gcr_overflow_buff + 2   ; gap for speed zone 2
+
         lda #1
-        sta job_track           ; start at track 1
+        sta job_track               ; start at track 1
 format_next_track:
         jsr drv_1541_move_head
         ; === prepare up to 21 GCR encoded sectors in our buffer ===
         jsr drv_1541_prepare_read
+        ldx speed_zone
+        lda gcr_overflow_buff, x    ; read inter sector gap length
+        sta format_gap_len
 
-        lda #0                  ; start at T/S 1,0
+        lda #0                  ; start at sector 0
         sta job_sector
         sta @header_ptr
         lda #$07
@@ -228,16 +265,14 @@ format_next_track:
         bne @next_header
 
         ; === write the track ===
-        jsr $fe0e               ; Write $55 10240 times
         lda sect_per_trk        ; number of sectors
         sta job_sector          ; Not the actual sector number but sector count
         ldy #0
         sty zptmp               ; offset into header buffer
-        dey
-        clv
-        wait_byte_ready
+        jsr start_write_gap_256 ; write 256 * 0x55, will be the last gap later
+
 write_next_sector:
-        ; y is #$ff here
+		dey				        ; Y = #$ff
         sty $1c01               ; write $ff = sync
         ldy #5                  ; header sync (5 * $ff)
 :
@@ -292,17 +327,18 @@ write_next_sector:
         bne @next2
 
         dec job_sector
-        beq @end                ; don't write the last gap to make sure that
+        beq skip_gap            ; don't write the last gap now to make sure
                                 ; that sector 0 is not damaged
         lda #$55
         sta $1c01
-        ldy #5                  ; 6 * 0x55 inter sector gap
+format_gap_len = * + 1
+        ldy #5                  ; n * 0x55 inter sector gap
 :
         wait_byte_ready
         dey
-        bpl :-                  ; Y is #$ff after this loop
-        bmi write_next_sector   ; always
-@end:
+        bne :-                  ; Y is #0 after this loop
+        beq write_next_sector   ; always
+skip_gap:
         jsr $fe00               ; head to read mode
 
         inc job_track
@@ -315,59 +351,6 @@ end_track = * + 1
         jsr $f98f               ; prepare motor off (doesn't change C)
         lda #ELOAD_OK
         jmp send_status_and_loop
-
-; =============================================================================
-;
-; ; wait for the header for job_track/job_sector
-;
-; parameters:
-;       -
-;
-; return:
-;
-; changes:
-;
-; =============================================================================
-.export drv_1541_search_header
-drv_1541_search_header:
-        jsr drv_1541_move_head
-        lda #2                  ; retry counter for track correction
-        sta retry_sh_cnt
-@retry_new_track:
-        jsr drv_1541_prepare_read
-        jsr drv_1541_create_gcr_header
-
-        lda #90                 ; retry counter for current track
-        sta retry_sec_cnt
-@retry:
-        jsr drv_1541_wait_sync
-        bcs @no_sync
-@cmp_header:
-        bvc @cmp_header         ; wait for byte ready
-        lda $1c01               ; read data from head
-        clv                     ; clear byte ready (V)
-        cmp gcr_tmp, y          ; same header?
-        bne @wrong_header
-        iny
-        cpy #8
-        bne @cmp_header
-        clc                     ; mark for success
-@ret:
-        rts
-
-@wrong_header:
-        dec retry_sec_cnt
-        bpl @retry
-        lda #ELOAD_SECTOR_NOT_FOUND
-@no_sync:
-        ; appearently we are on the wrong track or on no track at all
-        dec retry_sh_cnt        ; retries left?
-        bmi @ret                ; error code in A/C already
-        jsr drv_1541_update_disk_info
-        bcs @ret                ; if no readable header was found, bail out
-                                ; error code in A/C already
-        jsr drv_1541_move_head
-        jmp @retry_new_track
 
 
 
@@ -383,7 +366,65 @@ write_data:
         bne :-
         rts
 
+; =============================================================================
+;
+; Write 255 * $55 (gap)
+; Do not use this in timing critical situation at the beginning if the gap
+; as it switches on write mode first etc. there's a short delay at the
+; beginning. However, it's fast at the end, just RTS. So you can continue with
+; writing sync directly.
+;
+; returns:
+;       Y = 0
+;
+; changes:
+;       A
+;
+; =============================================================================
+start_write_gap_256:
+        jsr start_write
+write_gap_256:
+        lda #$55
+        sta $1c01
+        ldy #0
+:
+        wait_byte_ready
+        dey
+        bne :-                  ; Y = 0 after this loop
+        rts
 
+start_write:
+        lda #$ff
+        sta $1c03               ; data port output
+        lda $1c0c
+        and #$df                ; %111x => %110x
+        sta $1c0c               ; write mode
+        rts
+
+; =============================================================================
+;
+; Write 256 * $55 (gap)
+; Do not use this in timing critical situation at the beginning if the gap
+; as it switches on write mode first etc. there's a short delay at the
+; beginning. However, it's fast at the end, just RTS. So you can continue with
+; writing sync directly.
+;
+; returns:
+;       Y = 0
+;       X = 255
+;
+; changes:
+;       A
+;
+; =============================================================================
+write_gap_track:
+        jsr start_write
+        ldx #31                             ; 32 * 256
+:
+        jsr write_gap_256
+        dex
+        bpl :-
+        rts
 
 gcr_snippet_1:
         .byte $4a, $29, $a5, $d4, $55       ; backwards, contains the checksum
