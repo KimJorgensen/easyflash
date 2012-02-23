@@ -58,12 +58,10 @@ drv_1541_main:
 ;        jmp drv_wait_rx
 
 .export drv_1541_recv_to_buffer
-drv_1541_recv_to_buffer:
-        jmp recv_to_buffer
+drv_1541_recv_to_buffer = recv_to_buffer
 
 .export drv_1541_recv
-drv_1541_recv:
-        jmp recv
+drv_1541_recv = recv
 
 .export drv_1541_send
 drv_1541_send:
@@ -218,32 +216,6 @@ activate_soe:
 
 ; =============================================================================
 ;
-; =============================================================================
-.export drv_1541_update_disk_info
-drv_1541_update_disk_info:
-        lda #1
-        sta retry_udi_cnt
-@retry:
-        ldy #$b0                ; seek sector job code
-        lda #1
-        tax                     ; T/S 1/1
-        jsr drv_1541_exec_this_job
-        bcc @ret
-
-        dec retry_udi_cnt
-        bmi @ret                ; no retry - no need to bump
-
-        lda #1
-        tax                     ; T/S 1/1
-        ldy #$c0                ; bump job code
-        jsr drv_1541_exec_this_job
-        bcc @retry              ; shouldn't fail
-@ret:
-        jmp drv_1541_restore_orig_job
-
-
-; =============================================================================
-;
 ; Create a GCR encoded header at gcr_tmp. Use following input:
 ; header_id, job_track, job_sector.
 ;
@@ -263,6 +235,64 @@ drv_1541_create_gcr_header:
         eor header_track
         sta header_parity
         jmp $f934               ; header to GCR
+
+; =============================================================================
+;
+; ; wait for the header for job_track/job_sector
+;
+; parameters:
+;       -
+;
+; return:
+;
+; changes:
+;
+; =============================================================================
+.export drv_1541_search_header
+drv_1541_search_header:
+        lda #2                  ; retry counter for track correction
+        sta retry_sh_cnt
+@retry_new_track:
+        jsr drv_1541_move_head
+        jsr drv_1541_prepare_read
+        jsr drv_1541_create_gcr_header
+
+        lda #90                 ; retry counter for current track
+        sta retry_sec_cnt
+@retry:
+        jsr drv_1541_wait_sync
+        bcs @no_sync
+@cmp_header:
+        bvc @cmp_header         ; wait for byte ready
+        lda $1c01               ; read data from head
+        clv                     ; clear byte ready (V)
+        cmp gcr_tmp, y          ; same header?
+        bne @wrong_header
+        iny
+        cpy #8
+        bne @cmp_header
+        clc                     ; mark for success
+@ret:
+        rts
+
+@wrong_header:
+        dec retry_sec_cnt
+        bpl @retry
+        lda #ELOAD_SECTOR_NOT_FOUND
+@no_sync:
+        ; appearently we are on the wrong track or on no track at all
+        ; let the DOS fix it
+        ldy #$b0                ; seek sector job code
+        ldx job_track
+        lda job_sector
+        jsr drv_1541_exec_this_job
+        bcs @ret
+
+        dec retry_sh_cnt        ; retries left?
+        bmi @ret                ; error code in A/C already
+
+        jsr drv_1541_restore_orig_job
+        jmp @retry_new_track
 
 ; =============================================================================
 ;
@@ -360,20 +390,6 @@ exec_current_job:
 
 ; =============================================================================
 ;
-; Set Y/X/A to backup of job code, track and sector
-;
-; =============================================================================
-.export drv_1541_set_job_ts_backup
-.export drv_1541_set_ts_backup
-drv_1541_set_job_ts_backup:
-        sty job_code_backup
-drv_1541_set_ts_backup:
-        stx job_track_backup
-        sta job_sector_backup
-        rts
-
-; =============================================================================
-;
 ; Copy job code, track and sector from backup to current job.
 ;
 ; changes: A
@@ -391,6 +407,6 @@ drv_1541_restore_orig_job:
 
 .export drive_code_size_1541: abs
 drive_code_size_1541  = * - drive_code_1541_start
-.assert drive_code_size_1541 <= 512, error, "drive_code_init_size_1541"
+.assert drive_code_size_1541 <= 512, error, "drive_code_size_1541"
 
 .reloc
