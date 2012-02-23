@@ -42,6 +42,8 @@ int main(int argc, char** argv)
     const char* p_str_type = NULL;
     const char* p_filename = NULL;
     int i;
+    int do_format = 0;
+
 
     /* default callback functions for stdout */
     ef3xfer_set_callbacks(log_str_stdout, log_progress_stdout,
@@ -61,6 +63,14 @@ int main(int argc, char** argv)
         if (strcmp(argv[i], "-p") == 0 || strcmp(argv[i], "--prg") == 0)
         {
             p_str_type = "PRG";
+        }
+        if (strcmp(argv[i], "-w") == 0 || strcmp(argv[i], "--write-disk") == 0)
+        {
+            p_str_type = "D64";
+        }
+        if (strcmp(argv[i], "-f") == 0 || strcmp(argv[i], "--format") == 0)
+        {
+            do_format = 1;
         }
         else if (argv[i][0] == '-')
         {
@@ -92,7 +102,14 @@ int main(int argc, char** argv)
         return 1;
     }
 
-    ef3xfer_transfer(p_filename, p_str_type);
+    if (strcmp(p_str_type, "D64") == 0)
+    {
+        ef3xfer_d64_write(p_filename, do_format);
+    }
+    else
+    {
+        ef3xfer_transfer(p_filename, p_str_type);
+    }
 }
 
 
@@ -104,11 +121,14 @@ static void usage(const char* p_str_prg)
     printf("Transfer a file to an EasyFlash 3 over USB.\n\n");
     printf("Usage: %s [options] filename\n", p_str_prg);
     printf("Options:\n"
-           "  -h, --help     print this and exit\n"
-           "  -c  --crt      flash a cartridge image\n"
-           "  -p  --prg      start a program file\n"
+           "  -h, --help        print this and exit\n"
+           "  -c  --crt         flash a cartridge image\n"
+           "  -p  --prg         start a program file\n"
+           "  -w  --write-disk  write a disk image (d64)\n"
            "\nIf no option is given, the program type is guessed from "
            "the file name suffix.\n"
+           "\nOptions to be used with --write-disk:\n"
+           "  -f  --format      format disk before write\n"
            "\n"
           );
 }
