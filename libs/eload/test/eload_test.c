@@ -67,6 +67,15 @@ static uint8_t get_drive_number(void)
 }
 
 
+static void wait_key(void)
+{
+    while (kbhit())
+        cgetc();
+    cputs("\r\n\r\npress a key");
+    cgetc();
+}
+
+
 static void test_write(void)
 {
     uint8_t drv;
@@ -83,11 +92,7 @@ static void test_write(void)
     }
     else
         cputs("error");
-
-    while (kbhit())
-        cgetc();
-    cputs("\r\n\r\npress a key");
-    cgetc();
+    wait_key();
 }
 
 
@@ -237,7 +242,6 @@ static void test_format(void)
 {
     static uint8_t status[3];
     uint8_t drv;
-    unsigned i;
 
     drv = get_drive_number();
 
@@ -249,17 +253,14 @@ static void test_format(void)
     eload_prepare_drive();
 
     clrscr();
-    for (i = 0; i < 5; i++)
-    {
-        cputs("formatting...");
-        eload_format(40, 0x1234);
-        eload_recv_status(status);
-        cprintf("result: %d, %d\n\r", status[0],
-                status[1] | (status[2] << 8));
-    }
+    cputs("formatting...");
+    eload_format(40, 0x1234);
+    eload_recv_status(status);
+    cprintf("result: %d, %d\n\r", status[0],
+            status[1] | (status[2] << 8));
 
     eload_close();
-    for(;;);
+    wait_key();
 }
 
 
