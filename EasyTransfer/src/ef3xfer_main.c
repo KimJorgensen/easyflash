@@ -56,19 +56,19 @@ int main(int argc, char** argv)
             usage(argv[0]);
             return 0;
         }
-        if (strcmp(argv[i], "-c") == 0 || strcmp(argv[i], "--crt") == 0)
+        else if (strcmp(argv[i], "-c") == 0 || strcmp(argv[i], "--crt") == 0)
         {
             p_str_type = "CRT";
         }
-        if (strcmp(argv[i], "-p") == 0 || strcmp(argv[i], "--prg") == 0)
+        else if (strcmp(argv[i], "-p") == 0 || strcmp(argv[i], "--prg") == 0)
         {
             p_str_type = "PRG";
         }
-        if (strcmp(argv[i], "-w") == 0 || strcmp(argv[i], "--write-disk") == 0)
+        else if (strcmp(argv[i], "-w") == 0 || strcmp(argv[i], "--write-disk") == 0)
         {
             p_str_type = "D64";
         }
-        if (strcmp(argv[i], "-f") == 0 || strcmp(argv[i], "--format") == 0)
+        else if (strcmp(argv[i], "-f") == 0 || strcmp(argv[i], "--format") == 0)
         {
             do_format = 1;
         }
