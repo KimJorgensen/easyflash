@@ -56,9 +56,9 @@ begin
     -- This process decides combinatorically which data has to be put to
     -- data out.
     --
-    -- ID register:      0xa1
-    -- Check this register several times for 0xa1 to make sure USB is actually
-    -- there. Not bullet-proof but better than nothing.
+    -- Version register: $a1 = 10100001 = old versions
+    --                   AA BBB CCC
+    --                   01 000 000 = 1.0.0 = $40
     --
     -- Control register: 7   6   5   4   3   2   1   0
     --                   RXR TXR 0   0   0   0   0   0
@@ -75,7 +75,7 @@ begin
                 case addr(7 downto 0) is
                     when x"08" =>
                         -- $de08 - read ID register
-                        data_out <= x"a1";
+                        data_out <= x"40";
 
                     when x"09" =>
                         -- $de09 - read control register

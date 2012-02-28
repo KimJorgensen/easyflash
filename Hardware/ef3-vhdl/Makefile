@@ -16,6 +16,7 @@ src 		+= $(src_dir)/exp_bus_ctrl.vhdl
 src 		+= $(src_dir)/reset_generator.vhdl
 src 		+= $(src_dir)/freezer.vhdl
 src 		+= $(src_dir)/cart_easyflash.vhdl
+src 		+= $(src_dir)/cart_io2ram.vhdl
 src 		+= $(src_dir)/cart_kernal.vhdl
 src 		+= $(src_dir)/cart_ar.vhdl
 src 		+= $(src_dir)/cart_ss5.vhdl
