@@ -33,8 +33,6 @@ entity cart_easyflash is
         n_reset:        in  std_logic;
         enable:         in  std_logic;
         phi2:           in  std_logic;
-        n_io1:          in  std_logic;
-        n_io2:          in  std_logic;
         n_roml:         in  std_logic;
         n_romh:         in  std_logic;
         n_wr:           in  std_logic;
@@ -48,12 +46,9 @@ entity cart_easyflash is
         slot:           out std_logic_vector(2 downto 0);
         bank_hi:        out std_logic_vector(2 downto 0);
         flash_addr:     out std_logic_vector(16 downto 0);
-        ram_addr:       out std_logic_vector(14 downto 0);
         n_game:         out std_logic;
         n_exrom:        out std_logic;
         start_reset:    out std_logic;
-        ram_read:       out std_logic;
-        ram_write:      out std_logic;
         flash_read:     out std_logic;
         flash_write:    out std_logic;
         data_out:       out std_logic_vector(7 downto 0);
@@ -65,8 +60,7 @@ end cart_easyflash;
 -- Memory mapping:
 -- Bit                        98765432109876543210
 --                            1111111111  .
--- Bits needed for RAM/Flash:        .    .
---   RAM (32 ki * 8)               *************** (14..0)
+-- Bits needed for Flash:            .    .
 --   Flash (8 Mi * 8)         ******************** (19..0)
 -- Used in EF mode:
 --   mem_addr(19 downto 15)   HHHLB                (19..15)
@@ -126,11 +120,7 @@ begin
     ---------------------------------------------------------------------------
     -- Combinatorically create the next memory address.
     ---------------------------------------------------------------------------
-    create_mem_addr: process(n_io2, n_roml, bank_lo, addr)
-    begin
-        flash_addr <= n_roml & bank_lo & addr(12 downto 0);
-        ram_addr   <= "0000000" & addr(7 downto 0);
-    end process;
+    flash_addr <= n_roml & bank_lo & addr(12 downto 0);
 
     ---------------------------------------------------------------------------
     --
@@ -238,22 +228,13 @@ begin
     -- We need a special case with phi2 = '0' for C128 which doesn't set R/W
     -- correctly for Phi1 cycles.
     ---------------------------------------------------------------------------
-    rw_mem: process(enable, n_io2, n_roml, n_romh, n_wr, phi2, ctrl_no_vicii,
-                    bus_ready)
+    rw_mem: process(enable, n_roml, n_romh, n_wr, phi2, bus_ready)
     begin
         flash_write <= '0';
         flash_read <= '0';
-        ram_write <= '0';
-        ram_read <= '0';
         if enable = '1' then
             if bus_ready = '1' then
-                if n_io2 = '0' then
-                    if n_wr = '1' then
-                        ram_read <= '1';
-                    else
-                        ram_write <= '1';
-                    end if;
-                elsif n_roml = '0' or n_romh = '0' then
+                if n_roml = '0' or n_romh = '0' then
                     if phi2 = '0' then
                         -- VIC-II
                         flash_read <= '1';

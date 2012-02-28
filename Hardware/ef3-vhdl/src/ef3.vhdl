@@ -76,6 +76,7 @@ architecture ef3_arc of ef3 is
 
     -- This is enabled for several modes
     signal enable_usb:          std_logic;
+    signal enable_io2ram:       std_logic;
 
     signal buttons_enabled:     std_logic := '0';
 
@@ -136,12 +137,12 @@ architecture ef3_arc of ef3 is
     signal flash_write:         std_logic;
 
     signal ef_flash_addr:       std_logic_vector(16 downto 0);
-    signal ef_ram_addr:         std_logic_vector(14 downto 0);
+    signal io2ram_ram_addr:        std_logic_vector(14 downto 0);
     signal ef_n_game:           std_logic;
     signal ef_n_exrom:          std_logic;
     signal ef_start_reset:      std_logic;
-    signal ef_ram_read:         std_logic;
-    signal ef_ram_write:        std_logic;
+    signal io2_ram_read:        std_logic;
+    signal io2_ram_write:       std_logic;
     signal ef_flash_read:       std_logic;
     signal ef_flash_write:      std_logic;
     signal ef_data_out:         std_logic_vector(7 downto 0);
@@ -238,8 +239,6 @@ architecture ef3_arc of ef3 is
             n_reset:            in  std_logic;
             enable:             in  std_logic;
             phi2:               in  std_logic;
-            n_io1:              in  std_logic;
-            n_io2:              in  std_logic;
             n_roml:             in  std_logic;
             n_romh:             in  std_logic;
             n_wr:               in  std_logic;
@@ -253,17 +252,27 @@ architecture ef3_arc of ef3 is
             slot:               out std_logic_vector(2 downto 0);
             bank_hi:            out std_logic_vector(2 downto 0);
             flash_addr:         out std_logic_vector(16 downto 0);
-            ram_addr:           out std_logic_vector(14 downto 0);
             n_game:             out std_logic;
             n_exrom:            out std_logic;
             start_reset:        out std_logic;
-            ram_read:           out std_logic;
-            ram_write:          out std_logic;
             flash_read:         out std_logic;
             flash_write:        out std_logic;
             data_out:           out std_logic_vector(7 downto 0);
             data_out_valid:     out std_logic;
             led:                out std_logic
+        );
+    end component;
+
+    component cart_io2ram is
+        port (
+            enable:         in  std_logic;
+            n_io2:          in  std_logic;
+            n_wr:           in  std_logic;
+            bus_ready:      in  std_logic;
+            addr:           in  std_logic_vector(15 downto 0);
+            ram_addr:       out std_logic_vector(14 downto 0);
+            ram_read:       out std_logic;
+            ram_write:      out std_logic
         );
     end component;
 
@@ -427,8 +436,6 @@ begin
         n_reset                 => n_reset,
         enable                  => enable_ef,
         phi2                    => phi2,
-        n_io1                   => n_io1,
-        n_io2                   => n_io2,
         n_roml                  => n_roml,
         n_romh                  => n_romh,
         n_wr                    => n_wr,
@@ -442,17 +449,26 @@ begin
         slot                    => slot,
         bank_hi                 => bank_hi,
         flash_addr              => ef_flash_addr,
-        ram_addr                => ef_ram_addr,
         n_game                  => ef_n_game,
         n_exrom                 => ef_n_exrom,
         start_reset             => ef_start_reset,
-        ram_read                => ef_ram_read,
-        ram_write               => ef_ram_write,
         flash_read              => ef_flash_read,
         flash_write             => ef_flash_write,
         data_out                => ef_data_out,
         data_out_valid          => ef_data_out_valid,
         led                     => ef_led
+    );
+
+    u_cart_io2ram: cart_io2ram port map
+    (
+        enable                  => enable_io2ram,
+        n_io2                   => n_io2,
+        n_wr                    => n_wr,
+        bus_ready               => bus_ready,
+        addr                    => addr,
+        ram_addr                => io2ram_ram_addr,
+        ram_write               => io2_ram_write,
+        ram_read                => io2_ram_read
     );
 
     u_cart_kernal: cart_kernal port map
@@ -564,7 +580,8 @@ begin
         data_out_valid          => usb_data_out_valid
     );
 
-    enable_usb <= enable_ef or enable_kernal;
+    enable_usb      <= enable_ef or enable_kernal;
+    enable_io2ram   <= enable_ef or enable_kernal;
 
     button_menu       <= buttons_enabled and button_a;
     button_crt_reset  <= buttons_enabled and button_b;
@@ -689,8 +706,8 @@ begin
     ---------------------------------------------------------------------------
     -- Merge the output of all cartridges
     ---------------------------------------------------------------------------
-    ram_read        <= ef_ram_read or ar_ram_read or ss5_ram_read;
-    ram_write       <= ef_ram_write or ar_ram_write or ss5_ram_write;
+    ram_read        <= io2_ram_read or ar_ram_read or ss5_ram_read;
+    ram_write       <= io2_ram_write or ar_ram_write or ss5_ram_write;
     flash_read      <= ef_flash_read or kernal_flash_read or ar_flash_read or ss5_flash_read;
     flash_write     <= ef_flash_write;
     n_exrom_out     <= ef_n_exrom and kernal_n_exrom and ar_n_exrom and ss5_n_exrom;
@@ -719,7 +736,8 @@ begin
     ---------------------------------------------------------------------------
     --
     ---------------------------------------------------------------------------
-    set_mem_addr: process(enable_ef, ef_flash_addr, ef_ram_addr,
+    set_mem_addr: process(enable_ef, ef_flash_addr,
+                          enable_io2ram, io2ram_ram_addr,
                           enable_kernal, kernal_flash_addr,
                           enable_ar, ar_flash_addr, ar_ram_addr,
                           enable_ss5, ss5_flash_addr, ss5_ram_addr,
@@ -733,24 +751,22 @@ begin
         -- Take lower address bits from C64 directly
         mem_addr(12 downto 0) <= addr(12 downto 0);
 
-        if enable_kernal = '1' then
-            mem_addr(16 downto 13) <= kernal_flash_addr(16 downto 13);
-        elsif enable_ef = '1' then
-            if n_ram_cs_i = '0' then
-                mem_addr(14 downto 13) <= ef_ram_addr(14 downto 13);
-            else
-                mem_addr(16 downto 13) <= ef_flash_addr(16 downto 13);
-            end if;
-        elsif enable_ar = '1' then
-            if n_ram_cs_i = '0' then
+        if n_ram_cs_i = '0' then
+            if enable_io2ram = '1' then
+                mem_addr(14 downto 13) <= io2ram_ram_addr(14 downto 13);
+            elsif enable_ar = '1' then
                 mem_addr(14 downto 13) <= ar_ram_addr(14 downto 13);
-            else
-                mem_addr(16 downto 13) <= ar_flash_addr(16 downto 13);
-            end if;
-        elsif enable_ss5 = '1' then
-            if n_ram_cs_i = '0' then
+            elsif enable_ss5 = '1' then
                 mem_addr(14 downto 13) <= ss5_ram_addr(14 downto 13);
-            else
+            end if;
+        else
+            if enable_kernal = '1' then
+                mem_addr(16 downto 13) <= kernal_flash_addr(16 downto 13);
+            elsif enable_ef = '1' then
+                mem_addr(16 downto 13) <= ef_flash_addr(16 downto 13);
+            elsif enable_ar = '1' then
+                mem_addr(16 downto 13) <= ar_flash_addr(16 downto 13);
+            elsif enable_ss5 = '1' then
                 mem_addr(16 downto 13) <= ss5_flash_addr(16 downto 13);
             end if;
         end if;
@@ -783,7 +799,7 @@ begin
             end if;
 
             if ram_read = '1' then
-                -- start ram read, leave until cycle_start
+                -- start ram read, leave active until next cycle_start
                 n_ram_cs_i  <= '0';
                 n_flash_cs  <= '1';
                 n_mem_oe_i  <= '0';
@@ -799,7 +815,7 @@ begin
                 write_scheduled := 3;
             end if;
             if flash_read = '1' then
-                -- start flash read, leave until cycle_start
+                -- start flash read, leave active until next cycle_start
                 n_ram_cs_i  <= '1';
                 n_flash_cs  <= '0';
                 n_mem_oe_i  <= '0';

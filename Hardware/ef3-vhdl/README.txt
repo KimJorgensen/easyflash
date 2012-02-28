@@ -26,7 +26,12 @@ License
 Changes
 =======
 
-Version 0.9.2 - 09.01.2011
+Version 1.0.0 - xx.xx.xxxx
+
+- USB and I/O2 RAM are also active in KERNAL mode
+- CPLD Version register added ($de08)
+
+Version 0.9.2 - 09.01.2012
 
 - LED implemented
   - In EasyFlash mode: LED controlled by software
