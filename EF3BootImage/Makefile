@@ -21,9 +21,9 @@
 # .     (64k reserved)  |      (64 k)
 # 17                    |
 # ==========================================
-# 18                    |   Action Replay
-# .     Reserved        |      Slot 1
-# .                     |      (64 k)
+# 18    EF3 KERNAL      |   Action Replay
+# .                     |      Slot 1
+# .     Reserved        |      (64 k)
 # 1f                    |
 # ==========================================
 # 20
@@ -70,12 +70,15 @@ $(dirname).zip: ef3-init.crt ef3-menu.crt CHANGES
 ###############################################################################
 # These files are in "menu" image and "initial" image
 
-menu_image  := trampoline.bin       0x00 0x1F00 H
-menu_image  += efmenu/efmenu.bin    0x08 0x0000 LH
-menu_image  += $(easyprog)          0x09 0x0000 LH
-menu_image  += usbtool/usbtool.bin  0x0b 0x0000 LH
+menu_image  := trampoline.bin       		0x00 0x1F00 H
+menu_image  += efmenu/efmenu.bin    		0x08 0x0000 LH
+menu_image  += $(easyprog)          		0x09 0x0000 LH
+menu_image  += usbtool/usbtool.bin  		0x0b 0x0000 LH
+menu_image  += ef3kernal/out/ef3kernal.bin  0x18 0x0000 L
+
 #menu_image += waterdrop.raw        0x0f 0x0000
 #menu_image += bing.raw        0x0f 0x0000
+
 
 menu_deps   := trampoline.bin
 menu_deps   += efmenu/efmenu.bin
@@ -128,6 +131,11 @@ efmenu/efmenu.bin: always
 
 .PHONY: always
 always:
+
+###############################################################################
+#
+ef3kernal/out/ef3kernal.bin: always
+	$(MAKE) -C ef3kernal release=$(release)
 
 ###############################################################################
 #
