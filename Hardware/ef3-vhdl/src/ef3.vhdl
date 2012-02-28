@@ -74,6 +74,9 @@ architecture ef3_arc of ef3 is
     signal enable_ar:           std_logic;
     signal enable_ss5:          std_logic;
 
+    -- This is enabled for several modes
+    signal enable_usb:          std_logic;
+
     signal buttons_enabled:     std_logic := '0';
 
     -- This is Button A filtered with buttons_enabled
@@ -546,7 +549,7 @@ begin
     port map(
         clk                     => clk,
         n_reset                 => n_reset,
-        enable                  => enable_ef, -- currently only in EF mode
+        enable                  => enable_usb,
         n_io1                   => n_io1,
         n_wr                    => n_wr,
         bus_ready               => bus_ready,
@@ -560,6 +563,8 @@ begin
         data_out                => usb_data_out,
         data_out_valid          => usb_data_out_valid
     );
+
+    enable_usb <= enable_ef or enable_kernal;
 
     button_menu       <= buttons_enabled and button_a;
     button_crt_reset  <= buttons_enabled and button_b;
