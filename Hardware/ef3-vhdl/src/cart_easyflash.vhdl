@@ -35,12 +35,12 @@ entity cart_easyflash is
         phi2:           in  std_logic;
         n_roml:         in  std_logic;
         n_romh:         in  std_logic;
-        n_wr:           in  std_logic;
-        bus_ready:      in  std_logic;
+        async_read:     in  std_logic;
+        sync_write:     in  std_logic;
         cycle_start:    in  std_logic;
         addr:           in  std_logic_vector(15 downto 0);
         data:           in  std_logic_vector(7 downto 0);
-        io1_addr_0x_rdy:   in  std_logic;
+        io1_addr_0x:    in  std_logic;
         button_crt_reset:  in std_logic;
         button_special_fn: in std_logic;
         slot:           out std_logic_vector(2 downto 0);
@@ -159,8 +159,8 @@ begin
             end if;
         elsif rising_edge(clk) then
             if enable = '1' then
-                if io1_addr_0x_rdy = '1' then
-                    if n_wr = '0' then
+                if io1_addr_0x = '1' then
+                    if sync_write = '1' then
                         -- write control register
                         case addr(3 downto 0) is
                             when x"0" =>
@@ -185,14 +185,14 @@ begin
 
                             when others => null;
                         end case;
-                    else
+                    elsif async_read = '1' then -- todo: that's not really async yet
                         -- read control register
                         if addr(3 downto 0) = x"1" then
                             -- $de01
                             data_out_valid_i <= '1';
                         end if;
                     end if;
-                end if; -- bus_ready...
+                end if;
                 if cycle_start = '1' then
                     data_out_valid_i <= '0';
                 end if;
@@ -228,25 +228,17 @@ begin
     -- We need a special case with phi2 = '0' for C128 which doesn't set R/W
     -- correctly for Phi1 cycles.
     ---------------------------------------------------------------------------
-    rw_mem: process(enable, n_roml, n_romh, n_wr, phi2, bus_ready)
+    rw_mem: process(enable, n_roml, n_romh, async_read, sync_write)
     begin
         flash_write <= '0';
         flash_read <= '0';
         if enable = '1' then
-            if bus_ready = '1' then
-                if n_roml = '0' or n_romh = '0' then
-                    if phi2 = '0' then
-                        -- VIC-II
-                        flash_read <= '1';
-                    else
-                        -- CPU
-                        if n_wr = '1' then
-                            flash_read <= '1';
-                        else
-                            flash_write <= '1';
-                        end if;
-                    end if;
-                end if; -- roml or romh
+            if n_roml = '0' or n_romh = '0' then
+                if async_read = '1' then
+                    flash_read <= '1';
+                elsif sync_write = '1' then
+                    flash_write <= '1';
+                end if;
             end if;
         end if;
     end process;
