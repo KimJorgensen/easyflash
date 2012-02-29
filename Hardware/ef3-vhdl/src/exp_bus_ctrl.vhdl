@@ -29,6 +29,10 @@ entity exp_bus_ctrl is
     port (
         clk:        in  std_logic;
         phi2:       in  std_logic;
+        n_wr:       in  std_logic;
+
+        async_read: out std_logic;
+        sync_write: out std_logic;
 
         -- This combinatorical signal is '1' for one clk cycle at the
         -- beginning of a Phi2 cycle (when Phi2 is low)
@@ -87,12 +91,17 @@ begin
     --
     -- This signals are generated combinatorically, they are to be used on the
     -- next rising edge of clk.
+    --
+    -- One exception is async_read, which is to be used asynchronously. This
+    -- was implemented to enable fast read accesses for C128 2 MHz mode.
     ---------------------------------------------------------------------------
-    bus_states: process(clk_cnt, prev_phi2, phi2_s, phi2)
+    bus_states: process(clk_cnt, prev_phi2, phi2_s, phi2, n_wr)
     begin
         addr_ready  <= '0';
         bus_ready   <= '0';
         hiram_detect_ready <= '0';
+        sync_write  <= '0';
+        async_read  <= '0';
 
         if prev_phi2 /= phi2_s then
             cycle_start_i <= '1';
@@ -100,12 +109,22 @@ begin
             cycle_start_i <= '0';
         end if;
 
+        if phi2 = '0' or n_wr = '1' then
+            async_read <= '1';
+        end if;
+
         if clk_cnt = 3 then
             addr_ready <= '1';
         end if;
+
         if clk_cnt = 5 then
             bus_ready <= '1';
         end if;
+
+        if clk_cnt = 6 and n_wr = '0' then
+            sync_write <= '1';
+        end if;
+
         if clk_cnt = 7 then
             hiram_detect_ready <= '1';
         end if;

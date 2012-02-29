@@ -97,6 +97,8 @@ architecture ef3_arc of ef3 is
     signal n_usb_rd_i:          std_logic;
     signal n_usb_wr:            std_logic;
 
+    signal async_read:          std_logic;
+    signal sync_write:          std_logic;
     signal addr_ready:          std_logic;
     signal bus_ready:           std_logic;
     signal hiram_detect_ready:  std_logic;
@@ -188,15 +190,18 @@ architecture ef3_arc of ef3 is
     signal usb_data_out:        std_logic_vector(7 downto 0);
     signal usb_data_out_valid:  std_logic;
 
-    signal io1_addr_0x_rdy:     std_logic;
+    signal io1_addr_0x:         std_logic;
 
-    --attribute KEEP : string;
-    --attribute KEEP of io1_addr_0x_rdy : signal is "TRUE"; --keep buffer from being optimized out
+    attribute KEEP : string; -- keep buffer from being optimized out
+    attribute KEEP of io1_addr_0x: signal is "TRUE";
 
     component exp_bus_ctrl is
         port (
             clk:                in  std_logic;
             phi2:               in  std_logic;
+            n_wr:               in  std_logic;
+            async_read:         out std_logic;
+            sync_write:         out std_logic;
             phi2_cycle_start:   out std_logic;
             addr_ready:         out std_logic;
             bus_ready:          out std_logic;
@@ -241,12 +246,12 @@ architecture ef3_arc of ef3 is
             phi2:               in  std_logic;
             n_roml:             in  std_logic;
             n_romh:             in  std_logic;
-            n_wr:               in  std_logic;
-            bus_ready:          in  std_logic;
+            async_read:         in  std_logic;
+            sync_write:         in  std_logic;
             cycle_start:        in  std_logic;
             addr:               in  std_logic_vector(15 downto 0);
             data:               in  std_logic_vector(7 downto 0);
-            io1_addr_0x_rdy:    in  std_logic;
+            io1_addr_0x:        in  std_logic;
             button_crt_reset:   in  std_logic;
             button_special_fn:  in  std_logic;
             slot:               out std_logic_vector(2 downto 0);
@@ -267,8 +272,8 @@ architecture ef3_arc of ef3 is
         port (
             enable:         in  std_logic;
             n_io2:          in  std_logic;
-            n_wr:           in  std_logic;
-            bus_ready:      in  std_logic;
+            async_read:     in  std_logic;
+            sync_write:     in  std_logic;
             addr:           in  std_logic_vector(15 downto 0);
             ram_addr:       out std_logic_vector(14 downto 0);
             ram_read:       out std_logic;
@@ -379,7 +384,7 @@ architecture ef3_arc of ef3 is
             bus_ready:          in  std_logic;
             cycle_start:        in  std_logic;
             addr:               in  std_logic_vector(15 downto 0);
-            io1_addr_0x_rdy:    in  std_logic;
+            io1_addr_0x:        in  std_logic;
             n_usb_rxf:          in  std_logic;
             n_usb_txe:          in  std_logic;
             usb_read:           out std_logic;
@@ -397,6 +402,9 @@ begin
     (
         clk                     => clk,
         phi2                    => phi2,
+        n_wr                    => n_wr,
+        async_read              => async_read,
+        sync_write              => sync_write,
         phi2_cycle_start        => phi2_cycle_start,
         addr_ready              => addr_ready,
         bus_ready               => bus_ready,
@@ -438,12 +446,12 @@ begin
         phi2                    => phi2,
         n_roml                  => n_roml,
         n_romh                  => n_romh,
-        n_wr                    => n_wr,
-        bus_ready               => bus_ready,
+        async_read              => async_read,
+        sync_write              => sync_write,
         cycle_start             => cycle_start,
         addr                    => addr,
         data                    => data,
-        io1_addr_0x_rdy         => io1_addr_0x_rdy,
+        io1_addr_0x             => io1_addr_0x,
         button_crt_reset        => button_crt_reset,
         button_special_fn       => button_special_fn,
         slot                    => slot,
@@ -463,8 +471,8 @@ begin
     (
         enable                  => enable_io2ram,
         n_io2                   => n_io2,
-        n_wr                    => n_wr,
-        bus_ready               => bus_ready,
+        async_read              => async_read,
+        sync_write              => sync_write,
         addr                    => addr,
         ram_addr                => io2ram_ram_addr,
         ram_write               => io2_ram_write,
@@ -571,7 +579,7 @@ begin
         bus_ready               => bus_ready,
         cycle_start             => cycle_start,
         addr                    => addr,
-        io1_addr_0x_rdy         => io1_addr_0x_rdy,
+        io1_addr_0x             => io1_addr_0x,
         n_usb_rxf               => n_usb_rxf,
         n_usb_txe               => n_usb_txe,
         usb_read                => usb_read,
@@ -595,15 +603,14 @@ begin
     n_irq       <= 'Z' when freezer_irq = '0'       else '0';
 
     -- for readable optimizations: '1' for n_io1 $de00..$de0f
-    io1_addr_0x_rdy <= '1' when
+    io1_addr_0x <= '1' when
             n_io1 = '0' and
-            addr(7 downto 4) = x"0" and
-            bus_ready = '1'
+            addr(7 downto 4) = x"0"
         else '0';
 
     -- KERNAL bank at $de0e in menu mode
     kernal_set_bank <= '1' when
-            n_wr = '0' and io1_addr_0x_rdy = '1' and
+            sync_write = '1' and io1_addr_0x = '1' and
             addr(3 downto 0) = x"e" and
             enable_menu = '1'
         else '0';
@@ -794,69 +801,69 @@ begin
             elsif write_scheduled = 0 then
                 n_mem_wr <= '1';
                 n_usb_wr <= '1';
+
+                if ram_read = '1' then
+                    -- start ram read, leave active until next cycle_start
+                    n_ram_cs_i  <= '0';
+                    n_flash_cs  <= '1';
+                    n_mem_oe_i  <= '0';
+                    n_usb_rd_i  <= '1';
+                end if;
+                if ram_write = '1' then
+                    -- ram write tbd in next cycle
+                    n_ram_cs_i  <= '0';
+                    n_flash_cs  <= '1';
+                    n_mem_oe_i  <= '1';
+                    n_usb_rd_i  <= '1';
+                    -- 3 means activate n_mem_wr in the next cycle
+                    write_scheduled := 3;
+                end if;
+                if flash_read = '1' then
+                    -- start flash read, leave active until next cycle_start
+                    n_ram_cs_i  <= '1';
+                    n_flash_cs  <= '0';
+                    n_mem_oe_i  <= '0';
+                    n_usb_rd_i  <= '1';
+                end if;
+                if flash_write = '1' then
+                    -- flash write tbd in next cycle
+                    n_ram_cs_i  <= '1';
+                    n_flash_cs  <= '0';
+                    n_mem_oe_i  <= '1';
+                    n_usb_rd_i  <= '1';
+                    -- 3 means activate n_mem_wr in the next cycle
+                    write_scheduled := 3;
+                end if;
+                if usb_read = '1' then
+                    -- start usb read, leave until cycle_start
+                    n_ram_cs_i  <= '1';
+                    n_flash_cs  <= '1';
+                    n_mem_oe_i  <= '1';
+                    n_usb_rd_i  <= '0';
+                end if;
+                if usb_write = '1' then
+                    -- usb write can start now
+                    n_ram_cs_i  <= '1';
+                    n_flash_cs  <= '1';
+                    n_mem_oe_i  <= '1';
+                    n_usb_rd_i  <= '1';
+                    n_usb_wr    <= '0';
+                    -- set it to 2 but not to 3 to avoid n_mem_wr to be set
+                    write_scheduled := 2;
+                end if;
+                if cycle_start = '1' then
+                    -- return to idle
+                    n_ram_cs_i  <= '1';
+                    n_flash_cs  <= '1';
+                    n_mem_oe_i  <= '1';
+                    n_usb_rd_i  <= '1';
+                    n_usb_wr    <= '1';
+                    write_scheduled := 0;
+                end if;
+
             else
                 write_scheduled := write_scheduled - 1;
             end if;
-
-            if ram_read = '1' then
-                -- start ram read, leave active until next cycle_start
-                n_ram_cs_i  <= '0';
-                n_flash_cs  <= '1';
-                n_mem_oe_i  <= '0';
-                n_usb_rd_i  <= '1';
-            end if;
-            if ram_write = '1' then
-                -- ram write tbd in next cycle
-                n_ram_cs_i  <= '0';
-                n_flash_cs  <= '1';
-                n_mem_oe_i  <= '1';
-                n_usb_rd_i  <= '1';
-                -- 3 means activate n_mem_wr in the next cycle
-                write_scheduled := 3;
-            end if;
-            if flash_read = '1' then
-                -- start flash read, leave active until next cycle_start
-                n_ram_cs_i  <= '1';
-                n_flash_cs  <= '0';
-                n_mem_oe_i  <= '0';
-                n_usb_rd_i  <= '1';
-            end if;
-            if flash_write = '1' then
-                -- flash write tbd in next cycle
-                n_ram_cs_i  <= '1';
-                n_flash_cs  <= '0';
-                n_mem_oe_i  <= '1';
-                n_usb_rd_i  <= '1';
-                -- 3 means activate n_mem_wr in the next cycle
-                write_scheduled := 3;
-            end if;
-            if usb_read = '1' then
-                -- start usb read, leave until cycle_start
-                n_ram_cs_i  <= '1';
-                n_flash_cs  <= '1';
-                n_mem_oe_i  <= '1';
-                n_usb_rd_i  <= '0';
-            end if;
-            if usb_write = '1' then
-                -- usb write can start now
-                n_ram_cs_i  <= '1';
-                n_flash_cs  <= '1';
-                n_mem_oe_i  <= '1';
-                n_usb_rd_i  <= '1';
-                n_usb_wr    <= '0';
-                -- set it to 2 but not to 3 to avoid n_mem_wr to be set
-                write_scheduled := 2;
-            end if;
-            if cycle_start = '1' then
-                -- return to idle
-                n_ram_cs_i  <= '1';
-                n_flash_cs  <= '1';
-                n_mem_oe_i  <= '1';
-                n_usb_rd_i  <= '1';
-                n_usb_wr    <= '1';
-                write_scheduled := 0;
-            end if;
-
         end if;
     end process mem_ctrl;
     n_ram_cs <= n_ram_cs_i;

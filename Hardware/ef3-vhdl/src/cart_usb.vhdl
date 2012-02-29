@@ -35,7 +35,7 @@ entity cart_usb is
         bus_ready:      in  std_logic;
         cycle_start:    in  std_logic;
         addr:           in  std_logic_vector(15 downto 0);
-        io1_addr_0x_rdy: in  std_logic;
+        io1_addr_0x:    in  std_logic;
         n_usb_rxf:      in  std_logic;
         n_usb_txe:      in  std_logic;
         usb_read:       out std_logic;
@@ -124,7 +124,7 @@ begin
             usb_read  <= '0';
             usb_write <= '0';
             if enable = '1' then
-                if io1_addr_0x_rdy = '1' then
+                if io1_addr_0x = '1' and bus_ready = '1' then
                     if n_wr = '0' then
                         case addr(3 downto 0) is
                             when x"a" =>
