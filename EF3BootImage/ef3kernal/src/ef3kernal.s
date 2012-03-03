@@ -3,7 +3,7 @@
 * = $e000
 
 ; include original KERNAL image
-!bin "kernal.bin"
+!bin "src/kernal.bin"
 
 ; =============================================================================
 ; Overrite startup message
@@ -66,6 +66,9 @@ keyboard_scan_cont:
 ef3_usb_scan:
         dec $d020
 
+        lda #$00
+        ldx #$e0
+        jsr bank0_jsr_to_bank1_ax       ; test KERNAL banking
 
         LDA #$00
         STA $028D                       ; from original keyboard scan code
@@ -74,6 +77,12 @@ ef3_usb_scan:
         !if * > $e4d0 {
             !serious "Code too large"
         }
+
+; =============================================================================
+; Common code on all KERNAL banks
+; =============================================================================
+* = $FEC2
+        !src "src/kernal_common.s"
 
 ; $e430 3
 ; $e44f 2
