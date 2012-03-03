@@ -730,8 +730,7 @@ begin
     start_freezer   <= ar_start_freezer or ss5_start_freezer;
     reset_freezer   <= ar_reset_freezer or ss5_reset_freezer;
 
-    --n_led <= not (ef_led or ar_led or ss5_led);
-    n_led <= cycle_start;
+    n_led <= not (ef_led or ar_led or ss5_led);
 
     n_dma <= 'Z';
 
