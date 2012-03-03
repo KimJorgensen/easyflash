@@ -43,7 +43,7 @@ cycle_start
 -----------
 
 cycle_start is '1' for one clk-cycle right at the beginning of a half-cycle of
-Phi2. It can be used to reset states from the previous half-cycle and to 
+Phi2. It can be used to reset states from the previous half-cycle and to
 prepare the next one.
 
 addr_ready
@@ -84,7 +84,7 @@ This figure shows the timing of all signals described above:
  prev_phi2:  ________/                                               \_______
 
              .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .
- clk_cnt:   11  12   0   1   2   3   4   5   6   7   8   9  10  11   0   1
+ phase_pos:  -   -   0   1   2   3   4   5   6   7   8   9  10   -   0   1
              .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .
  t_min              40  80  120 160 200 240 280 320 360 400 440 480 ns
  t_max              80  120 160 200 240 280 320 360 400 440 480 520 ns

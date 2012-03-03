@@ -60,8 +60,7 @@ end exp_bus_ctrl;
 architecture arc of exp_bus_ctrl is
     signal prev_phi2:       std_logic;
     signal phi2_s:          std_logic;
-    signal cycle_start_i:   std_logic;
-    signal clk_cnt:         integer range 0 to 13; -- 25 MHz ~ 0.5 us
+    signal phase_pos_i:     std_logic_vector(10 downto 0);
 begin
 
     synchronize_stuff: process(clk)
@@ -73,64 +72,33 @@ begin
     end process synchronize_stuff;
 
     ---------------------------------------------------------------------------
-    -- Count cycles of clk
+    -- Count cycles in both phases of phi2
     ---------------------------------------------------------------------------
-    clk_counter: process(clk)
+    clk_phase_shift: process(clk, prev_phi2, phi2_s)
     begin
         if rising_edge(clk) then
             if prev_phi2 /= phi2_s then
-                clk_cnt <= 0;
+                phase_pos_i <= (others => '0');
+                phase_pos_i(0) <= '1';
             else
-                clk_cnt <= clk_cnt + 1;
+                phase_pos_i <= phase_pos_i(9 downto 0) & '0';
             end if;
         end if;
-    end process clk_counter;
+    end process;
 
     ---------------------------------------------------------------------------
     -- Create control signals depending from clk counter
     --
-    -- This signals are generated combinatorically, they are to be used on the
+    -- These signals are generated combinatorically, they are to be used on the
     -- next rising edge of clk.
     --
-    -- One exception is async_read, which is to be used asynchronously. This
-    -- was implemented to enable fast read accesses for C128 2 MHz mode.
     ---------------------------------------------------------------------------
-    bus_states: process(clk_cnt, prev_phi2, phi2_s, phi2, n_wr)
-    begin
-        addr_ready  <= '0';
-        bus_ready   <= '0';
-        hiram_detect_ready <= '0';
-        sync_write  <= '0';
-        async_read  <= '0';
+    cycle_start <= phi2_s xor prev_phi2;
+    addr_ready  <= phase_pos_i(3);
+    bus_ready   <= phase_pos_i(5);
+    sync_write  <= phase_pos_i(6) and not n_wr;
+    hiram_detect_ready <= phase_pos_i(7);
 
-        if prev_phi2 /= phi2_s then
-            cycle_start_i <= '1';
-        else
-            cycle_start_i <= '0';
-        end if;
-
-        if phi2 = '0' or n_wr = '1' then
-            async_read <= '1';
-        end if;
-
-        if clk_cnt = 3 then
-            addr_ready <= '1';
-        end if;
-
-        if clk_cnt = 5 then
-            bus_ready <= '1';
-        end if;
-
-        if clk_cnt = 6 and n_wr = '0' then
-            sync_write <= '1';
-        end if;
-
-        if clk_cnt = 7 then
-            hiram_detect_ready <= '1';
-        end if;
-
-    end process bus_states;
-
-    cycle_start <= cycle_start_i;
-    phi2_cycle_start <= not phi2_s and cycle_start_i;
+    async_read <= not phi2_s or n_wr;
+    phi2_cycle_start <= not phi2_s and phase_pos_i(0);
 end arc;
