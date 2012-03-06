@@ -49,23 +49,18 @@ drv_start:
 drv_1541_main:
         cli                     ; allow IRQs when waiting
         jsr drv_load_code       ; does SEI when data is received
+new_overlay:
         jsr drv_load_overlay
         jsr $0500
-        jmp drv_1541_main
+        jmp new_overlay
 
 ;.export drv_1541_wait_rx
 ;drv_1541_wait_rx:
 ;        jmp drv_wait_rx
 
-.export drv_1541_recv_to_buffer
-drv_1541_recv_to_buffer = recv_to_buffer
-
-.export drv_1541_recv
-drv_1541_recv = recv
-
-.export drv_1541_send
-drv_1541_send:
-        jmp drv_send
+.export drv_1541_recv_to_buffer = recv_to_buffer
+.export drv_1541_recv = recv
+.export drv_1541_send = drv_send
 
 .include "xfer_drive_1mhz.s"
 
@@ -144,8 +139,8 @@ drv_1541_wait_sync:
 ;       Z flag set
 ;
 ; =============================================================================
-.export drv_delay
-drv_delay:
+.export drv_1541_delay
+drv_1541_delay:
         ldx #0
 :
         dex
@@ -179,7 +174,7 @@ drv_1541_prepare_read:
         sta $3e                 ; set flag for motor running
         jsr $f97e               ; switch motor on
         ldy #250                ; motor was off: wait for a while
-        jsr drv_delay           ; wait when motor was off
+        jsr drv_1541_delay      ; wait when motor was off
 @motor_is_on:
         ; calculate speed zone and sectors per track
         ldx #4
@@ -193,6 +188,7 @@ drv_1541_prepare_read:
         stx speed_zone
         lda $fed1, x            ; get number of sectors per track
         sta $43                 ; and save
+        ; TODO: optimize me
         txa
         asl
         asl
@@ -325,7 +321,7 @@ drv_1541_move_head_direct:
         beq @ret                ; 0 => no steps
         jsr $fa2e               ; head step
         ldy #7
-        jsr drv_delay
+        jsr drv_1541_delay
         jmp @next_step
 @ret:
         jsr activate_soe        ; deactivated by jsr $fa2e
@@ -346,7 +342,7 @@ blink:
         and #$ff - 4            ; Motor aus
         sta $1c00
         ldy #250
-        jsr drv_delay
+        jsr drv_1541_delay
         beq blink               ; always
 
 blink_fast:
@@ -355,7 +351,7 @@ blink_fast:
         and #$ff - 4            ; Motor aus
         sta $1c00
         ldy #50
-        jsr drv_delay
+        jsr drv_1541_delay
         beq blink_fast          ; always
 .endif
 

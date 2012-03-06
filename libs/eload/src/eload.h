@@ -69,6 +69,9 @@ void eload_prepare_drive(void);
 
 void __fastcall__ eload_write_sector(unsigned ts, uint8_t* block);
 void __fastcall__ eload_write_sector_nodma(unsigned ts, uint8_t* block);
+void __fastcall__ eload_read_gcr_sector(unsigned ts);
+void __fastcall__ eload_recv_gcr_sector(uint8_t* gcr);
+void __fastcall__ eload_recv_gcr_sector_nodma(uint8_t* gcr);
 void __fastcall__ eload_format(uint8_t n_tracks, uint16_t id);
 
 #endif /* ELOAD_H_ */

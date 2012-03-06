@@ -1,34 +1,34 @@
 
-
-.export     eload_recv
+.importzp ptr1
 
 .include "config.s"
 
 ; =============================================================================
 ;
-; Receive a byte from the drive over the fast protocol. Used internally only.
-;
 ; parameters:
-;       -
+;       AX  pointer to data
+;       Y   number of bytes (1 for 256=0)
 ;
 ; return:
-;       Byte in A, Z-flag according to A
+;       A contains last byte received (lowest address)
+;       Y = 0
 ;
 ; changes:
 ;       flags
 ;
 ; =============================================================================
+.export eload_recv
 eload_recv:
+        sta ptr1
+        stx ptr1 + 1
+
         ; $dd00: | D_in | C_in | D_out | C_out || A_out | RS232 | VIC | VIC |
-        ; Note about the timing: After 50 cycles a PAL C64 is about 1 cycle
-        ; slower than the drive, an NTSC C64 is about 1 cycle faster. As we
-        ; have a safety gap of about 2 us, this doesn't matter.
-
-        ; Handshake Step 1: Drive signals byte ready with DATA low
-@wait1:
+        ; Handshake Step 1: Drive signals data ready with DATA low
+        ; only wait when 1st byte is transferred
+:
         lda $dd00
-        bmi @wait1
-
+        bmi :-
+@next_byte:
 @eload_recv_waitbadline:
         lda $d011               ; wait until a badline won't screw up
         clc                     ; the timing
@@ -36,36 +36,43 @@ eload_recv:
         and #7
         beq @eload_recv_waitbadline
 
-        ; Handshake Step 2: Host sets CLK low to acknowledge
+        ; Handshake Step 2: Host sets CLK low when ready
         lda $dd00
         ora #$10
-        sta $dd00               ; [1]
+        sta $dd00
 
-        ; Handshake Step 3: Host releases CLK - Time base
-        bit $ff                 ; waste 3 cycles
-        and #$03
-        ; an 1 MHz drive sees this 6..12 us after [1], so we have dt = 9
-        sta $dd00               ; t = 0
-        sta @eor+1              ; 4
+        and #$03                ; 2
+        sta @eor+1              ; 6     correction for video bank bits
 
-        nop
-        nop
-        nop
-        nop
-        nop                     ; 14
+        ; Release CLK so we can read it later
+        sta $dd00               ; 10    CLK was low for ~10 us
+
+
+        ; Handshake Step 3: Drive releases DATA to start
+:                               ; CLK       PAL us  NTSC us
+        lda $dd00               ;                           wait for DATA high
+        bpl :-                  ; 3..9
+
+        bit $ff                 ; 6..
 
         ; receive bits
-        lda $dd00               ; 18 - b0 b1
+        lda $dd00               ; 10..16    10..16  10..16  b3 b1
         lsr
+        lsr                     ; 14..
+        eor $dd00               ; 18..24    18..24  18..23  b2 b0
         lsr
-        eor $dd00               ; 26 - b2 b3
+        lsr                     ; 22..
+        nop
+        nop
+        bit $ff                 ; 29..
+        eor $dd00               ; 33..39    34..40  32..38  b7 b5
         lsr
-        lsr
-        eor $dd00               ; 34 - b4 b5
-        lsr
-        lsr
+        lsr                     ; 37..
 @eor:
-        eor #$00
-        eor $dd00               ; 44 - b6 b7
-        rts
+        eor #$00                ; 39..
+        eor $dd00               ; 43..49    44..50  42..48  b6 b4
 
+        dey
+        sta (ptr1), y
+        bne @next_byte
+        rts

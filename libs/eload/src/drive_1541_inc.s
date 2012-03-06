@@ -11,8 +11,8 @@ job_track       = $0e
 job_sector      = $0f
 
 speed_zone      = $06
-status          = $08           ; two bytes for status return
-zpptr           = $10           ; two bytes used as pointer
+status          = $07           ; 3 bytes for status return
+zpptr           = $10           ; 2 bytes used as pointer
 
 stack           = $8b
 

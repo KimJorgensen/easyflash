@@ -50,89 +50,83 @@ drv_wait_rx:
 
 ; =============================================================================
 ;
-; Send a byte to the host.
+; Send a data to the host. The first byte will be taken from the highest
+; address.
 ;
 ; parameters:
-;       Byte in A
+;       AX      point to buffer
+;       Y       number of bytes (1 to 256=0)
 ;
 ; return:
-;       -
+;       Y = #$ff
 ;
 ; changes:
-;       A, Y, zptmp
+;       A, X, Y, zptmp
 ;
 ; =============================================================================
-        ; serport: | A_in | DEV | DEV | ACK_out || C_out | C_in | D_out | D_in |
+; serport: | A_in | DEV | DEV | ACK_out || C_out | C_in | D_out | D_in |
+;
+; bit pair timing           11111111112222222222333333333344444444445555555555
+; (us)            012345678901234567890123456789012345678901234567890123456789
+; Drive write     S       B       B             B         B           XX
+; PAL read         ssssss   bbbbbb  bbbbbb          bbbbbb    bbbbbb
+; NTSC read        ssssss   bbbbbb  bbbbb         bbbbbb    bbbbbb
+
 drv_send:
-        bit serport             ; check for ATN
-        bmi exit_1              ; leave the drive code if it is active
+        sta buff_ptr
+        stx buff_ptr + 1
+        dey
 
-        sta zptmp
-        lsr
-        lsr
-        lsr
-        lsr
-        tay                     ; get high nibble into Y
+@next_byte:
+        ; Handshake Step 1: Drive signals data ready with DATA low
+        lda #$02                ; 49
+        sta serport             ; 53
 
-        ; Handshake Step 1: Drive signals byte ready with DATA low
-        lda #$02
-        sta serport
-
-        ; I moved this after Step 1 because the C64
-        ; makes SEI and the badline test now
-        lda drv_sendtbl,y       ; get the CLK, DATA pairs for high nibble
-        pha
-        lda zptmp
-        and #$0f                ; get low nibble into Y
-        tay
-
-        ; Handshake Step 2: Host sets CLK low to acknowledge
-        lda #$04
-@wait2:
+        ; Handshake Step 2: Host sets CLK low when ready
+        lda #$04                ; 55
+:
         bit serport             ; wait for CLK low (that's 1!)
-        beq @wait2
-        ; between the last cycle of these two "bit serport" are 6..12 cycles
+        bmi exit_1              ; leave the drive code if ATN is active
+        beq :-                  ; This loop takes 9 cycles
 
-        ; Handshake Step 3: Host releases CLK - Timing base
-        ; if CLK is high (that's 0!) already, skip 3 cycles
-        bit serport
-        beq @reduce_jitter
-        nop                     ; 6 cycles vs. 3 cycles
-        nop
-@reduce_jitter:                 ; t = 4..7 (only 3 us jitter)
+        lda (buff_ptr), y
 
-        ; 1 MHz code
-        ; get CLK, DATA pairs for low nibble
-        lda drv_sendtbl,y       ;  8..
-        sta serport             ; 12..15 - b0 b1 (CLK DATA)
+        ; Handshake Step 3: Drive releases DATA to start
+        ldx #$00
+        stx serport
 
-        asl                     ; 14..
-        and #$0f                ; 16..
-        sta serport             ; 20..23 - b2 b3
+        tax                     ; 2
+        and #$0f                ; 4
+        sta serport             ; 8     b3 b1 (CLK DATA)
 
-        pla                     ; 24
-        sta serport             ; 28..31 - b4 b5
+        asl                     ; 10
+        and #$0f                ; 12
+        sta serport             ; 16    b2 b0
 
-        asl                     ; 30..
-        and #$0f                ; 32..
-        sta serport             ; 36..39 - b6 b7
+        txa
+        lsr
+        lsr
+        lsr
+        lsr                     ; 26
+        sta serport             ; 30    b7 b5
 
-        nop                     ; 38..
-        nop                     ; 40..
-        lda #$00                ; 42..
-        sta serport             ; 48..51  set CLK and DATA high
+        asl                     ; 32
+        and #$0f                ; 34
+        nop                     ; 36
+        sta serport             ; 40    b6 b4
+
+        dey                     ; 42
+        cpy #$ff                ; 44
+        bne @next_byte          ; 46/47
+@ret:
+        lda #0                  ; 48
+        sta serport             ; 52    set CLK and DATA high
 
         rts
 
 exit_1:
         jmp drv_exit
 
-drv_sendtbl:
-        ; 0 0 0 0 b0 b2 b1 b3
-        .byte $0f, $07, $0d, $05
-        .byte $0b, $03, $09, $01
-        .byte $0e, $06, $0c, $04
-        .byte $0a, $02, $08, $00
 
 ; =============================================================================
 ;
@@ -140,7 +134,6 @@ drv_sendtbl:
 ;
 ; =============================================================================
 drv_load_code:
-        lda #<$0300
         ldx #>$0300
         bne drv_load_code_common ; always
 
@@ -150,10 +143,10 @@ drv_load_code:
 ;
 ; =============================================================================
 drv_load_overlay:
-        lda #<$0500
         ldx #>$0500
 drv_load_code_common:
-        ldy #0
+        lda #0                  ; low byte of address
+        tay                     ; number of bytes (256)
         jsr recv                ; 1st block
         inc buff_ptr + 1
         jsr recv_to_ptr         ; 2nd block

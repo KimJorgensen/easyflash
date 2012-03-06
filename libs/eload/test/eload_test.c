@@ -162,9 +162,9 @@ static void test_read_sector(void)
 
     // disable VIC-II DMA
     SEI();
-    VIC.ctrl1 &= 0xef;
+ /*   VIC.ctrl1 &= 0xef;
     while (VIC.rasterline != 255)
-    {}
+    {}*/
 
     eload_prepare_drive();
 
@@ -186,7 +186,7 @@ static void test_read_sector(void)
             eload_recv_status(status);
             if (status[0] == DISK_STATUS_OK)
             {
-                eload_recv_gcr_sector_nodma(gcr);
+                eload_recv_gcr_sector/*_nodma*/(gcr);
             }
         }
     }

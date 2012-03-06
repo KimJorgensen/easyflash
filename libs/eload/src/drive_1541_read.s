@@ -26,79 +26,104 @@
 .include "config.s"
 .include "drive_1541_inc.s"
 
+.import drv_1541_recv_to_buffer
+.import drv_1541_send
+.import drv_1541_delay
+.import drv_1541_prepare_read
+.import drv_1541_search_header
+.import drv_1541_restore_orig_job
+.import drv_1541_wait_sync
+
+
+.export drive_code_1541_read
+drive_code_1541_read:
+
 ; =============================================================================
 ;
-; Drive code assembled to fixed address $0600 follows
+; Drive code assembled to fixed address $0500 follows
 ;
 ; =============================================================================
-.org $0600
+.org $0500
 .export drive_code_1541_read_start
 drive_code_1541_read_start      = *
 
-; sector read subroutine. Returns clc if successful, sec if error
-; X/A = T/S
-drv_readsector:
-        ldy #$80                ; read sector job code
-        jsr set_job_ts_backup
+loop:
+        cli                     ; allow IRQs when waiting
+        ldy #4                  ; receive job to buffer (does SEI when rx)
+        jsr drv_1541_recv_to_buffer
 
-        ldy #retries            ; retry counter
-@retry:
-        jsr restore_orig_job
-        jsr exec_current_job
-        bcc @ret
-        dey                     ; decrease retry counter
-        bne @retry
-@ret:
-        rts                     ; C = error state, A = error code
+        ldx buffer              ; job
 
-; =============================================================================
-;
-; load file
-; args: start track, start sector
-; returns: $00 for EOF, $ff for error, $01-$fe for each data block
-;
-; =============================================================================
-load:
-        ldx prev_file_track
-        lda prev_file_sect
-loadchain:
-@sendsector:
-        jsr drv_readsector
-        bcc :+
-        lda #$ff                ; send read error
-        jmp error
-:
-        ldx #254                ; send 254 bytes (full sector)
-        lda buffer              ; last sector?
-        bne :+
-        ldx buffer + 1          ; send number of bytes in sector (1-254)
         dex
-:
-        stx @buflen
-        txa
-        jsr drv_send           ; send byte count
+        bne @not_rd_sector
+        jmp read_sector         ; eload job code: read 1
 
-        ldx #0                  ; send data
-@send:
-        txa
-        pha
-        lda buffer + 2,x
-        jsr drv_send
-        pla
-        tax
-        inx
-@buflen = * + 1
-        cpx #$ff
-        bne @send
+@not_rd_sector:
+ret:
+        rts
 
-        ; load next t/s in chain into x/a or exit loop if EOF
-        ldx buffer
-        beq @done
+send_status:
+; send the return value from A and two bytes of status
+        sta status
+        lda #<status
+        ldx #>status
+        ldy #3
+        jmp drv_1541_send
+
+
+; =============================================================================
+;
+;
+;
+; =============================================================================
+read_sector:
         lda buffer + 1
-        jmp @sendsector
-@done:
-        lda #0
-        jmp senddone
+        sta job_track_backup
+        lda buffer + 2
+        sta job_sector_backup
+
+        jsr drv_1541_restore_orig_job
+        jsr drv_1541_prepare_read
+        jsr drv_1541_search_header
+        bcs motor_off_status_ret    ; error: code in A already
+
+        jsr drv_1541_wait_sync
+        bcs motor_off_status_ret    ; error: code in A already
+
+        ldy #$bb                    ; write to $1bb
+@read1:
+        wait_byte_ready
+        lda $1c01
+        sta $0100, y
+        iny
+        bne @read1
+
+@read2:
+        wait_byte_ready             ; rest of the block
+        lda $1c01
+        sta buffer, y
+        iny
+        bne @read2
+
+        lda #ELOAD_OK
+        jsr send_status
+
+        lda #<gcr_overflow_buff
+        ldx #>gcr_overflow_buff
+        ldy #gcr_overflow_size
+        jsr drv_1541_send
+
+        iny
+        tya                         ; a = low byte = 0, y = 0 = 256 bytes
+        ldx #>buffer
+        jsr drv_1541_send
+        jmp motor_off_ret
+
+motor_off_status_ret:
+        jsr send_status
+motor_off_ret:
+        jsr $f98f               ; prepare motor off (doesn't change C)
+        jmp loop
 
 drive_code_1541_read_size  = * - drive_code_1541_read_start
 .assert drive_code_1541_read_size <= 256, error, "drive_code_1541_read_size"
