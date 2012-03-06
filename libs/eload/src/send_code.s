@@ -50,7 +50,7 @@
 .import drive_code_init_size_sd2iec
 
 .import drive_code_1541_write
-
+.import drive_code_1541_read
 
 code_ptr        = ptr1
 code_len        = ptr2
@@ -104,7 +104,7 @@ drive_code_init_sizes:
         .byte <drive_code_init_size_1541
         .byte <drive_code_init_size_1541     ; 1570
         .byte <drive_code_init_size_1541     ; for now
-        .byte 0 ;<drive_code_size_1581
+        .byte 0
         .byte 0
         .byte 0
         .byte <drive_code_init_size_sd2iec   ; sd2iec
@@ -116,7 +116,19 @@ drive_codes_write:
         .addr drive_code_1541_write
         .addr drive_code_1541_write     ; 1570
         .addr drive_code_1541_write     ; for now
-        .addr 0; drive_code_1581
+        .addr 0
+        .addr 0
+        .addr 0
+        .addr 0
+        .addr 0
+
+drive_codes_read:
+        .addr 0
+        .addr 0
+        .addr drive_code_1541_read
+        .addr drive_code_1541_read     ; 1570
+        .addr drive_code_1541_read     ; for now
+        .addr 0
         .addr 0
         .addr 0
         .addr 0
@@ -221,12 +233,10 @@ _eload_prepare_drive:
         ; upload 2 blocks of drive code using the fast protocol
         lda #<drive_codes
         ldx #>drive_codes
+        php
+        sei
         jsr set_ptr_and_upload
-
-        lda #ELOAD_OVERLAY_WRITE
-        jsr eload_upload_drive_overlay
-
-        cli
+        plp
 
 @no_drive_code:
         clc
@@ -268,18 +278,31 @@ set_code_ptr:
 ; =============================================================================
 .export eload_upload_drive_overlay
 eload_upload_drive_overlay:
-        ldx current_drv_overlay
-        beq @dont_exit
+        cmp current_drv_overlay
+        beq upload_ret
+        pha
+        ldx current_drv_overlay         ; any drive code overlay running?
+        beq @dont_exit                  ; no => don't stop it
+        lda #<stop_overlay_job_code
+        ldx #>stop_overlay_job_code     ; exit current overlay code
+        ldy #4                          ; eload-jobs have always 4 bytes
+        jsr eload_send
 @dont_exit:
+        pla
         sta current_drv_overlay
-        ;cmp #ELOAD_OVERLAY_WRITE ; todo
+        cmp #ELOAD_OVERLAY_WRITE
+        bne @not_write_code
         lda #<drive_codes_write
         ldx #>drive_codes_write
+        bne set_ptr_and_upload          ; always
+@not_write_code:
+        lda #<drive_codes_read
+        ldx #>drive_codes_read
+
 set_ptr_and_upload:
         jsr set_code_ptr
         lda #2                          ; number of blocks to transfer
         sta tmp1
-        sei ; ???
 :
         lda code_ptr
         ldx code_ptr + 1
@@ -288,8 +311,11 @@ set_ptr_and_upload:
         inc code_ptr + 1
         dec tmp1
         bne :-
-        cli ; ???
+upload_ret:
 		rts
+
+stop_overlay_job_code:
+        .byte 0 ; only the first byte of this job code is relevant
 
 ; =============================================================================
 ;

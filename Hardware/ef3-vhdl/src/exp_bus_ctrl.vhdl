@@ -45,10 +45,9 @@ entity exp_bus_ctrl is
         -- case between 200 ns to 240 ns after Phi2 edges.
         bus_ready:  out std_logic;
 
-        -- After the KERNAL implementation changed the address bus, ROMH has to be
-        -- examined. This combinatorical signal is '1' for one clock cycle when ROMH
-        -- is ready. That's 280 ns to 320 ns after Phi2 edges.
-        hiram_detect_ready:  out std_logic;
+        -- The phase inside a Phi2 half cycle as shift register. This is used
+        -- as one-hot encoded state machine to save function block inputs.
+        phase_pos:  out std_logic_vector(10 downto 0);
 
         -- This combinatorical signal is '1' for one clk cycle
         -- after the end of each Phi2 half cycle
@@ -97,8 +96,9 @@ begin
     addr_ready  <= phase_pos_i(3);
     bus_ready   <= phase_pos_i(5);
     sync_write  <= phase_pos_i(6) and not n_wr;
-    hiram_detect_ready <= phase_pos_i(7);
 
     async_read <= not phi2_s or n_wr;
     phi2_cycle_start <= not phi2_s and phase_pos_i(0);
+
+    phase_pos <= phase_pos_i;
 end arc;

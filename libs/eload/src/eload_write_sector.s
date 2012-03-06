@@ -1,12 +1,14 @@
 
-    .importzp       sp, sreg, regsave
-    .importzp       ptr1, ptr2, ptr3, ptr4
-    .importzp       tmp1, tmp2, tmp3, tmp4
+.include "eload_macros.s"
 
-    .import         popax
+.importzp       sp, sreg, regsave
+.importzp       ptr1, ptr2, ptr3, ptr4
+.importzp       tmp1, tmp2, tmp3, tmp4
 
-    .import eload_send
-    .import _eload_prepare_drive
+.import         popax
+
+.import eload_send
+.import eload_upload_drive_overlay
 
 gcr_overflow_size = 69
 
@@ -27,6 +29,9 @@ _eload_write_sector:
 
         php                     ; to backup the interrupt flag
         sei
+
+        lda #ELOAD_OVERLAY_WRITE
+        jsr eload_upload_drive_overlay
 
         lda #1                  ; command: write sector
         sta job

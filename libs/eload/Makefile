@@ -9,6 +9,7 @@ inc += src/xfer_drive_2mhz.s
 obj := 
 obj += obj/drive_1541.o
 obj += obj/drive_1541_write.o
+obj += obj/drive_1541_read.o
 #obj += obj/drive_1571.o
 #obj += obj/drive_1581.o
 obj += obj/drive_sd2iec.o
@@ -20,6 +21,7 @@ obj += obj/eload_send.o
 obj += obj/eload_send_nodma.o
 obj += obj/eload_sendtab.o
 obj += obj/eload_recv.o
+obj += obj/eload_recv_nodma.o
 obj += obj/eload_format.o
 
 obj += obj/eload_read_byte.o
@@ -29,6 +31,9 @@ obj += obj/eload_dos.o
 obj += obj/eload_read.o
 obj += obj/eload_write_sector.o
 obj += obj/eload_write_sector_nodma.o
+obj += obj/eload_read_gcr_sector.o
+obj += obj/eload_recv_gcr_sector.o
+obj += obj/eload_recv_gcr_sector_nodma.o
 obj += obj/eload_recv_status.o
 
 test_obj :=

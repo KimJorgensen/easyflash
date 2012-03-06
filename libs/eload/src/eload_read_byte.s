@@ -107,7 +107,7 @@ eload_read_byte_kernal:
         bne ret_err
         jmp ACPTR
 
-
+.if 0
 ; =============================================================================
 ;
 ; Implementation for eload_read_byte. Used internally only.
@@ -145,6 +145,7 @@ set_eof:
         lda ST
         ora #$40        ; EOF flag
         sta ST
+.endif
 ret_err:
         lda #$ff
         tax

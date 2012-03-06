@@ -43,7 +43,7 @@
 track_1_net_bytes = 21 * (5 + 10 + 9 + 5 + 325)
 
 .export drive_code_1541_write
-drive_code_1541_write  = *
+drive_code_1541_write:
 
 ; =============================================================================
 ;
@@ -59,17 +59,16 @@ loop:
         ldy #4                  ; receive job to buffer (does SEI when rx)
         jsr drv_1541_recv_to_buffer
 
-        lda buffer              ; job
+        ldx buffer              ; job
 
-        cmp #1
+        dex
         bne @not_wr_sector
-        jmp write_sector
+        jmp write_sector        ; eload job code: write 1
 
 @not_wr_sector:
-
-        cmp #2
+        dex
         bne @not_format
-        jmp format_disk
+        jmp format_disk         ; eload job code: write 2
 
 @not_format:
 ret:
@@ -77,10 +76,10 @@ ret:
 
 send_status_and_loop:
 ; send the return value from A and two bytes of status
-        jsr drv_1541_send
-        lda status
-        jsr drv_1541_send
-        lda status + 1
+        sta status
+        lda #<status
+        ldx #>status
+        ldy #3
         jsr drv_1541_send
         jmp loop
 
@@ -140,14 +139,11 @@ write_sector:
         wait_byte_ready
         jsr $fe00               ; head to read mode
         clc                     ; mark for success
+        lda #ELOAD_OK
 motor_off_and_ret:
         pha
         jsr $f98f               ; prepare motor off (doesn't change C)
         pla
-
-        bcs :+
-        lda #ELOAD_OK
-:
 send_and_loop:
         jmp send_status_and_loop
 
@@ -196,8 +192,8 @@ format_disk:
         bmi @count              ;  3   no => wait and count
         clv                     ; clear byte ready (V)
 
-        sty status              ; YX = number of bytes on this track
-        stx status + 1
+        sty status + 1          ; YX = number of bytes on this track
+        stx status + 2
 
         ; subtract the number of needed bytes from track length
         tya
