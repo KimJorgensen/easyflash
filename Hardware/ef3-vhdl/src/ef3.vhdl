@@ -97,11 +97,12 @@ architecture ef3_arc of ef3 is
     signal n_usb_rd_i:          std_logic;
     signal n_usb_wr:            std_logic;
 
+    signal rd:                  std_logic;
+    signal wr:                  std_logic;
     signal async_read:          std_logic;
     signal sync_write:          std_logic;
-    signal addr_ready:          std_logic;
     signal bus_ready:           std_logic;
-    signal hiram_detect_ready:  std_logic;
+    signal phase_pos:           std_logic_vector(10 downto 0);
     signal cycle_start:         std_logic;
 
     signal data_out:            std_logic_vector(7 downto 0);
@@ -139,7 +140,7 @@ architecture ef3_arc of ef3 is
     signal flash_write:         std_logic;
 
     signal ef_flash_addr:       std_logic_vector(16 downto 0);
-    signal io2ram_ram_addr:        std_logic_vector(14 downto 0);
+    signal io2ram_ram_addr:     std_logic_vector(14 downto 0);
     signal ef_n_game:           std_logic;
     signal ef_n_exrom:          std_logic;
     signal ef_start_reset:      std_logic;
@@ -194,19 +195,18 @@ architecture ef3_arc of ef3 is
 
     attribute KEEP : string; -- keep buffer from being optimized out
     attribute KEEP of io1_addr_0x: signal is "TRUE";
+    attribute KEEP of cycle_start: signal is "TRUE";
 
     component exp_bus_ctrl is
         port (
             clk:                in  std_logic;
             phi2:               in  std_logic;
             n_wr:               in  std_logic;
-            async_read:         out std_logic;
-            sync_write:         out std_logic;
-            phi2_cycle_start:   out std_logic;
-            addr_ready:         out std_logic;
-            bus_ready:          out std_logic;
-            hiram_detect_ready: out std_logic;
-            cycle_start:        out std_logic
+            rd:                 out std_logic;
+            wr:                 out std_logic;
+            phase_pos:          out std_logic_vector(10 downto 0);
+            cycle_start:        out std_logic;
+            phi2_cycle_start:   out std_logic
         );
     end component;
 
@@ -290,9 +290,7 @@ architecture ef3_arc of ef3 is
             ba:                 in  std_logic;
             n_romh:             in  std_logic;
             n_wr:               in  std_logic;
-            addr_ready:         in  std_logic;
-            bus_ready:          in  std_logic;
-            hiram_detect_ready: in std_logic;
+            phase_pos:          in  std_logic_vector(10 downto 0);
             cycle_start:        in  std_logic;
             set_bank:           in  std_logic;
             addr:               in  std_logic_vector(15 downto 0);
@@ -403,13 +401,11 @@ begin
         clk                     => clk,
         phi2                    => phi2,
         n_wr                    => n_wr,
-        async_read              => async_read,
-        sync_write              => sync_write,
-        phi2_cycle_start        => phi2_cycle_start,
-        addr_ready              => addr_ready,
-        bus_ready               => bus_ready,
-        hiram_detect_ready      => hiram_detect_ready,
-        cycle_start             => cycle_start
+        rd                      => rd,
+        wr                      => wr,
+        phase_pos               => phase_pos,
+        cycle_start             => cycle_start,
+        phi2_cycle_start        => phi2_cycle_start
     );
 
     u_reset_generator: reset_generator port map
@@ -488,9 +484,7 @@ begin
         ba                      => ba,
         n_romh                  => n_romh,
         n_wr                    => n_wr,
-        addr_ready              => addr_ready,
-        bus_ready               => bus_ready,
-        hiram_detect_ready      => hiram_detect_ready,
+        phase_pos               => phase_pos,
         cycle_start             => cycle_start,
         set_bank                => kernal_set_bank,
         addr                    => addr,
@@ -588,8 +582,14 @@ begin
         data_out_valid          => usb_data_out_valid
     );
 
-    enable_usb      <= enable_ef or enable_kernal;
-    enable_io2ram   <= enable_ef or enable_kernal;
+
+	-- these old signals will disappear
+	bus_ready <= phase_pos(5);
+	async_read <= rd;
+	sync_write <= wr;
+
+    enable_usb      <= enable_ef; -- or enable_kernal;
+    enable_io2ram   <= enable_ef; -- or enable_kernal;
 
     button_menu       <= buttons_enabled and button_a;
     button_crt_reset  <= buttons_enabled and button_b;

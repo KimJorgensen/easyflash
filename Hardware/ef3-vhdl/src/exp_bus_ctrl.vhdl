@@ -27,32 +27,24 @@ use ieee.numeric_std.all;
 
 entity exp_bus_ctrl is
     port (
-        clk:        in  std_logic;
-        phi2:       in  std_logic;
-        n_wr:       in  std_logic;
+        clk:                in  std_logic;
+        phi2:               in  std_logic;
+        n_wr:               in  std_logic;
 
-        async_read: out std_logic;
-        sync_write: out std_logic;
+        rd:                 out std_logic;
+        wr:                 out std_logic;
 
-        -- This combinatorical signal is '1' for one clk cycle at the
-        -- beginning of a Phi2 cycle (when Phi2 is low)
-        phi2_cycle_start: out std_logic;
-
-        addr_ready: out std_logic;
-
-        -- This combinatorical signal is '1' for one clk cycle
-        -- when the PLA result for the current address is stable, this is the
-        -- case between 200 ns to 240 ns after Phi2 edges.
-        bus_ready:  out std_logic;
-
-        -- After the KERNAL implementation changed the address bus, ROMH has to be
-        -- examined. This combinatorical signal is '1' for one clock cycle when ROMH
-        -- is ready. That's 280 ns to 320 ns after Phi2 edges.
-        hiram_detect_ready:  out std_logic;
+        -- The phase inside a Phi2 half cycle as shift register. This is used
+        -- as one-hot encoded state machine to save function block inputs.
+        phase_pos:          out std_logic_vector(10 downto 0);
 
         -- This combinatorical signal is '1' for one clk cycle
         -- after the end of each Phi2 half cycle
-        cycle_start:  out std_logic
+        cycle_start:        out std_logic;
+
+        -- This combinatorical signal is '1' for one clk cycle at the
+        -- beginning of a Phi2 cycle (when Phi2 is low)
+        phi2_cycle_start:   out std_logic
     );
 end exp_bus_ctrl;
 
@@ -87,6 +79,33 @@ begin
     end process;
 
     ---------------------------------------------------------------------------
+    -- Write is only allowed at phi2 = '1', because on C128 it happens
+    -- that n_wr = '0' when phi2 = '0', which is not a write access.
+    ---------------------------------------------------------------------------
+    check_rw: process(clk, phi2_s, n_wr)
+    begin
+        if rising_edge(clk) then
+
+            if phase_pos_i(4) = '1' and (n_wr = '1' or phi2 = '0') then
+                rd <= '1';
+            end if;
+
+            if phase_pos_i(6) = '1' and n_wr = '0' and phi2_s = '1' then
+                wr <= '1';
+                rd <= '0';
+            end if;
+
+            if phase_pos_i(7) = '1' then
+                wr <= '0';
+            end if;
+
+            if prev_phi2 /= phi2_s then
+                rd <= '0';
+            end if;
+        end if;
+    end process;
+
+    ---------------------------------------------------------------------------
     -- Create control signals depending from clk counter
     --
     -- These signals are generated combinatorically, they are to be used on the
@@ -94,11 +113,7 @@ begin
     --
     ---------------------------------------------------------------------------
     cycle_start <= phi2_s xor prev_phi2;
-    addr_ready  <= phase_pos_i(3);
-    bus_ready   <= phase_pos_i(5);
-    sync_write  <= phase_pos_i(6) and not n_wr;
-    hiram_detect_ready <= phase_pos_i(7);
-
-    async_read <= not phi2_s or n_wr;
     phi2_cycle_start <= not phi2_s and phase_pos_i(0);
+
+    phase_pos <= phase_pos_i;
 end arc;

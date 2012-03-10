@@ -33,9 +33,7 @@ entity cart_kernal is
         ba:                 in  std_logic;
         n_romh:             in  std_logic;
         n_wr:               in  std_logic;
-        addr_ready:         in  std_logic;
-        bus_ready:          in  std_logic;
-        hiram_detect_ready: in  std_logic;
+        phase_pos:          in  std_logic_vector(10 downto 0);
         cycle_start:        in  std_logic;
         set_bank:           in  std_logic;
         addr:               in  std_logic_vector(15 downto 0);
@@ -86,14 +84,14 @@ begin
     begin
         if rising_edge(clk) then
             if enable = '1' then
-                if bus_ready = '1' and kernal_space_cpu_read then
+                if phase_pos(5) = '1' and kernal_space_cpu_read then
                     -- Address lines are tristated/pulled up now
                     n_game  <= '0';
                     n_exrom <= '0';
                     a14 <= '0';
                     kernal_read_active <= true;
                 end if;
-                if kernal_read_active and hiram_detect_ready = '1' then
+                if phase_pos(7) = '1' and kernal_read_active then
                     -- ROMH reflects HIRAM now
                     a14 <= '1';
                     if n_romh = '1' then
@@ -137,13 +135,13 @@ begin
     -- internal address bus. Additionally the signal which enables
     -- the latches at the next CLK cycle is prepared here.
     ---------------------------------------------------------------------------
-    create_mem_ctrl: process(enable, addr, addr_ready,
+    create_mem_ctrl: process(enable, addr, phase_pos,
                              kernal_space_cpu_read)
     begin
         flash_read <= '0';
 
         if enable = '1' then
-            if addr_ready = '1' and kernal_space_cpu_read then
+            if phase_pos(3) = '1' and kernal_space_cpu_read then
                 -- start speculative flash read to hide its latency
                 flash_read <= '1';
             end if;
