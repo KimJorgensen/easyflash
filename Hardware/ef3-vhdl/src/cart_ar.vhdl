@@ -35,8 +35,8 @@ entity cart_ar is
         n_io2:              in  std_logic;
         n_roml:             in  std_logic;
         n_romh:             in  std_logic;
-        n_wr:               in  std_logic;
-        bus_ready:          in  std_logic;
+        rd:                 in  std_logic;
+        wr:                 in  std_logic;
         cycle_start:        in  std_logic;
         addr:               in  std_logic_vector(15 downto 0);
         data:               in  std_logic_vector(7 downto 0);
@@ -169,8 +169,8 @@ begin
                     bank            <= (others => '0');
                 end if;
                 if ctrl_kill = '0' then
-                    if bus_ready = '1' and n_io1 = '0' then
-                        if n_wr = '0' then
+                    if n_io1 = '0' then
+                        if wr = '1' then
                             case addr(7 downto 0) is
                                 when x"00" =>
                                     -- write control register $de00
@@ -194,7 +194,8 @@ begin
 
                                 when others => null;
                             end case;
-                        else
+                        end if;
+                        if rd = '1' then
                             if addr_00_01 then
                                 -- read $de00/$de01
                                 data_out_valid_i <= '1';
@@ -249,28 +250,29 @@ begin
     ---------------------------------------------------------------------------
     --
     ---------------------------------------------------------------------------
-    rw_mem: process(enable, addr, n_io1, n_io2, n_roml, n_romh, n_wr, phi2,
-                    bus_ready, ctrl_ram, ctrl_kill, ctrl_reumap, addr_00_01,
+    rw_mem: process(enable, addr, n_io1, n_io2, n_roml, n_romh, rd, wr, phi2,
+                    ctrl_ram, ctrl_kill, ctrl_reumap, addr_00_01,
                     np_mode)
     begin
         flash_read <= '0';
         ram_read   <= '0';
         ram_write  <= '0';
 
-        if enable = '1' and ctrl_kill = '0' and bus_ready = '1' then
+        if enable = '1' and ctrl_kill = '0' then
             -- RAM or Flash at I/O1 in REU map or
             --              at I/O2 in normal map or
             --              at ROML
             if (n_io1 = '0' and ctrl_reumap = '1' and not addr_00_01) or
                (n_io2 = '0' and ctrl_reumap = '0')
             then
-                if n_wr = '1' then
+                if rd = '1' then
                     if ctrl_ram = '1' then
                         ram_read <= '1';
                     else
                         flash_read <= '1';
                     end if;
-                else
+                end if;
+                if wr = '1' then
                     if ctrl_ram = '1' then
                         ram_write <= '1';
                     end if;
@@ -278,37 +280,39 @@ begin
             end if;
 
             if n_roml = '0' then
-                if n_wr = '1' then
+                if rd = '1' then
                     if ctrl_ram = '1' and not np_mode then
                         ram_read <= '1';
                     else
                         flash_read <= '1';
                     end if;
-                else
+                end if;
+                if wr = '1' then
                     if ctrl_ram = '1' and not np_mode then
                         ram_write <= '1';
                     end if;
                 end if;
             end if;
 
-            if not np_mode and ctrl_ram = '1' and addr(15 downto 13) = "100" and n_wr = '0' then
+            if wr = '1' and not np_mode and ctrl_ram = '1' and addr(15 downto 13) = "100" then
                 -- write through to cart RAM at $8000..$9fff like original AR
                 ram_write <= '1';
             end if;
 
-            if np_mode and addr(15 downto 13) = "101" and n_wr = '0' then
+            if wr = '1' and np_mode and addr(15 downto 13) = "101" then
                 -- write through to cart RAM at $a000..$bfff for Atomic/Nordic Power mode
                 ram_write <= '1';
             end if;
 
             if n_romh = '0' then
-                if n_wr = '1' then
+                if rd = '1' then
                     if np_mode then
                         ram_read <= '1';
                     else
                         flash_read <= '1';
                     end if;
-                else
+                end if;
+                if wr = '1' then
                     if np_mode then
                         ram_write <= '1';
                     end if;

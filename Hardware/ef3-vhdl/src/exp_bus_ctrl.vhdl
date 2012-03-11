@@ -85,18 +85,15 @@ begin
     check_rw: process(clk, phi2_s, n_wr)
     begin
         if rising_edge(clk) then
+            wr <= '0';
 
             if phase_pos_i(4) = '1' and (n_wr = '1' or phi2 = '0') then
                 rd <= '1';
             end if;
 
-            if phase_pos_i(6) = '1' and n_wr = '0' and phi2_s = '1' then
+            if phase_pos_i(5) = '1' and n_wr = '0' and phi2_s = '1' then
                 wr <= '1';
                 rd <= '0';
-            end if;
-
-            if phase_pos_i(7) = '1' then
-                wr <= '0';
             end if;
 
             if prev_phi2 /= phi2_s then
