@@ -29,8 +29,8 @@ entity cart_io2ram is
     port (
         enable:         in  std_logic;
         n_io2:          in  std_logic;
-        async_read:     in  std_logic;
-        sync_write:     in  std_logic;
+        rd:             in  std_logic;
+        wr:             in  std_logic;
         addr:           in  std_logic_vector(15 downto 0);
         ram_addr:       out std_logic_vector(14 downto 0);
         ram_read:       out std_logic;
@@ -48,18 +48,16 @@ begin
 
     ---------------------------------------------------------------------------
     --
-    -- We need a special case with phi2 = '0' for C128 which doesn't set R/W
-    -- correctly for Phi1 cycles.
     ---------------------------------------------------------------------------
-    rw_mem: process(enable, n_io2, async_read, sync_write)
+    rw_mem: process(enable, n_io2, rd, wr)
     begin
         ram_write <= '0';
         ram_read <= '0';
         if enable = '1' then
             if n_io2 = '0' then
-                if async_read = '1' then
+                if rd = '1' then
                     ram_read <= '1';
-                elsif sync_write = '1' then
+                elsif wr = '1' then
                     ram_write <= '1';
                 end if;
             end if;

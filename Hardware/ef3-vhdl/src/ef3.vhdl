@@ -272,8 +272,8 @@ architecture ef3_arc of ef3 is
         port (
             enable:         in  std_logic;
             n_io2:          in  std_logic;
-            async_read:     in  std_logic;
-            sync_write:     in  std_logic;
+            rd:             in  std_logic;
+            wr:             in  std_logic;
             addr:           in  std_logic_vector(15 downto 0);
             ram_addr:       out std_logic_vector(14 downto 0);
             ram_read:       out std_logic;
@@ -467,8 +467,8 @@ begin
     (
         enable                  => enable_io2ram,
         n_io2                   => n_io2,
-        async_read              => async_read,
-        sync_write              => sync_write,
+        rd                      => async_read,
+        wr                      => sync_write,
         addr                    => addr,
         ram_addr                => io2ram_ram_addr,
         ram_write               => io2_ram_write,
