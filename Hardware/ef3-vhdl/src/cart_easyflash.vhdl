@@ -27,33 +27,33 @@ use ieee.numeric_std.all;
 
 entity cart_easyflash is
     port (
-        clk:            in  std_logic;
-        n_sys_reset:    in  std_logic;
-        reset_to_menu:  in  std_logic;
-        n_reset:        in  std_logic;
-        enable:         in  std_logic;
-        phi2:           in  std_logic;
-        n_roml:         in  std_logic;
-        n_romh:         in  std_logic;
-        async_read:     in  std_logic;
-        sync_write:     in  std_logic;
-        cycle_start:    in  std_logic;
-        addr:           in  std_logic_vector(15 downto 0);
-        data:           in  std_logic_vector(7 downto 0);
-        io1_addr_0x:    in  std_logic;
-        button_crt_reset:  in std_logic;
-        button_special_fn: in std_logic;
-        slot:           out std_logic_vector(2 downto 0);
-        bank_hi:        out std_logic_vector(2 downto 0);
-        flash_addr:     out std_logic_vector(16 downto 0);
-        n_game:         out std_logic;
-        n_exrom:        out std_logic;
-        start_reset:    out std_logic;
-        flash_read:     out std_logic;
-        flash_write:    out std_logic;
-        data_out:       out std_logic_vector(7 downto 0);
-        data_out_valid: out std_logic;
-        led:            out std_logic
+            clk:                in  std_logic;
+            n_sys_reset:        in  std_logic;
+            reset_to_menu:      in  std_logic;
+            n_reset:            in  std_logic;
+            enable:             in  std_logic;
+            phi2:               in  std_logic;
+            n_roml:             in  std_logic;
+            n_romh:             in  std_logic;
+            rd:                 in  std_logic;
+            wr:                 in  std_logic;
+            cycle_start:        in  std_logic;
+            addr:               in  std_logic_vector(15 downto 0);
+            data:               in  std_logic_vector(7 downto 0);
+            io1_addr_0x:        in  std_logic;
+            button_crt_reset:   in  std_logic;
+            button_special_fn:  in  std_logic;
+            slot:               out std_logic_vector(2 downto 0);
+            bank_hi:            out std_logic_vector(2 downto 0);
+            flash_addr:         out std_logic_vector(16 downto 0);
+            n_game:             out std_logic;
+            n_exrom:            out std_logic;
+            start_reset:        out std_logic;
+            flash_read:         out std_logic;
+            flash_write:        out std_logic;
+            data_out:           out std_logic_vector(7 downto 0);
+            data_out_valid:     out std_logic;
+            led:                out std_logic
     );
 end cart_easyflash;
 
@@ -160,7 +160,7 @@ begin
         elsif rising_edge(clk) then
             if enable = '1' then
                 if io1_addr_0x = '1' then
-                    if sync_write = '1' then
+                    if wr = '1' then
                         -- write control register
                         case addr(3 downto 0) is
                             when x"0" =>
@@ -185,7 +185,7 @@ begin
 
                             when others => null;
                         end case;
-                    elsif async_read = '1' then -- todo: that's not really async yet
+                    elsif rd = '1' then
                         -- read control register
                         if addr(3 downto 0) = x"1" then
                             -- $de01
@@ -225,18 +225,16 @@ begin
 
     ---------------------------------------------------------------------------
     --
-    -- We need a special case with phi2 = '0' for C128 which doesn't set R/W
-    -- correctly for Phi1 cycles.
     ---------------------------------------------------------------------------
-    rw_mem: process(enable, n_roml, n_romh, async_read, sync_write)
+    rw_mem: process(enable, n_roml, n_romh, rd, wr)
     begin
         flash_write <= '0';
         flash_read <= '0';
         if enable = '1' then
             if n_roml = '0' or n_romh = '0' then
-                if async_read = '1' then
+                if rd = '1' then
                     flash_read <= '1';
-                elsif sync_write = '1' then
+                elsif wr = '1' then
                     flash_write <= '1';
                 end if;
             end if;
