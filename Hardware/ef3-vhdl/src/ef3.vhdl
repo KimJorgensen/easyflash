@@ -246,8 +246,8 @@ architecture ef3_arc of ef3 is
             phi2:               in  std_logic;
             n_roml:             in  std_logic;
             n_romh:             in  std_logic;
-            async_read:         in  std_logic;
-            sync_write:         in  std_logic;
+            rd:                 in  std_logic;
+            wr:                 in  std_logic;
             cycle_start:        in  std_logic;
             addr:               in  std_logic_vector(15 downto 0);
             data:               in  std_logic_vector(7 downto 0);
@@ -442,8 +442,8 @@ begin
         phi2                    => phi2,
         n_roml                  => n_roml,
         n_romh                  => n_romh,
-        async_read              => async_read,
-        sync_write              => sync_write,
+        rd                      => rd,
+        wr                      => wr,
         cycle_start             => cycle_start,
         addr                    => addr,
         data                    => data,
