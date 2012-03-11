@@ -316,8 +316,8 @@ architecture ef3_arc of ef3 is
             n_io2:              in  std_logic;
             n_roml:             in  std_logic;
             n_romh:             in  std_logic;
-            n_wr:               in  std_logic;
-            bus_ready:          in  std_logic;
+            rd:                 in  std_logic;
+            wr:                 in  std_logic;
             cycle_start:        in  std_logic;
             addr:               in  std_logic_vector(15 downto 0);
             data:               in  std_logic_vector(7 downto 0);
@@ -509,8 +509,8 @@ begin
         n_io2                   => n_io2,
         n_roml                  => n_roml,
         n_romh                  => n_romh,
-        n_wr                    => n_wr,
-        bus_ready               => bus_ready,
+        rd                      => rd,
+        wr                      => wr,
         cycle_start             => cycle_start,
         addr                    => addr,
         data                    => data,
