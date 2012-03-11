@@ -30,14 +30,11 @@ entity cart_ss5 is
         clk:                in  std_logic;
         n_reset:            in  std_logic;
         enable:             in  std_logic;
-        phi2:               in  std_logic;
         n_io1:              in  std_logic;
-        n_io2:              in  std_logic;
         n_roml:             in  std_logic;
         n_romh:             in  std_logic;
-        n_wr:               in  std_logic;
-        bus_ready:          in  std_logic;
-        cycle_start:        in  std_logic;
+        rd:                 in  std_logic;
+        wr:                 in  std_logic;
         addr:               in  std_logic_vector(15 downto 0);
         data:               in  std_logic_vector(7 downto 0);
         button_crt_reset:   in  std_logic;
@@ -121,8 +118,7 @@ begin
                     ctrl_game       <= '0';
                 end if;
 
-                if ctrl_kill = '0' and bus_ready = '1' and
-                        n_io1 = '0' and n_wr = '0' then
+                if ctrl_kill = '0' and n_io1 = '0' and wr = '1' then
                     -- write control register $de00
                     bank            <= data(4) & data(2);
                     ctrl_kill       <= data(3);
@@ -153,7 +149,7 @@ begin
     ---------------------------------------------------------------------------
     --
     ---------------------------------------------------------------------------
-    set_game_exrom: process(enable, ctrl_exrom, ctrl_game, phi2,
+    set_game_exrom: process(enable, ctrl_exrom, ctrl_game,
                             freezer_ready)
     begin
         if enable = '1' then
@@ -173,33 +169,30 @@ begin
     ---------------------------------------------------------------------------
     --
     ---------------------------------------------------------------------------
-    rw_mem: process(enable, addr, n_io1, n_io2, n_roml, n_romh, n_wr, phi2,
-                    bus_ready, ctrl_kill, ctrl_exrom)
+    rw_mem: process(enable, addr, n_io1, n_roml, n_romh, rd, wr,
+                    ctrl_kill, ctrl_exrom)
     begin
         flash_read <= '0';
         ram_read   <= '0';
         ram_write  <= '0';
 
-        if enable = '1' and ctrl_kill = '0' and bus_ready = '1' then
+        if enable = '1' and ctrl_kill = '0' then
             if n_roml = '0' then
-                if n_wr = '1' then
+                if rd = '1' then
                     if ctrl_exrom = '0' then
                         ram_read <= '1';
                     else
                         flash_read <= '1';
                     end if;
-                else
-                    if ctrl_exrom = '0' then
-                        ram_write <= '1';
-                    end if;
+                end if;
+                if wr = '1' and ctrl_exrom = '0' then
+                    ram_write <= '1';
                 end if;
             end if;
 
-            if n_romh = '0' or n_io1 = '0' then
-                if n_wr = '1' then
-                    flash_read <= '1';
-                end if;
-            end if; -- n_romh
+            if (n_romh = '0' or n_io1 = '0') and rd = '1' then
+                flash_read <= '1';
+            end if;
 
         end if; -- enable...
     end process;
@@ -225,7 +218,7 @@ begin
     -- "000L1000" corresponds to EF Bank 20
     --
     ---------------------------------------------------------------------------
-    create_mem_addr: process(bank, addr, n_io1, n_io2, n_roml)
+    create_mem_addr: process(bank, addr, n_io1, n_roml)
     begin
         flash_addr <= addr(13) & '0' & bank & addr(12 downto 0);
         ram_addr   <= bank & addr(12 downto 0);
