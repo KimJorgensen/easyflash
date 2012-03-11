@@ -345,14 +345,11 @@ architecture ef3_arc of ef3 is
             clk:                in  std_logic;
             n_reset:            in  std_logic;
             enable:             in  std_logic;
-            phi2:               in  std_logic;
             n_io1:              in  std_logic;
-            n_io2:              in  std_logic;
             n_roml:             in  std_logic;
             n_romh:             in  std_logic;
-            n_wr:               in  std_logic;
-            bus_ready:          in  std_logic;
-            cycle_start:        in  std_logic;
+            rd:                 in  std_logic;
+            wr:                 in  std_logic;
             addr:               in  std_logic_vector(15 downto 0);
             data:               in  std_logic_vector(7 downto 0);
             button_crt_reset:   in  std_logic;
@@ -537,14 +534,11 @@ begin
         clk                     => clk,
         n_reset                 => n_reset,
         enable                  => enable_ss5,
-        phi2                    => phi2,
         n_io1                   => n_io1,
-        n_io2                   => n_io2,
         n_roml                  => n_roml,
         n_romh                  => n_romh,
-        n_wr                    => n_wr,
-        bus_ready               => bus_ready,
-        cycle_start             => cycle_start,
+        rd                      => rd,
+        wr                      => wr,
         addr                    => addr,
         data                    => data,
         button_crt_reset        => button_crt_reset,
