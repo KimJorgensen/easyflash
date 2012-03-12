@@ -375,8 +375,8 @@ architecture ef3_arc of ef3 is
             n_reset:            in  std_logic;
             enable:             in  std_logic;
             n_io1:              in  std_logic;
-            n_wr:               in  std_logic;
-            bus_ready:          in  std_logic;
+            rd:                 in  std_logic;
+            wr:                 in  std_logic;
             cycle_start:        in  std_logic;
             addr:               in  std_logic_vector(15 downto 0);
             io1_addr_0x:        in  std_logic;
@@ -563,8 +563,8 @@ begin
         n_reset                 => n_reset,
         enable                  => enable_usb,
         n_io1                   => n_io1,
-        n_wr                    => n_wr,
-        bus_ready               => bus_ready,
+        rd                      => rd,
+        wr                      => wr,
         cycle_start             => cycle_start,
         addr                    => addr,
         io1_addr_0x             => io1_addr_0x,
@@ -577,10 +577,10 @@ begin
     );
 
 
-	-- these old signals will disappear
-	bus_ready <= phase_pos(5);
-	async_read <= rd;
-	sync_write <= wr;
+    -- these old signals will disappear
+    bus_ready <= phase_pos(5);
+    async_read <= rd;
+    sync_write <= wr;
 
     enable_usb      <= enable_ef; -- or enable_kernal;
     enable_io2ram   <= enable_ef; -- or enable_kernal;
