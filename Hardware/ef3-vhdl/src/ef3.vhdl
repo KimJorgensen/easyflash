@@ -99,8 +99,6 @@ architecture ef3_arc of ef3 is
 
     signal rd:                  std_logic;
     signal wr:                  std_logic;
-    signal async_read:          std_logic;
-    signal sync_write:          std_logic;
     signal bus_ready:           std_logic;
     signal phase_pos:           std_logic_vector(10 downto 0);
     signal cycle_start:         std_logic;
@@ -224,15 +222,16 @@ architecture ef3_arc of ef3 is
 
     component freezer is
         port (
-            clk:                    in  std_logic;
-            n_reset:                in  std_logic;
-            phi2:                   in  std_logic;
-            n_wr:                   in  std_logic;
-            bus_ready:              in  std_logic;
-            start_freezer:          in  std_logic;
-            reset_freezer:          in  std_logic;
-            freezer_irq:            out std_logic;
-            freezer_ready:          out std_logic
+            clk:                in  std_logic;
+            n_reset:            in  std_logic;
+            phi2:               in  std_logic;
+            bus_ready:          in  std_logic;
+            ba:                 in  std_logic;
+            n_wr:               in  std_logic;
+            start_freezer:      in  std_logic;
+            reset_freezer:      in  std_logic;
+            freezer_irq:        out std_logic;
+            freezer_ready:      out std_logic
         );
     end component;
 
@@ -421,8 +420,9 @@ begin
         clk                     => clk,
         n_reset                 => n_reset,
         phi2                    => phi2,
-        n_wr                    => n_wr,
         bus_ready               => bus_ready,
+        ba                      => ba,
+        n_wr                    => n_wr,
         start_freezer           => start_freezer,
         reset_freezer           => reset_freezer,
         freezer_irq             => freezer_irq,
@@ -464,8 +464,8 @@ begin
     (
         enable                  => enable_io2ram,
         n_io2                   => n_io2,
-        rd                      => async_read,
-        wr                      => sync_write,
+        rd                      => rd,
+        wr                      => wr,
         addr                    => addr,
         ram_addr                => io2ram_ram_addr,
         ram_write               => io2_ram_write,
@@ -577,10 +577,7 @@ begin
     );
 
 
-    -- these old signals will disappear
     bus_ready <= phase_pos(5);
-    async_read <= rd;
-    sync_write <= wr;
 
     enable_usb      <= enable_ef; -- or enable_kernal;
     enable_io2ram   <= enable_ef; -- or enable_kernal;
@@ -603,10 +600,8 @@ begin
         else '0';
 
     -- KERNAL bank at $de0e in menu mode
-    kernal_set_bank <= '1' when
-            sync_write = '1' and io1_addr_0x = '1' and
-            addr(3 downto 0) = x"e" and
-            enable_menu = '1'
+    kernal_set_bank <= '1' when wr = '1' and io1_addr_0x = '1' and
+            addr(3 downto 0) = x"e" and enable_menu = '1'
         else '0';
 
     ---------------------------------------------------------------------------

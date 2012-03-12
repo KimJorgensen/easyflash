@@ -28,15 +28,16 @@ use ieee.numeric_std.all;
 
 entity freezer is
     port (
-            clk:                    in  std_logic;
-            n_reset:                in  std_logic;
-            phi2:                   in  std_logic;
-            n_wr:                   in  std_logic;
-            bus_ready:              in  std_logic;
-            start_freezer:          in  std_logic;
-            reset_freezer:          in  std_logic;
-            freezer_irq:            out std_logic;
-            freezer_ready:          out std_logic
+            clk:                in  std_logic;
+            n_reset:            in  std_logic;
+            phi2:               in  std_logic;
+            bus_ready:          in  std_logic;
+            ba:                 in  std_logic;
+            n_wr:               in  std_logic;
+            start_freezer:      in  std_logic;
+            reset_freezer:      in  std_logic;
+            freezer_irq:        out std_logic;
+            freezer_ready:      out std_logic
     );
 end freezer;
 
@@ -55,7 +56,12 @@ architecture behav of freezer is
     signal freeze_counter:          integer range 0 to 3;
 
     signal freeze_pending:          std_logic;
+    
+    signal cpu_read:                std_logic;
+    signal cpu_write:               std_logic;
 begin
+	cpu_read  <= phi2 and ba and bus_ready and n_wr;
+	cpu_write <= phi2 and bus_ready and not n_wr;
 
     ---------------------------------------------------------------------------
     -- When the freeze button is being pressed during a bus read access we
@@ -81,15 +87,15 @@ begin
                     end if;
                 end if;
 
-            elsif bus_ready = '1' and phi2 = '1' then
-                if n_wr = '0' then
+            else
+            	if cpu_write = '1' then
                     if freeze_counter /= 0 then
                         freeze_counter <= freeze_counter - 1;
                     end if;
                     if freeze_counter = 1 then
                         freezer_ready <= '1';
                     end if;
-                else
+                elsif cpu_read = '1' then
                     freeze_counter <= 3;
                 end if;
             end if;
