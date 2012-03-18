@@ -108,7 +108,6 @@ architecture ef3_arc of ef3 is
 
     signal n_exrom_out:         std_logic;
     signal n_game_out:          std_logic;
-    --signal n_dma_out:         std_logic;
 
     signal phi2_cycle_start:    std_logic;
 
@@ -151,10 +150,13 @@ architecture ef3_arc of ef3 is
     signal ef_led:              std_logic;
 
     signal kernal_flash_addr:   std_logic_vector(16 downto 0);
+    signal kernal_n_dma:        std_logic;
     signal kernal_a14:          std_logic;
     signal kernal_n_game:       std_logic;
     signal kernal_n_exrom:      std_logic;
     signal kernal_flash_read:   std_logic;
+    signal kernal_ram_read:     std_logic;
+    signal kernal_ram_write:    std_logic;
     signal kernal_set_bank:     std_logic;
     signal kernal_start_reset:  std_logic;
 
@@ -194,6 +196,8 @@ architecture ef3_arc of ef3 is
     attribute KEEP : string; -- keep buffer from being optimized out
     attribute KEEP of io1_addr_0x: signal is "TRUE";
     attribute KEEP of cycle_start: signal is "TRUE";
+    --attribute KEEP of rd:          signal is "TRUE";
+    --attribute KEEP of wr:          signal is "TRUE";
 
     component exp_bus_ctrl is
         port (
@@ -296,11 +300,14 @@ architecture ef3_arc of ef3 is
             data:               in  std_logic_vector(7 downto 0);
             button_crt_reset:   in  std_logic;
             flash_addr:         out std_logic_vector(16 downto 0);
+            n_dma:              out std_logic;
             a14:                out std_logic;
             n_game:             out std_logic;
             n_exrom:            out std_logic;
             start_reset:        out std_logic;
             flash_read:         out std_logic;
+            ram_read:           out std_logic;
+            ram_write:          out std_logic;
             hiram:              out std_logic
         );
     end component;
@@ -488,11 +495,14 @@ begin
         data                    => data,
         button_crt_reset        => button_crt_reset,
         flash_addr              => kernal_flash_addr,
+        n_dma                   => kernal_n_dma,
         a14                     => kernal_a14,
         n_game                  => kernal_n_game,
         n_exrom                 => kernal_n_exrom,
         start_reset             => kernal_start_reset,
         flash_read              => kernal_flash_read,
+        ram_read                => kernal_ram_read,
+        ram_write               => kernal_ram_write,
         hiram                   => hiram
     );
 
@@ -595,8 +605,7 @@ begin
 
     -- for readable optimizations: '1' for n_io1 $de00..$de0f
     io1_addr_0x <= '1' when
-            n_io1 = '0' and
-            addr(7 downto 4) = x"0"
+            n_io1 = '0' and addr(7 downto 4) = x"0"
         else '0';
 
     -- KERNAL bank at $de0e in menu mode
@@ -651,10 +660,9 @@ begin
                 enable_ar       <= '0';
                 enable_ss5      <= '0';
                 enable_kernal   <= '0';
-            elsif n_wr = '0' and bus_ready = '1' and
-                n_io1 = '0' and enable_menu = '1' then
-                case addr(7 downto 0) is
-                    when x"0f" =>
+            elsif wr = '1' and io1_addr_0x = '1' and enable_menu = '1' then
+                case addr(3 downto 0) is
+                    when x"f" =>
                         enable_ef       <= '0';
                         enable_menu     <= '0';
                         enable_ar       <= '0';
@@ -679,7 +687,7 @@ begin
                                 sw_start_reset <= '1';
 
                             when x"4" =>
-                                enable_ar <= '1';
+                                --enable_ar <= '1';
                                 sw_start_reset <= '1';
 
                             when x"5" =>
@@ -702,8 +710,8 @@ begin
     ---------------------------------------------------------------------------
     -- Merge the output of all cartridges
     ---------------------------------------------------------------------------
-    ram_read        <= io2_ram_read or ar_ram_read or ss5_ram_read;
-    ram_write       <= io2_ram_write or ar_ram_write or ss5_ram_write;
+    ram_read        <= io2_ram_read or kernal_ram_read or ar_ram_read or ss5_ram_read;
+    ram_write       <= io2_ram_write or kernal_ram_write or ar_ram_write or ss5_ram_write;
     flash_read      <= ef_flash_read or kernal_flash_read or ar_flash_read or ss5_flash_read;
     flash_write     <= ef_flash_write;
     n_exrom_out     <= ef_n_exrom and kernal_n_exrom and ar_n_exrom and ss5_n_exrom;
@@ -721,7 +729,7 @@ begin
 
     n_led <= not (ef_led or ar_led or ss5_led);
 
-    n_dma <= 'Z';
+    n_dma <= '0' when kernal_n_dma = '0' else 'Z';
 
     n_exrom <= n_exrom_out; -- when ((n_exrom and n_exrom_out) = '0') else 'Z';
 
