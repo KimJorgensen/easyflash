@@ -35,11 +35,8 @@ entity cart_kernal is
         n_wr:               in  std_logic;
         phase_pos:          in  std_logic_vector(10 downto 0);
         cycle_start:        in  std_logic;
-        set_bank:           in  std_logic;
         addr:               in  std_logic_vector(15 downto 0);
-        data:               in  std_logic_vector(7 downto 0);
         button_crt_reset:   in  std_logic;
-        flash_addr:         out std_logic_vector(16 downto 0);
         n_dma:              out std_logic;
         a14:                out std_logic;
         n_game:             out std_logic;
@@ -57,7 +54,6 @@ architecture behav of cart_kernal is
     signal kernal_space_cpu_read:   boolean;
     signal kernal_space_cpu_write:  boolean;
     signal kernal_read_active:      boolean;
-    signal bank:                    std_logic_vector(2 downto 0);
 begin
 
     kernal_space_addressed <= true when addr(15 downto 13) = "111" else false;
@@ -71,19 +67,6 @@ begin
         else false;
 
     start_reset <= enable and button_crt_reset;
-
-    ---------------------------------------------------------------------------
-    -- Note: When the bank is set, the KERNAL is _not_ yet enabled
-    ---------------------------------------------------------------------------
-    set_kernal_bank: process(clk)
-    begin
-        -- todo: reset?
-        if rising_edge(clk) then
-            if set_bank = '1' then
-                bank <= data(2 downto 0);
-            end if;
-        end if;
-    end process;
 
     ---------------------------------------------------------------------------
     --
@@ -177,17 +160,6 @@ begin
 
             end if; -- enable
         end if; -- clk
-    end process;
-
-    ---------------------------------------------------------------------------
-    -- Combinatorically create the next memory address.
-    -- Always read from part usually used for ROML, because there we have
-    -- the boot sectors which contain the KERNAL images
-    ---------------------------------------------------------------------------
-    create_mem_addr: process(bank, addr)
-    begin
-        flash_addr <= (others => '0');
-        flash_addr(15 downto 0) <= bank & addr(12 downto 0);
     end process;
 
 end architecture behav;

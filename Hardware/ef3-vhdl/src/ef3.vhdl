@@ -67,6 +67,9 @@ architecture ef3_arc of ef3 is
     -- Current bank (high bits), taken from cart_easyflash (addr 19 downto 17)
     signal bank_hi:             std_logic_vector(2 downto 0);
 
+    -- Current bank (low bits), set by various cartridges (addr 15 downto 13)
+    signal bank_lo:             std_logic_vector(2 downto 0);
+
     -- Current cartridge mode
     signal enable_menu:         std_logic;
     signal enable_ef:           std_logic;
@@ -136,37 +139,39 @@ architecture ef3_arc of ef3 is
     signal flash_read:          std_logic;
     signal flash_write:         std_logic;
 
-    signal ef_flash_addr:       std_logic_vector(16 downto 0);
     signal io2ram_ram_addr:     std_logic_vector(14 downto 0);
     signal ef_n_game:           std_logic;
     signal ef_n_exrom:          std_logic;
     signal ef_start_reset:      std_logic;
     signal io2_ram_read:        std_logic;
     signal io2_ram_write:       std_logic;
+    signal ef_set_bank_lo:      std_logic;
+    signal ef_new_bank_lo:      std_logic_vector(2 downto 0);
     signal ef_flash_read:       std_logic;
     signal ef_flash_write:      std_logic;
     signal ef_data_out:         std_logic_vector(7 downto 0);
     signal ef_data_out_valid:   std_logic;
     signal ef_led:              std_logic;
 
-    signal kernal_flash_addr:   std_logic_vector(16 downto 0);
     signal kernal_n_dma:        std_logic;
     signal kernal_a14:          std_logic;
     signal kernal_n_game:       std_logic;
     signal kernal_n_exrom:      std_logic;
+    signal kernal_set_bank_lo:  std_logic;
+    signal kernal_new_bank_lo:  std_logic_vector(2 downto 0);
     signal kernal_flash_read:   std_logic;
     signal kernal_ram_read:     std_logic;
     signal kernal_ram_write:    std_logic;
-    signal kernal_set_bank:     std_logic;
     signal kernal_start_reset:  std_logic;
 
-    signal ar_flash_addr:       std_logic_vector(16 downto 0);
     signal ar_ram_addr:         std_logic_vector(14 downto 0);
     signal ar_n_game:           std_logic;
     signal ar_n_exrom:          std_logic;
     signal ar_start_reset:      std_logic;
     signal ar_start_freezer:    std_logic;
     signal ar_reset_freezer:    std_logic;
+    signal ar_set_bank_lo:      std_logic;
+    signal ar_new_bank_lo:      std_logic_vector(2 downto 0);
     signal ar_ram_read:         std_logic;
     signal ar_ram_write:        std_logic;
     signal ar_flash_read:       std_logic;
@@ -174,13 +179,14 @@ architecture ef3_arc of ef3 is
     signal ar_data_out_valid:   std_logic;
     signal ar_led:              std_logic;
 
-    signal ss5_flash_addr:      std_logic_vector(16 downto 0);
     signal ss5_ram_addr:        std_logic_vector(14 downto 0);
     signal ss5_n_game:          std_logic;
     signal ss5_n_exrom:         std_logic;
     signal ss5_start_reset:     std_logic;
     signal ss5_start_freezer:   std_logic;
     signal ss5_reset_freezer:   std_logic;
+    signal ss5_set_bank_lo:     std_logic;
+    signal ss5_new_bank_lo:     std_logic_vector(2 downto 0);
     signal ss5_ram_read:        std_logic;
     signal ss5_ram_write:       std_logic;
     signal ss5_flash_read:      std_logic;
@@ -259,7 +265,8 @@ architecture ef3_arc of ef3 is
             button_special_fn:  in  std_logic;
             slot:               out std_logic_vector(2 downto 0);
             bank_hi:            out std_logic_vector(2 downto 0);
-            flash_addr:         out std_logic_vector(16 downto 0);
+            set_bank_lo:        out std_logic;
+            new_bank_lo:        out std_logic_vector(2 downto 0);
             n_game:             out std_logic;
             n_exrom:            out std_logic;
             start_reset:        out std_logic;
@@ -295,11 +302,8 @@ architecture ef3_arc of ef3 is
             n_wr:               in  std_logic;
             phase_pos:          in  std_logic_vector(10 downto 0);
             cycle_start:        in  std_logic;
-            set_bank:           in  std_logic;
             addr:               in  std_logic_vector(15 downto 0);
-            data:               in  std_logic_vector(7 downto 0);
             button_crt_reset:   in  std_logic;
-            flash_addr:         out std_logic_vector(16 downto 0);
             n_dma:              out std_logic;
             a14:                out std_logic;
             n_game:             out std_logic;
@@ -327,10 +331,12 @@ architecture ef3_arc of ef3 is
             cycle_start:        in  std_logic;
             addr:               in  std_logic_vector(15 downto 0);
             data:               in  std_logic_vector(7 downto 0);
+            bank_lo:            in  std_logic_vector(2 downto 0);
             button_crt_reset:   in  std_logic;
             button_special_fn:  in  std_logic;
             freezer_ready:      in  std_logic;
-            flash_addr:         out std_logic_vector(16 downto 0);
+            set_bank_lo:        out std_logic;
+            new_bank_lo:        out std_logic_vector(2 downto 0);
             ram_addr:           out std_logic_vector(14 downto 0);
             n_game:             out std_logic;
             n_exrom:            out std_logic;
@@ -358,10 +364,12 @@ architecture ef3_arc of ef3 is
             wr:                 in  std_logic;
             addr:               in  std_logic_vector(15 downto 0);
             data:               in  std_logic_vector(7 downto 0);
+            bank_lo:            in  std_logic_vector(2 downto 0);
             button_crt_reset:   in  std_logic;
             button_special_fn:  in  std_logic;
             freezer_ready:      in  std_logic;
-            flash_addr:         out std_logic_vector(16 downto 0);
+            set_bank_lo:        out std_logic;
+            new_bank_lo:        out std_logic_vector(2 downto 0);
             ram_addr:           out std_logic_vector(14 downto 0);
             n_game:             out std_logic;
             n_exrom:            out std_logic;
@@ -456,7 +464,8 @@ begin
         button_special_fn       => button_special_fn,
         slot                    => slot,
         bank_hi                 => bank_hi,
-        flash_addr              => ef_flash_addr,
+        set_bank_lo             => ef_set_bank_lo,
+        new_bank_lo             => ef_new_bank_lo,
         n_game                  => ef_n_game,
         n_exrom                 => ef_n_exrom,
         start_reset             => ef_start_reset,
@@ -490,11 +499,8 @@ begin
         n_wr                    => n_wr,
         phase_pos               => phase_pos,
         cycle_start             => cycle_start,
-        set_bank                => kernal_set_bank,
         addr                    => addr,
-        data                    => data,
         button_crt_reset        => button_crt_reset,
-        flash_addr              => kernal_flash_addr,
         n_dma                   => kernal_n_dma,
         a14                     => kernal_a14,
         n_game                  => kernal_n_game,
@@ -521,10 +527,12 @@ begin
         cycle_start             => cycle_start,
         addr                    => addr,
         data                    => data,
+        bank_lo                 => bank_lo,
         button_crt_reset        => button_crt_reset,
         button_special_fn       => button_special_fn,
         freezer_ready           => freezer_ready,
-        flash_addr              => ar_flash_addr,
+        set_bank_lo             => ar_set_bank_lo,
+        new_bank_lo             => ar_new_bank_lo,
         ram_addr                => ar_ram_addr,
         n_game                  => ar_n_game,
         n_exrom                 => ar_n_exrom,
@@ -551,10 +559,12 @@ begin
         wr                      => wr,
         addr                    => addr,
         data                    => data,
+        bank_lo                 => bank_lo,
         button_crt_reset        => button_crt_reset,
         button_special_fn       => button_special_fn,
         freezer_ready           => freezer_ready,
-        flash_addr              => ss5_flash_addr,
+        set_bank_lo             => ss5_set_bank_lo,
+        new_bank_lo             => ss5_new_bank_lo,
         ram_addr                => ss5_ram_addr,
         n_game                  => ss5_n_game,
         n_exrom                 => ss5_n_exrom,
@@ -604,14 +614,15 @@ begin
     n_irq       <= 'Z' when freezer_irq = '0'       else '0';
 
     -- for readable optimizations: '1' for n_io1 $de00..$de0f
-    io1_addr_0x <= '1' when
-            n_io1 = '0' and addr(7 downto 4) = x"0"
+    io1_addr_0x <= '1' when n_io1 = '0' and addr(7 downto 4) = x"0"
         else '0';
 
     -- KERNAL bank at $de0e in menu mode
-    kernal_set_bank <= '1' when wr = '1' and io1_addr_0x = '1' and
+    -- Note: When the bank is set, the KERNAL is _not_ yet enabled
+    kernal_set_bank_lo <= '1' when wr = '1' and io1_addr_0x = '1' and
             addr(3 downto 0) = x"e" and enable_menu = '1'
         else '0';
+    kernal_new_bank_lo <= data(2 downto 0);
 
     ---------------------------------------------------------------------------
     -- The buttons will be enabled after all buttons have been released one
@@ -687,7 +698,7 @@ begin
                                 sw_start_reset <= '1';
 
                             when x"4" =>
-                                --enable_ar <= '1';
+                                enable_ar <= '1';
                                 sw_start_reset <= '1';
 
                             when x"5" =>
@@ -740,17 +751,40 @@ begin
     ---------------------------------------------------------------------------
     --
     ---------------------------------------------------------------------------
-    set_mem_addr: process(enable_ef, ef_flash_addr,
+    set_bank_lo: process(clk, n_reset, enable_kernal)
+    begin
+        -- Do not reset bank low when KERNAL is active
+        if n_reset = '0' and enable_kernal = '0' then
+            bank_lo <= (others => '0');
+        elsif rising_edge(clk) then
+            if ef_set_bank_lo = '1' then
+                bank_lo <= ef_new_bank_lo;
+            elsif ar_set_bank_lo = '1' then
+                bank_lo <= ar_new_bank_lo;
+            elsif kernal_set_bank_lo = '1' then
+                bank_lo <= kernal_new_bank_lo;
+            elsif ss5_set_bank_lo = '1' then
+                bank_lo <= ss5_new_bank_lo;
+            end if;
+        end if;
+    end process;
+
+    ---------------------------------------------------------------------------
+    --
+    ---------------------------------------------------------------------------
+    set_mem_addr: process(enable_ef,
                           enable_io2ram, io2ram_ram_addr,
-                          enable_kernal, kernal_flash_addr,
-                          enable_ar, ar_flash_addr, ar_ram_addr,
-                          enable_ss5, ss5_flash_addr, ss5_ram_addr,
-                          slot, bank_hi, n_ram_cs_i)
+                          enable_kernal,
+                          enable_ar, ar_ram_addr,
+                          enable_ss5, ss5_ram_addr,
+                          addr, slot, bank_hi, bank_lo, n_ram_cs_i)
     begin
         mem_addr <= (others => '0');
 
         -- The upper bits are the slot address and the high bits of bank
         mem_addr(22 downto 17) <= slot & bank_hi;
+
+        mem_addr(15 downto 13) <= bank_lo;
 
         -- Take lower address bits from C64 directly
         mem_addr(12 downto 0) <= addr(12 downto 0);
@@ -765,13 +799,13 @@ begin
             end if;
         else
             if enable_kernal = '1' then
-                mem_addr(16 downto 13) <= kernal_flash_addr(16 downto 13);
+                mem_addr(16) <= '0';
             elsif enable_ef = '1' then
-                mem_addr(16 downto 13) <= ef_flash_addr(16 downto 13);
+                mem_addr(16) <= n_roml;
             elsif enable_ar = '1' then
-                mem_addr(16 downto 13) <= ar_flash_addr(16 downto 13);
+                mem_addr(16) <= '1';
             elsif enable_ss5 = '1' then
-                mem_addr(16 downto 13) <= ss5_flash_addr(16 downto 13);
+                mem_addr(16) <= addr(13);
             end if;
         end if;
     end process;
