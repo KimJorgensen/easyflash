@@ -38,7 +38,7 @@ entity cart_kernal is
         addr:               in  std_logic_vector(15 downto 0);
         button_crt_reset:   in  std_logic;
         n_dma:              out std_logic;
-        a14:                out std_logic;
+        addr_test:          out std_logic;
         n_game:             out std_logic;
         n_exrom:            out std_logic;
         start_reset:        out std_logic;
@@ -89,7 +89,7 @@ begin
         if n_reset = '0' then
             n_game  <= '1';
             n_exrom <= '1';
-            a14 <= '1';
+            addr_test <= '0';
             n_dma <= '1';
             hiram <= '0';
             kernal_read_active <= false;
@@ -113,15 +113,17 @@ begin
                 end if;
 
                 if kernal_read_active then
-                    if phase_pos(1) = '1' then
-                        a14 <= '0';
-                        n_dma <= '1';
+                    if phase_pos(2) = '1' then
+                        addr_test <= '1';
                     end if;
 
                     if phase_pos(3) = '1' then
-                        -- Release everything and check for hiram
-                        a14 <= '1';
                         n_dma <= '1';
+                    end if;
+
+                    if phase_pos(4) = '1' then
+                        -- Release everything and check for hiram
+                        addr_test <= '0';
                         -- ROMH reflects HIRAM now
                         if n_romh = '1' then
                             -- ram
@@ -132,9 +134,7 @@ begin
                         end if;
                         n_exrom <= '1'; -- Ultimax mode
                     end if;
-                end if; -- kernal_read_active
-
-                if phase_pos(4) = '1' and kernal_space_cpu_write then
+                elsif phase_pos(4) = '1' and kernal_space_cpu_write then
                     ram_write <= '1';
                 end if;
 
@@ -142,14 +142,14 @@ begin
                     -- KERNAL read complete
                     n_game  <= '1';
                     n_exrom <= '1';
-                    a14 <= '1';
-                    --n_dma <= '1';
+                    addr_test <= '0';
+                    n_dma <= '1';
                     kernal_read_active <= false;
                 end if;
             else -- enable
                 n_game  <= '1';
                 n_exrom <= '1';
-                a14 <= '1';
+                addr_test <= '0';
                 n_dma <= '1';
                 hiram <= '0';
                 kernal_read_active <= false;
