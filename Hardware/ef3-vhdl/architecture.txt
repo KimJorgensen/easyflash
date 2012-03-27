@@ -1,0 +1,129 @@
+
+This file contains documentation about the structure and semantic of
+the EF3 VHDL implementation.
+
+===============================================================================
+cartridge_modes
+===============================================================================
+
+This package contains an enumeration for all cartridges and modes implemented.
+
+===============================================================================
+exp_bus_ctrl
+===============================================================================
+
+This entity contains low-level mechanisms to provide various control signals
+related to the expansion port to other parts.
+
+Its input are the main clock (25 MHz) and the unsynchronized Phi2 signal.
+
+The process "synchronize_stuff" creates a synchronized version of Phi2
+(phi2_s) and a copy of phi2_s which is delayed by one clock cycle (prev_phi2).
+
+The heart of this entity is the process clk_counter which controls a counter.
+It counts 25 MHz cycles and is reset to 0 synchronously each time when phi2_s
+is different from prev_phi2. So this counter (clk_cnt) counts from 0 to about
+11 or 12. The actual upper counter limit depends from the frequency of Phi2
+(PAL/NTSC) and the phase shift between the clock domains clk and Phi2.
+The actual limit is not important, as it is not used anywhere.
+
+Note that there is a delay between the original Phi2 edges and the start of
+clk_cnt = 0. First we have a synchronization delay of 0..40 ns when phi2_s is
+created. Additionally 40 ns are added because of prev_phi2.
+
+This means that clk_cnt is reset to 0 about 40 to 80 ns after each edge of
+Phi2.
+
+The process bus_states creates various control signals from clk_cnt and phi2_s.
+All of them are created in a combinatorical way and therefore may contain
+glitches. They must only be consumed in synchronous processes to make sure
+they reached a stable state.
+
+cycle_start
+-----------
+
+cycle_start is '1' for one clk-cycle right at the beginning of a half-cycle of
+Phi2. It can be used to reset states from the previous half-cycle and to
+prepare the next one.
+
+addr_ready
+----------
+
+This combinatorical signal is '1' for one clk cycle when the address from
+CPU or VIC is stable. It can be used where the address must be known as early
+as possible in the Phi2 half-cycle. Note that the PLA decoding may not be
+ready yet at this time.
+
+bus_ready
+---------
+
+This combinatorical signal is '1' for one clk cycle when the PLA result for the
+current address is stable. This can be used whereever the address, one of the
+PLA output lines and/or the data bus will be evaluated.
+
+hiram_detect_ready
+------------------
+
+After the KERNAL implementation changed the address bus, ROMH has to be
+examined. This combinatorical signal is '1' for one clock cycle when ROMH
+is ready.
+
+This figure shows the timing of all signals described above:
+
+              _   _   _   _   _   _   _   _   _   _   _   _   _   _   _   _
+ clk:        / \_/ \_/ \_/ \_/ \_/ \_/ \_/ \_/ \_/ \_/ \_/ \_/ \_/ \_/ \_/ \_
+                _______________________________________________
+ phi2:       __/                                               \_____________
+             .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .
+                 +0..40 ns
+                  _______________________________________________
+ phi2_s:     ____/                                               \___________
+             .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .
+                     +40..80 ns
+                      _______________________________________________
+ prev_phi2:  ________/                                               \_______
+
+             .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .
+ phase_pos:  -   -   0   1   2   3   4   5   6   7   8   9  10   -   0   1
+             .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .
+ t_min              40  80  120 160 200 240 280 320 360 400 440 480 ns
+ t_max              80  120 160 200 240 280 320 360 400 440 480 520 ns
+             .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .
+                  ___                .       .       .
+ cycle_start:____/   \_______________________________________________________
+                                  ___.       .       .
+ addr_ready: ____________________/   \_______________________________________
+                                          ___.       .
+ bus_ready:  ____________________________/   \_______________________________
+                                                     .
+ hiram_detect_ready:                              ___.
+             ____________________________________/   \_______________________
+
+
+===============================================================================
+reset_generator
+===============================================================================
+
+This module synchronizes and creates various reset signals.
+
+n_sys_reset
+-----------
+
+This is a synchronized version of the reset signal which comes from the C64.
+It is derived from n_reset_i (called n_reset_io in ef3.vhdl).
+
+n_sys_reset is not asserted when the reset was generated by the
+reset_generator.
+
+n_generated_reset
+-----------------
+
+This is a reset which is active for 8 Phi2 cycles after start_reset has 
+triggered it. It is generated in reset_generator and may be used e.g. to
+reset the C64 to activate a changed cartridge mode.
+
+n_reset
+-------
+
+This signal is active whenever any reset is active, it may be generated by
+reset_generator or coming from the C64.

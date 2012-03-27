@@ -1,0 +1,5 @@
+
+Version 1.0.3 - 07.01.2012
+- Contains EasyProg 1.6.3
+- Menu entries are also greyed out if the slot contains a torture test pattern
+
