@@ -154,7 +154,7 @@ architecture ef3_arc of ef3 is
     signal ef_led:              std_logic;
 
     signal kernal_n_dma:        std_logic;
-    signal kernal_addr_test:    std_logic;
+    signal kernal_a14:          std_logic;
     signal kernal_n_game:       std_logic;
     signal kernal_n_exrom:      std_logic;
     signal kernal_set_bank_lo:  std_logic;
@@ -305,7 +305,7 @@ architecture ef3_arc of ef3 is
             addr:               in  std_logic_vector(15 downto 0);
             button_crt_reset:   in  std_logic;
             n_dma:              out std_logic;
-            addr_test:          out std_logic;
+            a14:                out std_logic;
             n_game:             out std_logic;
             n_exrom:            out std_logic;
             start_reset:        out std_logic;
@@ -502,7 +502,7 @@ begin
         addr                    => addr,
         button_crt_reset        => button_crt_reset,
         n_dma                   => kernal_n_dma,
-        addr_test               => kernal_addr_test,
+        a14                     => kernal_a14,
         n_game                  => kernal_n_game,
         n_exrom                 => kernal_n_exrom,
         start_reset             => kernal_start_reset,
@@ -740,13 +740,13 @@ begin
 
     n_led <= not (ef_led or ar_led or ss5_led);
 
-    n_dma <= '0' when kernal_n_dma = '0' else '1';
+    n_dma <= '0' when kernal_n_dma = '0' else 'Z';
 
     n_exrom <= n_exrom_out; -- when ((n_exrom and n_exrom_out) = '0') else 'Z';
 
     n_game <= n_game_out; -- when ((n_game and n_game_out) = '0') else 'Z';
 
-    addr(15 downto 12) <= "1011" when kernal_addr_test = '1' else "ZZZZ";
+    addr(14) <= '0' when kernal_a14 = '0' else 'Z';
 
     ---------------------------------------------------------------------------
     --
