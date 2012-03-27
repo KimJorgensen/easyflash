@@ -37,12 +37,10 @@ entity cart_ss5 is
         wr:                 in  std_logic;
         addr:               in  std_logic_vector(15 downto 0);
         data:               in  std_logic_vector(7 downto 0);
-        bank_lo:            in  std_logic_vector(2 downto 0);
         button_crt_reset:   in  std_logic;
         button_special_fn:  in  std_logic;
         freezer_ready:      in  std_logic;
-        set_bank_lo:        out std_logic;
-        new_bank_lo:        out std_logic_vector(2 downto 0);
+        flash_addr:         out std_logic_vector(16 downto 0);
         ram_addr:           out std_logic_vector(14 downto 0);
         n_game:             out std_logic;
         n_exrom:            out std_logic;
@@ -62,23 +60,12 @@ architecture behav of cart_ss5 is
     signal ctrl_game:           std_logic;
     signal ctrl_exrom:          std_logic;
     signal ctrl_kill:           std_logic;
+    signal bank:                std_logic_vector(1 downto 0);
 
 begin
 
     start_reset <= enable and button_crt_reset;
     led <= enable and not ctrl_kill;
-
-    ---------------------------------------------------------------------------
-    --
-    ---------------------------------------------------------------------------
-    new_bank_lo <= (others => '0') when freezer_ready = '1'
-        else '0' & data(4) & data(2);
-
-    set_bank_lo <= '1' when
-        -- freezer or $dexx
-        enable = '1' and (freezer_ready = '1' or
-                          (ctrl_kill = '0' and n_io1 = '0' and wr = '1'))
-        else '0';
 
     ---------------------------------------------------------------------------
     --
@@ -118,12 +105,14 @@ begin
     rw_control_regs: process(clk, n_reset, enable)
     begin
         if n_reset = '0' then
+            bank            <= (others => '0');
             ctrl_kill       <= '0';
             ctrl_exrom      <= '0';
             ctrl_game       <= '0';
         elsif rising_edge(clk) then
             if enable = '1' then
                 if freezer_ready = '1' then
+                    bank            <= (others => '0');
                     ctrl_kill       <= '0';
                     ctrl_exrom      <= '0';
                     ctrl_game       <= '0';
@@ -131,7 +120,7 @@ begin
 
                 if ctrl_kill = '0' and n_io1 = '0' and wr = '1' then
                     -- write control register $de00
-                    -- for bank refer to combinatorical logic new_bank_lo
+                    bank            <= data(4) & data(2);
                     ctrl_kill       <= data(3);
                     ctrl_exrom      <= data(1);
                     ctrl_game       <= data(0);
@@ -229,9 +218,10 @@ begin
     -- "000L1000" corresponds to EF Bank 20
     --
     ---------------------------------------------------------------------------
-    create_mem_addr: process(addr, n_io1, n_roml)
+    create_mem_addr: process(bank, addr, n_io1, n_roml)
     begin
-        ram_addr   <= bank_lo(1 downto 0) & addr(12 downto 0);
+        flash_addr <= addr(13) & '0' & bank & addr(12 downto 0);
+        ram_addr   <= bank & addr(12 downto 0);
     end process;
 
 end architecture behav;
