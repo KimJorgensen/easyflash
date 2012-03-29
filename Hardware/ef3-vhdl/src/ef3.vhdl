@@ -67,6 +67,9 @@ architecture ef3_arc of ef3 is
     -- Current bank (high bits), taken from cart_easyflash (addr 19 downto 17)
     signal bank_hi:             std_logic_vector(2 downto 0);
 
+    -- Current bank (low bits), set by various cartridges (addr 15 downto 13)
+    signal bank_lo:             std_logic_vector(2 downto 0);
+
     -- Current cartridge mode
     signal enable_menu:         std_logic;
     signal enable_ef:           std_logic;
@@ -136,13 +139,14 @@ architecture ef3_arc of ef3 is
     signal flash_read:          std_logic;
     signal flash_write:         std_logic;
 
-    signal ef_flash_addr:       std_logic_vector(16 downto 0);
     signal io2ram_ram_addr:     std_logic_vector(14 downto 0);
     signal ef_n_game:           std_logic;
     signal ef_n_exrom:          std_logic;
     signal ef_start_reset:      std_logic;
     signal io2_ram_read:        std_logic;
     signal io2_ram_write:       std_logic;
+    signal ef_set_bank_lo:      std_logic;
+    signal ef_new_bank_lo:      std_logic_vector(2 downto 0);
     signal ef_flash_read:       std_logic;
     signal ef_flash_write:      std_logic;
     signal ef_data_out:         std_logic_vector(7 downto 0);
@@ -154,19 +158,22 @@ architecture ef3_arc of ef3 is
     signal kernal_addr_test:    std_logic;
     signal kernal_n_game:       std_logic;
     signal kernal_n_exrom:      std_logic;
+    signal kernal_set_bank_lo:  std_logic;
+    signal kernal_new_bank_lo:  std_logic_vector(2 downto 0);
     signal kernal_flash_read:   std_logic;
     signal kernal_ram_read:     std_logic;
     signal kernal_ram_write:    std_logic;
     signal kernal_set_bank:     std_logic;
     signal kernal_start_reset:  std_logic;
 
-    signal ar_flash_addr:       std_logic_vector(16 downto 0);
     signal ar_ram_addr:         std_logic_vector(14 downto 0);
     signal ar_n_game:           std_logic;
     signal ar_n_exrom:          std_logic;
     signal ar_start_reset:      std_logic;
     signal ar_start_freezer:    std_logic;
     signal ar_reset_freezer:    std_logic;
+    signal ar_set_bank_lo:      std_logic;
+    signal ar_new_bank_lo:      std_logic_vector(2 downto 0);
     signal ar_ram_read:         std_logic;
     signal ar_ram_write:        std_logic;
     signal ar_flash_read:       std_logic;
@@ -174,13 +181,14 @@ architecture ef3_arc of ef3 is
     signal ar_data_out_valid:   std_logic;
     signal ar_led:              std_logic;
 
-    signal ss5_flash_addr:      std_logic_vector(16 downto 0);
     signal ss5_ram_addr:        std_logic_vector(14 downto 0);
     signal ss5_n_game:          std_logic;
     signal ss5_n_exrom:         std_logic;
     signal ss5_start_reset:     std_logic;
     signal ss5_start_freezer:   std_logic;
     signal ss5_reset_freezer:   std_logic;
+    signal ss5_set_bank_lo:     std_logic;
+    signal ss5_new_bank_lo:     std_logic_vector(2 downto 0);
     signal ss5_ram_read:        std_logic;
     signal ss5_ram_write:       std_logic;
     signal ss5_flash_read:      std_logic;
@@ -259,7 +267,8 @@ architecture ef3_arc of ef3 is
             button_special_fn:  in  std_logic;
             slot:               out std_logic_vector(2 downto 0);
             bank_hi:            out std_logic_vector(2 downto 0);
-            flash_addr:         out std_logic_vector(16 downto 0);
+            set_bank_lo:        out std_logic;
+            new_bank_lo:        out std_logic_vector(2 downto 0);
             n_game:             out std_logic;
             n_exrom:            out std_logic;
             start_reset:        out std_logic;
@@ -327,10 +336,12 @@ architecture ef3_arc of ef3 is
             cycle_start:        in  std_logic;
             addr:               in  std_logic_vector(15 downto 0);
             data:               in  std_logic_vector(7 downto 0);
+            bank_lo:            in  std_logic_vector(2 downto 0);
             button_crt_reset:   in  std_logic;
             button_special_fn:  in  std_logic;
             freezer_ready:      in  std_logic;
-            flash_addr:         out std_logic_vector(16 downto 0);
+            set_bank_lo:        out std_logic;
+            new_bank_lo:        out std_logic_vector(2 downto 0);
             ram_addr:           out std_logic_vector(14 downto 0);
             n_game:             out std_logic;
             n_exrom:            out std_logic;
@@ -358,10 +369,12 @@ architecture ef3_arc of ef3 is
             wr:                 in  std_logic;
             addr:               in  std_logic_vector(15 downto 0);
             data:               in  std_logic_vector(7 downto 0);
+            bank_lo:            in  std_logic_vector(2 downto 0);
             button_crt_reset:   in  std_logic;
             button_special_fn:  in  std_logic;
             freezer_ready:      in  std_logic;
-            flash_addr:         out std_logic_vector(16 downto 0);
+            set_bank_lo:        out std_logic;
+            new_bank_lo:        out std_logic_vector(2 downto 0);
             ram_addr:           out std_logic_vector(14 downto 0);
             n_game:             out std_logic;
             n_exrom:            out std_logic;
@@ -456,7 +469,8 @@ begin
         button_special_fn       => button_special_fn,
         slot                    => slot,
         bank_hi                 => bank_hi,
-        flash_addr              => ef_flash_addr,
+        set_bank_lo             => ef_set_bank_lo,
+        new_bank_lo             => ef_new_bank_lo,
         n_game                  => ef_n_game,
         n_exrom                 => ef_n_exrom,
         start_reset             => ef_start_reset,
@@ -521,10 +535,12 @@ begin
         cycle_start             => cycle_start,
         addr                    => addr,
         data                    => data,
+        bank_lo                 => bank_lo,
         button_crt_reset        => button_crt_reset,
         button_special_fn       => button_special_fn,
         freezer_ready           => freezer_ready,
-        flash_addr              => ar_flash_addr,
+        set_bank_lo             => ar_set_bank_lo,
+        new_bank_lo             => ar_new_bank_lo,
         ram_addr                => ar_ram_addr,
         n_game                  => ar_n_game,
         n_exrom                 => ar_n_exrom,
@@ -551,10 +567,12 @@ begin
         wr                      => wr,
         addr                    => addr,
         data                    => data,
+        bank_lo                 => bank_lo,
         button_crt_reset        => button_crt_reset,
         button_special_fn       => button_special_fn,
         freezer_ready           => freezer_ready,
-        flash_addr              => ss5_flash_addr,
+        set_bank_lo             => ss5_set_bank_lo,
+        new_bank_lo             => ss5_new_bank_lo,
         ram_addr                => ss5_ram_addr,
         n_game                  => ss5_n_game,
         n_exrom                 => ss5_n_exrom,
@@ -687,7 +705,7 @@ begin
                                 sw_start_reset <= '1';
 
                             when x"4" =>
-                                --enable_ar <= '1';
+                                enable_ar <= '1';
                                 sw_start_reset <= '1';
 
                             when x"5" =>
@@ -729,7 +747,7 @@ begin
 
     n_led <= not (ef_led or ar_led or ss5_led);
 
-    n_dma <= '0' when kernal_n_dma = '0' else 'Z';
+    n_dma <= '0' when kernal_n_dma = '0' else '1';
 
     n_exrom <= n_exrom_out; -- when ((n_exrom and n_exrom_out) = '0') else 'Z';
 
@@ -740,20 +758,39 @@ begin
     ---------------------------------------------------------------------------
     --
     ---------------------------------------------------------------------------
-    set_mem_addr: process(enable_ef, ef_flash_addr,
+    set_bank_lo: process(clk, n_sys_reset, enable_kernal)
+    begin
+        if n_sys_reset = '0' then
+            bank_lo <= (others => '0');
+        elsif rising_edge(clk) then
+            if ef_set_bank_lo = '1' then
+                bank_lo <= ef_new_bank_lo;
+            elsif ar_set_bank_lo = '1' then
+                bank_lo <= ar_new_bank_lo;
+            --elsif kernal_set_bank_lo = '1' then
+            --    bank_lo <= kernal_new_bank_lo;
+            elsif ss5_set_bank_lo = '1' then
+                bank_lo <= ss5_new_bank_lo;
+            end if;
+        end if;
+    end process;
+
+    ---------------------------------------------------------------------------
+    --
+    ---------------------------------------------------------------------------
+    set_mem_addr: process(enable_ef,
                           enable_io2ram, io2ram_ram_addr,
                           enable_kernal, kernal_flash_addr,
-                          enable_ar, ar_flash_addr, ar_ram_addr,
-                          enable_ss5, ss5_flash_addr, ss5_ram_addr,
-                          slot, bank_hi, n_ram_cs_i)
+                          enable_ar, ar_ram_addr,
+                          enable_ss5, ss5_ram_addr,
+                          slot, bank_lo, bank_hi, n_ram_cs_i)
     begin
         mem_addr <= (others => '0');
 
         -- The upper bits are the slot address and the high bits of bank
         mem_addr(22 downto 17) <= slot & bank_hi;
 
-        -- Take lower address bits from C64 directly
-        mem_addr(12 downto 0) <= addr(12 downto 0);
+        mem_addr(15 downto 0) <= bank_lo & addr(12 downto 0);
 
         if n_ram_cs_i = '0' then
             if enable_io2ram = '1' then
@@ -765,13 +802,14 @@ begin
             end if;
         else
             if enable_kernal = '1' then
-                mem_addr(16 downto 13) <= kernal_flash_addr(16 downto 13);
+                mem_addr(16) <= '0';
+                mem_addr(15 downto 13) <= kernal_flash_addr(15 downto 13);
             elsif enable_ef = '1' then
-                mem_addr(16 downto 13) <= ef_flash_addr(16 downto 13);
+                mem_addr(16) <= n_roml;
             elsif enable_ar = '1' then
-                mem_addr(16 downto 13) <= ar_flash_addr(16 downto 13);
+                mem_addr(16) <= '1';
             elsif enable_ss5 = '1' then
-                mem_addr(16 downto 13) <= ss5_flash_addr(16 downto 13);
+                mem_addr(16) <= addr(13);
             end if;
         end if;
     end process;
