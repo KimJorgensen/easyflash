@@ -47,23 +47,29 @@ else
 	version := 1.0.4
 endif
 
-dirname := ef3-menu-init-$(version)
+ifeq "$(variant)" "jb"
+    prj := ef3-jb
+else
+    prj := ef3
+endif
+
+dirname := $(prj)-menu-init-$(version)
 
 ###############################################################################
 #
 .PHONY: all
 ifeq "$(release)" "yes"
-all: ef3-menu-init-$(version).zip
+all: $(prj)-menu-init-$(version).zip
 else
-all: ef3-init.crt ef3-menu.crt
+all: $(prj)-init.crt $(prj)-menu.crt
 endif
 
-$(dirname).zip: ef3-init.crt ef3-menu.crt CHANGES
+$(dirname).zip: $(prj)-init.crt $(prj)-menu.crt CHANGES
 	rm -rf $(dirname)
 	rm -f $@
 	mkdir $(dirname)
-	cp ef3-init.crt $(dirname)/ef3-init-$(version).crt
-	cp ef3-menu.crt $(dirname)/ef3-menu-$(version).crt
+	cp $(prj)-init.crt $(dirname)/$(prj)-init-$(version).crt
+	cp $(prj)-menu.crt $(dirname)/$(prj)-menu-$(version).crt
 	cp CHANGES $(dirname)
 	zip -v -r $@ $(dirname)
 
@@ -88,35 +94,66 @@ menu_deps   += usbtool/usbtool.bin
 ###############################################################################
 # These files are in and "initial" image only
 
-init_image  := images/exos.bin              0x00 0x0000 L
-init_image  += images/beast.bin             0x01 0x0000 L
-init_image  += images/ttn2crom.bin          0x02 0x0000 L
+init_image :=
 
-init_image  += directory.bin                0x10 0x0000 L
+ifeq "$(variant)" "jb"
+    init_image  += directory-jb.bin                     0x10 0x0000 L
 
-init_image  += images/rr38ppal.bin          0x10 0x0000 H
-#init_image  += images/apower.bin            0x18 0x0000 H
-init_image  += images/ar.bin                0x18 0x0000 H
+    init_image  += images/kernal.901227-01.bin          0x00 0x0000 L
+    init_image  += images/kernal.901227-02.bin          0x01 0x0000 L
+    init_image  += images/kernal.901227-03.bin          0x02 0x0000 L
+    init_image  += images/kernal.sx.251104-04.bin       0x03 0x0000 L
 
-#init_image  += images/ss522-2-pal.bin       0x20 0x0000 LH
+    init_image  += images/empty.bin                     0x10 0x0000 H
+    init_image  += images/empty.bin                     0x18 0x0000 L
+    init_image  += images/empty.bin                     0x18 0x0000 H
+    init_image  += images/empty.bin                     0x20 0x0000 L
+    init_image  += images/empty.bin                     0x20 0x0000 H
+    init_image  += images/empty.bin                     0x30 0x0000 L
+    init_image  += images/empty.bin                     0x30 0x0000 H
+    init_image  += images/empty.bin                     0x38 0x0000 L
+    init_image  += images/empty.bin                     0x38 0x0000 H
+else
+    init_image  += directory.bin                        0x10 0x0000 L
+
+    init_image  += images/exos.bin                      0x00 0x0000 L
+    init_image  += images/beast.bin                     0x01 0x0000 L
+    init_image  += images/ttn2crom.bin                  0x02 0x0000 L
+
+    init_image  += images/rr38ppal.bin                  0x10 0x0000 H
+    #init_image += images/apower.bin                    0x18 0x0000 H
+    init_image  += images/ar.bin                        0x18 0x0000 H
+
+    init_image  += images/empty.bin                     0x18 0x0000 L
+    #init_image += images/ss522-2-pal.bin               0x20 0x0000 LH
+    init_image  += images/empty.bin                     0x20 0x0000 L
+    init_image  += images/empty.bin                     0x20 0x0000 H
+endif
+
+init_image      += images/empty.bin                     0x28 0x0000 L
+init_image      += images/empty.bin                     0x28 0x0000 H
+init_image      += images/empty.bin                     0x30 0x0000 L
+init_image      += images/empty.bin                     0x30 0x0000 H
+init_image      += images/empty.bin                     0x38 0x0000 L
+init_image      += images/empty.bin                     0x38 0x0000 H
 
 ###############################################################################
 # The menu image: Contains menu and tools
 #
-ef3-menu.bin: $(menu_deps) mkimages
+$(prj)-menu.bin: $(menu_deps) mkimages
 	./mkimages \
 		$(menu_image) \
-		ef3-menu.bin
+		$(prj)-menu.bin
 
 ###############################################################################
 # The initial image: Contains menu, tools, some KERNALS and a directory
 #
-ef3-init.bin: $(menu_deps) mkimages \
-              directory.bin
+$(prj)-init.bin: $(menu_deps) mkimages \
+              directory.bin directory-jb.bin
 	./mkimages \
 		$(menu_image) \
 		$(init_image) \
-		ef3-init.bin
+		$(prj)-init.bin
 
 
 ###############################################################################
@@ -152,12 +189,12 @@ $(easyprog): always
 .PHONY: clean
 clean:
 	-rm -f mkimages
-	-rm -f ef3-init.crt
-	-rm -f ef3-init.bin
-	-rm -f ef3-menu.crt
-	-rm -f ef3-menu.bin
+	-rm -f *-init.crt
+	-rm -f *-init.bin
+	-rm -f *-menu.crt
+	-rm -f *-menu.bin
 	-rm -f mkimages
-	-rm -f directory.bin
+	-rm -f directory*.bin
 	-make -C efmenu clean
 	-make -C usbtool clean
 
