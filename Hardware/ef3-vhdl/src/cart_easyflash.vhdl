@@ -45,7 +45,8 @@ entity cart_easyflash is
             button_special_fn:  in  std_logic;
             slot:               out std_logic_vector(2 downto 0);
             bank_hi:            out std_logic_vector(2 downto 0);
-            flash_addr:         out std_logic_vector(16 downto 0);
+            set_bank_lo:        out std_logic;
+            new_bank_lo:        out std_logic_vector(2 downto 0);
             n_game:             out std_logic;
             n_exrom:            out std_logic;
             start_reset:        out std_logic;
@@ -88,7 +89,6 @@ architecture behav of cart_easyflash is
 
     signal slot_i:              std_logic_vector(2 downto 0);
     signal bank_hi_i:           std_logic_vector(2 downto 0);
-    signal bank_lo:             std_logic_vector(2 downto 0);
     signal ctrl_game:           std_logic;
     signal ctrl_exrom:          std_logic;
     signal ctrl_no_vicii:       std_logic;
@@ -118,9 +118,24 @@ begin
     start_reset <= start_reset_i;
 
     ---------------------------------------------------------------------------
-    -- Combinatorically create the next memory address.
+    --
     ---------------------------------------------------------------------------
-    flash_addr <= n_roml & bank_lo & addr(12 downto 0);
+    update_bank_lo: process(enable, addr, data, wr, io1_addr_0x,
+                            start_reset_i, reset_to_menu)
+    begin
+        set_bank_lo <= '0';
+        new_bank_lo <= data(2 downto 0);
+
+        if enable = '1' then
+            if wr = '1' and io1_addr_0x = '1' and addr(3 downto 0) = x"0" then
+                set_bank_lo <= '1';
+            end if;
+            if start_reset_i = '1' or reset_to_menu = '1' then
+                set_bank_lo <= '1';
+                new_bank_lo <= (others => '0');
+            end if;
+        end if;
+    end process;
 
     ---------------------------------------------------------------------------
     --
@@ -137,7 +152,7 @@ begin
     --
     ---------------------------------------------------------------------------
     rw_control_regs: process(clk, n_reset, n_sys_reset, enable,
-                             easyflash_boot, reset_to_menu, start_reset_i)
+                             easyflash_boot, reset_to_menu)
     begin
         if n_reset = '0' then
             ctrl_exrom <= '0';
@@ -150,12 +165,10 @@ begin
                 -- these situations only
                 slot_i <= (others => '0');
                 bank_hi_i <= (others => '0');
-                bank_lo   <= (others => '0');
             end if;
             if start_reset_i = '1' then
                 -- Reset Bank (not Slot) when current EF is restarted
                 bank_hi_i <= (others => '0');
-                bank_lo   <= (others => '0');
             end if;
         elsif rising_edge(clk) then
             if enable = '1' then
@@ -166,7 +179,7 @@ begin
                             when x"0" =>
                                 -- $de00
                                 bank_hi_i <= data(5 downto 3);
-                                bank_lo   <= data(2 downto 0);
+                                -- for bank_lo refer to combinatorical logic new_bank_lo
 
                             when x"1" =>
                                 -- $de01

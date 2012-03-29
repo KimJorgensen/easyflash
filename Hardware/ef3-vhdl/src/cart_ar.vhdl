@@ -40,10 +40,12 @@ entity cart_ar is
         cycle_start:        in  std_logic;
         addr:               in  std_logic_vector(15 downto 0);
         data:               in  std_logic_vector(7 downto 0);
+        bank_lo:            in  std_logic_vector(2 downto 0);
         button_crt_reset:   in  std_logic;
         button_special_fn:  in  std_logic;
         freezer_ready:      in  std_logic;
-        flash_addr:         out std_logic_vector(16 downto 0);
+        set_bank_lo:        out std_logic;
+        new_bank_lo:        out std_logic_vector(2 downto 0);
         ram_addr:           out std_logic_vector(14 downto 0);
         n_game:             out std_logic;
         n_exrom:            out std_logic;
@@ -70,7 +72,6 @@ architecture behav of cart_ar is
     signal ctrl_unfreeze:       std_logic;
     signal ctrl_reumap:         std_logic;
     signal ctrl_de01_written:   std_logic;
-    signal bank:                std_logic_vector(2 downto 0);
 
     signal addr_00_01:          boolean;
 
@@ -91,6 +92,27 @@ begin
     ---------------------------------------------------------------------------
     --
     ---------------------------------------------------------------------------
+    update_bank_lo: process(enable, data, freezer_ready, addr,
+                            button_crt_reset, ctrl_kill, n_io1, wr)
+    begin
+        set_bank_lo <= '0';
+        new_bank_lo <= data(7) & data(4 downto 3);
+
+        if enable = '1' then
+            if ctrl_kill = '0' and n_io1 = '0' and wr = '1' and
+                    addr(7 downto 1) = "0000000" then
+                set_bank_lo <= '1';
+            end if;
+            if button_crt_reset = '1' or freezer_ready = '1' then
+                set_bank_lo <= '1';
+                new_bank_lo <= (others => '0');
+            end if;
+        end if;
+    end process;
+
+    ---------------------------------------------------------------------------
+    --
+    ---------------------------------------------------------------------------
     do_freezer: process(enable, button_special_fn)
     begin
         start_freezer_i <= '0';
@@ -103,11 +125,11 @@ begin
     ---------------------------------------------------------------------------
     -- Combinatorically create the data value for a register read access.
     ---------------------------------------------------------------------------
-    create_data_out: process(data_out_valid_i, bank, ctrl_reumap)
+    create_data_out: process(data_out_valid_i, bank_lo, ctrl_reumap)
     begin
         data_out <= (others => '0');
         if data_out_valid_i = '1' then
-            data_out <= bank(2) & ctrl_reumap & '0' & bank(1 downto 0) & "000";
+            data_out <= bank_lo(2) & ctrl_reumap & '0' & bank_lo(1 downto 0) & "000";
         end if;
     end process;
 
@@ -156,7 +178,6 @@ begin
             ctrl_unfreeze   <= '0';
             ctrl_reumap     <= '0';
             ctrl_de01_written <= '0';
-            bank            <= (others => '0');
             data_out_valid_i <= '0';
         elsif rising_edge(clk) then
             if enable = '1' then
@@ -166,7 +187,6 @@ begin
                     ctrl_ram        <= '0';
                     ctrl_kill       <= '0';
                     ctrl_unfreeze   <= '0';
-                    bank            <= (others => '0');
                 end if;
                 if ctrl_kill = '0' then
                     if n_io1 = '0' then
@@ -174,7 +194,7 @@ begin
                             case addr(7 downto 0) is
                                 when x"00" =>
                                     -- write control register $de00
-                                    bank            <= data(7) & data(4 downto 3);
+                                    -- for bank refer to combinatorical logic new_bank_lo
                                     ctrl_unfreeze   <= data(6);
                                     ctrl_ram        <= data(5);
                                     ctrl_kill       <= data(2);
@@ -183,8 +203,8 @@ begin
 
                                 when x"01" =>
                                     -- write control register $de01
-                                        bank        <= data(7) & data(4 downto 3);
-                                        ctrl_ram    <= data(5);
+                                    -- for bank refer to combinatorical logic new_bank_lo
+                                    ctrl_ram    <= data(5);
                                     if ctrl_de01_written = '0' then
                                         ctrl_reumap <= data(6);
                                         -- todo: no freeze
@@ -344,16 +364,14 @@ begin
     -- "1011" corresponds to EF Bank 18:1, this is the AR slot 1
     --
     ---------------------------------------------------------------------------
-    create_mem_addr: process(bank, addr, n_io1, n_io2, n_romh,
+    create_mem_addr: process(bank_lo, addr, n_io1, n_io2, n_romh,
                              np_mode)
     begin
-        flash_addr <= '1' & bank & addr(12 downto 0);
-
        if n_io1 = '0' or n_io2 = '0' or np_mode then
            -- no RAM banking in IO-space and in NP mode
            ram_addr   <= "00" & addr(12 downto 0);
        else
-           ram_addr   <= bank(1 downto 0) & addr(12 downto 0);
+           ram_addr   <= bank_lo(1 downto 0) & addr(12 downto 0);
        end if;
     end process;
 
