@@ -62,7 +62,6 @@ architecture behav of cart_ss5 is
     signal ctrl_game:           std_logic;
     signal ctrl_exrom:          std_logic;
     signal ctrl_kill:           std_logic;
-
 begin
 
     start_reset <= enable and button_crt_reset;

@@ -153,7 +153,6 @@ architecture ef3_arc of ef3 is
     signal ef_data_out_valid:   std_logic;
     signal ef_led:              std_logic;
 
-    signal kernal_flash_addr:   std_logic_vector(16 downto 0);
     signal kernal_n_dma:        std_logic;
     signal kernal_addr_test:    std_logic;
     signal kernal_n_game:       std_logic;
@@ -163,7 +162,6 @@ architecture ef3_arc of ef3 is
     signal kernal_flash_read:   std_logic;
     signal kernal_ram_read:     std_logic;
     signal kernal_ram_write:    std_logic;
-    signal kernal_set_bank:     std_logic;
     signal kernal_start_reset:  std_logic;
 
     signal ar_ram_addr:         std_logic_vector(14 downto 0);
@@ -204,8 +202,8 @@ architecture ef3_arc of ef3 is
     attribute KEEP : string; -- keep buffer from being optimized out
     attribute KEEP of io1_addr_0x: signal is "TRUE";
     attribute KEEP of cycle_start: signal is "TRUE";
-    --attribute KEEP of rd:          signal is "TRUE";
-    --attribute KEEP of wr:          signal is "TRUE";
+    attribute KEEP of rd:          signal is "TRUE";
+    attribute KEEP of wr:          signal is "TRUE";
 
     component exp_bus_ctrl is
         port (
@@ -282,14 +280,14 @@ architecture ef3_arc of ef3 is
 
     component cart_io2ram is
         port (
-            enable:         in  std_logic;
-            n_io2:          in  std_logic;
-            rd:             in  std_logic;
-            wr:             in  std_logic;
-            addr:           in  std_logic_vector(15 downto 0);
-            ram_addr:       out std_logic_vector(14 downto 0);
-            ram_read:       out std_logic;
-            ram_write:      out std_logic
+            enable:             in  std_logic;
+            n_io2:              in  std_logic;
+            rd:                 in  std_logic;
+            wr:                 in  std_logic;
+            addr:               in  std_logic_vector(15 downto 0);
+            ram_addr:           out std_logic_vector(14 downto 0);
+            ram_read:           out std_logic;
+            ram_write:          out std_logic
         );
     end component;
 
@@ -304,11 +302,8 @@ architecture ef3_arc of ef3 is
             n_wr:               in  std_logic;
             phase_pos:          in  std_logic_vector(10 downto 0);
             cycle_start:        in  std_logic;
-            set_bank:           in  std_logic;
             addr:               in  std_logic_vector(15 downto 0);
-            data:               in  std_logic_vector(7 downto 0);
             button_crt_reset:   in  std_logic;
-            flash_addr:         out std_logic_vector(16 downto 0);
             n_dma:              out std_logic;
             addr_test:          out std_logic;
             n_game:             out std_logic;
@@ -504,11 +499,8 @@ begin
         n_wr                    => n_wr,
         phase_pos               => phase_pos,
         cycle_start             => cycle_start,
-        set_bank                => kernal_set_bank,
         addr                    => addr,
-        data                    => data,
         button_crt_reset        => button_crt_reset,
-        flash_addr              => kernal_flash_addr,
         n_dma                   => kernal_n_dma,
         addr_test               => kernal_addr_test,
         n_game                  => kernal_n_game,
@@ -626,10 +618,11 @@ begin
             n_io1 = '0' and addr(7 downto 4) = x"0"
         else '0';
 
-    -- KERNAL bank at $de0e in menu mode
-    kernal_set_bank <= '1' when wr = '1' and io1_addr_0x = '1' and
-            addr(3 downto 0) = x"e" and enable_menu = '1'
+    -- KERNAL bank at $de0e in KERNAL mode (initialized in menu mode)
+    kernal_set_bank_lo <= '1' when wr = '1' and io1_addr_0x = '1' and
+            addr(3 downto 0) = x"e" and enable_kernal = '1'
         else '0';
+    kernal_new_bank_lo <= data(2 downto 0);
 
     ---------------------------------------------------------------------------
     -- The buttons will be enabled after all buttons have been released one
@@ -700,9 +693,9 @@ begin
                                 enable_kernal <= '1';
                                 sw_start_reset <= '1';
 
-                            when x"3" =>
+                            --when x"3" =>
                                 -- FC not implemented
-                                sw_start_reset <= '1';
+                                --sw_start_reset <= '1';
 
                             when x"4" =>
                                 enable_ar <= '1';
@@ -749,9 +742,9 @@ begin
 
     n_dma <= '0' when kernal_n_dma = '0' else '1';
 
-    n_exrom <= n_exrom_out; -- when ((n_exrom and n_exrom_out) = '0') else 'Z';
+    n_exrom <= n_exrom_out;
 
-    n_game <= n_game_out; -- when ((n_game and n_game_out) = '0') else 'Z';
+    n_game <= n_game_out;
 
     addr(15 downto 12) <= "1011" when kernal_addr_test = '1' else "ZZZZ";
 
@@ -767,8 +760,8 @@ begin
                 bank_lo <= ef_new_bank_lo;
             elsif ar_set_bank_lo = '1' then
                 bank_lo <= ar_new_bank_lo;
-            --elsif kernal_set_bank_lo = '1' then
-            --    bank_lo <= kernal_new_bank_lo;
+            elsif kernal_set_bank_lo = '1' then
+                bank_lo <= kernal_new_bank_lo;
             elsif ss5_set_bank_lo = '1' then
                 bank_lo <= ss5_new_bank_lo;
             end if;
@@ -780,7 +773,7 @@ begin
     ---------------------------------------------------------------------------
     set_mem_addr: process(enable_ef,
                           enable_io2ram, io2ram_ram_addr,
-                          enable_kernal, kernal_flash_addr,
+                          enable_kernal,
                           enable_ar, ar_ram_addr,
                           enable_ss5, ss5_ram_addr,
                           slot, bank_lo, bank_hi, n_ram_cs_i)
@@ -803,7 +796,6 @@ begin
         else
             if enable_kernal = '1' then
                 mem_addr(16) <= '0';
-                mem_addr(15 downto 13) <= kernal_flash_addr(15 downto 13);
             elsif enable_ef = '1' then
                 mem_addr(16) <= n_roml;
             elsif enable_ar = '1' then
