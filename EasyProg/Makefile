@@ -10,6 +10,7 @@ endif
 
 obj :=
 obj += obj/crt0.o
+obj += obj/autoinit.o
 obj += obj/eapiglueasm.o
 obj += obj/texts.o
 obj += obj/torturetestasm.o
