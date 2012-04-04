@@ -159,18 +159,19 @@ static uint8_t tortureTestFlashIds(void)
  * Start the torture test. If bComplete != 0, the test data is written to the
  * flash memory first.
  */
-static void tortureTest(uint8_t bComplete)
+static void tortureTest(uint8_t bComplete, uint8_t bAutoTest)
 {
     uint16_t rv;
     uint16_t nLoop, nSlot;
 
-    if (bComplete)
+    if (bComplete && !bAutoTest)
     {
     	if (screenAskEraseDialog() != BUTTON_ENTER)
     		return;
     }
 
-    screenPrintSimpleDialog(apStrTestEndless);
+    if (!bAutoTest)
+        screenPrintSimpleDialog(apStrTestEndless);
 
     refreshMainScreen();
 
@@ -181,7 +182,7 @@ static void tortureTest(uint8_t bComplete)
     	if (!tortureTestWriteData())
     	    return;
 
-    for (nLoop = 0; ; ++nLoop)
+    for (nLoop = 0; !bAutoTest; ++nLoop)
     {
         strcpy(utilStr, "Test loop ");
         utilAppendDecimal(nLoop);
@@ -227,9 +228,17 @@ static void tortureTest(uint8_t bComplete)
 /******************************************************************************/
 /**
  */
+void tortureTestAuto(void)
+{
+    tortureTest(1, 1);
+}
+
+/******************************************************************************/
+/**
+ */
 void tortureTestComplete(void)
 {
-	tortureTest(1);
+	tortureTest(1, 0);
 }
 
 /******************************************************************************/
@@ -237,7 +246,7 @@ void tortureTestComplete(void)
  */
 void tortureTestRead(void)
 {
-	tortureTest(0);
+	tortureTest(0, 0);
 }
 
 /******************************************************************************/

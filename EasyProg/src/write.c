@@ -176,7 +176,7 @@ err:
 
 /******************************************************************************/
 /**
- * So all preparations to write a file to flash.
+ * Do all preparations to write a file to flash.
  * If pStrImageType points to "U", read the file from USB.
  *
  * If this function returns CART_RV_OK, the file has been opened successfully.
@@ -365,6 +365,41 @@ retError:
 
 /******************************************************************************/
 /**
+ * Write a CRT image file to flash. This version doesn't need any user
+ * interaction. g_strFileName must contain the file name already.
+ *
+ * Return 1 if everything worked well.
+ */
+uint8_t autoWriteCRTImage(uint8_t nSlot)
+{
+    uint8_t rv;
+
+    refreshMainScreen();
+
+    slotSelect(nSlot);
+    rv = utilOpenFile(0);
+    if (rv == 1)
+        return 0;
+
+    // make sure the right areas of the chip are erased
+    progressInit();
+
+    rv = writeCrtImage();
+    utilCloseFile();
+
+    if (rv == CART_RV_OK)
+    {
+        if (g_nSlots > 1 && g_nSelectedSlot != 0)
+        {
+            slotSaveName(g_strCartName, ~0);
+        }
+    }
+    return 1;
+}
+
+
+/******************************************************************************/
+/**
  * Write a CRT image file to flash.
  */
 void checkWriteCRTImage(void)
@@ -520,22 +555,29 @@ void checkWriteSS5Image(void)
 
 /******************************************************************************/
 /**
+ */
+void eraseAll(void)
+{
+    uint8_t i;
+
+    checkFlashType();
+    for (i = 0; i < g_nSlots; ++i)
+    {
+        slotSelect(i);
+        eraseSlot();
+    }
+    resetCartInfo();
+}
+
+
+/******************************************************************************/
+/**
  * Ask the user if it is okay to erase all and do so if yes.
  */
 void checkEraseAll(void)
 {
-    uint8_t i;
-
     if (screenAskEraseDialog() == BUTTON_ENTER)
-    {
-        checkFlashType();
-        for (i = 0; i < g_nSlots; ++i)
-        {
-            slotSelect(i);
-            eraseSlot();
-        }
-        resetCartInfo();
-    }
+        eraseAll();
 }
 
 

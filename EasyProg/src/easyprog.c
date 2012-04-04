@@ -32,6 +32,7 @@
 #include <ef3usb.h>
 
 #include "easyprog.h"
+#include "autoinit.h"
 #include "cart.h"
 #include "screen.h"
 #include "eapiglue.h"
@@ -225,6 +226,12 @@ ScreenMenu menuExpert =
             "&Edit directory",
             slotsEditDirectory,
             isEF3,
+            0
+        },
+        {
+            "A&uto test + init",
+            autoInit,
+            returnTrue,
             0
         },
         { NULL, NULL, 0, 0 }

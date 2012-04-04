@@ -51,6 +51,7 @@
 // Control register value for Ultimax cartridges
 #define EASYFLASH_IO_ULTIMAX (EASYFLASH_IO_BIT_MEMCTRL | EASYFLASH_IO_BIT_GAME)
 
+uint8_t autoWriteCRTImage(uint8_t nSlot);
 void checkWriteCRTImage(void);
 void checkWriteCRTImageFromUSB(void);
 void checkWriteLOROMImage(void);
@@ -58,6 +59,7 @@ void checkWriteHIROMImage(void);
 void checkWriteKERNALImage(void);
 void checkWriteARImage(void);
 void checkWriteSS5Image(void);
+void eraseAll(void);
 void checkEraseAll(void);
 void checkEraseSlot(void);
 void checkEraseKERNAL(void);
