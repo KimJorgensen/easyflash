@@ -81,13 +81,22 @@ begin
     ---------------------------------------------------------------------------
     -- Write is only allowed at phi2 = '1', because on C128 it happens
     -- that n_wr = '0' when phi2 = '0', which is not a write access.
+    --
+    -- We have partially support for C128 2 MHz mode. C128 read accesses with
+    -- 2 MHz are at least to be supported for EasyFlash mode (e.g. for PoP)
+    -- For this we allow read accesses to be evaluated from cycle 4 to 7
+    -- in the second half of Phi2 half-cycles.
+    --
     ---------------------------------------------------------------------------
     check_rw: process(clk, phi2_s, n_wr)
     begin
         if rising_edge(clk) then
             wr <= '0';
+            rd <= '0';
 
-            if phase_pos_i(4) = '1' and (n_wr = '1' or phi2 = '0') then
+            if (phase_pos_i(4) = '1' or phase_pos_i(5) = '1' or
+                phase_pos_i(6) = '1' or phase_pos_i(7) = '1') and
+                (n_wr = '1' or phi2 = '0') then
                 rd <= '1';
             end if;
 
