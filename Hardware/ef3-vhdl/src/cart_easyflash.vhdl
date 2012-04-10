@@ -124,9 +124,10 @@ begin
                             start_reset_i, reset_to_menu)
     begin
         set_bank_lo <= '0';
-        new_bank_lo <= data(2 downto 0);
+        new_bank_lo <= (others => '0');
 
         if enable = '1' then
+            new_bank_lo <= data(2 downto 0);
             if wr = '1' and io1_addr_0x = '1' and addr(3 downto 0) = x"0" then
                 set_bank_lo <= '1';
             end if;

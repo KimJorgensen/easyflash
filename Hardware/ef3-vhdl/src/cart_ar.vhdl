@@ -40,6 +40,7 @@ entity cart_ar is
         cycle_start:        in  std_logic;
         addr:               in  std_logic_vector(15 downto 0);
         data:               in  std_logic_vector(7 downto 0);
+        io1_addr_0x:        in  std_logic;
         bank_lo:            in  std_logic_vector(2 downto 0);
         button_crt_reset:   in  std_logic;
         button_special_fn:  in  std_logic;
@@ -73,14 +74,14 @@ architecture behav of cart_ar is
     signal ctrl_reumap:         std_logic;
     signal ctrl_de01_written:   std_logic;
 
-    signal addr_00_01:          boolean;
+    signal io1_addr_00_01:      boolean;
 
     -- special mode for Nordic/Atomic Power
     signal np_mode:             boolean;
 begin
 
     -- used to check if $00/$01 is addressed in I/O space (for $de00/$de01)
-    addr_00_01 <= true when addr(7 downto 1) = "0000000" else false;
+    io1_addr_00_01 <= true when io1_addr_0x = '1' and addr(3 downto 1) = "000" else false;
 
     np_mode <= true when
         ctrl_exrom = '1' and ctrl_game = '0' and ctrl_ram = '1'
@@ -93,14 +94,15 @@ begin
     --
     ---------------------------------------------------------------------------
     update_bank_lo: process(enable, data, freezer_ready, addr,
-                            button_crt_reset, ctrl_kill, n_io1, wr)
+                            button_crt_reset, ctrl_kill, io1_addr_0x, wr)
     begin
         set_bank_lo <= '0';
-        new_bank_lo <= data(7) & data(4 downto 3);
+        new_bank_lo <= (others => '0');
 
         if enable = '1' then
-            if ctrl_kill = '0' and n_io1 = '0' and wr = '1' and
-                    addr(7 downto 1) = "0000000" then
+            new_bank_lo <= data(7) & data(4 downto 3);
+            if ctrl_kill = '0' and io1_addr_0x = '1' and wr = '1' and
+                    addr(3 downto 1) = "000" then
                 set_bank_lo <= '1';
             end if;
             if button_crt_reset = '1' or freezer_ready = '1' then
@@ -189,10 +191,10 @@ begin
                     ctrl_unfreeze   <= '0';
                 end if;
                 if ctrl_kill = '0' then
-                    if n_io1 = '0' then
+                    if io1_addr_0x = '1' then
                         if wr = '1' then
-                            case addr(7 downto 0) is
-                                when x"00" =>
+                            case addr(3 downto 0) is
+                                when x"0" =>
                                     -- write control register $de00
                                     -- for bank refer to combinatorical logic new_bank_lo
                                     ctrl_unfreeze   <= data(6);
@@ -201,7 +203,7 @@ begin
                                     ctrl_exrom      <= data(1);
                                     ctrl_game       <= data(0);
 
-                                when x"01" =>
+                                when x"1" =>
                                     -- write control register $de01
                                     -- for bank refer to combinatorical logic new_bank_lo
                                     ctrl_ram    <= data(5);
@@ -216,7 +218,7 @@ begin
                             end case;
                         end if;
                         if rd = '1' then
-                            if addr_00_01 then
+                            if io1_addr_00_01 then
                                 -- read $de00/$de01
                                 data_out_valid_i <= '1';
                             end if;
@@ -271,7 +273,7 @@ begin
     --
     ---------------------------------------------------------------------------
     rw_mem: process(enable, addr, n_io1, n_io2, n_roml, n_romh, rd, wr, phi2,
-                    ctrl_ram, ctrl_kill, ctrl_reumap, addr_00_01,
+                    ctrl_ram, ctrl_kill, ctrl_reumap, io1_addr_00_01,
                     np_mode)
     begin
         flash_read <= '0';
@@ -282,7 +284,7 @@ begin
             -- RAM or Flash at I/O1 in REU map or
             --              at I/O2 in normal map or
             --              at ROML
-            if (n_io1 = '0' and ctrl_reumap = '1' and not addr_00_01) or
+            if (n_io1 = '0' and ctrl_reumap = '1' and not io1_addr_00_01) or
                (n_io2 = '0' and ctrl_reumap = '0')
             then
                 if rd = '1' then
