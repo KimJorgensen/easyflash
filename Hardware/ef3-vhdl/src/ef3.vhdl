@@ -331,6 +331,7 @@ architecture ef3_arc of ef3 is
             cycle_start:        in  std_logic;
             addr:               in  std_logic_vector(15 downto 0);
             data:               in  std_logic_vector(7 downto 0);
+            io1_addr_0x:        in  std_logic;
             bank_lo:            in  std_logic_vector(2 downto 0);
             button_crt_reset:   in  std_logic;
             button_special_fn:  in  std_logic;
@@ -527,6 +528,7 @@ begin
         cycle_start             => cycle_start,
         addr                    => addr,
         data                    => data,
+        io1_addr_0x             => io1_addr_0x,
         bank_lo                 => bank_lo,
         button_crt_reset        => button_crt_reset,
         button_special_fn       => button_special_fn,
@@ -599,8 +601,8 @@ begin
 
     bus_ready <= phase_pos(5);
 
-    enable_usb      <= enable_ef; -- or enable_kernal;
-    enable_io2ram   <= enable_ef; -- or enable_kernal;
+    enable_usb      <= enable_ef or enable_kernal;
+    enable_io2ram   <= enable_ef or enable_kernal;
 
     button_menu       <= buttons_enabled and button_a;
     button_crt_reset  <= buttons_enabled and button_b;
@@ -622,7 +624,8 @@ begin
     kernal_set_bank_lo <= '1' when wr = '1' and io1_addr_0x = '1' and
             addr(3 downto 0) = x"e" and enable_kernal = '1'
         else '0';
-    kernal_new_bank_lo <= data(2 downto 0);
+    kernal_new_bank_lo <= data(2 downto 0) when enable_kernal = '1'
+        else (others => '0');
 
     ---------------------------------------------------------------------------
     -- The buttons will be enabled after all buttons have been released one
@@ -756,14 +759,10 @@ begin
         if n_sys_reset = '0' then
             bank_lo <= (others => '0');
         elsif rising_edge(clk) then
-            if ef_set_bank_lo = '1' then
-                bank_lo <= ef_new_bank_lo;
-            elsif ar_set_bank_lo = '1' then
-                bank_lo <= ar_new_bank_lo;
-            elsif kernal_set_bank_lo = '1' then
-                bank_lo <= kernal_new_bank_lo;
-            elsif ss5_set_bank_lo = '1' then
-                bank_lo <= ss5_new_bank_lo;
+            if ef_set_bank_lo = '1' or ar_set_bank_lo = '1' or
+                    kernal_set_bank_lo = '1' or ss5_set_bank_lo = '1' then
+                bank_lo <= ef_new_bank_lo or ar_new_bank_lo or
+                    kernal_new_bank_lo or ss5_new_bank_lo;
             end if;
         end if;
     end process;

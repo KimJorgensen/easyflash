@@ -74,9 +74,10 @@ begin
                             button_crt_reset, ctrl_kill, n_io1, wr)
     begin
         set_bank_lo <= '0';
-        new_bank_lo <= '0' & data(4) & data(2);
+        new_bank_lo <= (others => '0');
 
         if enable = '1' then
+            new_bank_lo <= '0' & data(4) & data(2);
             if ctrl_kill = '0' and n_io1 = '0' and wr = '1' then
                 set_bank_lo <= '1';
             end if;
