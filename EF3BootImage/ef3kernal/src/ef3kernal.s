@@ -1,6 +1,11 @@
 
-
 * = $e000
+
+USB_ID     = $de08
+USB_STATUS = $de09
+USB_DATA   = $de0a
+
+bank1_check_usb_input   = $e000
 
 ; include original KERNAL image
 !bin "src/kernal.bin"
@@ -8,8 +13,8 @@
 ; =============================================================================
 ; Overrite startup message
 ; =============================================================================
-* = $e47e
-        !text "EASYFLASH 3 "
+;* = $e47e
+;        !text "EASYFLASH 3 "
 
 ; =============================================================================
 ; No memory test on startup
@@ -17,30 +22,30 @@
 * = $fd50
         ; $fd50 Init Memory Subst by tlr
         ; (to avoid the slow memory test, and avoid trashing one byte at $a000)
-        lda #0
-        tay
--
-        sta !$0002, y
-        sta $0200, y
-        sta $0300, y
-        iny
-        bne -
+;        lda #0
+;        tay
+;-
+;        sta !$0002, y
+;        sta $0200, y
+;        sta $0300, y
+;        iny
+;        bne -
 
-        ldx #$03
-        lda #$3c
-        sta $b2
-        stx $b3
+;        ldx #$03
+;        lda #$3c
+;        sta $b2
+;        stx $b3
 
-        ldx #$00
-        ldy #$a0
-        jmp $fd8c       ; Set MemBounds, original code
+;        ldx #$00
+;        ldy #$a0
+;        jmp $fd8c       ; Set MemBounds, original code
         ; end $fd50 subst
 
         ; note: between here and $fd8c is free space
 
-        !if * > $fd8c {
-            !serious "Code too large"
-        }
+;        !if * > $fd8c {
+;            !serious "Code too large"
+;        }
 
 ; =============================================================================
 ; Patch for USB scan in keyboard scan
@@ -64,14 +69,15 @@ keyboard_scan_cont:
 * = $e4b7   ;   Unused Bytes For Future Patches
 
 ef3_usb_scan:
-        dec $d020
+        bit USB_STATUS
+        bpl no_usb
 
-        lda #$00
-        ldx #$e0
+        lda #<bank1_check_usb_input
+        ldx #>bank1_check_usb_input
         jsr bank0_jsr_to_bank1_ax       ; test KERNAL banking
-
-        LDA #$00
-        STA $028D                       ; from original keyboard scan code
+no_usb:
+        lda #$00
+        sta $028d                       ; from original keyboard scan code
         jmp keyboard_scan_cont
 
         !if * > $e4d0 {
@@ -81,8 +87,11 @@ ef3_usb_scan:
 ; =============================================================================
 ; Common code on all KERNAL banks
 ; =============================================================================
-* = $FEC2
+* = $fec2
         !src "src/kernal_common.s"
+        !if * > $ff43 {
+            !serious "Code too large"
+        }
 
 ; $e430 3
 ; $e44f 2
