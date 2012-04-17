@@ -11,9 +11,10 @@
 ; I/O address to set the KERNAL bank
 EASYFLASH3_IO_KERNAL_BANK   = $de0e
 
-ram_jsr_op  = $dff0
-ram_jsr_lo  = $dff1
-ram_jsr_hi  = $dff2
+RAM_JSR_OP  = $dff0
+RAM_JSR_LO  = $dff1
+RAM_JSR_HI  = $dff2
+
 
 ; =============================================================================
 ; JSR to a subroutine on bank 0 and return to bank 1. The address to be JSRed
@@ -22,7 +23,7 @@ ram_jsr_hi  = $dff2
 bank1_jsr_to_bank0:
         pha
         lda #$4c                ; opcode of JMP
-        sta ram_jsr_op
+        sta RAM_JSR_OP
         lda #0
         sta EASYFLASH3_IO_KERNAL_BANK
         pla
@@ -37,12 +38,12 @@ bank1_jsr_to_bank0:
 ; Same as bank1_jsr_to_bank0, but different banks
 ; =============================================================================
 bank0_jsr_to_bank1_ax:
-        sta ram_jsr_lo
-        stx ram_jsr_hi
+        sta RAM_JSR_LO
+        stx RAM_JSR_HI
 bank0_jsr_to_bank1:
         pha
         lda #$4c                ; opcode of JMP
-        sta ram_jsr_op
+        sta RAM_JSR_OP
         lda #1
         sta EASYFLASH3_IO_KERNAL_BANK
         pla

@@ -4,12 +4,8 @@
 
 #include <ef3usb.h>
 
-extern void usbtool_prg_load_and_run(void);
-
-static void start_prg()
-{
-    usbtool_prg_load_and_run();
-}
+extern void usbrx_prg(void);
+extern void usbrx_key(void);
 
 
 void usbrx(void)
@@ -23,7 +19,12 @@ void usbrx(void)
         if (strcmp(p_str_cmd, "prg") == 0)
         {
             ef3usb_send_str("load");
-            start_prg();
+            usbrx_prg();
+        }
+        if (strcmp(p_str_cmd, "key") == 0)
+        {
+            ef3usb_send_str("load");
+            usbrx_key();
         }
         else
         {

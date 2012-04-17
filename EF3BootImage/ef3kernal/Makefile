@@ -24,7 +24,7 @@ out/ef3kernal_b0.bin: src/ef3kernal.s src/kernal.bin out
 
 obj_b1 := obj/kernal_b1.o
 obj_b1 += obj/usbrx.o
-obj_b1 += obj/usbprg.o
+obj_b1 += obj/usbrx_asm.o
 
 out/ef3kernal_b1.bin: $(obj_b1) $(libef3usb) src/ld.kernal.cfg
 	ld65 -o $@ -m $@.map -C src/ld.kernal.cfg $(obj_b1) \
