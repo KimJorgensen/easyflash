@@ -80,8 +80,9 @@ static efmenu_entry_t special_menu[] =
 
 static efmenu_entry_t hidden_menu[] =
 {
-        { '9',  0,  0x18,   1,  MODE_KERNAL,       "9", "EF3 KERNAL",       "prg" },
+        { '9',  0,  0x18,   1,  MODE_KERNAL,       "9", "EF3 KERNAL",       "" },
         { '?',  0,  0x0b,   1,  MODE_EF,           "?", "USB Tool",         "d64" },
+        { '?',  0,  0x0b,   1,  MODE_EF,           "?", "USB Tool",         "prg" },
 };
 
 static efmenu_t all_menus[] =
