@@ -19,7 +19,9 @@ void ef3xfer_set_callbacks(
         void (*custom_log_progress)(int percent),
         void (*custom_log_complete)(void));
 
-void ef3xfer_transfer(const char* p_filename, const char* p_str_type);
+int ef3xfer_transfer_keys(const char* keys);
+
+int ef3xfer_transfer_prg(const char* p_filename, int b_exec);
 
 #ifdef __cplusplus
 }
