@@ -44,6 +44,22 @@ static void (*log_str)(const char* str);
 static void (*log_complete)(void);
 static void (*log_progress)(int percent);
 
+/* Translate string constants to key buffer bytes */
+typedef struct str_to_key_s
+{
+    const char*   str;
+    unsigned char key;
+} str_to_key_t;
+
+static const str_to_key_t str_to_key[] =
+{
+        { "<RETURN>",       13 },
+        { "<LEFT>",        157 },
+        { "<RIGHT>",        29 },
+        { "<UP>",          145 },
+        { "<DOWN>",         17 },
+        { NULL,              0 }
+};
 
 /*****************************************************************************/
 void ef3xfer_set_callbacks(
@@ -57,15 +73,70 @@ void ef3xfer_set_callbacks(
 }
 
 /*****************************************************************************/
-void ef3xfer_transfer(const char* p_filename,
-                      const char* p_str_type)
+int ef3xfer_transfer_keys(const char* keys)
+{
+    int     len, i, ret, subst_len;
+    char    key;
+    const str_to_key_t* p_tab;
+
+    if (keys == NULL)
+    {
+        ef3xfer_log_printf("Missing keys to be sent.\n");
+        return 0;
+    }
+
+    len = strlen(keys);
+
+    if (!ef3xfer_connect_ftdi())
+        return 0;
+
+    i = 0;
+    while (i < len)
+    {
+        if (!ef3xfer_do_handshake("KEY"))
+            return 0;
+
+        // check for entities which must be replaced by single keys
+        key = 0;
+        p_tab = str_to_key;
+        while (p_tab->str)
+        {
+            subst_len = strlen(p_tab->str);
+            if (strncmp(p_tab->str, keys + i, subst_len) == 0)
+            {
+                key = p_tab->key;
+                i += subst_len;
+                break;
+            }
+            p_tab++;
+        }
+        if (key == 0)
+            key = keys[i++];
+
+        ret = ef3xfer_write_to_ftdi(&key, 1);
+        if (ret != 1)
+            return 0;
+    }
+
+    ef3xfer_log_printf("\nOK\n\n");
+    return 1;
+}
+
+/*****************************************************************************/
+int ef3xfer_transfer_prg(const char* p_filename, int b_start)
 {
     FILE*         fp;
     uint16_t      crc;
     size_t        i, size;
     uint8_t*      p;
 
-    ef3xfer_log_printf("Input:  %s\n", p_filename);
+    if (p_filename == NULL)
+    {
+        ef3xfer_log_printf("Missing file name.\n");
+        return 0;
+    }
+
+    ef3xfer_log_printf("Send PRG file:  %s\n", p_filename);
 
     fp = fopen(p_filename, "rb");
     if (fp == NULL)
@@ -74,30 +145,32 @@ void ef3xfer_transfer(const char* p_filename,
         return 0;
     }
 
-    /* todo: do this after the file has been checked */
     if (!ef3xfer_connect_ftdi())
     {
         fclose(fp);
-        return;
+        return 0;
     }
 
-    if (!ef3xfer_do_handshake(p_str_type))
+    if (!ef3xfer_do_handshake("PRG"))
     {
         fclose(fp);
-        return;
+        return 0;
     }
 
     if (!send_file(fp))
     {
         fclose(fp);
-        return;
+        return 0;
     }
 
     fclose(fp);
-    ef3xfer_log_printf("\n\\o/\nREADY.\n\n");
-    log_complete();
-}
+    ef3xfer_log_printf("\nOK\n\n");
 
+    /* todo: SYS implementieren */
+    if (b_start)
+        ef3xfer_transfer_keys("<RETURN>RUN:<RETURN>");
+    return 1;
+}
 
 /*****************************************************************************/
 /*
@@ -271,7 +344,7 @@ int ef3xfer_do_handshake(const char* p_str_type)
 
     ef3xfer_log_printf("Running...\n");
 
-    if (strcmp((char*)str_response, "BTYP") == 0)
+    if (strcmp((char*)str_response, "ETYP") == 0)
     {
         ef3xfer_log_printf("(%s) Client doesn't support this file type or action.\n", str_response);
         return 0;
