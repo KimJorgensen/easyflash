@@ -29,7 +29,7 @@ top_dir := $(here)
 .SECONDARY:
 
 .PHONY: world
-world: all
+world: ef3xfer #all
 
 prj_name      := easytransfer
 
@@ -126,7 +126,8 @@ src += easytransfer.png
 ef3xfer_src :=
 ef3xfer_src += ef3xfer_main.c
 ef3xfer_src += ef3xfer.c
-ef3xfer_src += ef3xfer_d64.c
+#ef3xfer_src += ef3xfer_d64.c
+ef3xfer_src += str_to_key.c
 
 # resource files to be built/copied
 res := easytransfer.png

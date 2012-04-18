@@ -48,14 +48,22 @@ static void usage(const char* p_str_prg)
     printf("Transfer a file to an EasyFlash 3 over USB.\n\n");
     printf("Usage: %s <action>\n", p_str_prg);
     printf("Actions:\n"
-           "  -h       --help           print this and exit\n"
-           "  -c FILE  --crt FILE       write a CRT image to flash\n"
-           "  -x FILE  --exec FILE      send a PRG file and execute it\n"
-           "  -w FILE  --write FILE     send a PRG file\n"
-           "  -k KEY   --key KEY        send a key to the keyboard buffer\n"
+           "  -h       --help           Print this and exit\n"
+           "  -c FILE  --crt FILE       Write a CRT image to flash\n"
+           "  -x FILE  --exec FILE      Send a PRG file and execute it\n"
+           "  -w FILE  --write FILE     Send a PRG file\n"
+           "  -k KEY   --key KEY        Send a key to the keyboard buffer\n"
+           "  -r       --run            Send \"run\"\n"
+           "  -e ADDR  --sys ADDR       Send \"sys <addr>\" (decimal or 0x.... for hex)\n"
            //"  -w  --write-disk  write a disk image (d64)\n"
            //"\nOptions to be used with --write-disk:\n"
            //"  -f  --format      format disk before write\n"
+           "\nSupported placeholders for key events:\n"
+           "  <CTRL-@> .. <CTRL-Z>, <CTRL-0> .. <CTRL-9>, <WHITE> .. <LGREY>\n"
+           "  <STOP>, <RETURN>, <SHIFT-RETURN>, <DEL>, <INS>, <HOME>, <CLEAR>,\n"
+           "  <UP>, <DOWN>, <LEFT>, <RIGHT>, <REVON>, <REVOFF>,\n"
+           "  <F1> .. <F8>, <<=>, <PI>, <<>, <>>, <^>, <POUND>\n"
+           "  and others...\n"
            "\n"
           );
 }
@@ -91,6 +99,30 @@ static void log_progress_stdout(int percent)
 static void log_complete_stdout(void)
 {
 }
+
+/*****************************************************************************/
+/*
+ * Send "sys <addr>"
+ */
+static int do_sys(const char* str_addr)
+{
+    unsigned addr;
+    char* p_end;
+
+    if (str_addr == NULL)
+    {
+        ef3xfer_log_printf("Address missing.\n");
+        return 0;
+    }
+    addr = strtol(str_addr, &p_end, 0);
+    if (*p_end != '\0' || addr > 0xffff)
+    {
+        ef3xfer_log_printf("Bad address.\n");
+        return 0;
+    }
+    return ef3xfer_transfer_sys(addr);
+}
+
 
 /*****************************************************************************/
 static const char* get_next_arg(void)
@@ -137,6 +169,14 @@ int main(int argc, char** argv)
         else if (strcmp(arg, "-k") == 0 || strcmp(arg, "--key") == 0)
         {
             ef3xfer_transfer_keys(get_next_arg());
+        }
+        else if (strcmp(arg, "-r") == 0 || strcmp(arg, "--run") == 0)
+        {
+            ef3xfer_transfer_keys("<SHIFT-RETURN>run:<RETURN>");
+        }
+        else if (strcmp(arg, "-e") == 0 || strcmp(arg, "--sys") == 0)
+        {
+            do_sys(get_next_arg());
         }
         else
         {

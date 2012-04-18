@@ -26,11 +26,13 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <unistd.h>
 
 #include <ftdi.h>
 
 #include "ef3xfer.h"
 #include "ef3xfer_internal.h"
+#include "str_to_key.h"
 
 static struct ftdi_context m_ftdic;
 
@@ -43,23 +45,7 @@ static int send_file(FILE* fp);
 static void (*log_str)(const char* str);
 static void (*log_complete)(void);
 static void (*log_progress)(int percent);
-
-/* Translate string constants to key buffer bytes */
-typedef struct str_to_key_s
-{
-    const char*   str;
-    unsigned char key;
-} str_to_key_t;
-
-static const str_to_key_t str_to_key[] =
-{
-        { "<RETURN>",       13 },
-        { "<LEFT>",        157 },
-        { "<RIGHT>",        29 },
-        { "<UP>",          145 },
-        { "<DOWN>",         17 },
-        { NULL,              0 }
-};
+static void ef3xfer_msleep(unsigned msecs);
 
 /*****************************************************************************/
 void ef3xfer_set_callbacks(
@@ -111,7 +97,14 @@ int ef3xfer_transfer_keys(const char* keys)
             p_tab++;
         }
         if (key == 0)
+        {
             key = keys[i++];
+            /* code conversion */
+            if (key >= 'A' && key <= 'Z')
+                key = 193 + key - 'A';
+            else if (key >= 'a' && key <= 'z')
+                key = 65 + key - 'a';
+        }
 
         ret = ef3xfer_write_to_ftdi(&key, 1);
         if (ret != 1)
@@ -123,12 +116,13 @@ int ef3xfer_transfer_keys(const char* keys)
 }
 
 /*****************************************************************************/
-int ef3xfer_transfer_prg(const char* p_filename, int b_start)
+int ef3xfer_transfer_prg(const char* p_filename, int b_exec)
 {
     FILE*         fp;
     uint16_t      crc;
     size_t        i, size;
     uint8_t*      p;
+    uint8_t       start[2];
 
     if (p_filename == NULL)
     {
@@ -144,33 +138,47 @@ int ef3xfer_transfer_prg(const char* p_filename, int b_start)
         ef3xfer_log_printf("Error: Cannot open %s for reading\n", p_filename);
         return 0;
     }
+    if (b_exec)
+    {
+        if (fread(start, 2, 1, fp) != 1)
+            goto close_and_err;
+        fseek(fp, 0, SEEK_SET);
+    }
 
     if (!ef3xfer_connect_ftdi())
-    {
-        fclose(fp);
-        return 0;
-    }
+        goto close_and_err;
 
     if (!ef3xfer_do_handshake("PRG"))
-    {
-        fclose(fp);
-        return 0;
-    }
+        goto close_and_err;
 
     if (!send_file(fp))
-    {
-        fclose(fp);
-        return 0;
-    }
+        goto close_and_err;
 
     fclose(fp);
     ef3xfer_log_printf("\nOK\n\n");
 
-    /* todo: SYS implementieren */
-    if (b_start)
-        ef3xfer_transfer_keys("<RETURN>RUN:<RETURN>");
+    if (b_exec)
+    {
+        if (start[0] == 0x01 && start[1] == 0x08)
+            return ef3xfer_transfer_keys("<SHIFT-RETURN>run:<RETURN>");
+        else
+            return ef3xfer_transfer_sys(start[1] * 256 + start[0]);
+    }
     return 1;
+
+close_and_err:
+    fclose(fp);
+    return 0;
 }
+
+/*****************************************************************************/
+int ef3xfer_transfer_sys(unsigned addr)
+{
+    char str[40];
+    sprintf(str, "<SHIFT-RETURN>sys%u:<RETURN>", addr);
+    return ef3xfer_transfer_keys(str);
+}
+
 
 /*****************************************************************************/
 /*
@@ -400,10 +408,10 @@ static void receive_response(unsigned char* p_resp,
 {
     int  ret, retry, i;
 
-    retry = timeout_secs;
+    retry = timeout_secs * 100;
     do
     {
-        sleep(1); // todo: schoener machen
+        ef3xfer_msleep(10);
         ret = ef3xfer_read_from_ftdi(p_resp, EF3XFER_RESP_SIZE);
         if (ret)
         {
@@ -476,3 +484,13 @@ static int send_file(FILE* fp)
 
     return 1;
 }
+
+/*****************************************************************************/
+/**
+ *
+ */
+static void ef3xfer_msleep(unsigned msecs)
+{
+    usleep(1000 * msecs);
+}
+

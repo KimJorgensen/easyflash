@@ -23,6 +23,8 @@ int ef3xfer_transfer_keys(const char* keys);
 
 int ef3xfer_transfer_prg(const char* p_filename, int b_exec);
 
+int ef3xfer_transfer_sys(unsigned addr);
+
 #ifdef __cplusplus
 }
 #endif
