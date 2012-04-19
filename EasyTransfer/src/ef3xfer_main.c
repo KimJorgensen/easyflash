@@ -45,7 +45,7 @@ static void usage(const char* p_str_prg)
 {
     printf("\n"
            "ef3xfer version %s\n\n", VERSION);
-    printf("Transfer a file to an EasyFlash 3 over USB.\n\n");
+    printf("Transfer data to an EasyFlash 3 over USB.\n\n");
     printf("Usage: %s <action>\n", p_str_prg);
     printf("Actions:\n"
            "  -h       --help           Print this and exit\n"
