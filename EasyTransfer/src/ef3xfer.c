@@ -61,8 +61,8 @@ void ef3xfer_set_callbacks(
 /*****************************************************************************/
 int ef3xfer_transfer_keys(const char* keys)
 {
-    int     len, i, ret, subst_len;
-    char    key;
+    int     len, i, n_out, ret, subst_len;
+    char    key, out[11];
     const str_to_key_t* p_tab;
 
     if (keys == NULL)
@@ -79,36 +79,49 @@ int ef3xfer_transfer_keys(const char* keys)
     i = 0;
     while (i < len)
     {
-        if (!ef3xfer_do_handshake("KEY"))
-            return 0;
-
-        // check for entities which must be replaced by single keys
-        key = 0;
-        p_tab = str_to_key;
-        while (p_tab->str)
+        /* send up to 10 keys at once */
+        n_out = 0;
+        while (n_out < 10 && i < len)
         {
-            subst_len = strlen(p_tab->str);
-            if (strncmp(p_tab->str, keys + i, subst_len) == 0)
+            // check for entities which must be replaced by single keys
+            key = 0;
+            p_tab = str_to_key;
+            while (p_tab->str)
             {
-                key = p_tab->key;
-                i += subst_len;
-                break;
+                subst_len = strlen(p_tab->str);
+                if (strncmp(p_tab->str, keys + i, subst_len) == 0)
+                {
+                    key = p_tab->key;
+                    i += subst_len;
+                    break;
+                }
+                p_tab++;
             }
-            p_tab++;
-        }
-        if (key == 0)
-        {
-            key = keys[i++];
-            /* code conversion */
-            if (key >= 'A' && key <= 'Z')
-                key = 193 + key - 'A';
-            else if (key >= 'a' && key <= 'z')
-                key = 65 + key - 'a';
+            if (key == 0)
+            {
+                key = keys[i++];
+                /* code conversion */
+                if (key >= 'A' && key <= 'Z')
+                    key = 193 + key - 'A';
+                else if (key >= 'a' && key <= 'z')
+                    key = 65 + key - 'a';
+            }
+            out[1 + n_out++] = key;
         }
 
-        ret = ef3xfer_write_to_ftdi(&key, 1);
-        if (ret != 1)
-            return 0;
+        if (n_out)
+        {
+            out[0] = n_out;
+            if (!ef3xfer_do_handshake("KEY"))
+                return 0;
+
+            ret = ef3xfer_write_to_ftdi(out, 1 + n_out);
+            if (ret != 1 + n_out)
+                return 0;
+
+            if (i < len)
+                ef3xfer_msleep(50);
+        }
     }
 
     ef3xfer_log_printf("\nOK\n\n");

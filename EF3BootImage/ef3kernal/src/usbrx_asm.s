@@ -50,14 +50,19 @@ _usbrx_prg:
 .export _usbrx_key
 _usbrx_key:
         wait_usb_rx_ok
-        lda USB_DATA    ; get exactly one byte which is one key pressed
-
+        ldy USB_DATA    ; get number of keys (at least 1)
         ldx $c6         ; Number of Characters in Keyboard Buffer queue
+@next:
+        wait_usb_rx_ok
+        lda USB_DATA
+
         cpx $0289       ; Maximum number of Bytes in Keyboard Buffer
         bcs @full
         sta $0277, x    ; Keyboard Buffer Queue (FIFO)
         inx
-        stx $c6         ; Number of Characters in Keyboard Buffer queue
 @full:
+        dey
+        bne @next
+        stx $c6         ; Number of Characters in Keyboard Buffer queue
         rts
 .endproc
