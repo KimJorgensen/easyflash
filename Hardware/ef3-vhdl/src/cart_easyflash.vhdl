@@ -122,14 +122,14 @@ begin
     -- Combinatorical process to prepare output signals set_bank_low and
     -- new_bank_lo.
     ---------------------------------------------------------------------------
-    update_bank_lo: process(enable, addr, data, wr, io1_addr_0x,
+    update_bank_lo: process(enable, addr, data, wp, io1_addr_0x,
                             start_reset_i, reset_to_menu)
     begin
         set_bank_lo <= '0';
         new_bank_lo <= (others => '0');
 
         if enable = '1' then
-            if wr = '1' and io1_addr_0x = '1' and addr(3 downto 0) = x"0" then
+            if wp = '1' and io1_addr_0x = '1' and addr(3 downto 0) = x"0" then
                 new_bank_lo <= data(2 downto 0);
                 set_bank_lo <= '1';
             end if;
