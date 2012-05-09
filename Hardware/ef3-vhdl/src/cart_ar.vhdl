@@ -96,7 +96,7 @@ begin
     -- new_bank_lo.
     ---------------------------------------------------------------------------
     update_bank_lo: process(enable, data, freezer_ready, addr,
-                            button_crt_reset, ctrl_kill, io1_addr_0x, wr)
+                            button_crt_reset, ctrl_kill, io1_addr_0x, wp)
     begin
         set_bank_lo <= '0';
         new_bank_lo <= (others => '0');
