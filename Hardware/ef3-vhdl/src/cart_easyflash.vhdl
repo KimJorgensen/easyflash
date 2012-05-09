@@ -37,6 +37,7 @@ entity cart_easyflash is
             n_romh:             in  std_logic;
             rd:                 in  std_logic;
             wr:                 in  std_logic;
+            wp:                 in  std_logic;
             cycle_start:        in  std_logic;
             addr:               in  std_logic_vector(15 downto 0);
             data:               in  std_logic_vector(7 downto 0);
@@ -118,7 +119,8 @@ begin
     start_reset <= start_reset_i;
 
     ---------------------------------------------------------------------------
-    --
+    -- Combinatorical process to prepare output signals set_bank_low and
+    -- new_bank_lo.
     ---------------------------------------------------------------------------
     update_bank_lo: process(enable, addr, data, wr, io1_addr_0x,
                             start_reset_i, reset_to_menu)
@@ -127,19 +129,19 @@ begin
         new_bank_lo <= (others => '0');
 
         if enable = '1' then
-            new_bank_lo <= data(2 downto 0);
             if wr = '1' and io1_addr_0x = '1' and addr(3 downto 0) = x"0" then
+                new_bank_lo <= data(2 downto 0);
                 set_bank_lo <= '1';
             end if;
-            if start_reset_i = '1' or reset_to_menu = '1' then
-                set_bank_lo <= '1';
-                new_bank_lo <= (others => '0');
-            end if;
+        end if;
+        if start_reset_i = '1' or reset_to_menu = '1' then
+            set_bank_lo <= '1';
+            new_bank_lo <= (others => '0');
         end if;
     end process;
 
     ---------------------------------------------------------------------------
-    --
+    -- Combinatorical process to prepare data read from a register.
     ---------------------------------------------------------------------------
     create_data_out: process(data_out_valid_i, slot_i)
     begin
@@ -150,7 +152,7 @@ begin
     end process;
 
     ---------------------------------------------------------------------------
-    --
+    -- Process to read and write control registers.
     ---------------------------------------------------------------------------
     rw_control_regs: process(clk, n_reset, n_sys_reset, enable,
                              easyflash_boot, reset_to_menu)
@@ -174,7 +176,7 @@ begin
         elsif rising_edge(clk) then
             if enable = '1' then
                 if io1_addr_0x = '1' then
-                    if wr = '1' then
+                    if wp = '1' then
                         -- write control register
                         case addr(3 downto 0) is
                             when x"0" =>
@@ -238,7 +240,7 @@ begin
     end process;
 
     ---------------------------------------------------------------------------
-    --
+    -- Combinatorical process to prepare a memory read or write access.
     ---------------------------------------------------------------------------
     rw_mem: process(enable, n_roml, n_romh, rd, wr)
     begin

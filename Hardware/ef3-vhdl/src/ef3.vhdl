@@ -97,11 +97,13 @@ architecture ef3_arc of ef3 is
 
     signal n_ram_cs_i:          std_logic;
     signal n_mem_oe_i:          std_logic;
+    signal n_mem_wr_i:          std_logic;
     signal n_usb_rd_i:          std_logic;
     signal n_usb_wr:            std_logic;
 
     signal rd:                  std_logic;
     signal wr:                  std_logic;
+    signal wp:                  std_logic;
     signal bus_ready:           std_logic;
     signal phase_pos:           std_logic_vector(10 downto 0);
     signal cycle_start:         std_logic;
@@ -212,6 +214,7 @@ architecture ef3_arc of ef3 is
             n_wr:               in  std_logic;
             rd:                 out std_logic;
             wr:                 out std_logic;
+            wp:                 out std_logic;
             phase_pos:          out std_logic_vector(10 downto 0);
             cycle_start:        out std_logic;
             phi2_cycle_start:   out std_logic
@@ -257,6 +260,7 @@ architecture ef3_arc of ef3 is
             n_romh:             in  std_logic;
             rd:                 in  std_logic;
             wr:                 in  std_logic;
+            wp:                 in  std_logic;
             cycle_start:        in  std_logic;
             addr:               in  std_logic_vector(15 downto 0);
             data:               in  std_logic_vector(7 downto 0);
@@ -328,6 +332,7 @@ architecture ef3_arc of ef3 is
             n_romh:             in  std_logic;
             rd:                 in  std_logic;
             wr:                 in  std_logic;
+            wp:                 in  std_logic;
             cycle_start:        in  std_logic;
             addr:               in  std_logic_vector(15 downto 0);
             data:               in  std_logic_vector(7 downto 0);
@@ -363,6 +368,7 @@ architecture ef3_arc of ef3 is
             n_romh:             in  std_logic;
             rd:                 in  std_logic;
             wr:                 in  std_logic;
+            wp:                 in  std_logic;
             addr:               in  std_logic_vector(15 downto 0);
             data:               in  std_logic_vector(7 downto 0);
             bank_lo:            in  std_logic_vector(2 downto 0);
@@ -415,6 +421,7 @@ begin
         n_wr                    => n_wr,
         rd                      => rd,
         wr                      => wr,
+        wp                      => wp,
         phase_pos               => phase_pos,
         cycle_start             => cycle_start,
         phi2_cycle_start        => phi2_cycle_start
@@ -457,6 +464,7 @@ begin
         n_romh                  => n_romh,
         rd                      => rd,
         wr                      => wr,
+        wp                      => wp,
         cycle_start             => cycle_start,
         addr                    => addr,
         data                    => data,
@@ -525,6 +533,7 @@ begin
         n_romh                  => n_romh,
         rd                      => rd,
         wr                      => wr,
+        wp                      => wp,
         cycle_start             => cycle_start,
         addr                    => addr,
         data                    => data,
@@ -559,6 +568,7 @@ begin
         n_romh                  => n_romh,
         rd                      => rd,
         wr                      => wr,
+        wp                      => wp,
         addr                    => addr,
         data                    => data,
         bank_lo                 => bank_lo,
@@ -621,7 +631,7 @@ begin
         else '0';
 
     -- KERNAL bank at $de0e in KERNAL mode (initialized in menu mode)
-    kernal_set_bank_lo <= '1' when wr = '1' and io1_addr_0x = '1' and
+    kernal_set_bank_lo <= '1' when wp = '1' and io1_addr_0x = '1' and
             addr(3 downto 0) = x"e" and enable_kernal = '1'
         else '0';
     kernal_new_bank_lo <= data(2 downto 0) when enable_kernal = '1'
@@ -674,7 +684,7 @@ begin
                 enable_ar       <= '0';
                 enable_ss5      <= '0';
                 enable_kernal   <= '0';
-            elsif wr = '1' and io1_addr_0x = '1' and enable_menu = '1' then
+            elsif wp = '1' and io1_addr_0x = '1' and enable_menu = '1' then
                 case addr(3 downto 0) is
                     when x"f" =>
                         enable_ef       <= '0';
@@ -693,7 +703,7 @@ begin
                                 -- without reset, hide this register only
 
                             when x"2" =>
-                                enable_kernal <= '1';
+                                --enable_kernal <= '1';
                                 sw_start_reset <= '1';
 
                             --when x"3" =>
@@ -753,16 +763,18 @@ begin
 
     ---------------------------------------------------------------------------
     --
+    -- Note that bank_lo is not reset on (all) generated resets because e.g.
+    -- the active KERNAL slot may have to be kept.
     ---------------------------------------------------------------------------
-    set_bank_lo: process(clk, n_sys_reset, enable_kernal)
+    set_bank_lo: process(clk, n_sys_reset, start_reset_to_menu)
     begin
-        if n_sys_reset = '0' then
+        if n_sys_reset = '0' or start_reset_to_menu = '1' then
             bank_lo <= (others => '0');
         elsif rising_edge(clk) then
-            if ef_set_bank_lo = '1' or ar_set_bank_lo = '1' or
-                    kernal_set_bank_lo = '1' or ss5_set_bank_lo = '1' then
-                bank_lo <= ef_new_bank_lo or ar_new_bank_lo or
-                    kernal_new_bank_lo or ss5_new_bank_lo;
+            if (ef_set_bank_lo = '1' or ar_set_bank_lo = '1' or
+                kernal_set_bank_lo = '1' or ss5_set_bank_lo = '1') then
+                    bank_lo <= ef_new_bank_lo or ar_new_bank_lo or
+                               kernal_new_bank_lo or ss5_new_bank_lo;
             end if;
         end if;
     end process;
@@ -812,85 +824,76 @@ begin
     mem_ctrl: process(clk, n_reset)
         variable write_scheduled : integer range 0 to 3;
     begin
+        n_ram_cs_i  <= '1';
+        n_flash_cs  <= '1';
+        n_mem_oe_i  <= '1';
+        n_usb_rd_i  <= '1';
+        n_usb_wr    <= '1';
+        n_mem_wr_i  <= '1';
+
+        if ram_read = '1' then
+            n_ram_cs_i  <= '0';
+            n_mem_oe_i  <= '0';
+        elsif ram_write = '1' then
+            n_ram_cs_i  <= '0';
+            n_mem_wr_i  <= '0';
+        elsif flash_read = '1' then
+            n_flash_cs  <= '0';
+            n_mem_oe_i  <= '0';
+        elsif flash_write = '1' then
+            n_flash_cs  <= '0';
+            n_mem_wr_i  <= '0';
+        end if;
+
         if n_reset = '0' then
-            n_ram_cs_i  <= '1';
-            n_flash_cs  <= '1';
-            n_mem_oe_i  <= '1';
-            n_mem_wr    <= '1';
-            n_usb_rd_i  <= '1';
-            n_usb_wr    <= '1';
-            write_scheduled := 0;
+            n_mem_wr <= '1';
         elsif rising_edge(clk) then
-            if write_scheduled = 3 then
-                n_mem_wr <= '0';
-                write_scheduled := write_scheduled - 1;
-            elsif write_scheduled = 0 then
-                n_mem_wr <= '1';
-                n_usb_wr <= '1';
-
-                if ram_read = '1' then
-                    -- start ram read, leave active until next cycle_start
-                    n_ram_cs_i  <= '0';
-                    n_flash_cs  <= '1';
-                    n_mem_oe_i  <= '0';
-                    n_usb_rd_i  <= '1';
-                end if;
-                if ram_write = '1' then
-                    -- ram write tbd in next cycle
-                    n_ram_cs_i  <= '0';
-                    n_flash_cs  <= '1';
-                    n_mem_oe_i  <= '1';
-                    n_usb_rd_i  <= '1';
-                    -- 3 means activate n_mem_wr in the next cycle
-                    write_scheduled := 3;
-                end if;
-                if flash_read = '1' then
-                    -- start flash read, leave active until next cycle_start
-                    n_ram_cs_i  <= '1';
-                    n_flash_cs  <= '0';
-                    n_mem_oe_i  <= '0';
-                    n_usb_rd_i  <= '1';
-                end if;
-                if flash_write = '1' then
-                    -- flash write tbd in next cycle
-                    n_ram_cs_i  <= '1';
-                    n_flash_cs  <= '0';
-                    n_mem_oe_i  <= '1';
-                    n_usb_rd_i  <= '1';
-                    -- 3 means activate n_mem_wr in the next cycle
-                    write_scheduled := 3;
-                end if;
-                if usb_read = '1' then
-                    -- start usb read, leave until cycle_start
-                    n_ram_cs_i  <= '1';
-                    n_flash_cs  <= '1';
-                    n_mem_oe_i  <= '1';
-                    n_usb_rd_i  <= '0';
-                end if;
-                if usb_write = '1' then
-                    -- usb write can start now
-                    n_ram_cs_i  <= '1';
-                    n_flash_cs  <= '1';
-                    n_mem_oe_i  <= '1';
-                    n_usb_rd_i  <= '1';
-                    n_usb_wr    <= '0';
-                    -- set it to 2 but not to 3 to avoid n_mem_wr to be set
-                    write_scheduled := 2;
-                end if;
-                if cycle_start = '1' then
-                    -- return to idle
-                    n_ram_cs_i  <= '1';
-                    n_flash_cs  <= '1';
-                    n_mem_oe_i  <= '1';
-                    n_usb_rd_i  <= '1';
-                    n_usb_wr    <= '1';
-                    write_scheduled := 0;
-                end if;
-
+            if wp = '1' then
+                n_mem_wr <= n_mem_wr_i;
             else
-                write_scheduled := write_scheduled - 1;
+                n_mem_wr <= '1';
             end if;
         end if;
+--        if n_reset = '0' then
+--            write_scheduled := 0;
+--        elsif rising_edge(clk) then
+--            if write_scheduled = 3 then
+--                write_scheduled := write_scheduled - 1;
+--            elsif write_scheduled = 0 then
+--                n_mem_wr <= '1';
+--                n_usb_wr <= '1';
+--
+--                if usb_read = '1' then
+--                    -- start usb read, leave until cycle_start
+--                    n_ram_cs_i  <= '1';
+--                    n_flash_cs  <= '1';
+--                    n_mem_oe_i  <= '1';
+--                    n_usb_rd_i  <= '0';
+--                end if;
+--                if usb_write = '1' then
+--                    -- usb write can start now
+--                    n_ram_cs_i  <= '1';
+--                    n_flash_cs  <= '1';
+--                    n_mem_oe_i  <= '1';
+--                    n_usb_rd_i  <= '1';
+--                    n_usb_wr    <= '0';
+--                    -- set it to 2 but not to 3 to avoid n_mem_wr to be set
+--                    write_scheduled := 2;
+--                end if;
+--                if cycle_start = '1' then
+--                    -- return to idle
+--                    n_ram_cs_i  <= '1';
+--                    n_flash_cs  <= '1';
+--                    n_mem_oe_i  <= '1';
+--                    n_usb_rd_i  <= '1';
+--                    n_usb_wr    <= '1';
+--                    write_scheduled := 0;
+--                end if;
+--
+--            else
+--                write_scheduled := write_scheduled - 1;
+--            end if;
+--        end if;
     end process mem_ctrl;
     n_ram_cs <= n_ram_cs_i;
     n_mem_oe <= n_mem_oe_i;
@@ -920,6 +923,7 @@ begin
         mem_data <= (others => 'Z');
         data <= (others => 'Z');
         if (n_io1 and n_io2 and n_roml and n_romh) = '0' and
+           --(n_wr = '1' or phi2 = '0') then
            ((n_wr = '1' and phi2 = '1') or phi2 = '0') then
             if data_out_valid = '1' then
                 data <= data_out;

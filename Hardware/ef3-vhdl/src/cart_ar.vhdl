@@ -37,6 +37,7 @@ entity cart_ar is
         n_romh:             in  std_logic;
         rd:                 in  std_logic;
         wr:                 in  std_logic;
+        wp:                 in  std_logic;
         cycle_start:        in  std_logic;
         addr:               in  std_logic_vector(15 downto 0);
         data:               in  std_logic_vector(7 downto 0);
@@ -91,7 +92,8 @@ begin
     led <= enable and not ctrl_kill;
 
     ---------------------------------------------------------------------------
-    --
+    -- Combinatorical process to prepare output signals set_bank_low and
+    -- new_bank_lo.
     ---------------------------------------------------------------------------
     update_bank_lo: process(enable, data, freezer_ready, addr,
                             button_crt_reset, ctrl_kill, io1_addr_0x, wr)
@@ -101,7 +103,7 @@ begin
 
         if enable = '1' then
             new_bank_lo <= data(7) & data(4 downto 3);
-            if ctrl_kill = '0' and io1_addr_0x = '1' and wr = '1' and
+            if ctrl_kill = '0' and io1_addr_0x = '1' and wp = '1' and
                     addr(3 downto 1) = "000" then
                 set_bank_lo <= '1';
             end if;
@@ -192,7 +194,7 @@ begin
                 end if;
                 if ctrl_kill = '0' then
                     if io1_addr_0x = '1' then
-                        if wr = '1' then
+                        if wp = '1' then
                             case addr(3 downto 0) is
                                 when x"0" =>
                                     -- write control register $de00
@@ -216,8 +218,7 @@ begin
 
                                 when others => null;
                             end case;
-                        end if;
-                        if rd = '1' then
+                        elsif rd = '1' then
                             if io1_addr_00_01 then
                                 -- read $de00/$de01
                                 data_out_valid_i <= '1';
@@ -270,7 +271,7 @@ begin
     end process;
 
     ---------------------------------------------------------------------------
-    --
+    -- Combinatorical process to prepare a memory read or write access.
     ---------------------------------------------------------------------------
     rw_mem: process(enable, addr, n_io1, n_io2, n_roml, n_romh, rd, wr, phi2,
                     ctrl_ram, ctrl_kill, ctrl_reumap, io1_addr_00_01,
