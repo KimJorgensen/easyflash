@@ -30,9 +30,9 @@ entity exp_bus_ctrl is
         clk:                in  std_logic;
         phi2:               in  std_logic;
         n_wr:               in  std_logic;
-
         rd:                 out std_logic;
         wr:                 out std_logic;
+        rp:                 out std_logic;
         wp:                 out std_logic;
 
         -- The phase inside a Phi2 half cycle as shift register. This is used
@@ -113,8 +113,12 @@ begin
     cycle_start <= phi2_s xor prev_phi2;
     phi2_cycle_start <= not phi2_s and phase_pos_i(0);
 
+    -- Write pulse
     -- todo: This pulse is too short? Should we use two?
     wp <= not n_wr and phi2_s and (phase_pos_i(7));
+
+    -- Read pulse (for synchronous read accesses, e.g. USB)
+    rp <= (n_wr or not phi2_s) and (phase_pos_i(6));
 
     phase_pos <= phase_pos_i;
 end arc;

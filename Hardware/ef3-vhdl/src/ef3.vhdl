@@ -103,6 +103,7 @@ architecture ef3_arc of ef3 is
 
     signal rd:                  std_logic;
     signal wr:                  std_logic;
+    signal rp:                  std_logic;
     signal wp:                  std_logic;
     signal bus_ready:           std_logic;
     signal phase_pos:           std_logic_vector(10 downto 0);
@@ -214,6 +215,7 @@ architecture ef3_arc of ef3 is
             n_wr:               in  std_logic;
             rd:                 out std_logic;
             wr:                 out std_logic;
+            rp:                 out std_logic;
             wp:                 out std_logic;
             phase_pos:          out std_logic_vector(10 downto 0);
             cycle_start:        out std_logic;
@@ -421,6 +423,7 @@ begin
         n_wr                    => n_wr,
         rd                      => rd,
         wr                      => wr,
+        rp                      => rp,
         wp                      => wp,
         phase_pos               => phase_pos,
         cycle_start             => cycle_start,
