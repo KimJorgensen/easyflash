@@ -73,14 +73,14 @@ begin
     -- new_bank_lo.
     ---------------------------------------------------------------------------
     update_bank_lo: process(enable, data, freezer_ready,
-                            button_crt_reset, ctrl_kill, n_io1, wr)
+                            button_crt_reset, ctrl_kill, n_io1, wp)
     begin
         set_bank_lo <= '0';
         new_bank_lo <= (others => '0');
 
         if enable = '1' then
             new_bank_lo <= '0' & data(4) & data(2);
-            if ctrl_kill = '0' and n_io1 = '0' and wr = '1' then
+            if ctrl_kill = '0' and n_io1 = '0' and wp = '1' then
                 set_bank_lo <= '1';
             end if;
             if button_crt_reset = '1' or freezer_ready = '1' then
