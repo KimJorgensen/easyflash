@@ -33,6 +33,7 @@ entity exp_bus_ctrl is
 
         rd:                 out std_logic;
         wr:                 out std_logic;
+        wp:                 out std_logic;
 
         -- The phase inside a Phi2 half cycle as shift register. This is used
         -- as one-hot encoded state machine to save function block inputs.
@@ -88,27 +89,18 @@ begin
     -- in the second half of Phi2 half-cycles.
     --
     ---------------------------------------------------------------------------
-    check_rw: process(clk, phi2_s, n_wr)
+    check_rw: process(phi2_s, n_wr)
     begin
-        if rising_edge(clk) then
             wr <= '0';
             rd <= '0';
 
-            if (phase_pos_i(4) = '1' or phase_pos_i(5) = '1' or
-                phase_pos_i(6) = '1' or phase_pos_i(7) = '1') and
-                (n_wr = '1' or phi2 = '0') then
+            if n_wr = '1' or phi2_s = '0' then
                 rd <= '1';
             end if;
 
-            if phase_pos_i(5) = '1' and n_wr = '0' and phi2_s = '1' then
+            if n_wr = '0' and phi2_s = '1' then
                 wr <= '1';
-                rd <= '0';
             end if;
-
-            if prev_phi2 /= phi2_s then
-                rd <= '0';
-            end if;
-        end if;
     end process;
 
     ---------------------------------------------------------------------------
@@ -120,6 +112,9 @@ begin
     ---------------------------------------------------------------------------
     cycle_start <= phi2_s xor prev_phi2;
     phi2_cycle_start <= not phi2_s and phase_pos_i(0);
+
+    -- todo: This pulse is too short? Should we use two?
+    wp <= not n_wr and phi2_s and (phase_pos_i(7));
 
     phase_pos <= phase_pos_i;
 end arc;

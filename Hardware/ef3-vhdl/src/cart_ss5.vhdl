@@ -35,6 +35,7 @@ entity cart_ss5 is
         n_romh:             in  std_logic;
         rd:                 in  std_logic;
         wr:                 in  std_logic;
+        wp:                 in  std_logic;
         addr:               in  std_logic_vector(15 downto 0);
         data:               in  std_logic_vector(7 downto 0);
         bank_lo:            in  std_logic_vector(2 downto 0);
@@ -68,7 +69,8 @@ begin
     led <= enable and not ctrl_kill;
 
     ---------------------------------------------------------------------------
-    --
+    -- Combinatorical process to prepare output signals set_bank_low and
+    -- new_bank_lo.
     ---------------------------------------------------------------------------
     update_bank_lo: process(enable, data, freezer_ready,
                             button_crt_reset, ctrl_kill, n_io1, wr)
@@ -137,7 +139,7 @@ begin
                     ctrl_game       <= '0';
                 end if;
 
-                if ctrl_kill = '0' and n_io1 = '0' and wr = '1' then
+                if ctrl_kill = '0' and n_io1 = '0' and wp = '1' then
                     -- write control register $de00
                     -- for bank refer to combinatorical logic new_bank_lo
                     ctrl_kill       <= data(3);
@@ -186,7 +188,7 @@ begin
     end process;
 
     ---------------------------------------------------------------------------
-    --
+    -- Combinatorical process to prepare a memory read or write access.
     ---------------------------------------------------------------------------
     rw_mem: process(enable, addr, n_io1, n_roml, n_romh, rd, wr,
                     ctrl_kill, ctrl_exrom)
