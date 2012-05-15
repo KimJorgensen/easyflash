@@ -93,19 +93,19 @@ begin
         if n_reset = '0' then
             data_out_valid_i <= '0';
         elsif rising_edge(clk) then
-            usb_read  <= '0';
-            usb_write <= '0';
+            --usb_read  <= '0';
+            --usb_write <= '0';
             if enable = '1' then
                 if io1_addr_0x = '1' then
-                    if wr = '1' then
-                        case addr(3 downto 0) is
-                            when x"a" =>
-                                -- $de0a - write data
-                                usb_write <= '1';
+                    --if wr = '1' then
+                    --    case addr(3 downto 0) is
+                    --        when x"a" =>
+                    --            -- $de0a - write data
+                    --            usb_write <= '1';
 
-                            when others => null;
-                        end case;
-                    end if;
+                    --        when others => null;
+                    --    end case;
+                    --end if;
                     if rd = '1' then
                         case addr(3 downto 0) is
                             when x"8" =>
@@ -116,9 +116,9 @@ begin
                                 -- $de09 - read control register
                                 data_out_valid_i <= '1';
 
-                            when x"a" =>
-                                -- $de0a - read data
-                                usb_read <= '1';
+                    --        when x"a" =>
+                    --            -- $de0a - read data
+                    --            usb_read <= '1';
 
                             when others => null;
                         end case;
@@ -134,4 +134,25 @@ begin
     end process;
 
     data_out_valid <= data_out_valid_i;
+
+    ---------------------------------------------------------------------------
+    --
+    ---------------------------------------------------------------------------
+    rw_usb: process(enable, addr, io1_addr_0x, rd, wr)
+    begin
+        usb_write <= '0';
+        usb_read <= '0';
+        if enable = '1' then
+            if io1_addr_0x = '1' and addr(3 downto 0) = x"a" then
+                if rd = '1' then
+                    -- $de0a - read data
+                    usb_read <= '1';
+                elsif wr = '1' then
+                    -- $de0a - write data
+                    usb_write <= '1';
+                end if;
+            end if;
+        end if;
+    end process;
+
 end architecture behav;

@@ -135,7 +135,6 @@ architecture ef3_arc of ef3 is
     signal freezer_irq:         std_logic;
     signal freezer_ready:       std_logic;
 
-    signal hiram:               std_logic;
 
     signal ram_read:            std_logic;
     signal ram_write:           std_logic;
@@ -166,6 +165,7 @@ architecture ef3_arc of ef3 is
     signal kernal_ram_read:     std_logic;
     signal kernal_ram_write:    std_logic;
     signal kernal_start_reset:  std_logic;
+    signal kernal_test:         std_logic;
 
     signal ar_ram_addr:         std_logic_vector(14 downto 0);
     signal ar_n_game:           std_logic;
@@ -318,7 +318,7 @@ architecture ef3_arc of ef3 is
             flash_read:         out std_logic;
             ram_read:           out std_logic;
             ram_write:          out std_logic;
-            hiram:              out std_logic
+            test:               out std_logic
         );
     end component;
 
@@ -521,7 +521,7 @@ begin
         flash_read              => kernal_flash_read,
         ram_read                => kernal_ram_read,
         ram_write               => kernal_ram_write,
-        hiram                   => hiram
+        test                    => kernal_test
     );
 
     u_cart_ar: cart_ar port map
@@ -706,7 +706,7 @@ begin
                                 -- without reset, hide this register only
 
                             when x"2" =>
-                                --enable_kernal <= '1';
+                                enable_kernal <= '1';
                                 sw_start_reset <= '1';
 
                             --when x"3" =>
@@ -714,11 +714,11 @@ begin
                                 --sw_start_reset <= '1';
 
                             when x"4" =>
-                                enable_ar <= '1';
+                                --enable_ar <= '1';
                                 sw_start_reset <= '1';
 
                             when x"5" =>
-                                enable_ss5 <= '1';
+                                --enable_ss5 <= '1';
                                 sw_start_reset <= '1';
 
                             when x"7" =>
@@ -754,7 +754,7 @@ begin
     start_freezer   <= ar_start_freezer or ss5_start_freezer;
     reset_freezer   <= ar_reset_freezer or ss5_reset_freezer;
 
-    n_led <= not (ef_led or ar_led or ss5_led);
+    n_led <= kernal_test; --not (ef_led or ar_led or ss5_led);
 
     n_dma <= '0' when kernal_n_dma = '0' else '1';
 
@@ -830,8 +830,6 @@ begin
         n_ram_cs_i  <= '1';
         n_flash_cs  <= '1';
         n_mem_oe_i  <= '1';
-        n_usb_rd_i  <= '1';
-        n_usb_wr    <= '1';
         n_mem_wr_i  <= '1';
 
         if ram_read = '1' then
@@ -853,8 +851,15 @@ begin
         elsif rising_edge(clk) then
             if wp = '1' then
                 n_mem_wr <= n_mem_wr_i;
+                n_usb_wr <= not usb_write;
             else
                 n_mem_wr <= '1';
+                n_usb_wr <= '1';
+            end if;
+            if rp = '1' then
+                n_usb_rd_i <= not usb_read;
+            else
+                n_usb_rd_i <= '1';
             end if;
         end if;
 --        if n_reset = '0' then
@@ -900,7 +905,7 @@ begin
     end process mem_ctrl;
     n_ram_cs <= n_ram_cs_i;
     n_mem_oe <= n_mem_oe_i;
-    n_usb_rd <= n_usb_rd_i;
+    n_usb_rd <= n_usb_rd_i; -- todo: USB read und RAM read verriegeln
     usb_wr   <= not n_usb_wr;
 
     ---------------------------------------------------------------------------
