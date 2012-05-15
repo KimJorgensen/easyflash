@@ -45,7 +45,7 @@ entity cart_kernal is
         flash_read:         out std_logic;
         ram_read:           out std_logic;
         ram_write:          out std_logic;
-        hiram:              out std_logic
+        test:               out std_logic
     );
 end cart_kernal;
 
@@ -71,6 +71,7 @@ begin
         else false;
 
     start_reset <= enable and button_crt_reset;
+    test <= enable;
 
     ---------------------------------------------------------------------------
     --
@@ -95,7 +96,6 @@ begin
             n_exrom <= '1';
             addr_test <= '0';
             n_dma <= '1';
-            hiram <= '0';
             kernal_read_active <= false;
 
             flash_read <= '0';
@@ -103,10 +103,6 @@ begin
             ram_write <= '0';
 
         elsif rising_edge(clk) then
-            flash_read <= '0';
-            ram_read <= '0';
-            ram_write <= '0';
-
             if enable = '1' then
 
                 if phase_pos(0) = '1' and kernal_space_cpu_read then
@@ -144,6 +140,10 @@ begin
 
                 if cycle_start = '1' then
                     -- KERNAL read complete
+                    flash_read <= '0';
+                    ram_read <= '0';
+                    ram_write <= '0';
+
                     n_game  <= '1';
                     n_exrom <= '1';
                     addr_test <= '0';
@@ -155,7 +155,6 @@ begin
                 n_exrom <= '1';
                 addr_test <= '0';
                 n_dma <= '1';
-                hiram <= '0';
                 kernal_read_active <= false;
 
                 flash_read <= '0';
