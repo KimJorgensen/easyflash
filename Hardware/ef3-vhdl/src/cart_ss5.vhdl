@@ -69,7 +69,7 @@ begin
     led <= enable and not ctrl_kill;
 
     ---------------------------------------------------------------------------
-    -- Combinatorical process to prepare output signals set_bank_low and
+    -- Combinatorial process to prepare output signals set_bank_low and
     -- new_bank_lo.
     ---------------------------------------------------------------------------
     update_bank_lo: process(enable, data, freezer_ready,
@@ -141,7 +141,7 @@ begin
 
                 if ctrl_kill = '0' and n_io1 = '0' and wp = '1' then
                     -- write control register $de00
-                    -- for bank refer to combinatorical logic new_bank_lo
+                    -- for bank refer to combinatorial logic new_bank_lo
                     ctrl_kill       <= data(3);
                     ctrl_exrom      <= data(1);
                     ctrl_game       <= data(0);
@@ -188,7 +188,7 @@ begin
     end process;
 
     ---------------------------------------------------------------------------
-    -- Combinatorical process to prepare a memory read or write access.
+    -- Combinatorial process to prepare a memory read or write access.
     ---------------------------------------------------------------------------
     rw_mem: process(enable, addr, n_io1, n_roml, n_romh, rd, wr,
                     ctrl_kill, ctrl_exrom)
@@ -219,7 +219,7 @@ begin
     end process;
 
     ---------------------------------------------------------------------------
-    -- Combinatorically create the next memory address.
+    -- Combinatorially create the next memory address.
     --
     -- Memory mapping of SS5 binary in Flash and SS5 RAM:
     -- Address Bit                98765432109876543210

@@ -92,7 +92,7 @@ begin
     led <= enable and not ctrl_kill;
 
     ---------------------------------------------------------------------------
-    -- Combinatorical process to prepare output signals set_bank_low and
+    -- Combinatorial process to prepare output signals set_bank_low and
     -- new_bank_lo.
     ---------------------------------------------------------------------------
     update_bank_lo: process(enable, data, freezer_ready, addr,
@@ -127,7 +127,7 @@ begin
     start_freezer <= start_freezer_i;
 
     ---------------------------------------------------------------------------
-    -- Combinatorically create the data value for a register read access.
+    -- Combinatorially create the data value for a register read access.
     ---------------------------------------------------------------------------
     create_data_out: process(data_out_valid_i, bank_lo, ctrl_reumap)
     begin
@@ -198,7 +198,7 @@ begin
                             case addr(3 downto 0) is
                                 when x"0" =>
                                     -- write control register $de00
-                                    -- for bank refer to combinatorical logic new_bank_lo
+                                    -- for bank refer to combinatorial logic new_bank_lo
                                     ctrl_unfreeze   <= data(6);
                                     ctrl_ram        <= data(5);
                                     ctrl_kill       <= data(2);
@@ -207,7 +207,7 @@ begin
 
                                 when x"1" =>
                                     -- write control register $de01
-                                    -- for bank refer to combinatorical logic new_bank_lo
+                                    -- for bank refer to combinatorial logic new_bank_lo
                                     ctrl_ram    <= data(5);
                                     if ctrl_de01_written = '0' then
                                         ctrl_reumap <= data(6);
@@ -271,7 +271,7 @@ begin
     end process;
 
     ---------------------------------------------------------------------------
-    -- Combinatorical process to prepare a memory read or write access.
+    -- Combinatorial process to prepare a memory read or write access.
     ---------------------------------------------------------------------------
     rw_mem: process(enable, addr, n_io1, n_io2, n_roml, n_romh, rd, wr, phi2,
                     ctrl_ram, ctrl_kill, ctrl_reumap, io1_addr_00_01,
@@ -346,7 +346,7 @@ begin
     end process;
 
     ---------------------------------------------------------------------------
-    -- Combinatorically create the next memory address.
+    -- Combinatorially create the next memory address.
     --
     -- Memory mapping of AR binary in Flash and AR RAM:
     -- Address Bit                98765432109876543210

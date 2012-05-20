@@ -42,7 +42,7 @@ architecture behav of cart_io2ram is
 begin
 
     ---------------------------------------------------------------------------
-    -- Combinatorically create the next memory address.
+    -- Combinatorially create the next memory address.
     ---------------------------------------------------------------------------
     ram_addr   <= "0000000" & addr(7 downto 0);
 
