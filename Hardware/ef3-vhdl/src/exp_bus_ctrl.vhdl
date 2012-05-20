@@ -1,6 +1,6 @@
 ----------------------------------------------------------------------------------
 --
--- (c) 2011 Thomas 'skoe' Giesel
+-- (c) 2012 Thomas 'skoe' Giesel
 --
 -- This software is provided 'as-is', without any express or implied
 -- warranty.  In no event will the authors be held liable for any damages
@@ -35,17 +35,13 @@ entity exp_bus_ctrl is
         rp:                 out std_logic;
         wp:                 out std_logic;
 
-        -- The phase inside a Phi2 half cycle as shift register. This is used
+        -- The time inside a Phi2 half cycle as shift register. This is used
         -- as one-hot encoded state machine to save function block inputs.
-        phase_pos:          out std_logic_vector(10 downto 0);
+        cycle_time:         out std_logic_vector(10 downto 0);
 
-        -- This combinatorical signal is '1' for one clk cycle
+        -- This combinatorial signal is '1' for one clk cycle
         -- after the end of each Phi2 half cycle
         cycle_start:        out std_logic;
-
-        -- This combinatorical signal is '1' for one clk cycle at the
-        -- beginning of a Phi2 cycle (when Phi2 is low)
-        phi2_cycle_start:   out std_logic
     );
 end exp_bus_ctrl;
 
@@ -53,9 +49,13 @@ end exp_bus_ctrl;
 architecture arc of exp_bus_ctrl is
     signal prev_phi2:       std_logic;
     signal phi2_s:          std_logic;
-    signal phase_pos_i:     std_logic_vector(10 downto 0);
+    signal cycle_time_i:     std_logic_vector(10 downto 0);
 begin
 
+    ---------------------------------------------------------------------------
+    -- Create a synchronized version of Phi2 (phi2_s) and a copy of phi2_s
+    -- which is delayed by one clock cycle (prev_phi2).
+    ---------------------------------------------------------------------------
     synchronize_stuff: process(clk)
     begin
         if rising_edge(clk) then
@@ -65,16 +65,16 @@ begin
     end process synchronize_stuff;
 
     ---------------------------------------------------------------------------
-    -- Count cycles in both phases of phi2
+    -- Count clk cycles in both phases of phi2
     ---------------------------------------------------------------------------
-    clk_phase_shift: process(clk, prev_phi2, phi2_s)
+    clk_time_shift: process(clk, prev_phi2, phi2_s)
     begin
         if rising_edge(clk) then
             if prev_phi2 /= phi2_s then
-                phase_pos_i <= (others => '0');
-                phase_pos_i(0) <= '1';
+                cycle_time_i <= (others => '0');
+                cycle_time_i(0) <= '1';
             else
-                phase_pos_i <= phase_pos_i(9 downto 0) & '0';
+                cycle_time_i <= cycle_time_i(9 downto 0) & '0';
             end if;
         end if;
     end process;
@@ -83,10 +83,9 @@ begin
     -- Write is only allowed at phi2 = '1', because on C128 it happens
     -- that n_wr = '0' when phi2 = '0', which is not a write access.
     --
-    -- We have partially support for C128 2 MHz mode. C128 read accesses with
+    -- We have partial support for C128 2 MHz mode. C128 read accesses with
     -- 2 MHz are at least to be supported for EasyFlash mode (e.g. for PoP)
-    -- For this we allow read accesses to be evaluated from cycle 4 to 7
-    -- in the second half of Phi2 half-cycles.
+    -- For this we allow read accesses to be evaluated asynchronously.
     --
     ---------------------------------------------------------------------------
     check_rw: process(phi2_s, n_wr)
@@ -106,19 +105,17 @@ begin
     ---------------------------------------------------------------------------
     -- Create control signals depending from clk counter
     --
-    -- These signals are generated combinatorically, they are to be used on the
+    -- These signals are generated combinatorially, they are to be used on the
     -- next rising edge of clk.
     --
     ---------------------------------------------------------------------------
     cycle_start <= phi2_s xor prev_phi2;
-    phi2_cycle_start <= not phi2_s and phase_pos_i(0);
 
-    -- Write pulse
-    -- todo: This pulse is too short? Should we use two?
-    wp <= not n_wr and phi2_s and (phase_pos_i(7));
+    -- Write pulse, 80 ns to be long enough for slow chips
+    wp <= not n_wr and phi2_s and (cycle_time_i(7) or cycle_time_i(8));
 
     -- Read pulse (for synchronous read accesses, e.g. USB)
-    rp <= (n_wr or not phi2_s) and (phase_pos_i(6));
+    rp <= (n_wr or not phi2_s) and (cycle_time_i(6));
 
-    phase_pos <= phase_pos_i;
+    cycle_time <= cycle_time_i;
 end arc;

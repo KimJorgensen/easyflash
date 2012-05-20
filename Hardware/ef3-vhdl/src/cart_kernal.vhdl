@@ -33,7 +33,7 @@ entity cart_kernal is
         ba:                 in  std_logic;
         n_romh:             in  std_logic;
         n_wr:               in  std_logic;
-        phase_pos:          in  std_logic_vector(10 downto 0);
+        cycle_time:         in  std_logic_vector(10 downto 0);
         cycle_start:        in  std_logic;
         addr:               in  std_logic_vector(15 downto 0);
         button_crt_reset:   in  std_logic;
@@ -78,7 +78,7 @@ begin
     -- VIC-II needs address input in this time window (times after Phi2):
     --      min: Trhl_min - Tasrin = 155 ns - 25 ns = 130 ns
     --      max: Trhl_max + Trahin = 190 ns + 0 ns  = 190 ns
-    -- phase_pos(3) ends at 160..200 ns, so we can set DMA at this cycle
+    -- cycle_time(3) ends at 160..200 ns, so we can set DMA at this cycle
     --
     --
     -- DMA bei:     0   1   2   3   4   5   6   7   8
@@ -105,7 +105,7 @@ begin
         elsif rising_edge(clk) then
             if enable = '1' then
 
-                if phase_pos(0) = '1' and kernal_space_cpu_read then
+                if cycle_time(0) = '1' and kernal_space_cpu_read then
                     n_dma <= '0';
                     n_game  <= '0';
                     n_exrom <= '0';
@@ -113,15 +113,15 @@ begin
                 end if;
 
                 if kernal_read_active then
-                    if phase_pos(2) = '1' then
+                    if cycle_time(2) = '1' then
                         addr_test <= '1';
                     end if;
 
-                    if phase_pos(3) = '1' then
+                    if cycle_time(3) = '1' then
                         n_dma <= '1';
                     end if;
 
-                    if phase_pos(4) = '1' then
+                    if cycle_time(4) = '1' then
                         -- Release everything and check for hiram
                         addr_test <= '0';
                         -- ROMH reflects HIRAM now
@@ -134,7 +134,7 @@ begin
                         end if;
                         n_exrom <= '1'; -- Ultimax mode
                     end if;
-                elsif phase_pos(4) = '1' and kernal_space_cpu_write then
+                elsif cycle_time(4) = '1' and kernal_space_cpu_write then
                     ram_write <= '1';
                 end if;
 

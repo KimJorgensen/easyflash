@@ -53,7 +53,7 @@ architecture behav of cart_usb is
 begin
 
     ---------------------------------------------------------------------------
-    -- This process decides combinatorically which data has to be put to
+    -- This process decides combinatorially which data has to be put to
     -- data out.
     --
     -- Version register: $a1 = 10100001 = old versions
@@ -96,33 +96,18 @@ begin
             --usb_read  <= '0';
             --usb_write <= '0';
             if enable = '1' then
-                if io1_addr_0x = '1' then
-                    --if wr = '1' then
-                    --    case addr(3 downto 0) is
-                    --        when x"a" =>
-                    --            -- $de0a - write data
-                    --            usb_write <= '1';
+                if io1_addr_0x = '1' and rd = '1' then
+                    case addr(3 downto 0) is
+                        when x"8" =>
+                            -- $de08 - read ID register
+                            data_out_valid_i <= '1';
 
-                    --        when others => null;
-                    --    end case;
-                    --end if;
-                    if rd = '1' then
-                        case addr(3 downto 0) is
-                            when x"8" =>
-                                -- $de08 - read ID register
-                                data_out_valid_i <= '1';
+                        when x"9" =>
+                            -- $de09 - read control register
+                            data_out_valid_i <= '1';
 
-                            when x"9" =>
-                                -- $de09 - read control register
-                                data_out_valid_i <= '1';
-
-                    --        when x"a" =>
-                    --            -- $de0a - read data
-                    --            usb_read <= '1';
-
-                            when others => null;
-                        end case;
-                    end if;
+                        when others => null;
+                    end case;
                 end if; -- io1_addr_0x...
                 if cycle_start = '1' then
                     data_out_valid_i <= '0';

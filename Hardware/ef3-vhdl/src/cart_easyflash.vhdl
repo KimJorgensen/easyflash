@@ -119,7 +119,7 @@ begin
     start_reset <= start_reset_i;
 
     ---------------------------------------------------------------------------
-    -- Combinatorical process to prepare output signals set_bank_low and
+    -- Combinatorial process to prepare output signals set_bank_low and
     -- new_bank_lo.
     ---------------------------------------------------------------------------
     update_bank_lo: process(enable, addr, data, wp, io1_addr_0x,
@@ -141,7 +141,7 @@ begin
     end process;
 
     ---------------------------------------------------------------------------
-    -- Combinatorical process to prepare data read from a register.
+    -- Combinatorial process to prepare data read from a register.
     ---------------------------------------------------------------------------
     create_data_out: process(data_out_valid_i, slot_i)
     begin
@@ -182,7 +182,7 @@ begin
                             when x"0" =>
                                 -- $de00
                                 bank_hi_i <= data(5 downto 3);
-                                -- for bank_lo refer to combinatorical logic new_bank_lo
+                                -- for bank_lo refer to combinatorial logic new_bank_lo
 
                             when x"1" =>
                                 -- $de01
@@ -240,7 +240,7 @@ begin
     end process;
 
     ---------------------------------------------------------------------------
-    -- Combinatorical process to prepare a memory read or write access.
+    -- Combinatorial process to prepare a memory read or write access.
     ---------------------------------------------------------------------------
     rw_mem: process(enable, n_roml, n_romh, rd, wr)
     begin

@@ -29,7 +29,8 @@ use ieee.std_logic_unsigned.all;
 entity reset_generator is
     port (
             clk:                in std_logic;
-            phi2_cycle_start:   in std_logic;
+            cycle_start:        in std_logic;
+            phi2:               in std_logic;
             start_reset:        in std_logic;
             n_reset_in:         in std_logic;
             n_reset:            out std_logic; -- any reset
@@ -41,7 +42,7 @@ end reset_generator;
 
 architecture reset_generator_arc of reset_generator is
 
-    -- count cycles, one cycle is cycle_start to cycle_start
+    -- count cycles, a cycle starts at phi2 = '0' and cycle_start = '1'
     signal cycle_cnt:           std_logic_vector(2 downto 0);
 
     -- as long as this is '1', n_reset_in is ignored
@@ -60,7 +61,7 @@ begin
                 n_generated_reset_i <= '0';
                 ignore_reset <= '1';
             elsif cycle_cnt /= "000" then
-                if phi2_cycle_start = '1' then
+                if phi2 = '0' and cycle_start = '1' then
                     cycle_cnt <= cycle_cnt - 1;
                 end if;
             else

@@ -26,7 +26,8 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 entity ef3 is
-    port ( addr:                inout std_logic_vector (15 downto 0);
+    port (
+           addr:                inout std_logic_vector (15 downto 0);
            data:                inout std_logic_vector (7 downto 0);
            n_dma:               out std_logic;
            ba:                  in std_logic;
@@ -106,7 +107,7 @@ architecture ef3_arc of ef3 is
     signal rp:                  std_logic;
     signal wp:                  std_logic;
     signal bus_ready:           std_logic;
-    signal phase_pos:           std_logic_vector(10 downto 0);
+    signal cycle_time:          std_logic_vector(10 downto 0);
     signal cycle_start:         std_logic;
 
     signal data_out:            std_logic_vector(7 downto 0);
@@ -217,7 +218,7 @@ architecture ef3_arc of ef3 is
             wr:                 out std_logic;
             rp:                 out std_logic;
             wp:                 out std_logic;
-            phase_pos:          out std_logic_vector(10 downto 0);
+            cycle_time:         out std_logic_vector(10 downto 0);
             cycle_start:        out std_logic;
             phi2_cycle_start:   out std_logic
         );
@@ -226,7 +227,8 @@ architecture ef3_arc of ef3 is
     component reset_generator is
         port (
             clk:                in std_logic;
-            phi2_cycle_start:   in std_logic;
+            cycle_start:        in std_logic;
+            phi2:               in std_logic;
             start_reset:        in std_logic;
             n_reset_in:         in  std_logic;
             n_reset:            out std_logic;
@@ -306,7 +308,7 @@ architecture ef3_arc of ef3 is
             ba:                 in  std_logic;
             n_romh:             in  std_logic;
             n_wr:               in  std_logic;
-            phase_pos:          in  std_logic_vector(10 downto 0);
+            cycle_time:         in  std_logic_vector(10 downto 0);
             cycle_start:        in  std_logic;
             addr:               in  std_logic_vector(15 downto 0);
             button_crt_reset:   in  std_logic;
@@ -425,7 +427,7 @@ begin
         wr                      => wr,
         rp                      => rp,
         wp                      => wp,
-        phase_pos               => phase_pos,
+        cycle_time              => cycle_time,
         cycle_start             => cycle_start,
         phi2_cycle_start        => phi2_cycle_start
     );
@@ -433,7 +435,8 @@ begin
     u_reset_generator: reset_generator port map
     (
         clk                     => clk,
-        phi2_cycle_start        => phi2_cycle_start,
+        cycle_start             => cycle_start,
+        phi2                    => phi2,
         start_reset             => start_reset,
         n_reset_in              => n_reset_io,
         n_reset                 => n_reset,
@@ -509,7 +512,7 @@ begin
         ba                      => ba,
         n_romh                  => n_romh,
         n_wr                    => n_wr,
-        phase_pos               => phase_pos,
+        cycle_time              => cycle_time,
         cycle_start             => cycle_start,
         addr                    => addr,
         button_crt_reset        => button_crt_reset,
@@ -612,7 +615,7 @@ begin
     );
 
 
-    bus_ready <= phase_pos(5);
+    bus_ready <= cycle_time(5);
 
     enable_usb      <= enable_ef or enable_kernal;
     enable_io2ram   <= enable_ef or enable_kernal;
@@ -655,7 +658,6 @@ begin
             end if;
         end if;
     end process enable_buttons;
-
 
     ---------------------------------------------------------------------------
     -- This button will always enter the menu mode.
@@ -714,11 +716,11 @@ begin
                                 --sw_start_reset <= '1';
 
                             when x"4" =>
-                                --enable_ar <= '1';
+                                enable_ar <= '1';
                                 sw_start_reset <= '1';
 
                             when x"5" =>
-                                --enable_ss5 <= '1';
+                                enable_ss5 <= '1';
                                 sw_start_reset <= '1';
 
                             when x"7" =>
@@ -754,7 +756,7 @@ begin
     start_freezer   <= ar_start_freezer or ss5_start_freezer;
     reset_freezer   <= ar_reset_freezer or ss5_reset_freezer;
 
-    n_led <= kernal_test; --not (ef_led or ar_led or ss5_led);
+    n_led <= not (ef_led or ar_led or ss5_led);
 
     n_dma <= '0' when kernal_n_dma = '0' else '1';
 
@@ -790,7 +792,7 @@ begin
                           enable_kernal,
                           enable_ar, ar_ram_addr,
                           enable_ss5, ss5_ram_addr,
-                          slot, bank_lo, bank_hi, n_ram_cs_i)
+                          slot, bank_lo, bank_hi, n_ram_cs_i, n_roml)
     begin
         mem_addr <= (others => '0');
 
@@ -824,8 +826,8 @@ begin
     -- The variable write_scheduled is used to delay a n_mem_wr by one
     -- cycle to allow data and address bus to settle.
     ---------------------------------------------------------------------------
-    mem_ctrl: process(clk, n_reset)
-        variable write_scheduled : integer range 0 to 3;
+    mem_ctrl: process(clk, n_reset,
+                       ram_read, ram_write, flash_read, flash_write)
     begin
         n_ram_cs_i  <= '1';
         n_flash_cs  <= '1';
@@ -862,54 +864,14 @@ begin
                 n_usb_rd_i <= '1';
             end if;
         end if;
---        if n_reset = '0' then
---            write_scheduled := 0;
---        elsif rising_edge(clk) then
---            if write_scheduled = 3 then
---                write_scheduled := write_scheduled - 1;
---            elsif write_scheduled = 0 then
---                n_mem_wr <= '1';
---                n_usb_wr <= '1';
---
---                if usb_read = '1' then
---                    -- start usb read, leave until cycle_start
---                    n_ram_cs_i  <= '1';
---                    n_flash_cs  <= '1';
---                    n_mem_oe_i  <= '1';
---                    n_usb_rd_i  <= '0';
---                end if;
---                if usb_write = '1' then
---                    -- usb write can start now
---                    n_ram_cs_i  <= '1';
---                    n_flash_cs  <= '1';
---                    n_mem_oe_i  <= '1';
---                    n_usb_rd_i  <= '1';
---                    n_usb_wr    <= '0';
---                    -- set it to 2 but not to 3 to avoid n_mem_wr to be set
---                    write_scheduled := 2;
---                end if;
---                if cycle_start = '1' then
---                    -- return to idle
---                    n_ram_cs_i  <= '1';
---                    n_flash_cs  <= '1';
---                    n_mem_oe_i  <= '1';
---                    n_usb_rd_i  <= '1';
---                    n_usb_wr    <= '1';
---                    write_scheduled := 0;
---                end if;
---
---            else
---                write_scheduled := write_scheduled - 1;
---            end if;
---        end if;
     end process mem_ctrl;
     n_ram_cs <= n_ram_cs_i;
     n_mem_oe <= n_mem_oe_i;
-    n_usb_rd <= n_usb_rd_i; -- todo: USB read und RAM read verriegeln
+    n_usb_rd <= n_usb_rd_i and not n_mem_oe_i; -- mem read disables USB read
     usb_wr   <= not n_usb_wr;
 
     ---------------------------------------------------------------------------
-    -- Combinatorically decide:
+    -- Combinatorially decide:
     -- - If we put the memory bus onto the C64 data bus
     -- - If we put data out onto the C64 data bus
     -- - If we put the C64 data bus onto the memory bus
