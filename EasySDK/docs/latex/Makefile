@@ -1,6 +1,6 @@
 
 pdfs := ../EasyFlash-ProgRef.pdf
-pdfs += ../EasyFlash-EasyFS.pdf
+pdfs += ../EasyFlash-AppSupport.pdf
 
 .PHONY: all
 all: $(pdfs)
