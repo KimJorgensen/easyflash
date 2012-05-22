@@ -3,7 +3,7 @@
 \usepackage{microtype}
 \usepackage{graphicx}
 \usepackage[linkbordercolor={0.8 0.8 1}]{hyperref} % muss letztes package sein
-\title{EasyFlash File System}
+\title{EasyFlash Application Support}
 \author{
 Thomas 'skoe' Giesel (skoe@directbox.com) \\
 ALeX Kazik
@@ -61,7 +61,7 @@ will see that each entry has a size of 24 Bytes, so the whole directory can
 have a size of up to \$1800 Bytes. Behind the directory there is space of
 \$0800 bytes for EasyAPI and the start-up code and data.
 
-Remember that HIROM is banked in in Ultimax mode at \$E000 after a reset.
+Remember that ROMH is banked in in Ultimax mode at \$E000 after a reset.
 Therefore the start-up code contains the reset vector.
 
 
@@ -125,8 +125,8 @@ Table \ref{tab:easyfs-file-types} shows possible values of the Type field.
         \$00 & Files with this type are marked as invalid, they must be
         skipped. Note that the flags of this file may be not 0. \\[3pt]
         \$01 & Normal PRG file with 2 bytes start address \\[3pt]
-        \$02 & Normal PRG file with 2 bytes start address, only LOROM used\footref{fn:fs-new} \\[3pt]
-        \$03 & Normal PRG file with 2 bytes start address, only HIROM used\footref{fn:fs-new} \\[3pt]
+        \$02 & Normal PRG file with 2 bytes start address, only ROML used\footref{fn:fs-new} \\[3pt]
+        \$03 & Normal PRG file with 2 bytes start address, only ROMH used\footref{fn:fs-new} \\[3pt]
         \ldots & Reserved \\[3pt]
         \$10 & Normal 8 kByte cartridge (\$8000..\$9FFF) \\[3pt]
         \$11 & Normal 16 kByte cartridge (\$8000..\$9FFF, \$A000..\$BFFF) \\[3pt]
@@ -207,7 +207,7 @@ In order to specify which banks are used the use of only Offset and Size is not 
     \centering
     \begin{tabularx}{0.6\textwidth}{c|X|X}
         \toprule
-        Bank & LOROM & HIROM \\
+        Bank & ROML & ROMH \\
         \midrule
         31 & - & Used \\
         \ldots & - & Used \\
@@ -222,9 +222,9 @@ In order to specify which banks are used the use of only Offset and Size is not 
 \end{table}
 
 The "opposite ROM" is the ROM (LO or HI) which does not contain the startup code.
-For normal cartridges the startup code is in the LOROM, thus the opposite is HIROM.
-Ultimax cartiridges on the other hand do have the startup code in HIROM
-(making LOROM the opposite).
+For normal cartridges the startup code is in the ROML, thus the opposite is ROMH.
+Ultimax cartiridges on the other hand do have the startup code in ROMH
+(making ROML the opposite).
 
 In case of the Shadow of the Beast cartridge
 there are 16 banks in the opposite ROM and also 16 banks free at the
@@ -234,8 +234,8 @@ minus the banks used in the opposite ROM (16) results in 16 banks.
 
 The opposite ROM is defined as follows:
 \begin{itemize}
-\item[-] HIROM when Type \& 3 is 0 or 1
-\item[-] LOROM when Type \& 3 is 2 or 3
+\item[-] ROMH when Type \& 3 is 0 or 1
+\item[-] ROML when Type \& 3 is 2 or 3
 \end{itemize}
 
 When bit 15 of CrtUsage (for cartridges) is 0 then this is an old EasyFS1
@@ -282,7 +282,7 @@ of this area may be used to embed a cartridge name, refer to EasySDK.pdf for mor
 
 \section {Normal 8K Cartridges}
 
-Normal 8K cartridges consist of up to 8 KiB of ROM visible at \$8000 (LOROM).
+Normal 8K cartridges consist of up to 8 KiB of ROM visible at \$8000 (ROML).
 This type of cartridges pulls down /EXROM and leaves /GAME high.
 The memory at \$8000 contains some magic bytes. The C64 Kernal detects these
 bytes in the reset code. If such a cartridge is found, it gets started with
@@ -294,7 +294,7 @@ start-up code automatically when flashing 8K cartridges.
 \section{Normal 16K Cartridges}
 
 Normal 16K cartridges consist of up to 16 KiB of ROM. 8 KiB are visible at
-\$8000 (LOROM) and 8 KiB at \$A000 (ROML). This type of cartridges pulls down
+\$8000 (ROML) and 8 KiB at \$A000 (ROML). This type of cartridges pulls down
 /EXROM and /GAME.
 The memory at \$8000 contains some magic bytes. The C64 Kernal detects these
 bytes in the reset code. If such a cartridge is found, it gets started with
@@ -342,8 +342,8 @@ undefined / don't care, '-' = nothing):
 BANK  0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
       0 1 2 3 4 5 6 7 8 9 A B C D E F 0 1 2 3 4 5 6 7 8 9 A B C D E F
 
-LOROM P P P P P P P P P P P P P P P P - - - - - - - - - - - - - - - -
-HIROM / / / / / / / / / / / / / / / / - - - - - - - - - - - - - - - -
+ROML  P P P P P P P P P P P P P P P P - - - - - - - - - - - - - - - -
+ROMH  / / / / / / / / / / / / / / / / - - - - - - - - - - - - - - - -
 \end{verbatim}
 \normalsize
 
@@ -354,8 +354,8 @@ Example 2: A 256 KiB Ocean cartridge looks like this:
 BANK  0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
       0 1 2 3 4 5 6 7 8 9 A B C D E F 0 1 2 3 4 5 6 7 8 9 A B C D E F
 
-LOROM P P P P P P P P P P P P P P P P / / / / / / / / / / / / / / / /
-HIROM / / / / / / / / / / / / / / / / P P P P P P P P P P P P P P P P
+ROML  P P P P P P P P P P P P P P P P / / / / / / / / / / / / / / / /
+ROMH  / / / / / / / / / / / / / / / / P P P P P P P P P P P P P P P P
 \end{verbatim}
 \normalsize
 
@@ -373,7 +373,7 @@ Example 3: A 512 KiB Ocean cartridge looks like this:
 BANK  0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 2 ... 3 3
       0 1 2 3 4 5 6 7 8 9 A B C D E F 0 1 2 3 4 5 6 7 8 9 A B C D E 0 ... E F
 
-LOROM P P P P P P P P P P P P P P P P P P P P P P P P P P P P P P P P ... P P
+ROML  P P P P P P P P P P P P P P P P P P P P P P P P P P P P P P P P ... P P
 \end{verbatim}
 \normalsize
 
@@ -408,7 +408,7 @@ banking register.
 EasyProg adds start-up code automatically when flashing an xbank cartridge
 directly. Currently EasyProg does not automatically replace/patch EasyAPI for
 xbank cartridges.
- 
+
 The magic cartridge id is 33 (\$21).
 
 \end{document}
