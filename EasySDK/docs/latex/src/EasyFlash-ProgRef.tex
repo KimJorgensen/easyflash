@@ -375,7 +375,7 @@ address together must point to the first byte of a 64 KiByte sector.
 
 When erasing a sector, all bits of the 64 KiB area will be set to '1'.
 This means that 8 banks with 8 KiB each will be erased, all of them either
-in the LOROM chip when \$8000 is used or in the HIROM chip when \$e000 is
+in the ROML chip when \$8000 is used or in the ROMH chip when \$e000 is
 used.
 
 This function uses SEI, it restores all flags except C before it returns.
@@ -384,7 +384,7 @@ Do not call it with D-flag set. \$01 must enable the affected ROM area.
 \begin{verbatim}
 parameters:
       A   bank
-      Y   base address (high byte), $80 for LOROM, $a0 or $e0 for HIROM
+      Y   base address (high byte), $80 for ROML, $a0 or $e0 for ROMH
 return:
       C   set: Error
           clear: Okay
