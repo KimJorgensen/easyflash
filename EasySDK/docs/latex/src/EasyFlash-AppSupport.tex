@@ -78,7 +78,8 @@ Table \ref{tab:easyfs-file-entry} shows the format of EasyFS directory entries.
         \midrule
         Name              & 16 bytes & File name, 16 characters PETSCII, 0-padded \\[3pt]
         Flags             & 1 byte   & File type and some flags \\[3pt]
-        Bank\footref{fn:fs-changed}          & 2 bytes  & Bank where the entry starts, little endian \\[3pt]
+        Bank              & 1 byte   & Bank where the file starts, 0..63 \\[3pt]
+        Bank High         & 1 byte   & Reserved, always 0 \\[3pt]
         Offset/CrtUsage\footref{fn:fs-changed} & 2 bytes  & For files: start offset in this bank 0..\$3FFF, little endian;
                                        For anything else: see CrtUsage table \ref{tab:easyfs-crtusage}\\[3pt]
         Size              & 3 bytes  & File size, little endian \\[3pt]
@@ -126,8 +127,6 @@ Table \ref{tab:easyfs-file-types} shows possible values of the Type field.
         \$01 & Normal PRG file with 2 bytes start address \\[3pt]
         \$02 & Normal PRG file with 2 bytes start address, only LOROM used\footref{fn:fs-new} \\[3pt]
         \$03 & Normal PRG file with 2 bytes start address, only HIROM used\footref{fn:fs-new} \\[3pt]
-        \$04 & Kernal\footref{fn:fs-new} \\[3pt]
-        \$05 & Freezer\footref{fn:fs-new} \\[3pt]
         \ldots & Reserved \\[3pt]
         \$10 & Normal 8 kByte cartridge (\$8000..\$9FFF) \\[3pt]
         \$11 & Normal 16 kByte cartridge (\$8000..\$9FFF, \$A000..\$BFFF) \\[3pt]
@@ -171,8 +170,9 @@ With the EasyFS2 it is a 2 byte wide, so all EasyFS1 entries are full compatible
 \subsection{CrtUsage}
 
 Table \ref{tab:easyfs-crtusage} shows the meaning of the CrtUsage field.
-Note that this field is EasyFS2 specific. EasyFS1 has this field set to \$0000 or \$2000
+Note that this field is EasyFS2 specific. EasyFS1 has this field set to either \$0000 or \$2000
 for all cartridge entries (the offset, \$2000 for 8k ultimax cartidges, \$0000 for all others).
+This field is only used for entries of type cartridge (Type \$10..\$1E).
 
 \begin{table}[!htbp]
     \centering
@@ -233,9 +233,6 @@ beginning of the opposite ROM. Now it's easy to calculate how much of the
 minus the banks used in the opposite ROM (16) results in 16 banks.
 
 The opposite ROM is defined as follows:
-
-On non cartridge types (Type \$01..\$0F) it's the HIROM.\\
-On cartridge types (Type \$10..\$1E):
 \begin{itemize}
 \item[-] HIROM when Type \& 3 is 0 or 1
 \item[-] LOROM when Type \& 3 is 2 or 3
