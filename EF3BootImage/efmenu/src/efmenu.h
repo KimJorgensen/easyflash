@@ -32,6 +32,7 @@ void __fastcall__ set_bank_change_mode(uint8_t bank, uint8_t mode);
 void __fastcall__ start_program(uint8_t bank);
 
 void wait_for_no_key(void);
+uint8_t is_c128(void);
 
 typedef struct efmenu_dir_s
 {
