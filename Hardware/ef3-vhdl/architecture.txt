@@ -1,12 +1,6 @@
 
-This file contains documentation about the structure and semantic of
+This file contains documentation about the structure and functionality of
 the EF3 VHDL implementation.
-
-===============================================================================
-cartridge_modes
-===============================================================================
-
-This package contains an enumeration for all cartridges and modes implemented.
 
 ===============================================================================
 exp_bus_ctrl
@@ -15,29 +9,63 @@ exp_bus_ctrl
 This entity contains low-level mechanisms to provide various control signals
 related to the expansion port to other parts.
 
-Its input are the main clock (25 MHz) and the unsynchronized Phi2 signal.
+Its inputs are the main clock (25 MHz), the unsynchronized Phi2 and the
+unsynchronized n_wr signal.
 
-The process "synchronize_stuff" creates a synchronized version of Phi2
-(phi2_s) and a copy of phi2_s which is delayed by one clock cycle (prev_phi2).
+The process synchronize_stuff creates a synchronized version of Phi2
+(phi2_s) and a copy of phi2_s which is delayed by one clk cycle (prev_phi2).
 
-The heart of this entity is the process clk_counter which controls a counter.
-It counts 25 MHz cycles and is reset to 0 synchronously each time when phi2_s
-is different from prev_phi2. So this counter (clk_cnt) counts from 0 to about
-11 or 12. The actual upper counter limit depends from the frequency of Phi2
-(PAL/NTSC) and the phase shift between the clock domains clk and Phi2.
-The actual limit is not important, as it is not used anywhere.
+The heart of this entity is the process clk_time_shift which controls a
+shift register "cycle_time". Each time when phi2_s is different from prev_phi2,
+bit 0 of the shift register is set and the rest cleared. Then the register is
+shifted left at each cycle of the 25 MHz clock. So the position of the set bit
+shows the time in each Phi1 and Phi2 cycle.
+
+The last position of the shift register depends from the frequency of Phi2
+(PAL/NTSC) and the phase shift between the clock domains clk and Phi2. The
+actual limit is not important, as it is not used anywhere.
+
+This is not a counter but a shift register, because it turned out that the
+resulting one-hot encoding fits better into the target CPLD.
 
 Note that there is a delay between the original Phi2 edges and the start of
-clk_cnt = 0. First we have a synchronization delay of 0..40 ns when phi2_s is
-created. Additionally 40 ns are added because of prev_phi2.
+cycle_time(0). First we have a synchronization delay of 0..40 ns when phi2_s
+is created. Additionally 40 ns are added because of prev_phi2. This means that
+cycle_time is restarted to 0 about 40 to 80 ns after each edge of Phi2.
 
-This means that clk_cnt is reset to 0 about 40 to 80 ns after each edge of
-Phi2.
+rd, wr
+------
 
-The process bus_states creates various control signals from clk_cnt and phi2_s.
-All of them are created in a combinatorical way and therefore may contain
-glitches. They must only be consumed in synchronous processes to make sure
-they reached a stable state.
+The two signals rd and wr are created combinatorially from Phi2 and R/W
+taken from the expansion port. On the C128 the R/W line can be low at the
+expansion port in Phi1 cycles, during VIC-II read accesses. Because of this
+the R/W line is combined with Phi2 to create the real read (rd) and write (wr)
+signals.
+
+These signals are used to create addresses, chip selects etc. asynchronously.
+
+rp, wp
+------
+
+These signals are created similar as rd and wr, but they are also combined
+with cycle_time.
+
+The read pulse rp is active for 1 clk cycle (40 ns) at cycle_time(6) when a
+read access occurs, so the data to be read still has enough time to be on the
+bus before the setup time window of the CPU starts. rd is used e.g. to start a
+glitch-free read signal for the USB part, which removes one byte from its FIFO
+per read access, therefore glitches in read accesses would be fatal.
+
+The write pulse wp is low for 80 ns near to the end of a write cycle, when all
+busses are considered to be stable. This signal can be used to create a
+synchronous write signal for memory and USB chips.
+
+cycle_time
+----------
+
+Shift register which contains the time offset inside a Phi1/Phi2 half cycle.
+Each bit corresponds to a 40 ns time range. Refer to the timing diagram below
+for details.
 
 cycle_start
 -----------
@@ -46,26 +74,11 @@ cycle_start is '1' for one clk-cycle right at the beginning of a half-cycle of
 Phi2. It can be used to reset states from the previous half-cycle and to
 prepare the next one.
 
-addr_ready
-----------
-
-This combinatorical signal is '1' for one clk cycle when the address from
-CPU or VIC is stable. It can be used where the address must be known as early
-as possible in the Phi2 half-cycle. Note that the PLA decoding may not be
-ready yet at this time.
-
-bus_ready
----------
-
-This combinatorical signal is '1' for one clk cycle when the PLA result for the
-current address is stable. This can be used whereever the address, one of the
-PLA output lines and/or the data bus will be evaluated.
-
 hiram_detect_ready
 ------------------
 
 After the KERNAL implementation changed the address bus, ROMH has to be
-examined. This combinatorical signal is '1' for one clock cycle when ROMH
+examined. This combinatorial signal is '1' for one clock cycle when ROMH
 is ready.
 
 This figure shows the timing of all signals described above:
@@ -84,21 +97,16 @@ This figure shows the timing of all signals described above:
  prev_phi2:  ________/                                               \_______
 
              .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .
- phase_pos:  -   -   0   1   2   3   4   5   6   7   8   9  10   -   0   1
+ cycle_time(n):  -   0   1   2   3   4   5   6   7   8   9  10   -   0   1
              .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .
  t_min              40  80  120 160 200 240 280 320 360 400 440 480 ns
  t_max              80  120 160 200 240 280 320 360 400 440 480 520 ns
              .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .
-                  ___                .       .       .
- cycle_start:____/   \_______________________________________________________
-                                  ___.       .       .
- addr_ready: ____________________/   \_______________________________________
-                                          ___.       .
- bus_ready:  ____________________________/   \_______________________________
-                                                     .
- hiram_detect_ready:                              ___.
-             ____________________________________/   \_______________________
+                  ___                                                 ___
+ cycle_start:____/   \_______________________________________________/   \___
 
+ phi2_cycle_start:                                                    ___
+             ________________________________________________________/   \___
 
 ===============================================================================
 reset_generator
@@ -118,7 +126,7 @@ reset_generator.
 n_generated_reset
 -----------------
 
-This is a reset which is active for 8 Phi2 cycles after start_reset has 
+This is a reset which is active for 8 Phi2 cycles after start_reset has
 triggered it. It is generated in reset_generator and may be used e.g. to
 reset the C64 to activate a changed cartridge mode.
 
