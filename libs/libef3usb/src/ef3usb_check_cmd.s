@@ -1,10 +1,5 @@
 
 
-.importzp   ptr1, ptr2, ptr3, ptr4
-.importzp   tmp1, tmp2, tmp3, tmp4
-.import     popa, popax
-
-
 .include "ef3usb_macros.s"
 
 .bss
@@ -14,7 +9,7 @@ cmd_buffer:
 .code
 ; =============================================================================
 ;
-; char* __fastcall__ ef3usb_check_for_command(void);
+; char* __fastcall__ ef3usb_check_cmd(void);
 ;
 ; Check if a command arrived from USB. The format is:
 ;
@@ -26,12 +21,13 @@ cmd_buffer:
 ;
 ; This is also used to synchronize the connection, i.e. all data is shifted
 ; through the buffer until a match with "efstart:???#" is found. The buffer is
-; kept between calls.
+; kept between calls. Yes, a simple state machine would be faster, but with
+; this method I get the resulting buffer for free :)
 ;
 ; =============================================================================
 .proc   _ef3usb_check_cmd
 .export _ef3usb_check_cmd
-_ef3usb_check_for_command:
+_ef3usb_check_cmd:
         bit USB_STATUS
         bpl @end            ; nothing received?
 
@@ -60,7 +56,7 @@ _ef3usb_check_for_command:
         lda cmd_buffer + 11
         bne @end                ; no 0-termination
 
-        ; success, retrun the string behind "efstart:"
+        ; success, return the string behind "efstart:"
         lda #<(cmd_buffer + 8)
         ldx #>(cmd_buffer + 8)
         rts
