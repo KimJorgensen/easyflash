@@ -245,3 +245,21 @@ wfnk:
         cli
         rts
 
+
+; =============================================================================
+;
+; Return 0 if we're on a C64, other values for a C128.
+;
+; uint8_t is_c128(void);
+;
+; in:
+;       -
+; out:
+;       -
+;
+.export _is_c128
+_is_c128:
+        ldx $d030
+        inx
+        txa
+        rts

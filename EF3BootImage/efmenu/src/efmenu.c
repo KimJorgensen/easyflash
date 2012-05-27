@@ -116,6 +116,9 @@ uint8_t menu_entry_is_valid(const efmenu_entry_t* entry)
     if (entry->mode == MODE_KILL)
         return 1;
 
+    if (entry->mode == MODE_KERNAL && is_c128())
+        return 0;
+
     set_slot(entry->slot);
     set_bank(entry->bank);
 
