@@ -1,8 +1,6 @@
 
 
-.importzp   ptr1, ptr2, ptr3, ptr4
-.importzp   tmp1, tmp2, tmp3, tmp4
-.import     popa, popax
+.importzp   ptr1
 
 
 .include "ef3usb_macros.s"
