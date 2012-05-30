@@ -34,6 +34,7 @@ entity exp_bus_ctrl is
         wr:                 out std_logic;
         rp:                 out std_logic;
         wp:                 out std_logic;
+        wp_end:             out std_logic;
 
         -- The time inside a Phi2 half cycle as shift register. This is used
         -- as one-hot encoded state machine to save function block inputs.
@@ -41,7 +42,7 @@ entity exp_bus_ctrl is
 
         -- This combinatorial signal is '1' for one clk cycle
         -- after the end of each Phi2 half cycle
-        cycle_start:        out std_logic;
+        cycle_start:        out std_logic
     );
 end exp_bus_ctrl;
 
@@ -111,11 +112,15 @@ begin
     ---------------------------------------------------------------------------
     cycle_start <= phi2_s xor prev_phi2;
 
-    -- Write pulse, 80 ns to be long enough for slow chips
-    wp <= not n_wr and phi2_s and (cycle_time_i(7) or cycle_time_i(8));
+    -- Write pulse for internal registers
+    -- or to start a write signal for external memory
+    wp <= not n_wr and phi2_s and cycle_time_i(6);
+
+    -- end of write access, we need 80 ns for external chips
+    wp_end <= cycle_time_i(8);
 
     -- Read pulse (for synchronous read accesses, e.g. USB)
-    rp <= (n_wr or not phi2_s) and (cycle_time_i(6));
+    rp <= (n_wr or not phi2_s) and cycle_time_i(6);
 
     cycle_time <= cycle_time_i;
 end arc;
