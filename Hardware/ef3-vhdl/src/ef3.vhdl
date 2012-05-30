@@ -106,6 +106,7 @@ architecture ef3_arc of ef3 is
     signal wr:                  std_logic;
     signal rp:                  std_logic;
     signal wp:                  std_logic;
+    signal wp_end:              std_logic;
     signal bus_ready:           std_logic;
     signal cycle_time:          std_logic_vector(10 downto 0);
     signal cycle_start:         std_logic;
@@ -115,8 +116,6 @@ architecture ef3_arc of ef3 is
 
     signal n_exrom_out:         std_logic;
     signal n_game_out:          std_logic;
-
-    signal phi2_cycle_start:    std_logic;
 
     -- When this it '1' at the rising edge of clk the reset generator
     -- is started
@@ -218,9 +217,9 @@ architecture ef3_arc of ef3 is
             wr:                 out std_logic;
             rp:                 out std_logic;
             wp:                 out std_logic;
+            wp_end:             out std_logic;
             cycle_time:         out std_logic_vector(10 downto 0);
-            cycle_start:        out std_logic;
-            phi2_cycle_start:   out std_logic
+            cycle_start:        out std_logic
         );
     end component;
 
@@ -427,9 +426,9 @@ begin
         wr                      => wr,
         rp                      => rp,
         wp                      => wp,
+        wp_end                  => wp_end,
         cycle_time              => cycle_time,
-        cycle_start             => cycle_start,
-        phi2_cycle_start        => phi2_cycle_start
+        cycle_start             => cycle_start
     );
 
     u_reset_generator: reset_generator port map
@@ -850,11 +849,12 @@ begin
 
         if n_reset = '0' then
             n_mem_wr <= '1';
+            n_usb_wr <= '1';
         elsif rising_edge(clk) then
             if wp = '1' then
                 n_mem_wr <= n_mem_wr_i;
                 n_usb_wr <= not usb_write;
-            else
+            elsif wp_end = '1' then
                 n_mem_wr <= '1';
                 n_usb_wr <= '1';
             end if;
