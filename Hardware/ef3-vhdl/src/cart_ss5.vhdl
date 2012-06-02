@@ -44,7 +44,7 @@ entity cart_ss5 is
         freezer_ready:      in  std_logic;
         set_bank_lo:        out std_logic;
         new_bank_lo:        out std_logic_vector(2 downto 0);
-        ram_addr:           out std_logic_vector(14 downto 0);
+        ram_bank:           out std_logic_vector(1 downto 0);
         n_game:             out std_logic;
         n_exrom:            out std_logic;
         start_reset:        out std_logic;
@@ -59,7 +59,6 @@ end cart_ss5;
 
 architecture behav of cart_ss5 is
 
-    signal start_freezer_i:     std_logic;
     signal ctrl_game:           std_logic;
     signal ctrl_exrom:          std_logic;
     signal ctrl_kill:           std_logic;
@@ -95,12 +94,11 @@ begin
     ---------------------------------------------------------------------------
     do_freezer: process(enable, button_special_fn)
     begin
-        start_freezer_i <= '0';
+        start_freezer <= '0';
         if enable = '1' and button_special_fn = '1' then
-            start_freezer_i <= '1';
+            start_freezer <= '1';
         end if;
     end process;
-    start_freezer <= start_freezer_i;
 
     ---------------------------------------------------------------------------
     --
@@ -239,9 +237,9 @@ begin
     -- "000L1000" corresponds to EF Bank 20
     --
     ---------------------------------------------------------------------------
-    create_mem_addr: process(addr, n_io1, n_roml)
+    create_mem_addr: process(addr, bank_lo)
     begin
-        ram_addr   <= bank_lo(1 downto 0) & addr(12 downto 0);
+        ram_bank <= bank_lo(1 downto 0);
     end process;
 
 end architecture behav;
