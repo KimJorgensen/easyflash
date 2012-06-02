@@ -31,8 +31,7 @@ entity cart_io2ram is
         n_io2:          in  std_logic;
         rd:             in  std_logic;
         wr:             in  std_logic;
-        addr:           in  std_logic_vector(15 downto 0);
-        ram_addr:       out std_logic_vector(14 downto 0);
+        ram_bank:       out std_logic_vector(1 downto 0);
         ram_read:       out std_logic;
         ram_write:      out std_logic
     );
@@ -44,7 +43,7 @@ begin
     ---------------------------------------------------------------------------
     -- Combinatorially create the next memory address.
     ---------------------------------------------------------------------------
-    ram_addr   <= "0000000" & addr(7 downto 0);
+    ram_bank <= "00";
 
     ---------------------------------------------------------------------------
     --
