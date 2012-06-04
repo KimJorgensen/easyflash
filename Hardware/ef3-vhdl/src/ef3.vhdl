@@ -107,7 +107,6 @@ architecture ef3_arc of ef3 is
     signal rp:                  std_logic;
     signal wp:                  std_logic;
     signal wp_end:              std_logic;
-    signal bus_ready:           std_logic;
     signal cycle_time:          std_logic_vector(10 downto 0);
     signal cycle_start:         std_logic;
 
@@ -204,9 +203,9 @@ architecture ef3_arc of ef3 is
 
     attribute KEEP : string; -- keep buffer from being optimized out
     attribute KEEP of io1_addr_0x: signal is "TRUE";
-    attribute KEEP of cycle_start: signal is "TRUE";
-    attribute KEEP of rd:          signal is "TRUE";
-    attribute KEEP of wr:          signal is "TRUE";
+    --attribute KEEP of cycle_start: signal is "TRUE";
+    --attribute KEEP of rd:          signal is "TRUE";
+    --attribute KEEP of wr:          signal is "TRUE";
 
     component exp_bus_ctrl is
         port (
@@ -241,9 +240,9 @@ architecture ef3_arc of ef3 is
             clk:                in  std_logic;
             n_reset:            in  std_logic;
             phi2:               in  std_logic;
-            bus_ready:          in  std_logic;
             ba:                 in  std_logic;
-            n_wr:               in  std_logic;
+            rp:                 in  std_logic;
+            wp:                 in  std_logic;
             start_freezer:      in  std_logic;
             reset_freezer:      in  std_logic;
             freezer_irq:        out std_logic;
@@ -447,9 +446,9 @@ begin
         clk                     => clk,
         n_reset                 => n_reset,
         phi2                    => phi2,
-        bus_ready               => bus_ready,
         ba                      => ba,
-        n_wr                    => n_wr,
+        rp                      => rp,
+        wp                      => wp,
         start_freezer           => start_freezer,
         reset_freezer           => reset_freezer,
         freezer_irq             => freezer_irq,
@@ -610,9 +609,6 @@ begin
         data_out                => usb_data_out,
         data_out_valid          => usb_data_out_valid
     );
-
-
-    bus_ready <= cycle_time(5);
 
     enable_usb      <= enable_ef or enable_kernal;
     enable_io2ram   <= enable_ef or enable_kernal;
@@ -859,14 +855,16 @@ begin
             end if;
             if rp = '1' then
                 n_usb_rd_i <= not usb_read;
-            else
+            elsif cycle_start = '1' then
                 n_usb_rd_i <= '1';
             end if;
         end if;
     end process mem_ctrl;
     n_ram_cs <= n_ram_cs_i;
     n_mem_oe <= n_mem_oe_i;
-    n_usb_rd <= n_usb_rd_i and not n_mem_oe_i; -- mem read disables USB read
+
+    -- safety first: mem read disables USB read
+    n_usb_rd <= '0' when n_usb_rd_i = '0' and n_mem_oe_i = '1' else '1';
     usb_wr   <= not n_usb_wr;
 
     ---------------------------------------------------------------------------
