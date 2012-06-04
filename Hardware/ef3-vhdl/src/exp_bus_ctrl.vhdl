@@ -116,10 +116,10 @@ begin
 
     -- Write pulse for internal registers
     -- or to start a write signal for external memory
-    wp <= not n_wr and phi2_s and cycle_time_i(6);
+    wp <= not n_wr and phi2_s and cycle_time_i(7);
 
     -- end of write access, we need 80 ns for external chips
-    wp_end <= cycle_time_i(8);
+    wp_end <= cycle_time_i(9);
 
     -- Read pulse (for synchronous read accesses, e.g. USB)
     rp <= (n_wr or not phi2_s) and cycle_time_i(6);
