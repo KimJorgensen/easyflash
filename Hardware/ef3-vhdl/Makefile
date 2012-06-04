@@ -1,6 +1,6 @@
 
 ifeq "$(release)" "yes"
-	version := 0.9.2
+	version := 1.0.0
 else
 	version := $(shell date +%y%m%d-%H%M)
 endif
@@ -42,7 +42,7 @@ device     := $(dev_type)-$(dev_pkg)-$(dev_speed)
 device_fit := $(dev_type)-$(dev_speed)-$(dev_pkg)
 
 fit_flags  := -p $(device_fit) -ofmt abel -log fitter.log -optimize density
-fit_flags  += -power low -slew slow -inputs 25 -pterms 20
+fit_flags  += -power low -slew slow -inputs 24 -pterms 25
 fit_filter_output := "^CS: block property:\|^$$"
 
 # directories to be created

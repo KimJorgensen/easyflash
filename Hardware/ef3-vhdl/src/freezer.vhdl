@@ -31,9 +31,9 @@ entity freezer is
             clk:                in  std_logic;
             n_reset:            in  std_logic;
             phi2:               in  std_logic;
-            bus_ready:          in  std_logic;
             ba:                 in  std_logic;
-            n_wr:               in  std_logic;
+            rp:                 in  std_logic;
+            wp:                 in  std_logic;
             start_freezer:      in  std_logic;
             reset_freezer:      in  std_logic;
             freezer_irq:        out std_logic;
@@ -44,7 +44,7 @@ end freezer;
 
 architecture behav of freezer is
 
-    -- This counter has two semantics (to safe macro cells):
+    -- This counter has two semantics (to save macro cells):
     --
     -- a) If freeze_pending is '1', it counts the write accesses
     --    Count from 3 to 0 to find 3 consecutive write accesses which only
@@ -60,8 +60,8 @@ architecture behav of freezer is
     signal cpu_read:                std_logic;
     signal cpu_write:               std_logic;
 begin
-	cpu_read  <= phi2 and ba and bus_ready and n_wr;
-	cpu_write <= phi2 and bus_ready and not n_wr;
+	cpu_read  <= phi2 and ba and rp;
+	cpu_write <= phi2 and wp;
 
     ---------------------------------------------------------------------------
     -- When the freeze button is being pressed during a bus read access we
@@ -80,8 +80,7 @@ begin
                     -- Unlock the Freezer only if the button has been released
                     freeze_counter <= 0; -- unlocked
                 else
-                    if freeze_counter = 0 and bus_ready = '1' and n_wr = '1'
-                    then
+                    if freeze_counter = 0 and rp = '1' then
                         freeze_pending <= '1';
                         freeze_counter <= 3;
                     end if;
