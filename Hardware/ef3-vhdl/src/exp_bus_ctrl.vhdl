@@ -36,18 +36,18 @@ entity exp_bus_ctrl is
         wp:                 out std_logic;
         wp_end:             out std_logic;
 
-        -- The time inside a Phi2 half cycle as shift register. This is used
-        -- as one-hot encoded state machine to save function block inputs.
+        -- The time in a Phi2 half cycle as shift register. This is used
+        -- as one-hot encoded state machine.
         cycle_time:         out std_logic_vector(10 downto 0);
 
         -- This combinatorial signal is '1' for one clk cycle
-        -- after the end of each Phi2 half cycle
+        -- at the beginning of each Phi2 half cycle
         cycle_start:        out std_logic
     );
 end exp_bus_ctrl;
 
 
-architecture arc of exp_bus_ctrl is
+architecture a of exp_bus_ctrl is
     signal prev_phi2:       std_logic;
     signal phi2_s:          std_logic;
     signal cycle_time_i:     std_logic_vector(10 downto 0);
@@ -66,7 +66,7 @@ begin
     end process synchronize_stuff;
 
     ---------------------------------------------------------------------------
-    -- Count clk cycles in both phases of phi2
+    -- Count clk cycles in both phases of phi2 with a shift register.
     ---------------------------------------------------------------------------
     clk_time_shift: process(clk, prev_phi2, phi2_s)
     begin
@@ -79,6 +79,8 @@ begin
             end if;
         end if;
     end process;
+
+    cycle_time <= cycle_time_i;
 
     ---------------------------------------------------------------------------
     -- Write is only allowed at phi2 = '1', because on C128 it happens
@@ -121,6 +123,4 @@ begin
 
     -- Read pulse (for synchronous read accesses, e.g. USB)
     rp <= (n_wr or not phi2_s) and cycle_time_i(6);
-
-    cycle_time <= cycle_time_i;
-end arc;
+end a;
