@@ -11,7 +11,7 @@ FAIL    test failed
 Edit the 1st three columns according to the devices tested, also note if it is
 PAL or NTSC and the board revision, if known.
 
-C64 PAL C64 PAL PALs
+C64 PAL C64 PAL PAL
 250407  250469  C128
 ===============================================================================
 .       OK      OK      Start PoP from EF, start level 1
@@ -20,7 +20,7 @@ C64 PAL C64 PAL PALs
 .       OK      OK      Kill cartridge (<K>) and test One-Der,
                         loaded from disk (CSDB ID 11692)
 
-.       .       N/A     Start the Exos V3 KERNAL and test One-Der,
+.       OK      N/A     Start the Exos V3 KERNAL and test One-Der,
                         loaded from disk (CSDB ID 11692)
 
 .       OK      OK      Start Retro Replay (<R>), press <F7> and test
