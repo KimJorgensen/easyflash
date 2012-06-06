@@ -26,10 +26,23 @@ License
 Changes
 =======
 
-Version 1.0.0 - xx.xx.xxxx
+Version 1.0.0 - 06.06.2012
 
 - USB and I/O2 RAM are also active in KERNAL mode
+  - Allows USB-related features in a special KERNAL currently being
+    developed
+- KERNAL implementation uses a cleaner timing now
 - CPLD Version register added ($de08)
+  - Will be displayed in the next menu version, not release yet
+- Improved C128 support
+  - 2 MHz mode works in EasyFlash mode (needed for PoP)
+  - Added a way to leave to C64 mode or to C128 mode
+    - Will need a menu update, not release yet
+  - Still NO external KERNAL on C128!
+- Many optimizations to get all this crap into the CPLD
+
+Some of the features will need a software update which is not release yet.
+Do not try to start an external KERNAL on the C128, it will crash.
 
 Version 0.9.2 - 09.01.2012
 
