@@ -8,10 +8,10 @@ N/A     test not applicable for this machine
 OK      test passed
 FAIL    test failed
 
+Edit the 1st three columns according to the devices tested, also note if it is
+PAL or NTSC and the board revision, if known.
 
-PAL? NTSC?
-
-C64     C64
+C64 PAL C64 PAL PALs
 250407  250469  C128
 ===============================================================================
 .       OK      OK      Start PoP from EF, start level 1
