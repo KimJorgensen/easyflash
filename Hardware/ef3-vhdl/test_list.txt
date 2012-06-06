@@ -9,6 +9,8 @@ OK      test passed
 FAIL    test failed
 
 
+PAL? NTSC?
+
 C64     C64
 250407  250469  C128
 ===============================================================================
@@ -45,7 +47,7 @@ C64     C64
 
 .       OK      OK      Flash a CRT file over USB
 
-.       .       N/A     Enter the EF3 menu, run a program over USB
+.       OK      N/A     Enter the EF3 menu, run a program over USB
 
 .       .       .       Run the Torture Test in EasyProg, let it run for at
                         least one test loop
