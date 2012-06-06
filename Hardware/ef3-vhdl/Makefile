@@ -42,7 +42,9 @@ device     := $(dev_type)-$(dev_pkg)-$(dev_speed)
 device_fit := $(dev_type)-$(dev_speed)-$(dev_pkg)
 
 fit_flags  := -p $(device_fit) -ofmt abel -log fitter.log -optimize density
-fit_flags  += -power low -slew slow -inputs 24 -pterms 25
+fit_flags  += -power low -slew slow 
+#fit_flags  += -exhaust
+fit_flags  += -inputs 18 -pterms 25 
 fit_filter_output := "^CS: block property:\|^$$"
 
 # directories to be created

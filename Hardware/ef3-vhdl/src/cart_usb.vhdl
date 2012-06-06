@@ -30,7 +30,6 @@ entity cart_usb is
         clk:                in  std_logic;
         n_reset:            in  std_logic;
         enable:             in  std_logic;
-        n_io1:              in  std_logic;
         rd:                 in  std_logic;
         wr:                 in  std_logic;
         cycle_start:        in  std_logic;
@@ -66,17 +65,18 @@ begin
     -- RXF  (RX Ready)   If this bit is set, received data can be read
     -- TXF  (TX Ready)   If this bit is set, data can be transmitted
     ---------------------------------------------------------------------------
-    create_data_out: process(data_out_valid_i, n_usb_rxf, n_usb_txe, addr, n_io1)
+    create_data_out: process(data_out_valid_i, n_usb_rxf, n_usb_txe, addr,
+                             io1_addr_0x)
     begin
         data_out <= (others => '0');
         if data_out_valid_i = '1' then
-            if n_io1 = '0' then
-                case addr(7 downto 0) is
-                    when x"08" =>
+            if io1_addr_0x = '1' then
+                case addr(3 downto 0) is
+                    when x"8" =>
                         -- $de08 - read ID register
                         data_out <= x"40";
 
-                    when x"09" =>
+                    when x"9" =>
                         -- $de09 - read control register
                         data_out <= not n_usb_rxf & not n_usb_txe & "000000";
                     when others => null;
