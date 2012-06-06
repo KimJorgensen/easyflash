@@ -56,7 +56,8 @@ begin
             if n_io2 = '0' then
                 if rd = '1' then
                     ram_read <= '1';
-                elsif wr = '1' then
+                end if;
+                if wr = '1' then
                     ram_write <= '1';
                 end if;
             end if;

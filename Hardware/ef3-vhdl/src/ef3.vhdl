@@ -120,6 +120,10 @@ architecture ef3_arc of ef3 is
     -- is started
     signal start_reset:         std_logic;
 
+    -- Activate this together with start_reset to go to C64 mode on C128.
+    -- No effect on C64.
+    signal go_64:               std_logic;
+
     -- Reset the machine to enter the menu mode
     signal start_reset_to_menu: std_logic;
 
@@ -129,6 +133,7 @@ architecture ef3_arc of ef3 is
     signal n_reset:             std_logic;
     signal n_sys_reset:         std_logic;
     signal n_generated_reset:   std_logic;
+    signal n_reset_game:        std_logic;
     signal start_freezer:       std_logic;
     signal reset_freezer:       std_logic;
     signal freezer_irq:         std_logic;
@@ -203,9 +208,7 @@ architecture ef3_arc of ef3 is
 
     attribute KEEP : string; -- keep buffer from being optimized out
     attribute KEEP of io1_addr_0x: signal is "TRUE";
-    --attribute KEEP of cycle_start: signal is "TRUE";
-    --attribute KEEP of rd:          signal is "TRUE";
-    --attribute KEEP of wr:          signal is "TRUE";
+    attribute KEEP of n_mem_oe_i: signal is "TRUE";
 
     component exp_bus_ctrl is
         port (
@@ -224,14 +227,17 @@ architecture ef3_arc of ef3 is
 
     component reset_generator is
         port (
-            clk:                in std_logic;
-            cycle_start:        in std_logic;
-            phi2:               in std_logic;
-            start_reset:        in std_logic;
+            clk:                in  std_logic;
+            cycle_start:        in  std_logic;
+            phi2:               in  std_logic;
+            start_reset:        in  std_logic;
+            go_64:              in  std_logic;
             n_reset_in:         in  std_logic;
+            n_romh:             in  std_logic;
             n_reset:            out std_logic;
             n_generated_reset:  out std_logic;
-            n_sys_reset:        out std_logic
+            n_sys_reset:        out std_logic;
+            n_game:             out std_logic
         );
     end component;
 
@@ -396,7 +402,6 @@ architecture ef3_arc of ef3 is
             clk:                in  std_logic;
             n_reset:            in  std_logic;
             enable:             in  std_logic;
-            n_io1:              in  std_logic;
             rd:                 in  std_logic;
             wr:                 in  std_logic;
             cycle_start:        in  std_logic;
@@ -435,10 +440,13 @@ begin
         cycle_start             => cycle_start,
         phi2                    => phi2,
         start_reset             => start_reset,
+        go_64                   => go_64,
         n_reset_in              => n_reset_io,
+        n_romh                  => n_romh,
         n_reset                 => n_reset,
         n_generated_reset       => n_generated_reset,
-        n_sys_reset             => n_sys_reset
+        n_sys_reset             => n_sys_reset,
+        n_game                  => n_reset_game
     );
 
     u_freezer: freezer port map
@@ -596,7 +604,6 @@ begin
         clk                     => clk,
         n_reset                 => n_reset,
         enable                  => enable_usb,
-        n_io1                   => n_io1,
         rd                      => rd,
         wr                      => wr,
         cycle_start             => cycle_start,
@@ -676,6 +683,7 @@ begin
             sw_start_reset  <= '0';
         elsif rising_edge(clk) then
             sw_start_reset  <= '0';
+            go_64           <= '1';
             if start_reset_to_menu = '1' then
                 enable_ef       <= '1';
                 enable_menu     <= '1';
@@ -716,8 +724,13 @@ begin
                                 enable_ss5 <= '1';
                                 sw_start_reset <= '1';
 
+                            when x"6" =>
+                                -- everything disabled, go to C128 mode
+                                sw_start_reset <= '1';
+                                go_64 <= '0';
+
                             when x"7" =>
-                                -- everything disabled
+                                -- everything disabled, stay in C64 mode
                                 sw_start_reset <= '1';
 
                             when others => null;
@@ -737,7 +750,7 @@ begin
     flash_read      <= ef_flash_read or kernal_flash_read or ar_flash_read or ss5_flash_read;
     flash_write     <= ef_flash_write;
     n_exrom_out     <= ef_n_exrom and kernal_n_exrom and ar_n_exrom and ss5_n_exrom;
-    n_game_out      <= ef_n_game and kernal_n_game and ar_n_game and ss5_n_game;
+    n_game_out      <= ef_n_game and kernal_n_game and ar_n_game and ss5_n_game and n_reset_game;
 
     data_out        <= ef_data_out or usb_data_out or ar_data_out;
     data_out_valid  <= ef_data_out_valid or usb_data_out_valid or ar_data_out_valid;

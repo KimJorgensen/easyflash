@@ -28,14 +28,17 @@ use ieee.std_logic_unsigned.all;
 
 entity reset_generator is
     port (
-            clk:                in std_logic;
-            cycle_start:        in std_logic;
-            phi2:               in std_logic;
-            start_reset:        in std_logic;
-            n_reset_in:         in std_logic;
+            clk:                in  std_logic;
+            cycle_start:        in  std_logic;
+            phi2:               in  std_logic;
+            start_reset:        in  std_logic;
+            go_64:              in  std_logic; -- for C128: go to C64 mode
+            n_reset_in:         in  std_logic;
+            n_romh:             in  std_logic;
             n_reset:            out std_logic; -- any reset
             n_generated_reset:  out std_logic; -- reset from host
-            n_sys_reset:        out std_logic  -- reset by us
+            n_sys_reset:        out std_logic; -- reset by us
+            n_game:             out std_logic
     );
 end reset_generator;
 
@@ -50,6 +53,7 @@ architecture reset_generator_arc of reset_generator is
 
     signal n_generated_reset_i: std_logic;
     signal n_sys_reset_i:       std_logic;
+    signal n_game_i:            std_logic;
 begin
 
     ---------------------------------------------------------------------------
@@ -60,25 +64,50 @@ begin
                 cycle_cnt <= "111";
                 n_generated_reset_i <= '0';
                 ignore_reset <= '1';
-            elsif cycle_cnt /= "000" then
-                if phi2 = '0' and cycle_start = '1' then
-                    cycle_cnt <= cycle_cnt - 1;
-                end if;
-            else
-                -- cycle count reached 0
-                n_generated_reset_i <= '1';
-                if n_reset_in = '1' then
-                    ignore_reset <= '0';
+            elsif phi2 = '0' and cycle_start = '1' then
+                cycle_cnt <= cycle_cnt - 1;
+
+                if cycle_cnt = "000" then
+                    n_generated_reset_i <= '1';
+
+                    -- another 8 cycles later:
+                    if n_reset_in = '1' then
+                        ignore_reset <= '0';
+                    end if;
                 end if;
             end if;
+        end if;
+    end process cycle_counter;
+
+
+    ---------------------------------------------------------------------------
+    -- When C64 mode is wanted, pull n_game low until the first n_romh low is
+    -- seen after reset.
+    ---------------------------------------------------------------------------
+    check_c64_mode: process(clk)
+    begin
+        if rising_edge(clk) then
+            if start_reset = '1' then
+                n_game_i <= not go_64;
+            elsif n_romh = '0' and n_generated_reset_i = '1' then
+                n_game_i <= '1';
+            end if;
+        end if;
+    end process;
+
+    ---------------------------------------------------------------------------
+    sync_reset: process(clk)
+    begin
+        if rising_edge(clk) then
             -- synchronize reset from C64
             n_sys_reset_i <= ignore_reset or n_reset_in;
         end if;
-    end process cycle_counter;
+    end process sync_reset;
 
 
     n_sys_reset <= n_sys_reset_i;
     n_reset <= n_generated_reset_i and n_sys_reset_i;
     n_generated_reset <= n_generated_reset_i;
+    n_game <= n_game_i;
 
 end reset_generator_arc;
