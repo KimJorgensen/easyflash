@@ -160,7 +160,7 @@ architecture ef3_arc of ef3 is
     signal ef_led:              std_logic;
 
     signal kernal_n_dma:        std_logic;
-    signal kernal_addr_test:    std_logic;
+    signal kernal_addr_test:    std_logic_vector(3 downto 0);
     signal kernal_n_game:       std_logic;
     signal kernal_n_exrom:      std_logic;
     signal kernal_set_bank_lo:  std_logic;
@@ -316,7 +316,7 @@ architecture ef3_arc of ef3 is
             addr:               in  std_logic_vector(15 downto 0);
             button_crt_reset:   in  std_logic;
             n_dma:              out std_logic;
-            addr_test:          out std_logic;
+            addr_test:          out std_logic_vector(3 downto 0);
             n_game:             out std_logic;
             n_exrom:            out std_logic;
             start_reset:        out std_logic;
@@ -717,7 +717,7 @@ begin
                                 --sw_start_reset <= '1';
 
                             when x"4" =>
-                                enable_ar <= '1';
+                                --enable_ar <= '1';
                                 sw_start_reset <= '1';
 
                             when x"5" =>
@@ -770,7 +770,7 @@ begin
 
     n_game <= n_game_out;
 
-    addr(15 downto 12) <= "1011" when kernal_addr_test = '1' else "ZZZZ";
+    addr(15 downto 12) <= kernal_addr_test;
 
     ---------------------------------------------------------------------------
     --

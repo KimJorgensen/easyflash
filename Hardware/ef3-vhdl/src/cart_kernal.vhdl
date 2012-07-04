@@ -38,7 +38,7 @@ entity cart_kernal is
         addr:               in  std_logic_vector(15 downto 0);
         button_crt_reset:   in  std_logic;
         n_dma:              out std_logic;
-        addr_test:          out std_logic;
+        addr_test:          out std_logic_vector(3 downto 0);
         n_game:             out std_logic;
         n_exrom:            out std_logic;
         start_reset:        out std_logic;
@@ -54,6 +54,7 @@ architecture behav of cart_kernal is
     signal kernal_space_cpu_read:   boolean;
     signal kernal_space_cpu_write:  boolean;
     signal kernal_read_active:      boolean;
+    signal orig_a12:                std_logic;
 
     attribute KEEP : string; -- keep buffer from being optimized out
     attribute KEEP of kernal_space_addressed: signal is "TRUE";
@@ -94,7 +95,7 @@ begin
         if n_reset = '0' then
             n_game  <= '1';
             n_exrom <= '1';
-            addr_test <= '0';
+            addr_test <= "ZZZZ";
             n_dma <= '1';
             kernal_read_active <= false;
 
@@ -106,24 +107,27 @@ begin
             if enable = '1' then
 
                 if cycle_time(0) = '1' and kernal_space_cpu_read then
-                    n_dma <= '0';
-                    n_game  <= '0';
-                    n_exrom <= '0';
                     kernal_read_active <= true;
+                    n_game <= '0'; -- Ultimax: CAS verhindern
+                    n_dma <= '0';
                 end if;
 
                 if kernal_read_active then
-                    if cycle_time(2) = '1' then
-                        addr_test <= '1';
+                    if cycle_time(1) = '1' then
+                        addr_test <= "Z0Z" & addr(12);
+                        orig_a12 <= addr(12);
                     end if;
 
-                    if cycle_time(3) = '1' then
-                        n_dma <= '1';
+                    if cycle_time(2) = '1' then
+                        n_game  <= '0';
+                        n_exrom <= '0';
                     end if;
 
                     if cycle_time(4) = '1' then
-                        -- Release everything and check for hiram
-                        addr_test <= '0';
+                        -- restore the original address quickly
+                        -- to avoid CASRAM glitches
+                        addr_test <= "111" & orig_a12;
+                        n_dma <= '1';
                         -- ROMH reflects HIRAM now
                         if n_romh = '1' then
                             -- ram
@@ -134,7 +138,13 @@ begin
                         end if;
                         n_exrom <= '1'; -- Ultimax mode
                     end if;
-                elsif cycle_time(4) = '1' and kernal_space_cpu_write then
+
+                    if cycle_time(6) = '1' then
+                        -- The CPU drives them now
+                        addr_test <= "ZZZZ";
+                    end if;
+
+                elsif cycle_time(5) = '1' and kernal_space_cpu_write then
                     ram_write <= '1';
                 end if;
 
@@ -146,14 +156,14 @@ begin
 
                     n_game  <= '1';
                     n_exrom <= '1';
-                    addr_test <= '0';
+                    addr_test <= "ZZZZ";
                     n_dma <= '1';
                     kernal_read_active <= false;
                 end if;
             else -- enable
                 n_game  <= '1';
                 n_exrom <= '1';
-                addr_test <= '0';
+                addr_test <= "ZZZZ";
                 n_dma <= '1';
                 kernal_read_active <= false;
 
