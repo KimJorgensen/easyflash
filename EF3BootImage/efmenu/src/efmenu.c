@@ -75,6 +75,7 @@ static efmenu_entry_t special_menu[] =
         { 's',  0,  0x20,   1,  MODE_SS5,          "S", "Super Snapshot 5", "" },
         { 'p',  0,  9,      1,  MODE_EF_NO_RESET,  "P", "EasyProg",         "crt" },
         { 'k',  0,  0,      1,  MODE_KILL,         "K", "Kill Cartridge",   "" },
+        { 'z',  0,  0,      1,  MODE_GO128,        "Z", "To C128 Mode",     "" },
         { 0, 0, 0, 0, 0, "", "", "" }
 };
 
@@ -110,10 +111,9 @@ uint8_t menu_entry_is_valid(const efmenu_entry_t* entry)
     uint8_t* p;
     uint8_t  i;
 
-    if (entry->mode == MODE_EF_NO_RESET)
-        return 1;
-
-    if (entry->mode == MODE_KILL)
+    if (entry->mode == MODE_EF_NO_RESET ||
+        entry->mode == MODE_GO128 ||
+        entry->mode == MODE_KILL)
         return 1;
 
     if (entry->mode == MODE_KERNAL && is_c128())
