@@ -159,15 +159,12 @@ architecture ef3_arc of ef3 is
     signal ef_data_out_valid:   std_logic;
     signal ef_led:              std_logic;
 
-    signal kernal_n_dma:        std_logic;
-    signal kernal_addr_test:    std_logic_vector(3 downto 0);
+    signal kernal_a14:          std_logic;
     signal kernal_n_game:       std_logic;
     signal kernal_n_exrom:      std_logic;
     signal kernal_set_bank_lo:  std_logic;
     signal kernal_new_bank_lo:  std_logic_vector(2 downto 0);
     signal kernal_flash_read:   std_logic;
-    signal kernal_ram_read:     std_logic;
-    signal kernal_ram_write:    std_logic;
     signal kernal_start_reset:  std_logic;
     signal kernal_test:         std_logic;
 
@@ -315,14 +312,11 @@ architecture ef3_arc of ef3 is
             cycle_start:        in  std_logic;
             addr:               in  std_logic_vector(15 downto 0);
             button_crt_reset:   in  std_logic;
-            n_dma:              out std_logic;
-            addr_test:          out std_logic_vector(3 downto 0);
+            a14:                out std_logic;
             n_game:             out std_logic;
             n_exrom:            out std_logic;
             start_reset:        out std_logic;
             flash_read:         out std_logic;
-            ram_read:           out std_logic;
-            ram_write:          out std_logic;
             test:               out std_logic
         );
     end component;
@@ -520,14 +514,11 @@ begin
         cycle_start             => cycle_start,
         addr                    => addr,
         button_crt_reset        => button_crt_reset,
-        n_dma                   => kernal_n_dma,
-        addr_test               => kernal_addr_test,
+        a14                     => kernal_a14,
         n_game                  => kernal_n_game,
         n_exrom                 => kernal_n_exrom,
         start_reset             => kernal_start_reset,
         flash_read              => kernal_flash_read,
-        ram_read                => kernal_ram_read,
-        ram_write               => kernal_ram_write,
         test                    => kernal_test
     );
 
@@ -626,6 +617,7 @@ begin
 
     -- unused signals and defaults
     addr <= (others => 'Z');
+    n_dma <= 'Z';
 
     n_reset_io  <= 'Z' when n_generated_reset = '1' else '0';
     n_nmi       <= 'Z' when freezer_irq = '0'       else '0';
@@ -745,8 +737,8 @@ begin
     ---------------------------------------------------------------------------
     -- Merge the output of all cartridges
     ---------------------------------------------------------------------------
-    ram_read        <= io2_ram_read or kernal_ram_read or ar_ram_read or ss5_ram_read;
-    ram_write       <= io2_ram_write or kernal_ram_write or ar_ram_write or ss5_ram_write;
+    ram_read        <= io2_ram_read or ar_ram_read or ss5_ram_read;
+    ram_write       <= io2_ram_write or ar_ram_write or ss5_ram_write;
     flash_read      <= ef_flash_read or kernal_flash_read or ar_flash_read or ss5_flash_read;
     flash_write     <= ef_flash_write;
     n_exrom_out     <= ef_n_exrom and kernal_n_exrom and ar_n_exrom and ss5_n_exrom;
@@ -764,13 +756,11 @@ begin
 
     n_led <= not (ef_led or ar_led or ss5_led);
 
-    n_dma <= '0' when kernal_n_dma = '0' else '1';
-
     n_exrom <= n_exrom_out;
 
     n_game <= n_game_out;
 
-    addr(15 downto 12) <= kernal_addr_test;
+    addr(14) <= kernal_a14;
 
     ---------------------------------------------------------------------------
     --
