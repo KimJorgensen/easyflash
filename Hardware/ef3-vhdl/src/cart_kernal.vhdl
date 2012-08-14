@@ -37,14 +37,11 @@ entity cart_kernal is
         cycle_start:        in  std_logic;
         addr:               in  std_logic_vector(15 downto 0);
         button_crt_reset:   in  std_logic;
-        n_dma:              out std_logic;
-        addr_test:          out std_logic_vector(3 downto 0);
+        a14:                out std_logic;
         n_game:             out std_logic;
         n_exrom:            out std_logic;
         start_reset:        out std_logic;
         flash_read:         out std_logic;
-        ram_read:           out std_logic;
-        ram_write:          out std_logic;
         test:               out std_logic
     );
 end cart_kernal;
@@ -52,9 +49,10 @@ end cart_kernal;
 architecture behav of cart_kernal is
     signal kernal_space_addressed:  boolean;
     signal kernal_space_cpu_read:   boolean;
-    signal kernal_space_cpu_write:  boolean;
     signal kernal_read_active:      boolean;
-    signal orig_a12:                std_logic;
+    signal cpu_port_changed:        boolean;
+    signal addr_test:               std_logic;
+    signal hiram_state:             std_logic;
 
     attribute KEEP : string; -- keep buffer from being optimized out
     attribute KEEP of kernal_space_addressed: signal is "TRUE";
@@ -67,110 +65,79 @@ begin
         phi2 = '1' and ba = '1' and n_wr = '1'
         else false;
 
-    kernal_space_cpu_write <= true when kernal_space_addressed and
-        phi2 = '1' and n_wr = '0'
-        else false;
-
     start_reset <= enable and button_crt_reset;
     test <= enable;
 
+
     ---------------------------------------------------------------------------
     --
-    -- VIC-II needs address input in this time window (times after Phi2):
-    --      min: Trhl_min - Tasrin = 155 ns - 25 ns = 130 ns
-    --      max: Trhl_max + Trahin = 190 ns + 0 ns  = 190 ns
-    -- cycle_time(3) ends at 160..200 ns, so we can set DMA at this cycle
+    ---------------------------------------------------------------------------
+    detect_cpu_port_access: process(n_reset, clk)
+    begin
+        if n_reset = '0' then
+            cpu_port_changed <= true;
+        elsif rising_edge(clk) then
+            -- check every write access to $0000 and $0001
+            if addr(15 downto 1) = x"000" & "000" and n_wr = '0' then
+                cpu_port_changed <= true;
+            end if;
+        end if;
+    end process;
+
+    ---------------------------------------------------------------------------
     --
-    --
-    -- DMA bei:     0   1   2   3   4   5   6   7   8
-    -- 250407:      OK  OK  OK  OK  NOK ?   ?   NOK NOK
-    -- 250469:      OK  OK  OK  OK  OK  ?   ?   NOK NOK
-    -- Zwei Zyklen:
-    -- 250407:          OK> OK>
-    -- 250469:          OK> OK>
-    -- nok: 7, 8
     ---------------------------------------------------------------------------
     detect_hiram: process(n_reset, phi2, clk)
     begin
         if n_reset = '0' then
+            flash_read <= '0';
             n_game  <= '1';
             n_exrom <= '1';
-            addr_test <= "ZZZZ";
-            n_dma <= '1';
+            a14 <= 'Z';
             kernal_read_active <= false;
-
-            flash_read <= '0';
-            ram_read <= '0';
-            ram_write <= '0';
+            hiram_state <= '0';
 
         elsif rising_edge(clk) then
             if enable = '1' then
 
-                if cycle_time(0) = '1' and kernal_space_cpu_read then
+                if cycle_time(5) = '1' and kernal_space_cpu_read then
+                    n_game  <= '0';
+                    n_exrom <= '0';
+                    a14 <= '0';
                     kernal_read_active <= true;
-                    n_game <= '0'; -- Ultimax: CAS verhindern
-                    n_dma <= '0';
+                    -- start speculative flash read to hide its latency
+                    flash_read <= '1';
                 end if;
 
                 if kernal_read_active then
-                    if cycle_time(1) = '1' then
-                        addr_test <= "Z0Z" & addr(12);
-                        orig_a12 <= addr(12);
-                    end if;
-
-                    if cycle_time(2) = '1' then
-                        n_game  <= '0';
-                        n_exrom <= '0';
-                    end if;
-
-                    if cycle_time(4) = '1' then
-                        -- restore the original address quickly
-                        -- to avoid CASRAM glitches
-                        addr_test <= "111" & orig_a12;
-                        n_dma <= '1';
+                    if cycle_time(7) = '1' then
+                        a14 <= 'Z';
                         -- ROMH reflects HIRAM now
                         if n_romh = '1' then
                             -- ram
-                            ram_read <= '1';
+                            n_game  <= '1';
+                            n_exrom <= '1';
                         else
                             -- rom
-                            flash_read <= '1';
+                            n_exrom <= '1'; -- Ultimax mode
                         end if;
-                        n_exrom <= '1'; -- Ultimax mode
                     end if;
-
-                    if cycle_time(6) = '1' then
-                        -- The CPU drives them now
-                        addr_test <= "ZZZZ";
-                    end if;
-
-                elsif cycle_time(5) = '1' and kernal_space_cpu_write then
-                    ram_write <= '1';
                 end if;
 
                 if cycle_start = '1' then
                     -- KERNAL read complete
                     flash_read <= '0';
-                    ram_read <= '0';
-                    ram_write <= '0';
-
                     n_game  <= '1';
                     n_exrom <= '1';
-                    addr_test <= "ZZZZ";
-                    n_dma <= '1';
+                    a14 <= 'Z';
                     kernal_read_active <= false;
                 end if;
             else -- enable
+                flash_read <= '0';
                 n_game  <= '1';
                 n_exrom <= '1';
-                addr_test <= "ZZZZ";
-                n_dma <= '1';
+                a14 <= 'Z';
                 kernal_read_active <= false;
-
-                flash_read <= '0';
-                ram_read <= '0';
-                ram_write <= '0';
-
             end if; -- enable
         end if; -- clk
     end process;
