@@ -26,6 +26,10 @@ License
 Changes
 =======
 
+Version 1.1.0 - 17.08.2012
+
+- Improved compatibility of KERNAL implementation
+
 Version 1.0.0 - 06.06.2012
 
 - USB and I/O2 RAM are also active in KERNAL mode
