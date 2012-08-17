@@ -57,7 +57,7 @@ begin
     --
     -- Version register: $a1 = 10100001 = old versions
     --                   AA BBB CCC
-    --                   01 000 000 = 1.0.0 = $40
+    --                   01 001 000 = 1.1.0 = $48
     --
     -- Control register: 7   6   5   4   3   2   1   0
     --                   RXR TXR 0   0   0   0   0   0
@@ -74,7 +74,7 @@ begin
                 case addr(3 downto 0) is
                     when x"8" =>
                         -- $de08 - read ID register
-                        data_out <= x"40";
+                        data_out <= x"48";
 
                     when x"9" =>
                         -- $de09 - read control register
