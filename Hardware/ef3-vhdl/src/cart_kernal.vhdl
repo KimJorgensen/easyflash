@@ -51,8 +51,7 @@ architecture behav of cart_kernal is
     signal kernal_space_cpu_read:   boolean;
     signal kernal_read_active:      boolean;
     signal cpu_port_changed:        boolean;
-    signal addr_test:               std_logic;
-    signal hiram_state:             std_logic;
+    signal n_hiram_state:           std_logic;
 
     attribute KEEP : string; -- keep buffer from being optimized out
     attribute KEEP of kernal_space_addressed: signal is "TRUE";
@@ -66,23 +65,7 @@ begin
         else false;
 
     start_reset <= enable and button_crt_reset;
-    test <= enable;
-
-
-    ---------------------------------------------------------------------------
-    --
-    ---------------------------------------------------------------------------
-    detect_cpu_port_access: process(n_reset, clk)
-    begin
-        if n_reset = '0' then
-            cpu_port_changed <= true;
-        elsif rising_edge(clk) then
-            -- check every write access to $0000 and $0001
-            if addr(15 downto 1) = x"000" & "000" and n_wr = '0' then
-                cpu_port_changed <= true;
-            end if;
-        end if;
-    end process;
+    --test <= enable;
 
     ---------------------------------------------------------------------------
     --
@@ -95,33 +78,58 @@ begin
             n_exrom <= '1';
             a14 <= 'Z';
             kernal_read_active <= false;
-            hiram_state <= '0';
+            cpu_port_changed <= true;
+            n_hiram_state <= '1';
 
         elsif rising_edge(clk) then
             if enable = '1' then
 
-                if cycle_time(5) = '1' and kernal_space_cpu_read then
-                    n_game  <= '0';
-                    n_exrom <= '0';
-                    a14 <= '0';
-                    kernal_read_active <= true;
-                    -- start speculative flash read to hide its latency
-                    flash_read <= '1';
-                end if;
+                if cycle_time(5) = '1' then
+                    -- check every write access to $0000 and $0001
+                    if addr(15 downto 1) = "000000000000000" and n_wr = '0' then
+                        cpu_port_changed <= true;
+                    end if;
 
-                if kernal_read_active then
-                    if cycle_time(7) = '1' then
-                        a14 <= 'Z';
-                        -- ROMH reflects HIRAM now
-                        if n_romh = '1' then
-                            -- ram
-                            n_game  <= '1';
-                            n_exrom <= '1';
+                    if kernal_space_cpu_read then
+                        kernal_read_active <= true;
+                        -- start speculative flash read to hide its latency
+                        flash_read <= '1';
+                        if cpu_port_changed then
+                            -- start detection
+                            n_game  <= '0';
+                            n_exrom <= '0';
+                            a14 <= '0';
                         else
-                            -- rom
-                            n_exrom <= '1'; -- Ultimax mode
+                            -- use previously detected HIRAM state
+                            if n_hiram_state = '1' then
+                                -- ram
+                                n_game  <= '1';
+                                n_exrom <= '1';
+                            else
+                                -- rom
+                                n_game  <= '0';
+                                n_exrom <= '1'; -- Ultimax mode
+                            end if;
                         end if;
                     end if;
+                end if;
+
+                if kernal_read_active and
+                   cycle_time(7) = '1' and cpu_port_changed then
+                    -- evaluate HIRAM detection
+                    -- ROMH reflects n_hiram now
+                    n_hiram_state <= n_romh;
+                    if n_romh = '1' then
+                        -- ram
+                        n_game  <= '1';
+                        n_exrom <= '1';
+                    else
+                        -- rom
+                        n_game  <= '0';
+                        n_exrom <= '1'; -- Ultimax mode
+                    end if;
+                    cpu_port_changed <= false;
+                    a14 <= 'Z';
                 end if;
 
                 if cycle_start = '1' then
@@ -138,8 +146,11 @@ begin
                 n_exrom <= '1';
                 a14 <= 'Z';
                 kernal_read_active <= false;
+                cpu_port_changed <= true;
             end if; -- enable
         end if; -- clk
     end process;
+
+    test <= '1' when n_hiram_state = '1' else '0';
 
 end architecture behav;
