@@ -26,6 +26,10 @@ License
 Changes
 =======
 
+Version 1.1.1 - 18.08.2012
+
+- Re-enabled AR/RR-mode, which I forgot in 1.0.0 *fp*
+
 Version 1.1.0 - 17.08.2012
 
 - Improved compatibility of KERNAL implementation
