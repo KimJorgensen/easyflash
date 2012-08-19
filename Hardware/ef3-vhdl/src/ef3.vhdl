@@ -709,7 +709,7 @@ begin
                                 --sw_start_reset <= '1';
 
                             when x"4" =>
-                                --enable_ar <= '1';
+                                enable_ar <= '1';
                                 sw_start_reset <= '1';
 
                             when x"5" =>
