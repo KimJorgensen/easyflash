@@ -42,7 +42,7 @@ all: $(name).crt
 headers := $(foreach dir, $(inc), $(wildcard $(dir)/*.h))
 
 obj/%.s: src/%.c obj $(headers)
-	cc65 -t c64 -T -O --static-locals -I $(INCLUDE) $(DEFINE) -o $@ $<
+	cc65 -t c64 -T -O --static-locals $(INCLUDE) $(DEFINE) -o $@ $<
 
 ###############################################################################
 obj/%.o: obj/%.s obj

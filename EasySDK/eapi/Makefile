@@ -22,4 +22,4 @@ out:
 .PHONY: clean
 clean:
 	rm -f $(EAPI)
-	-rmdir out
+	rm -rf out

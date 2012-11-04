@@ -198,8 +198,10 @@ clean:
 	-rm -f *-menu.bin
 	-rm -f mkimages
 	-rm -f directory*.bin
-	-make -C efmenu clean
-	-make -C usbtool clean
+	-rm -f trampoline.bin
+	-$(MAKE) -C ef3kernal clean
+	-$(MAKE) -C efmenu clean
+	-$(MAKE) -C usbtool clean
 
 ###############################################################################
 # create a .crt image from a .bin image
