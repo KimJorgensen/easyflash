@@ -26,6 +26,8 @@
 #define EF_DIR_SLOT         0
 #define EF_DIR_BANK         0x10
 
+#define EF3_OLD_VERSION  0xa1
+#define EF3_CPLD_VERSION (*(uint8_t*) 0xde08)
 
 void __fastcall__ set_slot(uint8_t slot);
 void __fastcall__ set_bank(uint8_t bank);

@@ -32,6 +32,8 @@
 #include "memcfg.h"
 #include "efmenu.h"
 
+static void erase_text_areas(void);
+static void fill_directory(void);
 
 // from gfx.s
 extern const uint8_t* bitmap;
@@ -42,6 +44,13 @@ extern uint8_t background;
 
 static const char* m_pEFSignature = "EF-Directory V1:";
 
+typedef enum screen_state_e
+{
+    SCREEN_STATE_MENU,
+    SCREEN_STATE_VERSION
+} screen_state_t;
+
+static screen_state_t screen_state;
 
 static efmenu_entry_t kernal_menu[] =
 {
@@ -149,9 +158,17 @@ static void show_menu(void)
     const efmenu_t* menu;
     const efmenu_entry_t* entry;
 
+    // copy bitmap at $A000 from ROM to RAM => VIC can see it
+    // copy colors to $8400
+    memcpy(P_GFX_BITMAP, bitmap, 8000);
+    memcpy(P_GFX_COLOR, colmap, 1000);
+
+    erase_text_areas();
+    fill_directory();
+
     memset(P_GFX_COLOR + 24 * 40, COLOR_GRAY1 << 4 | COLOR_LIGHTBLUE, 4);
     memset(P_GFX_BITMAP + 8 * (24 * 40), 0, 4 * 8);
-    text_plot_puts(0, 1, 24, EFVERSION);
+    text_plot_puts(0, 1, 24, "[V]");
 
     menu = all_menus;
     while (menu->pp_entries)
@@ -163,7 +180,7 @@ static void show_menu(void)
             entry = menu->pp_entries;
             while (entry->key)
             {
-                text_plot_puts(menu->x_pos,     4, y, entry->label);
+                //text_plot_puts(menu->x_pos,     4, y, entry->label);
                 text_plot_puts(menu->x_pos + 2, 0, y, entry->name);
 
                 if (menu_entry_is_valid(entry))
@@ -178,6 +195,7 @@ static void show_menu(void)
         }
         ++menu;
     }
+    screen_state = SCREEN_STATE_MENU;
 }
 
 
@@ -238,6 +256,36 @@ static void __fastcall__ start_menu_entry_ex(uint8_t key, const char* type)
 /******************************************************************************/
 /**
  */
+static void show_version(void)
+{
+    static char str_version[6];
+    uint8_t vcode = EF3_CPLD_VERSION;
+
+    memset(P_GFX_BITMAP, 0, 8000);
+    memset(P_GFX_COLOR, (COLOR_GRAY3 << 4) | COLOR_BLUE, 1000);
+
+    text_plot_puts(2, 0, 5, "CPLD Core Version:");
+    text_plot_puts(2, 0, 7, "Menu Version:");
+    text_plot_puts(2, 0, 23, "Press <Run/Stop>");
+
+    if (vcode != EF3_OLD_VERSION)
+    {
+        str_version[0] = '0' + ((vcode >> 6) & 3);
+        str_version[1] = '.';
+        str_version[2] = '0' + ((vcode >> 3) & 7);
+        str_version[3] = '.';
+        str_version[4] = '0' + (vcode & 7);
+    }
+    text_plot_puts(18, 0, 5, str_version);
+    text_plot_puts(18, 0, 7, EFVERSION);
+
+    screen_state = SCREEN_STATE_VERSION;
+}
+
+
+/******************************************************************************/
+/**
+ */
 static void main_loop(void)
 {
     const char* pType;
@@ -248,7 +296,12 @@ static void main_loop(void)
         if (kbhit())
         {
             key = cgetc();
-            start_menu_entry_ex(key, NULL);
+            if (screen_state != SCREEN_STATE_VERSION && key == 'v')
+                show_version();
+            else if (screen_state != SCREEN_STATE_MENU && key == CH_STOP)
+                show_menu();
+            else
+                start_menu_entry_ex(key, NULL);
         }
 
         pType = ef3usb_check_cmd();
@@ -329,6 +382,25 @@ static void fill_directory(void)
     }
 }
 
+
+/******************************************************************************/
+/**
+ */
+static void init_screen(void)
+{
+    VIC.bordercolor = COLOR_BLUE;
+
+    /* set VIC base address to $4000 */
+    CIA2.pra = 0x14 + 2;
+    CIA2.ddra = 0x3f;
+
+    /* video offset $1c00, bitmap offset = $2000 */
+    VIC.addr = 0x78;
+
+    /* Bitmap mode */
+    VIC.ctrl1 = 0xbb;
+}
+
 void initNMI(void);
 
 /******************************************************************************/
@@ -336,31 +408,8 @@ void initNMI(void);
  */
 int main(void)
 {
-    // copy bitmap at $A000 from ROM to RAM => VIC can see it
-    memcpy(P_GFX_BITMAP, bitmap, 8000);
-
-    // copy colors to $8400
-    memcpy(P_GFX_COLOR, colmap, 1000);
-
-    VIC.bordercolor = COLOR_BLUE;
-
-    /* set VIC base address to $4000 */
-    CIA2.pra = 0x14 + 2;
-
-    /* DDR => Output */
-    CIA2.ddra = 0x3f;
-
-    /* video offset $2000, bitmap offset = $0000 */
-    VIC.addr = 0x80;
-
-    /* Bitmap mode */
-    VIC.ctrl1 = 0xbb;
-
-    erase_text_areas();
-
-    fill_directory();
+    init_screen();
     show_menu();
-
 
 #if 0
     set_bank(0x0f);
