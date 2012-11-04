@@ -26,17 +26,23 @@ SRCS = easyloader_nrm.asm easyloader_ocm.asm
 N = "\\033[0m"
 B = "\\033[1m"
 
+.PHONY: all
+all: build
+
+.PHONY: build
 build: n
 
+.PHONY: clean
 clean:
-	rm build/* .deps/*
+	rm -f build/* .deps/*
 
+.PHONY: svn
 svn:
 	svn ci
 	svn up
 
 build/%.prg: %.asm
-	@echo "$(B)Assembling $<$(N)"
+	@echo -e "$(B)Assembling $<$(N)"
 	$(PHP5) tools/mkdep.php $< > $(df).P build/ts.txt
 	@$(PHP5) -r ' \
 		@error_reporting(0); \
@@ -61,7 +67,7 @@ build/%.prg: %.asm
 	@mv $(<:.asm=.vs) $(@:.prg=.vs)
 
 %.crt: %.prg tools/mk_easyflash_module.php $(RCFILES)
-	@echo "$(B)Packing a module $<$(N)"
+	@echo -e "$(B)Packing a module $<$(N)"
 	$(PHP5) tools/mk_easyflash_module.php > $@ < $< $< $(PACKAGE)
 
 # prereq
@@ -71,19 +77,21 @@ build/main.prg: graphics/petscii_lower_minimal.png build/screen.bin
 build/screen.asm: build/screen.bin
 
 build/screen.bin: screen/screen.php graphics/sprites.png
-	@echo "$(B)Generating $<$(N)"
+	@echo -e "$(B)Generating $<$(N)"
 	$(PHP5) screen/screen.php > $@
 
 
 # debug version!
 
+.PHONY: n
 n: build/easyloader_nrm.crt
-	@echo "$(B)Launching vice$(N)"
+	@echo -e "$(B)Launching vice$(N)"
 	echo 'load_labels "build/easyloader_nrm.vs"' > build/easyloader_nrm.mc
 	$(VICE) -cartcrt build/easyloader_nrm.crt -moncommands build/easyloader_nrm.mc
 
+.PHONY: o
 o: build/easyloader_ocm.crt
-	@echo "$(B)Launching vice$(N)"
+	@echo -e "$(B)Launching vice$(N)"
 	echo 'load_labels "build/easyloader_ocm.vs"' > build/easyloader_ocm.mc
 	$(VICE) -cartcrt build/easyloader_ocm.crt -moncommands build/easyloader_ocm.mc
 

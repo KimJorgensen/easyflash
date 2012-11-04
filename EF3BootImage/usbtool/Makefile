@@ -81,5 +81,6 @@ $(name).prg: obj/crt0.prg.o $(obj) src/ld.prg.cfg $(libef3usb) $(libeload)
 
 .PHONY: clean
 clean:
-	rm -f $(name) $(name).map $(name).bin $(name).crt
+	rm -f $(name) $(name).bin $(name).bin.map $(name).crt
 	rm -rf obj
+

@@ -105,7 +105,7 @@ obj/%.o: src/%.s obj $(bin_acme) $(eapi_obj)
 always:
 
 $(eapi_obj): always
-	make -C $(eapi_dir)
+	$(MAKE) -C $(eapi_dir)
 	cp $(eapi_src) obj
 
 ###############################################################################

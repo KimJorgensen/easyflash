@@ -33,11 +33,11 @@ world: ef3xfer #all
 
 prj_name      := easytransfer
 
-cxxflags      := 
-cflags        := 
-clibs         :=
-cxxlibs       :=
-ldflags       :=
+cxxflags      := $(CXXFLAGS)
+cflags        := $(CFLAGS)
+clibs         := $(CLIBS)
+cxxlibs       := $(CXXLIBS)
+ldflags       := $(LDFLAGS)
 
 ifeq ($(win32), yes)
     app_name      := EasyTransfer.exe
