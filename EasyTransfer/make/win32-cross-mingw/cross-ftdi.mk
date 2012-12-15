@@ -21,18 +21,18 @@
 here := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 cross_ftdi_dir := $(here)
 
-libusb_dir    := $(archive_dir)/libusb-pbatard-HEAD-bb43370
-libftdi_dir   := $(archive_dir)/libftdi-1.0-HEAD-9330b12
+libusb_dir    := $(archive_dir)/libusb-1.0.9
+libftdi_dir   := $(archive_dir)/libftdi-HEAD-a67c3be
 
 # to be used in top-level Makefile
-cxxflags      += -I $(tmp_install)/include/libusb-1.0 
-cxxflags      += -I $(tmp_install)/include/libftdi
-cflags        += -I $(tmp_install)/include/libusb-1.0 
-cflags        += -I $(tmp_install)/include/libftdi
+cxxflags      += -I $(tmp_install)/include/libusb-1.0
+cxxflags      += -I $(tmp_install)/include/libftdi1
+cflags        += -I $(tmp_install)/include/libusb-1.0
+cflags        += -I $(tmp_install)/include/libftdi1
 cxxlibs       += -L $(tmp_install)/lib -L $(tmp_install)/bin 
-cxxlibs       += -l ftdi
+cxxlibs       += -l ftdi1 -lusb-1.0.dll
 clibs         += -L $(tmp_install)/lib -L $(tmp_install)/bin 
-clibs         += -l ftdi
+clibs         += -l ftdi1 -lusb-1.0.dll
 
 ftdiopt := -DDOCUMENTATION=OFF -DEXAMPLES=OFF -DFTDIPP=OFF -DFTDI_EEPROM=OFF
 ftdiopt += -DPYTHON_BINDINGS=OFF
@@ -47,13 +47,8 @@ cmakeopt += -DLIBUSB_LIBRARIES=$(tmp_install)/lib/libusb-1.0.dll.a
 
 ###############################################################################
 #
-$(libusb_dir)/autogen.sh:
+$(libusb_dir)/configure:
 	cd $(archive_dir) && tar xjf $(libusb_dir).tar.bz2
-
-###############################################################################
-#
-$(libusb_dir)/configure: $(libusb_dir)/autogen.sh
-	cd $(libusb_dir) && ./autogen.sh --host=$(host)
 
 
 ###############################################################################

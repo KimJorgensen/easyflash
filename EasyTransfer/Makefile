@@ -29,7 +29,7 @@ top_dir := $(here)
 .SECONDARY:
 
 .PHONY: world
-world: ef3xfer #all
+world: all
 
 prj_name      := easytransfer
 
@@ -45,6 +45,7 @@ ifeq ($(win32), yes)
     host          := i686-w64-mingw32
     cxx           := $(host)-c++
     cc            := $(host)-gcc
+    ldflags       += -lstdc++ -static-libgcc
     outbase       := $(top_dir)/out_win32
     archive_fmt   := zip
 else
@@ -103,6 +104,7 @@ cxxflags  += -I$(objdir)
 ifeq ($(win32), yes)
     include make/win32-cross-mingw/cross-wx.mk
     include make/win32-cross-mingw/cross-ftdi.mk
+	pre_deps := libftdi libusb
 endif
 
 ###############################################################################
@@ -121,6 +123,7 @@ src += TabWriteCRT.cpp
 src += TabWriteDisk.cpp
 src += ef3xfer.c
 src += ef3xfer_d64.c
+src += str_to_key.c
 src += easytransfer.png
 
 ef3xfer_src :=
@@ -139,14 +142,14 @@ doc := CHANGES COPYING README
 dll :=
 ifeq "$(win32)" "yes"
 #dll += mingwm10.dll
-dll += $(outdir)/libftdi.dll
+dll += $(outdir)/libftdi1.dll
 dll += $(outdir)/libusb-1.0.dll
 endif
 
 # source archives to be copied (LGPL libs)
 src_archives :=
-src_archives += $(outdir)/libftdi-1.0-HEAD-9330b12.tar.gz
-src_archives += $(outdir)/libusb-pbatard-HEAD-bb43370.tar.bz2
+src_archives += $(libusb_dir).tar.bz2
+src_archives += $(libftdi_dir).tar.gz
 
 ###############################################################################
 ###############################################################################
@@ -187,10 +190,6 @@ headers := $(wildcard $(srcdir)/*.h) $(xpm)
 .PHONY: all
 all: $(outbase)/$(prj_name)$(version_suffix).$(archive_fmt)
 
-ifeq "$(win32)" "yes"
-pre_deps := libftdi
-endif
-
 $(outbase)/$(prj_name)$(version_suffix).tar.bz2: \
 		$(outdir)/$(app_name) $(outdir)/$(ef3xfer_name) \
 		$(outres) $(outdoc) $(dll)
@@ -204,26 +203,26 @@ $(outbase)/$(prj_name)$(version_suffix).zip: \
 	rm -f $@
 	cd $(dir $@) && zip -r $(notdir $@) $(prj_name)
 
-$(outdir)/$(app_name): $(obj) | $(outdir) check-environment
+$(outdir)/$(app_name): $(obj) | $(outdir) $(pre_deps)
 	$(cxx) $(ldflags) $(obj) -o $@ $(cxxlibs)
 
 # quick and dirty: command line tool
 .PHONY: ef3xfer
 ef3xfer: $(outdir)/$(ef3xfer_name)
-$(outdir)/$(ef3xfer_name): $(ef3xfer_obj) | $(outdir) check-environment
+$(outdir)/$(ef3xfer_name): $(ef3xfer_obj) | $(outdir) $(pre_deps)
 	$(cc) $(ldflags) $(cflags) -o $@ $(ef3xfer_obj) $(clibs)
 
 
 $(outdir) $(objdir):
 	mkdir -p $@
 
-$(objdir)/%.o: $(srcdir)/%.cpp $(headers) | $(objdir) check-environment
+$(objdir)/%.o: $(srcdir)/%.cpp $(headers) | $(objdir) $(pre_deps)
 	$(cxx) -c $(cxxflags) -o $@ $<
 
-$(objdir)/%.o: $(srcdir)/%.c $(headers) | $(objdir) check-environment
+$(objdir)/%.o: $(srcdir)/%.c $(headers) | $(objdir) $(pre_deps)
 	$(cc) -c $(cflags) -o $@ $<
 
-$(objdir)/%.xpm: $(srcdir)/../res/%.png | $(objdir) check-environment
+$(objdir)/%.xpm: $(srcdir)/../res/%.png | $(objdir) $(pre_deps)
 	convert $< $@.tmp.xpm
 	cat $@.tmp.xpm | sed "\
 			s/static char/static const char/;\
@@ -240,8 +239,8 @@ $(outdir)/%.txt: $(srcdir)/../%
 #$(outbase)/$(prj_name)/mingwm10.dll: /usr/share/doc/mingw32-runtime/mingwm10.dll.gz
 #	gunzip -c $^ > $@
 
-$(outdir)/%.dll: $(tmp_install)/bin/%.dll
-	cp $^ $@
+$(outdir)/%.dll: $(tmp_install)/bin/%.dll $(pre_deps)
+	cp $< $@
 
 $(outdir)/%.tar.bz2: $(archive_dir)/%.tar.bz2
 	cp $^ $@
@@ -255,7 +254,3 @@ $(outdir)/%.tar.gz: $(archive_dir)/%.tar.gz
 .PHONY: clean
 clean:
 	rm -rf $(outbase)
-
-
-.PHONY: check-environment
-check-environment: $(pre_deps)
