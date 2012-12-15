@@ -14,7 +14,7 @@
 ; =============================================================================
 .proc   _ef3usb_fclose
 .export _ef3usb_fclose
-_ef3usb_close_file:
+_ef3usb_fclose:
         lda #0
         wait_usb_tx_ok
         sta USB_DATA
