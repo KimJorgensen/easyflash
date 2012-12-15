@@ -80,8 +80,8 @@ menu_image  := trampoline.bin                           0x00 0x1F00 H
 menu_image  += efmenu/efmenu.bin                        0x08 0x0000 LH
 menu_image  += $(easyprog)                              0x09 0x0000 LH
 menu_image  += usbtool/usbtool.bin                      0x0b 0x0000 LH
-menu_image  += ef3kernal/out/ef3kernal_b0.bin           0x18 0x0000 L
-menu_image  += ef3kernal/out/ef3kernal_b1.bin           0x19 0x0000 L
+#menu_image  += ef3kernal/out/ef3kernal_b0.bin           0x18 0x0000 L
+#menu_image  += ef3kernal/out/ef3kernal_b1.bin           0x19 0x0000 L
 
 #menu_image += waterdrop.raw        0x0f 0x0000
 #menu_image += bing.raw        0x0f 0x0000
@@ -91,7 +91,7 @@ menu_deps   := trampoline.bin
 menu_deps   += efmenu/efmenu.bin
 menu_deps   += $(easyprog)
 menu_deps   += usbtool/usbtool.bin
-menu_deps   += ef3kernal_phony
+#menu_deps   += ef3kernal_phony
 
 ###############################################################################
 # These files are in and "initial" image only
@@ -173,9 +173,9 @@ always:
 
 ###############################################################################
 #
-.PHONY: ef3kernal_phony
-ef3kernal_phony:
-	$(MAKE) -C ef3kernal release=$(release)
+#.PHONY: ef3kernal_phony
+#ef3kernal_phony:
+#	$(MAKE) -C ef3kernal release=$(release)
 
 ###############################################################################
 #
@@ -199,7 +199,7 @@ clean:
 	-rm -f mkimages
 	-rm -f directory*.bin
 	-rm -f trampoline.bin
-	-$(MAKE) -C ef3kernal clean
+	#-$(MAKE) -C ef3kernal clean
 	-$(MAKE) -C efmenu clean
 	-$(MAKE) -C usbtool clean
 
