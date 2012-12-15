@@ -59,6 +59,47 @@ void ef3xfer_set_callbacks(
 }
 
 /*****************************************************************************/
+int ef3xfer_transfer_crt(const char* p_filename)
+{
+    FILE*         fp;
+    size_t        i, size;
+    uint8_t*      p;
+    uint8_t       start[2];
+
+    if (p_filename == NULL)
+    {
+        ef3xfer_log_printf("Missing file name.\n");
+        return 0;
+    }
+
+    ef3xfer_log_printf("Send CRT file:  %s\n", p_filename);
+
+    fp = fopen(p_filename, "rb");
+    if (fp == NULL)
+    {
+        ef3xfer_log_printf("Error: Cannot open %s for reading\n", p_filename);
+        return 0;
+    }
+
+    if (!ef3xfer_connect_ftdi())
+        goto close_and_err;
+
+    if (!ef3xfer_do_handshake("CRT"))
+        goto close_and_err;
+
+    if (!send_file(fp))
+        goto close_and_err;
+
+    fclose(fp);
+    ef3xfer_log_printf("\nOK\n\n");
+    return 1;
+
+close_and_err:
+    fclose(fp);
+    return 0;
+}
+
+/*****************************************************************************/
 int ef3xfer_transfer_keys(const char* keys)
 {
     int     len, i, n_out, ret, subst_len;
@@ -132,7 +173,6 @@ int ef3xfer_transfer_keys(const char* keys)
 int ef3xfer_transfer_prg(const char* p_filename, int b_exec)
 {
     FILE*         fp;
-    uint16_t      crc;
     size_t        i, size;
     uint8_t*      p;
     uint8_t       start[2];

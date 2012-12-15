@@ -34,6 +34,8 @@ static void log_str_stdout(const char* str);
 static void log_progress_stdout(int percent);
 static void log_complete_stdout(void);
 
+#undef ENABLE_EF3_KERNAL_CMDS
+
 /*****************************************************************************/
 static int m_argc;
 static char** m_argv;
@@ -50,6 +52,7 @@ static void usage(const char* p_str_prg)
     printf("Actions:\n"
            "  -h       --help           Print this and exit\n"
            "  -c FILE  --crt FILE       Write a CRT image to flash\n"
+#ifdef ENABLE_EF3_KERNAL_CMDS
            "  -x FILE  --exec FILE      Send a PRG file and execute it\n"
            "  -w FILE  --write FILE     Send a PRG file\n"
            "  -k KEY   --key KEY        Send a key to the keyboard buffer\n"
@@ -64,7 +67,8 @@ static void usage(const char* p_str_prg)
            "  <UP>, <DOWN>, <LEFT>, <RIGHT>, <REVON>, <REVOFF>,\n"
            "  <F1> .. <F8>, <<=>, <PI>, <<>, <>>, <^>, <POUND>\n"
            "  and others...\n"
-           "\n"
+#endif
+            "\n"
           );
 }
 
@@ -148,16 +152,24 @@ int main(int argc, char** argv)
     /* default callback functions for stdout */
     ef3xfer_set_callbacks(log_str_stdout, log_progress_stdout,
                           log_complete_stdout);
+    if (argc == 1)
+    {
+        usage(argv[0]);
+        return 0;
+    }
 
     while ((arg = get_next_arg()) != NULL)
     {
         if (strcmp(arg, "-h") == 0 || strcmp(arg, "--help") == 0)
         {
             usage(argv[0]);
+            return 0;
         }
         else if (strcmp(arg, "-c") == 0 || strcmp(arg, "--crt") == 0)
         {
+            ef3xfer_transfer_crt(get_next_arg());
         }
+#ifdef ENABLE_EF3_KERNAL_CMDS
         else if (strcmp(arg, "-x") == 0 || strcmp(arg, "--exec") == 0)
         {
             ef3xfer_transfer_prg(get_next_arg(), 1);
@@ -178,6 +190,7 @@ int main(int argc, char** argv)
         {
             do_sys(get_next_arg());
         }
+#endif
         else
         {
             fprintf(stderr, "Unknown action: %s\n", arg);
