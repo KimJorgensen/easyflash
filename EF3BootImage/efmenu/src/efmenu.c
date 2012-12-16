@@ -180,7 +180,7 @@ static void show_menu(void)
             entry = menu->pp_entries;
             while (entry->key)
             {
-                //text_plot_puts(menu->x_pos,     4, y, entry->label);
+                text_plot_puts(menu->x_pos,     4, y, entry->label);
                 text_plot_puts(menu->x_pos + 2, 0, y, entry->name);
 
                 if (menu_entry_is_valid(entry))
@@ -276,6 +276,8 @@ static void show_version(void)
         str_version[3] = '.';
         str_version[4] = '0' + (vcode & 7);
     }
+    else
+        strcpy(str_version, "0.x.x");
     text_plot_puts(18, 0, 5, str_version);
     text_plot_puts(18, 0, 7, EFVERSION);
 
