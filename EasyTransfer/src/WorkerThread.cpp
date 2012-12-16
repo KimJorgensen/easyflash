@@ -61,8 +61,10 @@ void* WorkerThread::Entry()
     size_t        i, size;
     uint8_t*      p;
 
-    ef3xfer_transfer(m_stringInputFileName.mb_str(),
-                     m_stringTransferType.mb_str());
+    if (m_stringTransferType == _("CRT"))
+        ef3xfer_transfer_crt(m_stringInputFileName.mb_str());
+    else if (m_stringTransferType == _("PRG"))
+        ef3xfer_transfer_prg(m_stringInputFileName.mb_str(), 1);
     LogComplete();
 
     return NULL;
