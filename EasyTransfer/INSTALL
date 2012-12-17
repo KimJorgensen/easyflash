@@ -25,7 +25,10 @@ Step 3 should even create a menu entry for Gnome, KDE or Xfce.
 Windows
 =======
 
-If you got a binary, just click on it one or two times.
+To cross compile the software on Linux for Windows, you need following
+packages (Debian/Ubuntu naming):
+gcc-mingw-w64-i686 g++-mingw-w64-i686 cmake dos2unix
+
 
 Mac OS X
 ========
@@ -36,8 +39,7 @@ Other platforms
 ===============
 
 It may be possible to compile EasyTransfer on other platforms. The most
-important precondition is that wxWidgets runs on that box. You can check
-it on following page: http://wiki.wxwidgets.org/Supported_Platforms
+important precondition is that wxWidgets and libftdi run on that box.
 
 If you get it running somewhere else, I appreciate a report :)
 

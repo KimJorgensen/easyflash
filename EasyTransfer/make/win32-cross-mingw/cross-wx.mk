@@ -23,10 +23,11 @@
 # Thomas Giesel skoe@directbox.com
 #
 
-cross          := i586-mingw32msvc
+cross          := $(host)
 wx-version     := wxMSW-2.8.12
-wx-build-dir   := wx-build
-wx-prefix      := /opt/cross/$(cross)-$(wx-version)
+wx-build-dir   := $(outbase)/wx-build
+wx-prefix      := $(outbase)/$(cross)-$(wx-version)
+sudo           := 
 
 # after adding some paths to this it will be used as PATH
 path           := $(PATH)
@@ -35,50 +36,17 @@ path           := $(PATH)
 cxxflags       += $(shell $(wx-prefix)/bin/wx-config --static=yes --cxxflags)
 cxxlibs        += $(shell $(wx-prefix)/bin/wx-config --libs)
 
-###############################################################################
-# Rules to check the cross compiling environment
-#
-.PHONY: check-environment
-check-environment: out/check-environment.ok
 
-out/check-environment.ok:
-	$(MAKE) check-wx
-	mkdir -p out
-	touch $@
-
-.PHONY: check-wx
-check-wx:
-	$(host)-gcc --help > /dev/null
-	$(wx-prefix)/bin/wx-config --version > /dev/null || $(MAKE) no-wx
-
-.PHONY: no-wx
-no-wx:
-	$(warning ========================================================================)
-	$(warning No cross-wxWidgets found.)
-	$(warning )
-	$(warning This could mean that it is not installed or not at the place we look at:)
-	$(warning $(wx-prefix)/bin/wx-config)
-	$(warning )
-	$(warning If you have a suitable i586-wxWidgets installed, you may want to adapt)
-	$(warning the path in this makefile.)
-	$(warning )
-	$(warning However, it's recommended to build it with this makefile, it uses a path)
-	$(warning which is unlikely to collide with other versions. Otherwise it may)
-	$(warning become a pain in the ass to get the config running.)
-	$(warning )
-	$(warning You can install it using this makefile by invoking:)
-	$(warning make win32=yes install-wxwidgets)
-	$(warning This needs you to be a sudoer, because some commands use sudo)
-	$(warning ========================================================================)
-	$(error stop.)
-
-###############################################################################
-# Rules for installing cross-wxWidgets
-#
 .PHONY: install-wxwidgets
 install-wxwidgets: $(wx-build-dir)/$(wx-version)/3-installed
 
-$(wx-build-dir)/$(wx-version)/1-configured: $(wx-build-dir)/$(wx-version)
+$(wx-build-dir)/$(wx-version)/0-depacked: $(archive_dir)/$(wx-version).tar.bz2
+	mkdir -p $(wx-build-dir)
+	tar xjf $(archive_dir)/$(wx-version).tar.bz2 -C $(wx-build-dir)
+	patch -i $(archive_dir)/filefn.wx2.8.12.diff $(wx-build-dir)/$(wx-version)/include/wx/filefn.h
+	touch $@
+
+$(wx-build-dir)/$(wx-version)/1-configured: $(wx-build-dir)/$(wx-version)/0-depacked
 	cd $(wx-build-dir)/$(wx-version) && \
 		PATH=$(path) ./configure --prefix=$(wx-prefix) --disable-shared --host=$(cross) --build=`uname -m`-linux
 	touch $@
@@ -88,13 +56,8 @@ $(wx-build-dir)/$(wx-version)/2-compiled: $(wx-build-dir)/$(wx-version)/1-config
 	touch $@
 
 $(wx-build-dir)/$(wx-version)/3-installed: $(wx-build-dir)/$(wx-version)/2-compiled
-	PATH=$(path) sudo make -C $(wx-build-dir)/$(wx-version) install
+	PATH=$(path) $(sudo) make -C $(wx-build-dir)/$(wx-version) install
 	touch $@
-
-# unpack wxwidgets
-$(wx-build-dir)/$(wx-version): $(archive_dir)/$(wx-version).tar.bz2
-	mkdir -p $(wx-build-dir)
-	tar xjf $(archive_dir)/$(wx-version).tar.bz2 -C $(wx-build-dir)
 
 # download wxwidgets
 $(archive_dir)/$(wx-version).tar.bz2:
