@@ -45,7 +45,7 @@ ifeq ($(win32), yes)
     host          := i686-w64-mingw32
     cxx           := $(host)-c++
     cc            := $(host)-gcc
-    ldflags       += -lstdc++ -static-libgcc
+    ldflags       += -static-libstdc++ -static-libgcc
     outbase       := $(top_dir)/out_win32
     archive_fmt   := zip
 else
@@ -104,7 +104,7 @@ cxxflags  += -I$(objdir)
 ifeq ($(win32), yes)
     include make/win32-cross-mingw/cross-wx.mk
     include make/win32-cross-mingw/cross-ftdi.mk
-	pre_deps := libftdi libusb
+	pre_deps := libftdi libusb install-wxwidgets
 endif
 
 ###############################################################################
