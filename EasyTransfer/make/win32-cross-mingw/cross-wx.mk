@@ -36,7 +36,6 @@ path           := $(PATH)
 cxxflags       += $(shell $(wx-prefix)/bin/wx-config --static=yes --cxxflags)
 cxxlibs        += $(shell $(wx-prefix)/bin/wx-config --libs)
 
-
 .PHONY: install-wxwidgets
 install-wxwidgets: $(wx-build-dir)/$(wx-version)/3-installed
 
