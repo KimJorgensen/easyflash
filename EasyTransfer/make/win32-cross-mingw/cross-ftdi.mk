@@ -64,9 +64,11 @@ $(outbase)/libusb/Makefile: $(libusb_dir)/configure
 ###############################################################################
 #
 .PHONY: libusb
-libusb: $(outbase)/libusb/Makefile
-	$(MAKE) -C $(outbase)/libusb install
+libusb: $(outbase)/libusb.done
 
+$(outbase)/libusb.done: $(outbase)/libusb/Makefile
+	$(MAKE) -C $(outbase)/libusb install
+	touch $@
 
 ###############################################################################
 #
@@ -77,7 +79,10 @@ $(libftdi_dir)/CMakeLists.txt: libusb
 ###############################################################################
 #
 .PHONY: libftdi
-libftdi: $(libftdi_dir)/CMakeLists.txt
+libftdi: $(outbase)/libftdi.done
+
+$(outbase)/libftdi.done: $(libftdi_dir)/CMakeLists.txt
 	mkdir -p $(outbase)/libftdi
 	cd $(outbase)/libftdi && cmake $(cmakeopt) $(libftdi_dir)
 	make -C $(outbase)/libftdi install
+	touch $@
