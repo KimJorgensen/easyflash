@@ -88,7 +88,7 @@ static void utilComplainWrongPart(uint8_t nPart);
  * split or it may be the first part of a split file. Otherwise it must be the
  * right split file > 0.
  *
- * If nPart is UTIL_USE_USB the file will be read from USB in this case no
+ * If nPart is UTIL_USE_USB the file will be read from USB, in this case no
  * splitting is allowed.
  *
  * OPEN_FILE_OK, OPEN_FILE_ERR, OPEN_FILE_WRONG
@@ -102,6 +102,7 @@ uint8_t utilOpenFile(uint8_t nPart)
         ef3usb_send_str("load");
         utilRead = ef3usb_fread;
         bUseUSB = 1;
+        return OPEN_FILE_OK;
     }
     bUseUSB = 0;
 
