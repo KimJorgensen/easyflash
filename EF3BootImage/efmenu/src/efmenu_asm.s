@@ -198,6 +198,7 @@ start_program_bank = * + 1
         bne @copy
         inc ptr1 + 1                    ; inc high byte of target
         inc ptr2 + 1
+        inc $d020
         lda ptr2 + 1
         cmp #$c0                        ; wrap $c000 => $8000
         bne @noBankInc
@@ -262,4 +263,22 @@ _is_c128:
         ldx $d030
         inx
         txa
+        rts
+
+; =============================================================================
+;
+; Return 0 if Shift is not pressed, != 0 otherwise.
+;
+; uint8_t shift_pressed(void);
+;
+; in:
+;       -
+; out:
+;       -
+;
+.export _shift_pressed
+_shift_pressed:
+        lda $028d
+        and #1
+        tax
         rts

@@ -24,6 +24,7 @@
 #include <stddef.h>
 #include <string.h>
 #include <conio.h>
+#include <stdlib.h>
 #include <c64.h>
 
 #include <ef3usb.h>
@@ -47,6 +48,7 @@ static const char* m_pEFSignature = "EF-Directory V1:";
 typedef enum screen_state_e
 {
     SCREEN_STATE_MENU,
+    SCREEN_STATE_SHIFT_MENU,
     SCREEN_STATE_VERSION
 } screen_state_t;
 
@@ -83,16 +85,25 @@ static efmenu_entry_t special_menu[] =
         { 'y',  0,  0x18,   1,  MODE_AR,           "Y", "Replay Slot 2",    "" },
         { 's',  0,  0x20,   1,  MODE_SS5,          "S", "Super Snapshot 5", "" },
         { 'p',  0,  9,      1,  MODE_EF_NO_RESET,  "P", "EasyProg",         "crt" },
-        { 'k',  0,  0,      1,  MODE_KILL,         "K", "Kill Cartridge",   "" },
-        { 'z',  0,  0,      1,  MODE_GO128,        "Z", "To C128 Mode",     "" },
+        { '?',  0,  0,      0,  MODE_EF,           "",  "",                 "" },
+        { '?',  0,  0,      0,  MODE_EF,           "",  "<SHIFT> for more",   "" },
         { 0, 0, 0, 0, 0, "", "", "" }
 };
 
-static efmenu_entry_t hidden_menu[] =
+static efmenu_entry_t dummy_menu[] =
 {
         // { '9',  0,  0x18,   1,  MODE_KERNAL,       "9", "EF3 KERNAL",       "key" },
         // { '9',  0,  0x18,   1,  MODE_KERNAL,       "9", "EF3 KERNAL",       "prg" },
         { '?',  0,  0x0b,   1,  MODE_EF,           "?", "USB Tool",         "d64" },
+        { '?',  0,  0x0b,   1,  MODE_EF,           "?", "USB Tool",         "prg" },
+        { 0, 0, 0, 0, 0, "", "", "" }
+};
+
+static efmenu_entry_t special_shift_menu[] =
+{
+        { 128 + 'v', 0, 0,  0,  MODE_SHOW_VERSION, "V", "Show Versions",    "" },
+        { 128 + 'k', 0, 0,  1,  MODE_KILL,         "K", "Kill Cartridge",   "" },
+        { 128 + 'z', 0, 0,  1,  MODE_GO128,        "Z", "To C128 Mode",     "" },
         { 0, 0, 0, 0, 0, "", "", "" }
 };
 
@@ -101,9 +112,19 @@ static efmenu_t all_menus[] =
         {  2,  2, 10, kernal_menu },
         { 22, 13,  9, ef_menu },
         {  2, 15,  8, special_menu },
-        {  0,  0,  0, hidden_menu },
+        {  0,  0,  0, dummy_menu },
         {  0,  0,  0, NULL }
 };
+
+static efmenu_t all_shift_menus[] =
+{
+        {  2, 15,  8, special_shift_menu },
+        {  0,  0,  0, NULL }
+};
+
+
+/******************************************************************************/
+static void show_version(void);
 
 
 
@@ -122,12 +143,20 @@ uint8_t menu_entry_is_valid(const efmenu_entry_t* entry)
     uint8_t  i;
 
     if (entry->mode == MODE_EF_NO_RESET ||
-        entry->mode == MODE_GO128 ||
-        entry->mode == MODE_KILL)
+        entry->mode == MODE_KILL ||
+        entry->mode == MODE_SHOW_VERSION)
         return 1;
 
-    if (entry->mode == MODE_KERNAL && is_c128())
-        return 0;
+    if (is_c128())
+    {
+        if (entry->mode == MODE_KERNAL)
+            return 0;
+    }
+    else
+    {
+        if (entry->mode == MODE_GO128)
+            return 0;
+    }
 
     set_slot(entry->slot);
     set_bank(entry->bank);
@@ -152,25 +181,26 @@ uint8_t menu_entry_is_valid(const efmenu_entry_t* entry)
 /******************************************************************************/
 /**
  */
-static void show_menu(void)
+static void show_menu(uint8_t shift)
 {
     uint8_t y, color;
     const efmenu_t* menu;
     const efmenu_entry_t* entry;
 
-    // copy bitmap at $A000 from ROM to RAM => VIC can see it
-    // copy colors to $8400
-    memcpy(P_GFX_BITMAP, bitmap, 8000);
-    memcpy(P_GFX_COLOR, colmap, 1000);
-
     erase_text_areas();
     fill_directory();
 
-    memset(P_GFX_COLOR + 24 * 40, COLOR_GRAY1 << 4 | COLOR_LIGHTBLUE, 4);
-    memset(P_GFX_BITMAP + 8 * (24 * 40), 0, 4 * 8);
-    text_plot_puts(0, 1, 24, "[V]");
+    if (shift)
+    {
+        menu = all_shift_menus;
+        screen_state = SCREEN_STATE_SHIFT_MENU;
+    }
+    else
+    {
+        menu = all_menus;
+        screen_state = SCREEN_STATE_MENU;
+    }
 
-    menu = all_menus;
     while (menu->pp_entries)
     {
         if (menu->n_max_entries) /* hidden otherwise */
@@ -195,7 +225,6 @@ static void show_menu(void)
         }
         ++menu;
     }
-    screen_state = SCREEN_STATE_MENU;
 }
 
 
@@ -214,6 +243,10 @@ static void __fastcall__ start_menu_entry(const efmenu_entry_t* entry)
         // PONR
         start_program(entry->bank);
     }
+    else if (entry->mode == MODE_SHOW_VERSION)
+    {
+        show_version();
+    }
     else
     {
         // PONR
@@ -227,28 +260,34 @@ static void __fastcall__ start_menu_entry(const efmenu_entry_t* entry)
  */
 static void __fastcall__ start_menu_entry_ex(uint8_t key, const char* type)
 {
+    const efmenu_t* menu_list[] = {all_menus, all_shift_menus, NULL};
     const efmenu_t* menu;
     const efmenu_entry_t* entry;
+    uint8_t i;
 
-    menu = all_menus;
-    while (menu->pp_entries)
+    for (i = 0; menu_list[i]; ++i)
     {
-        entry = menu->pp_entries;
-        while (entry->key)
+        menu = menu_list[i];
+
+        while (menu->pp_entries)
         {
-            if (menu_entry_is_valid(entry))
+            entry = menu->pp_entries;
+            while (entry->key)
             {
-                if (key  && entry->key == key)
-                    start_menu_entry(entry);
-                if (type && strcmp(entry->type, type) == 0)
+                if (menu_entry_is_valid(entry))
                 {
-                    ef3usb_send_str("wait");
-                    start_menu_entry(entry);
+                    if (key  && entry->key == key)
+                        start_menu_entry(entry);
+                    if (type && strcmp(entry->type, type) == 0)
+                    {
+                        ef3usb_send_str("wait");
+                        start_menu_entry(entry);
+                    }
                 }
+                ++entry;
             }
-            ++entry;
+            ++menu;
         }
-        ++menu;
     }
 }
 
@@ -258,15 +297,20 @@ static void __fastcall__ start_menu_entry_ex(uint8_t key, const char* type)
  */
 static void show_version(void)
 {
+    uint16_t x;
+    uint8_t  y;
     static char str_version[6];
     uint8_t vcode = EF3_CPLD_VERSION;
 
-    memset(P_GFX_BITMAP, 0, 8000);
-    memset(P_GFX_COLOR, (COLOR_GRAY3 << 4) | COLOR_BLUE, 1000);
+    erase_text_areas();
+    x = all_menus[0].x_pos + 1;
+    y = all_menus[0].y_pos + 1;
 
-    text_plot_puts(2, 0, 5, "CPLD Core Version:");
-    text_plot_puts(2, 0, 7, "Menu Version:");
-    text_plot_puts(2, 0, 23, "Press <Run/Stop>");
+    text_plot_puts(x, 0, y, "CPLD Core Version:");
+    y += 3;
+    text_plot_puts(x, 0, y, "Menu Version:");
+    y += 4;
+    text_plot_puts(x, 0, y, "Press <Run/Stop>");
 
     if (vcode != EF3_OLD_VERSION)
     {
@@ -278,8 +322,11 @@ static void show_version(void)
     }
     else
         strcpy(str_version, "0.x.x");
-    text_plot_puts(18, 0, 5, str_version);
-    text_plot_puts(18, 0, 7, EFVERSION);
+    y = all_menus[0].y_pos + 2;
+    x += 6;
+    text_plot_puts(x, 0, y, str_version);
+    y += 3;
+    text_plot_puts(x, 0, y, EFVERSION);
 
     screen_state = SCREEN_STATE_VERSION;
 }
@@ -298,13 +345,15 @@ static void main_loop(void)
         if (kbhit())
         {
             key = cgetc();
-            if (screen_state != SCREEN_STATE_VERSION && key == 'v')
-                show_version();
-            else if (screen_state != SCREEN_STATE_MENU && key == CH_STOP)
-                show_menu();
+            if (screen_state == SCREEN_STATE_VERSION && key == CH_STOP)
+                show_menu(shift_pressed());
             else
                 start_menu_entry_ex(key, NULL);
         }
+        if (shift_pressed() && screen_state == SCREEN_STATE_MENU)
+            show_menu(1);
+        else if (!shift_pressed() && screen_state == SCREEN_STATE_SHIFT_MENU)
+            show_menu(0);
 
         pType = ef3usb_check_cmd();
         if (pType)
@@ -333,10 +382,10 @@ static void erase_text_areas(void)
 
         for (n = 0; n != menu->n_max_entries; ++n)
         {
-            text_set_line_color(menu->x_pos, menu->y_pos + n,
-                                COLOR_BLACK << 4 | COLOR_GRAY3);
             memset(P_GFX_BITMAP + offset, 0, 16 * 8);
             offset += 320;
+            text_set_line_color(menu->x_pos, menu->y_pos + n,
+                                COLOR_BLACK << 4 | COLOR_GRAY3);
         }
         ++menu;
     }
@@ -401,6 +450,11 @@ static void init_screen(void)
 
     /* Bitmap mode */
     VIC.ctrl1 = 0xbb;
+
+    // copy bitmap at $A000 from ROM to RAM => VIC can see it
+    // copy colors to $8400
+    memcpy(P_GFX_BITMAP, bitmap, 8000);
+    memcpy(P_GFX_COLOR, colmap, 1000);
 }
 
 void initNMI(void);
@@ -411,7 +465,7 @@ void initNMI(void);
 int main(void)
 {
     init_screen();
-    show_menu();
+    show_menu(shift_pressed());
 
 #if 0
     set_bank(0x0f);
