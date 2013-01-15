@@ -38,6 +38,7 @@
 
 .import drive_detect
 .import eload_send
+.import eload_send_job
 
 .import drv_start
 
@@ -50,6 +51,8 @@
 .import drive_code_init_size_sd2iec
 
 .import drive_code_1541_write
+
+.import drive_code_1541_format
 
 
 code_ptr        = ptr1
@@ -122,6 +125,18 @@ drive_codes_write:
         .addr 0
         .addr 0
 
+drive_codes_format:
+        .addr 0
+        .addr 0
+        .addr drive_code_1541_format
+        .addr drive_code_1541_format    ; 1570
+        .addr drive_code_1541_format    ; for now
+        .addr 0; drive_code_1581
+        .addr 0
+        .addr 0
+        .addr 0
+        .addr 0
+
 .code
 
 ; =============================================================================
@@ -145,6 +160,7 @@ _eload_set_drive_check_fastload:
         ldx #0
         rts
 
+.if 0
 ; =============================================================================
 ;
 ; Refer to eload.h for documentation.
@@ -164,6 +180,7 @@ _eload_set_drive_disable_fastload:
         lda #drivetype_unknown
         sta drivetype
         rts
+.endif
 
 ; =============================================================================
 ;
@@ -188,10 +205,11 @@ _eload_drive_is_fast:
         tax
         rts
 
-
 ; =============================================================================
 ;
 ; Upload the drive code if this drive is supported.
+;
+; This function uses KERNAL code, it calls SEI/CLI as usual.
 ;
 ; Return:
 ;       C clear if the drive code has been uploaded
@@ -211,7 +229,22 @@ _eload_prepare_drive:
         sta cmd_addr + 1
 
         jsr send_code_slow              ; send initial drive code with KERNAL
-        jsr start_code                  ; and start it
+
+        ; Send M-E $0300
+        jsr eload_dos_open_listen_cmd
+        ; bcs error -- error handling?
+        lda #str_me_len
+        ldx #<str_me
+        ldy #>str_me
+        jsr eload_dos_send_data
+        jsr UNLSN
+
+        ldy #10                 ; delay
+:       dex
+        bne :-
+        dey
+        bne :-
+        ; End Send M-E $0300
 
         ; no final drive code needed for sd2iec
         lda drivetype
@@ -221,11 +254,8 @@ _eload_prepare_drive:
         ; upload 2 blocks of drive code using the fast protocol
         lda #<drive_codes
         ldx #>drive_codes
+        sei
         jsr set_ptr_and_upload
-
-        lda #ELOAD_OVERLAY_WRITE
-        jsr eload_upload_drive_overlay
-
         cli
 
 @no_drive_code:
@@ -259,8 +289,9 @@ set_code_ptr:
 
 ; =============================================================================
 ;
-; Upload a new drive code overlay. If one is running already, exit it first
-; by sending job $00 $00 $00. The caller must disable IRQs.
+; Upload a new drive code overlay if a different one or none is running.
+; If one is running already, exit it first by sending job $00.
+; The caller must disable IRQs.
 ;
 ; Parameters:
 ;       A       one of ELOAD_OVERLAY_*
@@ -268,18 +299,27 @@ set_code_ptr:
 ; =============================================================================
 .export eload_upload_drive_overlay
 eload_upload_drive_overlay:
-        ldx current_drv_overlay
-        beq @dont_exit
-@dont_exit:
+        cmp current_drv_overlay         ; this overlay is running already?
+        beq no_upload
+        ldx current_drv_overlay         ; no overlay code running?
+        beq @noexit
+        pha
+        jsr eload_exit_drive_overlay
+        pla
+@noexit:
         sta current_drv_overlay
-        ;cmp #ELOAD_OVERLAY_WRITE ; todo
+        cmp #ELOAD_OVERLAY_WRITE
+        bne @no_write
         lda #<drive_codes_write
         ldx #>drive_codes_write
+        jmp set_ptr_and_upload
+@no_write:
+        lda #<drive_codes_format
+        ldx #>drive_codes_format
 set_ptr_and_upload:
         jsr set_code_ptr
         lda #2                          ; number of blocks to transfer
         sta tmp1
-        sei ; ???
 :
         lda code_ptr
         ldx code_ptr + 1
@@ -288,12 +328,28 @@ set_ptr_and_upload:
         inc code_ptr + 1
         dec tmp1
         bne :-
-        cli ; ???
+no_upload:
 		rts
 
 ; =============================================================================
 ;
-; Send code, 32 bytes at a time
+; Exit drive overlay code by sending job $00.
+; The caller must disable IRQs.
+;
+; =============================================================================
+.export eload_exit_drive_overlay
+eload_exit_drive_overlay:
+eload_zero_job = * + 1              ; three remaining bytes don't matter
+        lda #0
+        sta current_drv_overlay
+		lda #<eload_zero_job
+        ldx #>eload_zero_job
+        jmp eload_send_job
+
+; =============================================================================
+;
+; Send code, 32 bytes at a time.
+; This function uses KERNAL code, it calls SEI/CLI as usual.
 ;
 ; =============================================================================
 send_code_slow:
@@ -303,11 +359,11 @@ send_code_slow:
         lda code_len
         cmp #cmdbytes
         bcs @send
-        beq done
+        beq @done
         sta cmd_len         ; no, just send the rest
 @send:
         jsr eload_dos_open_listen_cmd
-        bcs done
+        bcs @done
 
         lda #str_mw_len
         ldx #<str_mw
@@ -342,7 +398,7 @@ send_code_slow:
         sbc cmd_len
         sta code_len
         bne @next
-done:
+@done:
         rts
 
 
@@ -352,25 +408,4 @@ addlen:
         bcc :+
         inx
 :
-        rts
-
-; =============================================================================
-;
-; Send M-E $0300
-;
-; =============================================================================
-start_code:
-        jsr eload_dos_open_listen_cmd
-        bcs done
-        lda #str_me_len
-        ldx #<str_me
-        ldy #>str_me
-        jsr eload_dos_send_data
-        jsr UNLSN
-
-        ldy #10                 ; delay
-:       dex
-        bne :-
-        dey
-        bne :-
         rts

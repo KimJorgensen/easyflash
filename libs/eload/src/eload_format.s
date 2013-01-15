@@ -1,12 +1,14 @@
 
-    .importzp       sp, sreg, regsave
-    .importzp       ptr1, ptr2, ptr3, ptr4
-    .importzp       tmp1, tmp2, tmp3, tmp4
+.include "eload_macros.s"
 
-    .import         popa
+.importzp       sp, sreg, regsave
+.importzp       ptr1, ptr2, ptr3, ptr4
+.importzp       tmp1, tmp2, tmp3, tmp4
 
-    .import eload_send
-    .import _eload_prepare_drive
+.import         popa
+
+.import eload_send_job
+.import eload_upload_drive_overlay
 
 gcr_overflow_size = 69
 
@@ -14,6 +16,8 @@ gcr_overflow_size = 69
 ; =============================================================================
 ;
 ; void __fastcall__ eload_format(uint8_t n_tracks, uint16_t id);
+;
+; This function saves the IRQ flag, uses SEI, and restores the IRQ flag.
 ;
 ; =============================================================================
 .export _eload_format
@@ -27,12 +31,14 @@ _eload_format:
         php                     ; to backup the interrupt flag
         sei
 
+        lda #ELOAD_OVERLAY_FORMAT
+        jsr eload_upload_drive_overlay
+
         lda #2                  ; command: format
         sta job
         lda #<job
         ldx #>job
-        ldy #4                  ; eload-jobs have always 4 bytes
-        jsr eload_send
+        jsr eload_send_job
 
         plp                     ; to restore the interrupt flag
         rts

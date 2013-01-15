@@ -3,9 +3,20 @@
 .import     sendtab
 .import     sendtab75, sendtab64, sendtab31, sendtab20
 
-.export     eload_send
 
 .include "config.s"
+
+; =============================================================================
+;
+; Like eload_send, but always 4 bytes.
+;
+; Used internally only.
+;
+; =============================================================================
+.export  eload_send_job
+eload_send_job:
+        ldy #4
+        ; fall through
 
 ; =============================================================================
 ;
@@ -27,6 +38,8 @@
 ;   A, X, Y
 ;
 ; =============================================================================
+        ; fall through from eload_send_job
+.export  eload_send
 eload_send:
         sta ptr3
         stx ptr3 + 1

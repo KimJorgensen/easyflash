@@ -45,13 +45,13 @@ drive_code_1541_start  = *
 drv_start:
         tsx
         stx stack
-
-drv_1541_main:
         cli                     ; allow IRQs when waiting
         jsr drv_load_code       ; does SEI when data is received
+drv_1541_next_overlay:
+        cli
         jsr drv_load_overlay
         jsr $0500
-        jmp drv_1541_main
+        jmp drv_1541_next_overlay
 
 ;.export drv_1541_wait_rx
 ;drv_1541_wait_rx:

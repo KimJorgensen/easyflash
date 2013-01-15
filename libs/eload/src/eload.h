@@ -18,6 +18,7 @@
 #define DISK_STATUS_HEADER_CHK_ERR   0x09 /* Checksum error in header block */
 #define DISK_STATUS_ID_MISMATCH      0x0b /* Id mismatch */
 #define DISK_STATUS_NO_DISK          0x0f /* Disk not inserted */
+#define DISK_STATUS_UNKNOWN          0xff
 
 /**
  * Set the device number for the drive to be used, and check the drive type.
