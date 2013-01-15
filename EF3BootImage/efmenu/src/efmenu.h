@@ -19,6 +19,9 @@
 #define MODE_SS5            5
 #define MODE_GO128          6
 #define MODE_KILL           7
+/* dummy modes */
+#define MODE_SHOW_VERSION   128
+
 
 #define EF_DIR_BANK         0x10
 #define EF_DIR_NUM_SLOTS    16
@@ -36,6 +39,7 @@ void __fastcall__ start_program(uint8_t bank);
 
 void wait_for_no_key(void);
 uint8_t is_c128(void);
+uint8_t shift_pressed(void);
 
 typedef struct efmenu_dir_s
 {
