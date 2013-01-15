@@ -9,11 +9,23 @@
 
 ; =============================================================================
 ;
+; Like eload_send_nodma, but always 4 bytes.
+;
+; Used internally only.
+;
+; =============================================================================
+.export  eload_send_job_nodma
+eload_send_job_nodma:
+        ldy #4
+        ; fall through
+
+; =============================================================================
+;
 ; Send up to 256 bytes to the drive over the fast protocol. The last byte is
 ; sent first.
 ;
-; Do not wait for any VIC-II DMA. This function does not use SEI/CLI, the
-; caller must care for it.
+; Do not wait for any VIC-II DMA.
+; This function does not use SEI/CLI, the caller must care for it.
 ;
 ; Used internally only.
 ;
@@ -28,6 +40,7 @@
 ;   A, X, Y
 ;
 ; =============================================================================
+        ; fall through from eload_send_job_nodma
 eload_send_nodma:
         sta ptr3
         stx ptr3 + 1
