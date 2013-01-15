@@ -140,7 +140,6 @@ drv_sendtbl:
 ;
 ; =============================================================================
 drv_load_code:
-        lda #<$0300
         ldx #>$0300
         bne drv_load_code_common ; always
 
@@ -150,10 +149,10 @@ drv_load_code:
 ;
 ; =============================================================================
 drv_load_overlay:
-        lda #<$0500
         ldx #>$0500
 drv_load_code_common:
         ldy #0
+        tya
         jsr recv                ; 1st block
         inc buff_ptr + 1
         jsr recv_to_ptr         ; 2nd block
