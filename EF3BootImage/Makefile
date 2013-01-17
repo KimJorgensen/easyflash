@@ -142,7 +142,7 @@ init_image      += images/empty.bin                     0x38 0x0000 H
 ###############################################################################
 # The menu image: Contains menu and tools
 #
-$(prj)-menu.bin: $(menu_deps) mkimages
+$(prj)-menu.bin: $(menu_deps) mkimages | images/empty.bin
 	./mkimages \
 		$(menu_image) \
 		$(prj)-menu.bin
@@ -151,7 +151,7 @@ $(prj)-menu.bin: $(menu_deps) mkimages
 # The initial image: Contains menu, tools, some KERNALS and a directory
 #
 $(prj)-init.bin: $(menu_deps) mkimages \
-              directory.bin directory-jb.bin
+              directory.bin directory-jb.bin | images/empty.bin
 	./mkimages \
 		$(menu_image) \
 		$(init_image) \
@@ -162,6 +162,12 @@ $(prj)-init.bin: $(menu_deps) mkimages \
 #
 mkimages: mkimages.c
 	$(CC) -o $@ $<
+
+###############################################################################
+#
+images/empty.bin:
+	rm -f $@
+	touch $@
 
 ###############################################################################
 #
@@ -196,12 +202,13 @@ clean:
 	-rm -f *-init.bin
 	-rm -f *-menu.crt
 	-rm -f *-menu.bin
-	-rm -f mkimages
 	-rm -f directory*.bin
 	-rm -f trampoline.bin
+	-rm -f images/empty.bin
 	#-$(MAKE) -C ef3kernal clean
 	-$(MAKE) -C efmenu clean
 	-$(MAKE) -C usbtool clean
+	-$(MAKE) -C $(dir $(easyprog)) clean
 
 ###############################################################################
 # create a .crt image from a .bin image

@@ -41,24 +41,24 @@ all: $(name).crt
 #
 headers := $(foreach dir, $(inc), $(wildcard $(dir)/*.h))
 
-obj/%.s: src/%.c obj $(headers)
+obj/%.s: src/%.c $(headers) | obj
 	cc65 -t c64 -T -O --static-locals $(INCLUDE) $(DEFINE) -o $@ $<
 
 ###############################################################################
-obj/%.o: obj/%.s obj
+obj/%.o: obj/%.s | obj
 	ca65 -t c64 -o $@ $<
 
 ###############################################################################
 # the binaries created with acme are included in ca65 source code
 # therefore we need a dependency here
 #
-obj/%.o: src/%.s obj $(bin_acme)
+obj/%.o: src/%.s $(bin_acme) | obj
 	ca65 -t c64 -I src -o $@ $<
 
 ###############################################################################
 # prepare the charset
 #
-obj/charset.s: src/charset.sed obj
+obj/charset.s: src/charset.sed | obj
 	sed -e "s/\#/1/g; s/\-/0/g; s/^[01][01]/.byte %&/" \
 		$< > $@
 
@@ -90,4 +90,5 @@ $(name).bin: $(obj) $(ld_config) $(libef3usb)
 clean:
 	rm -f $(name) $(name).bin $(name).bin.map $(name).bin.labels
 	rm -f $(name).crt
+	rm -f $(obj)
 	rm -rf obj

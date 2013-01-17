@@ -21,12 +21,12 @@ obj += obj/eload_close.o
 obj += obj/eload_dos.o
 
 .PHONY: all
-all: eload.lib 
+all: eload.lib
 
 .PHONY: test
 test: eload_test.prg
 
-obj/%.o: src/%.s obj $(inc)
+obj/%.o: src/%.s $(inc) | obj
 	ca65 -I src -t c64 -o $@ $<
 
 obj:
@@ -39,11 +39,15 @@ eload.lib: $(obj)
 eload_test.prg: src/eload_test.c eload.lib
 	cl65 -g -O -I src -m $@.map -o $@ $^
 
+.PHONY: clean
 clean:
+	rm -f $(obj)
 	rm -rf obj
 	rm -f eload.lib
 	rm -f eload_test.prg
 	rm -f eload_test.prg.map
 
+.PHONY: distclean
 distclean: clean
 	rm -f *~
+
