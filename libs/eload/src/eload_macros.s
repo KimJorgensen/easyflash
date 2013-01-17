@@ -9,12 +9,11 @@ ELOAD_SECTOR_NOT_FOUND  =  4
 
 ELOAD_UNKNOWN_CMD       =  255
 
-
+; Used as table indexes, do not change
 ELOAD_OVERLAY_NONE    = 0
 ELOAD_OVERLAY_READ    = 1
 ELOAD_OVERLAY_WRITE   = 2
 ELOAD_OVERLAY_FORMAT  = 3
-
 
 
 ; Byte ready check for drive code

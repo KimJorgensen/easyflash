@@ -287,7 +287,7 @@ write_sync:
 
 ; =============================================================================
 ;
-; Write 255 * $55 (gap)
+; Write 256 * $55 (gap)
 ; Do not use this in timing critical situation at the beginning if the gap
 ; as it switches on write mode first etc. there's a short delay at the
 ; beginning. However, it's fast at the end, just RTS. So you can continue with
@@ -322,7 +322,7 @@ start_write:
 
 ; =============================================================================
 ;
-; Write 256 * $55 (gap)
+; Write 32 * 256 * $55 (gap)
 ; Do not use this in timing critical situation at the beginning if the gap
 ; as it switches on write mode first etc. there's a short delay at the
 ; beginning. However, it's fast at the end, just RTS. So you can continue with

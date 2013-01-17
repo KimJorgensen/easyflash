@@ -113,6 +113,11 @@ drive_code_init_sizes:
         .byte <drive_code_init_size_sd2iec   ; sd2iec
         .byte 0
 
+overlay_code_to_tab:
+        .addr 0 ; read
+        .addr drive_codes_write
+        .addr drive_codes_format
+
 drive_codes_write:
         .addr 0
         .addr 0
@@ -308,14 +313,11 @@ eload_upload_drive_overlay:
         pla
 @noexit:
         sta current_drv_overlay
-        cmp #ELOAD_OVERLAY_WRITE
-        bne @no_write
-        lda #<drive_codes_write
-        ldx #>drive_codes_write
-        jmp set_ptr_and_upload
-@no_write:
-        lda #<drive_codes_format
-        ldx #>drive_codes_format
+        asl
+        tay
+        lda overlay_code_to_tab - 1, y  ; high, index 0 unused
+        tax
+        lda overlay_code_to_tab - 2, y  ; low
 set_ptr_and_upload:
         jsr set_code_ptr
         lda #2                          ; number of blocks to transfer
