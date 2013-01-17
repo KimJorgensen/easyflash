@@ -13,9 +13,9 @@ obj += obj/ef3usb_fload.o
 obj += obj/ef3usb_fclose.o
 
 .PHONY: all
-all: $(libname).lib 
+all: $(libname).lib
 
-obj/%.o: src/%.s obj $(inc)
+obj/%.o: src/%.s $(inc) | obj
 	ca65 -I src -t c64 -o $@ $<
 
 obj:
@@ -25,9 +25,12 @@ $(libname).lib: $(obj)
 	rm -f $@
 	ar65 a $@ $(obj)
 
+.PHONY: clean
 clean:
+	rm -f $(obj)
 	rm -rf obj
 	rm -f $(libname).lib
 
+.PHONY: distclean
 distclean: clean
 	rm -f *~

@@ -72,6 +72,8 @@ ifeq "$(debug)" "yes"
 DEFINE   += -DEFDEBUG
 endif
 
+###############################################################################
+#
 .PHONY: all
 ifeq "$(release)" "yes"
 all: easyprog-$(version).zip
@@ -84,18 +86,18 @@ endif
 #
 headers := $(foreach dir, $(inc), $(wildcard $(dir)/*.h))
 
-obj/%.s: src/%.c obj $(headers)
+obj/%.s: src/%.c $(headers) | obj
 	cc65 -t c64 -T -O --static-locals $(INCLUDE) $(DEFINE) -o $@ $<
 
 ###############################################################################
-obj/%.o: obj/%.s obj
+obj/%.o: obj/%.s | obj
 	ca65 -t c64 -o $@ $<
 
 ###############################################################################
 # the binaries created with acme are included in ca65 source code
 # therefore we need a dependency here, and we need the built-in eapi
 #
-obj/%.o: src/%.s obj $(bin_acme) $(eapi_obj)
+obj/%.o: src/%.s $(bin_acme) $(eapi_obj) | obj
 	ca65 -t c64 -o $@ $<
 
 ###############################################################################
@@ -104,12 +106,12 @@ obj/%.o: src/%.s obj $(bin_acme) $(eapi_obj)
 .PHONY: always
 always:
 
-$(eapi_obj): always
+$(eapi_obj): always | obj
 	$(MAKE) -C $(eapi_dir)
 	cp $(eapi_src) obj
 
 ###############################################################################
-obj/%.bin: src/%.s obj
+obj/%.bin: src/%.s | obj
 	acme -o $@ $<
 
 ###############################################################################
@@ -151,4 +153,4 @@ clean:
 	rm -rf obj
 	$(MAKE) -C $(dir $(eload)) clean
 	$(MAKE) -C $(dir $(libprint)) clean
-	
+

@@ -35,15 +35,15 @@ all: $(name).crt
 #
 headers := $(wildcard $(INCLUDE)/*.h)
 
-obj/%.s: src/%.c obj $(headers)
+obj/%.s: src/%.c $(headers) | obj
 	cc65 -t c64 -T -O --static-locals $(INCLUDE) $(DEFINE) -o $@ $<
 
 ###############################################################################
-obj/%.o: obj/%.s obj
+obj/%.o: obj/%.s | obj
 	ca65 -t c64 $(INCLUDE) -o $@ $<
 
 ###############################################################################
-obj/%.o: src/%.s obj
+obj/%.o: src/%.s | obj
 	ca65 -t c64 $(INCLUDE) -o $@ $<
 
 ###############################################################################
@@ -82,5 +82,8 @@ $(name).prg: obj/crt0.prg.o $(obj) src/ld.prg.cfg $(libef3usb) $(libeload)
 .PHONY: clean
 clean:
 	rm -f $(name) $(name).bin $(name).bin.map $(name).crt
+	rm -f $(obj)
 	rm -rf obj
+	-$(MAKE) -C $(dir $(libef3usb)) clean
+	-$(MAKE) -C $(dir $(libeload)) clean
 
