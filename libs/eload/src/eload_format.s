@@ -34,8 +34,6 @@ _eload_format:
         lda #ELOAD_OVERLAY_FORMAT
         jsr eload_upload_drive_overlay
 
-        lda #2                  ; command: format
-        sta job
         lda #<job
         ldx #>job
         jsr eload_send_job
@@ -43,13 +41,13 @@ _eload_format:
         plp                     ; to restore the interrupt flag
         rts
 
-.bss
-
+.data
+; keep the order of these bytes
 job:
-        .res 1
+        .byte 1                 ; command: format
 n_tracks:
-        .res 1
+        .byte 1                 ; track
 id1:
-        .res 1
+        .byte 0
 id2:
-        .res 1
+        .byte 0
