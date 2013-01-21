@@ -168,6 +168,9 @@ format_next_track:
         lda #$07
 @next_header:
         jsr drv_1541_create_gcr_header
+        lda #$55                ; use the same
+        sta gcr_tmp + 8         ; off-bytes
+        sta gcr_tmp + 9         ; as the original DOS (who cares?)
         ldx #0                  ; read GCR index
 @copy_header:
         lda gcr_tmp, x          ; copy GCR header
