@@ -263,14 +263,14 @@ drv_1541_search_header:
         jsr drv_1541_wait_sync
         bcs @no_sync
 @cmp_header:
-        bvc @cmp_header         ; wait for byte ready
+        wait_byte_ready
         lda $1c01               ; read data from head
-        clv                     ; clear byte ready (V)
         cmp gcr_tmp, y          ; same header?
         bne @wrong_header
         iny
         cpy #8
         bne @cmp_header
+        wait_byte_ready			; byte 9 of GCR header (off-byte)
         clc                     ; mark for success
 @ret:
         rts
