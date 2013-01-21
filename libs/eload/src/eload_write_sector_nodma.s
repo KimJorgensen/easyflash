@@ -27,8 +27,8 @@ _eload_write_sector_nodma:
         stx block_tmp + 1       ; Save buffer
 
         jsr popax
-        stx trk_tmp             ; track
-        sta sec_tmp             ; sector
+        stx n_track
+        sta n_sector
 
         php                     ; to backup the interrupt flag
         sei
@@ -62,13 +62,15 @@ _eload_write_sector_nodma:
         plp                     ; to restore the interrupt flag
         rts
 
-.bss
-; keep the order of these three bytes
+.data
+; keep the order of these bytes
 job:
-        .res 1
-trk_tmp:
-        .res 1
-sec_tmp:
-        .res 1
+        .byte 2                 ; command: write sector
+n_track:
+        .byte 1                 ; track
+n_sector:
+        .byte 0                 ; sector
+
+.bss
 block_tmp:
         .res 2
