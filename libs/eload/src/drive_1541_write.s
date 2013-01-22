@@ -218,7 +218,7 @@ error:
 ; Depending from the bit rate we have 26 to 32 cycles per byte,
 ; so our loop must take less then 26 cycles.
 checksum16:
-        ldx #$bb        ; init counter
+        ldx #65         ; 325 / 5 = 65 => speed code
         lda #0
         sta zptmp       ; high byte = 0
 
@@ -229,23 +229,26 @@ checksum16:
         ; c is clear on success, addition prepared
 
         tya             ; low byte = 0
+@check:
+        bvc @check
+@read:
+.repeat 5
+        eor $1c01       ;   4    4      low ^= data
+        clv             ;   2    6
+        inc zptmp       ;   5   11      high++
+        rol zptmp       ;   5   16      carry << high << carry
+        rol             ;   2   18      carry << low << carry
 :
-        bvc :-          ;   2    2
-        eor $1c01       ;   4    6      sum += value + carry; new carry
-        clv             ;   2    8
-        rol zptmp       ;   5   13      carry << high << carry
-        rol             ;   2   15      carry << low << carry
-        inx             ;   2   17
-        bne :-          ;   3   20
+        bvs :+          ;   3   21
+        bvs :+
+        bvs :+
+        bvs :+
+        jmp :-
+:
+.endrepeat
 
-:
-        bvc :-          ;   2    2
-        eor $1c01       ;   4    6      sum += value + carry; new carry
-        clv             ;   2    8
-        rol zptmp       ;   5   13      carry << high << carry
-        rol             ;   2   15      carry << low << carry
-        inx             ;   2   17
-        bne :-          ;   3   20
+        dex
+        bne @read
 
 .assert >checksum16 = >*, error, "page boundary crossed"
         ldx buff_ptr
