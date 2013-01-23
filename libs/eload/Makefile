@@ -22,6 +22,7 @@ obj += obj/eload_send_nodma.o
 obj += obj/eload_sendtab.o
 obj += obj/eload_recv.o
 obj += obj/eload_format.o
+obj += obj/eload_checksum.o
 
 obj += obj/eload_read_byte.o
 obj += obj/eload_close.o
@@ -30,7 +31,7 @@ obj += obj/eload_dos.o
 obj += obj/eload_read.o
 obj += obj/eload_write_sector.o
 obj += obj/eload_write_sector_nodma.o
-obj += obj/eload_recv_status.o
+obj += obj/eload_recv_block.o
 
 test_obj :=
 test_obj += obj/crt0.o
