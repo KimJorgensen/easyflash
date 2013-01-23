@@ -95,6 +95,8 @@ format_disk:
         ; switch on motor, set bitrate for track 1, bump
         lda #1                  ; move this to bump function?
         sta current_track       ; we'll be on track 1
+        sta status              ; track #1 for possible error
+        sta status+1            ; sector #1 for possible error (who cares)
         jsr drv_1541_prepare_read
         jsr drv_1541_bump
 
@@ -318,8 +320,7 @@ write_gap_256:
 start_write:
         lda #$ff
         sta $1c03               ; data port output
-        lda $1c0c
-        and #$df                ; %111x => %110x
+        lda #$ce
         sta $1c0c               ; write mode
         rts
 
