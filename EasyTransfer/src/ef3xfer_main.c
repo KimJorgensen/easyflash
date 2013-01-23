@@ -34,8 +34,6 @@ static void log_str_stdout(const char* str);
 static void log_progress_stdout(int percent);
 static void log_complete_stdout(void);
 
-#undef ENABLE_EF3_KERNAL_CMDS
-
 /*****************************************************************************/
 static int m_argc;
 static char** m_argv;
@@ -48,27 +46,16 @@ static void usage(const char* p_str_prg)
     printf("\n"
            "ef3xfer version %s\n\n", VERSION);
     printf("Transfer data to an EasyFlash 3 over USB.\n\n");
-    printf("Usage: %s <action>\n", p_str_prg);
+    printf("Usage: %s <action> [options]\n", p_str_prg);
     printf("Actions:\n"
            "  -h       --help           Print this and exit\n"
            "  -c FILE  --crt FILE       Write a CRT image to flash\n"
-#ifdef ENABLE_EF3_KERNAL_CMDS
            "  -x FILE  --exec FILE      Send a PRG file and execute it\n"
-           "  -w FILE  --write FILE     Send a PRG file\n"
-           "  -k KEY   --key KEY        Send a key to the keyboard buffer\n"
-           "  -r       --run            Send \"run\"\n"
-           "  -e ADDR  --sys ADDR       Send \"sys <addr>\" (decimal or 0x.... for hex)\n"
-           //"  -w  --write-disk  write a disk image (d64)\n"
-           //"\nOptions to be used with --write-disk:\n"
-           //"  -f  --format      format disk before write\n"
-           "\nSupported placeholders for key events:\n"
-           "  <CTRL-@> .. <CTRL-Z>, <CTRL-0> .. <CTRL-9>, <WHITE> .. <LGREY>\n"
-           "  <STOP>, <RETURN>, <SHIFT-RETURN>, <DEL>, <INS>, <HOME>, <CLEAR>,\n"
-           "  <UP>, <DOWN>, <LEFT>, <RIGHT>, <REVON>, <REVOFF>,\n"
-           "  <F1> .. <F8>, <<=>, <PI>, <<>, <>>, <^>, <POUND>\n"
-           "  and others...\n"
-#endif
-            "\n"
+           "  -w FILE  --write FILE     Write a disk image (d64)\n"
+           "\nOptions to be used with --write-disk:\n"
+           "           --no-format      Do not format disk before write\n"
+           "  -d NUM   --drive          Drive number to be used (8)\n"
+           "\n"
           );
 }
 
@@ -104,29 +91,6 @@ static void log_complete_stdout(void)
 {
 }
 
-/*****************************************************************************/
-/*
- * Send "sys <addr>"
- */
-static int do_sys(const char* str_addr)
-{
-    unsigned addr;
-    char* p_end;
-
-    if (str_addr == NULL)
-    {
-        ef3xfer_log_printf("Address missing.\n");
-        return 0;
-    }
-    addr = strtol(str_addr, &p_end, 0);
-    if (*p_end != '\0' || addr > 0xffff)
-    {
-        ef3xfer_log_printf("Bad address.\n");
-        return 0;
-    }
-    return ef3xfer_transfer_sys(addr);
-}
-
 
 /*****************************************************************************/
 static const char* get_next_arg(void)
@@ -140,8 +104,12 @@ static const char* get_next_arg(void)
 /*****************************************************************************/
 int main(int argc, char** argv)
 {
-    const char* p_str_type = NULL;
-    const char* p_filename = NULL;
+    const char* p_crt_filename = NULL;
+    const char* p_write_filename = NULL;
+    const char* p_exec_filename = NULL;
+    int         n_actions = 0;
+    int         n_drv = 8;
+    char dummy;
     const char* arg;
     int i;
 
@@ -167,34 +135,53 @@ int main(int argc, char** argv)
         }
         else if (strcmp(arg, "-c") == 0 || strcmp(arg, "--crt") == 0)
         {
-            ef3xfer_transfer_crt(get_next_arg());
+            p_crt_filename = get_next_arg();
+            n_actions++;
         }
-#ifdef ENABLE_EF3_KERNAL_CMDS
         else if (strcmp(arg, "-x") == 0 || strcmp(arg, "--exec") == 0)
         {
-            ef3xfer_transfer_prg(get_next_arg(), 1);
+            p_exec_filename = get_next_arg();
+            n_actions++;
         }
         else if (strcmp(arg, "-w") == 0 || strcmp(arg, "--write") == 0)
         {
-            ef3xfer_transfer_prg(get_next_arg(), 0);
+            p_write_filename = get_next_arg();
+            n_actions++;
         }
-        else if (strcmp(arg, "-k") == 0 || strcmp(arg, "--key") == 0)
+        else if (strcmp(arg, "-d") == 0 || strcmp(arg, "--drive") == 0)
         {
-            ef3xfer_transfer_keys(get_next_arg());
+            arg = get_next_arg();
+            if (!arg)
+            {
+                fprintf(stderr, "*** Drive number missing\n");
+                return 1;
+            }
+            if (sscanf(arg, "%d%c", &n_drv, &dummy) != 1 ||
+                n_drv < 0 || n_drv > 15)
+            {
+                fprintf(stderr, "*** Bad drive number\n");
+                return 1;
+            }
         }
-        else if (strcmp(arg, "-r") == 0 || strcmp(arg, "--run") == 0)
-        {
-            ef3xfer_transfer_keys("<SHIFT-RETURN>run:<RETURN>");
-        }
-        else if (strcmp(arg, "-e") == 0 || strcmp(arg, "--sys") == 0)
-        {
-            do_sys(get_next_arg());
-        }
-#endif
         else
         {
-            fprintf(stderr, "Unknown action: %s\n", arg);
+            fprintf(stderr, "*** Unknown action: %s\n", arg);
             return 1;
         }
     }
+
+    if (n_actions > 1)
+    {
+        fprintf(stderr, "*** Too many actions, use only one at once.\n");
+        return 1;
+    }
+
+    if (p_crt_filename)
+        return ef3xfer_transfer_crt(p_crt_filename);
+    else if (p_exec_filename)
+        return ef3xfer_transfer_prg(p_exec_filename, 1);
+    else if (p_write_filename)
+        return ef3xfer_d64_write(p_write_filename, n_drv, 1);
+
+    return 1;
 }

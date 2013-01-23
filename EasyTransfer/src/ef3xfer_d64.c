@@ -20,7 +20,7 @@
 
 #define GCR_BPS 325
 
-#define DISK_STATUS_MAGIC            0x52
+#define USB_STATUS_MAGIC             0x52
 
 /* These error codes are the same as the ones for 1541 job codes */
 #define DISK_STATUS_OK               0x01 /* Everything OK */
@@ -33,6 +33,11 @@
 #define DISK_STATUS_HEADER_CHK_ERR   0x09 /* Checksum error in header block */
 #define DISK_STATUS_ID_MISMATCH      0x0b /* Id mismatch */
 #define DISK_STATUS_NO_DISK          0x0f /* Disk not inserted */
+/* Additional error codes */
+#define DISK_STATUS_ADDITIONAL_ERRORS 0x80 /* Marker */
+#define DISK_STATUS_DRV_WRONG        0xfd /* Drive type not supported */
+#define DISK_STATUS_DRV_NOT_FOUND    0xfe /* Drive not found */
+#define DISK_STATUS_UNKNOWN          0xff
 
 typedef struct transfer_disk_ts_s
 {
@@ -77,6 +82,18 @@ static const uint8_t bin_to_gcr[16] =
     0x0d, 0x1d, 0x1e, 0x15
 };
 
+/* Conversion GCR => BIN (0xff = invalid code) */
+static const uint8_t gcr_to_bin[32] =
+{
+    0xff, 0xff, 0xff, 0xff,
+    0xff, 0xff, 0xff, 0xff,
+    0xff, 0x08, 0x00, 0x01,
+    0xff, 0x0c, 0x04, 0x05,
+    0xff, 0xff, 0x02, 0x03,
+    0xff, 0x0f, 0x06, 0x07,
+    0xff, 0x09, 0x0a, 0x0b,
+    0xff, 0x0d, 0x0e, 0xff
+};
 
 /*****************************************************************************/
 /**
@@ -110,6 +127,40 @@ static void drive_gcr_encode(uint8_t* dst, const uint8_t* src)
     o |= bin_to_gcr[i & 0xf];
     dst[3] = o >> 8;
     dst[4] = o;
+}
+
+
+/*****************************************************************************/
+/**
+ * Convert 5 bytes of GCR data from src to 4 bytes binary to dst.
+ */
+static void drive_gcr_decode(uint8_t* dst, const uint8_t* src)
+{
+    uint32_t o, i;
+
+    // oooo oppp => aaaa ....
+    i  = src[0];
+    o  = gcr_to_bin[i >> 3] << 4;
+    // ppp ppqq qqqr => .... bbbb
+    i  = (i & 0x07) << 8 | src[1];
+    o |= gcr_to_bin[i >> 6];
+    dst[0] = o;
+    // qq qqqr => cccc ....
+    o  = gcr_to_bin[(i >> 1) & 0x1f] << 4;
+    // r rrrr ssss => .... dddd
+    i  = (i & 0x01) << 8 | src[2];
+    o |= gcr_to_bin[(i >> 4)];
+    dst[1] = o;
+    // ssss sttt ttuu => eeee ffff
+    i  = (i & 0x0f) << 8 | src[3];
+    o  = gcr_to_bin[i >> 7] << 4;
+    o |= gcr_to_bin[(i >> 2) & 0x1f];
+    dst[2] = o;
+    // uu uuuv vvvv => gggg hhhh
+    i  = (i & 0x03) << 8 | src[4];
+    o  = gcr_to_bin[i >> 5] << 4;
+    o |= gcr_to_bin[i & 0x1f];
+    dst[3] = o;
 }
 
 
@@ -176,7 +227,7 @@ void encode_sector_to_gcr(uint8_t* p_dst,
 #endif
 
     // first 3 bytes of src data come to this GCR block
-    bin[0] = 0x07;    // $00 - data block ID
+    bin[0] = 0x07;    // data block ID
     bin[1] = p_src[n_in++];
     bin[2] = p_src[n_in++];
     bin[3] = p_src[n_in++];
@@ -207,6 +258,39 @@ void encode_sector_to_gcr(uint8_t* p_dst,
 }
 
 
+static const char* err_to_str(int i)
+{
+    switch (i)
+    {
+    case DISK_STATUS_OK:
+        return "OK";
+    case DISK_STATUS_HEADER_NOT_FOUND:
+        return "Header block not found";
+    case DISK_STATUS_SYNC_NOT_FOUND:
+        return "SYNC not found";
+    case DISK_STATUS_DATA_NOT_FOUND:
+        return "Data block not found";
+    case DISK_STATUS_DATA_CHK_ERR:
+        return "Checksum error in data block";
+    case DISK_STATUS_VERIFY_ERR:
+        return "Verify error";
+    case DISK_STATUS_WRITE_PROTECTED:
+        return "Disk write protected";
+    case DISK_STATUS_HEADER_CHK_ERR:
+        return "Checksum error in header block";
+    case DISK_STATUS_ID_MISMATCH:
+        return "ID mismatch";
+    case DISK_STATUS_NO_DISK:
+        return "Disk not inserted";
+    case DISK_STATUS_DRV_WRONG:
+        return "Drive type not supported";
+    case DISK_STATUS_DRV_NOT_FOUND:
+        return "Drive not found";
+    default:
+        return "Unknown error";
+    }
+}
+
 /*****************************************************************************/
 /**
  *
@@ -226,7 +310,7 @@ static int check_c64_response(transfer_disk_status_t* p_st)
         return 0;
     }
 
-    if (p_st->magic != DISK_STATUS_MAGIC)
+    if (p_st->magic != USB_STATUS_MAGIC)
     {
         ef3xfer_log_printf("\nInvalid data from C-64.\n");
         return 0;
@@ -234,10 +318,18 @@ static int check_c64_response(transfer_disk_status_t* p_st)
 
     if (p_st->status != DISK_STATUS_OK)
     {
-        ef3xfer_log_printf("\nError %d at track %d, sector %d.\n",
-                           p_st->status,
-                           p_st->data.ts.track,
-                           p_st->data.ts.sector);
+        if (p_st->status < DISK_STATUS_ADDITIONAL_ERRORS)
+        {
+            ef3xfer_log_printf("\n*** %s at %d:%d\n",
+                               err_to_str(p_st->status),
+                               p_st->data.ts.track,
+                               p_st->data.ts.sector);
+        }
+        else
+        {
+            ef3xfer_log_printf("\n*** %s\n",
+                               err_to_str(p_st->status));
+        }
         return 0;
     }
 
@@ -249,7 +341,6 @@ static int check_c64_response(transfer_disk_status_t* p_st)
  *
  */
 static int send_d64(uint8_t* p_buffer,
-                    uint8_t* p_gcr_buffer,
                     int n_num_tracks)
 {
     transfer_disk_status_t st;
@@ -260,11 +351,12 @@ static int send_d64(uint8_t* p_buffer,
     int     n_sectors_left, n_sectors, n_interleave, i;
     int     b_first_sector;
 
+    ef3xfer_log_printf("Writing...    ");
     n_interleave = 4;
     b_first_sector = 1;
     for (ts.track = 1; ts.track <= n_num_tracks; ++ts.track)
     {
-        ef3xfer_log_printf("Track %2d", ts.track);
+        ef3xfer_log_printf("%d", ts.track % 10);
 
         n_sectors_left = a_sectors_per_track[ts.track - 1];
         n_sectors = n_sectors_left;
@@ -281,16 +373,14 @@ static int send_d64(uint8_t* p_buffer,
 
             offset = (a_track_offset_in_d64[ts.track - 1] + ts.sector) * 256;
 
-            encode_sector_to_gcr(p_gcr_buffer, p_buffer + offset);
+            encode_sector_to_gcr(gcr, p_buffer + offset);
 
             /* Send track and sector numbers */
             if (!ef3xfer_write_to_ftdi(&ts, sizeof(ts)))
                 return 0;
 
-            if (!ef3xfer_write_to_ftdi(p_gcr_buffer, GCR_BPS))
+            if (!ef3xfer_write_to_ftdi(gcr, GCR_BPS))
                 return 0;
-
-            ef3xfer_log_printf(".");
 
             /* no response after the 1st sector has been sent */
             if (!b_first_sector)
@@ -301,8 +391,8 @@ static int send_d64(uint8_t* p_buffer,
             a_sector_state[ts.sector] = 1;
             --n_sectors_left;
         }
-        ef3xfer_log_printf("\n");
     }
+    ef3xfer_log_printf("\n");
 
     /* track == 0 => end mark */
     ts.track = 0;
@@ -316,14 +406,166 @@ static int send_d64(uint8_t* p_buffer,
 
 /*****************************************************************************/
 /**
+ * checksums has 12 bytes for each sector: 10 bytes GCR header and 2 bytes
+ * Fletcher16 checksum over the data block GCR data.
+ * This function converts the 10 bytes GCR header data to 8 bytes binary
+ * header data in-place.
  *
  */
-int ef3xfer_d64_write(const char* p_filename, int do_format)
+static void decode_headers_in_checksums(uint8_t checksums[D64_MAX_SECTORS][12])
+{
+    int n_sector;
+
+    for (n_sector = 0; n_sector < D64_MAX_SECTORS; n_sector++)
+    {
+        drive_gcr_decode(checksums[n_sector], checksums[n_sector]);
+        drive_gcr_decode(checksums[n_sector] + 4, checksums[n_sector] + 5);
+    }
+}
+
+/*****************************************************************************/
+/**
+ *
+ */
+static int check_headers(uint8_t checksums[D64_MAX_SECTORS][12],
+                          int n_track, const uint8_t disk_id[2])
+{
+    int n_sec, i;
+    uint8_t eor;
+    int n_sectors = a_sectors_per_track[n_track - 1];
+    uint8_t* p_header;
+
+    for (n_sec = 0; n_sec < n_sectors; ++n_sec)
+    {
+        for (i = 0; i < n_sectors; ++i)
+        {
+            if (checksums[i][2] == n_sec)
+            {
+                p_header = checksums[i];
+                /*ef3xfer_log_printf("%02x %02x %02x %02x  %02x %02x %02x %02x",
+                        checksums[i][0], checksums[i][1], checksums[i][2], checksums[i][3],
+                        checksums[i][4], checksums[i][5], checksums[i][6], checksums[i][7]);
+                ef3xfer_log_printf("\n");*/
+                eor = p_header[2] ^ p_header[3] ^ p_header[4] ^ p_header[5];
+                if (p_header[0] != 0x08 || /* header ID */
+                    p_header[1] != eor ||  /* header checksum */
+                    p_header[3] != n_track ||
+                    p_header[4] != disk_id[1] ||
+                    p_header[5] != disk_id[0])
+                {
+                    ef3xfer_log_printf("*** Error: Header %d:%d bad\n",
+                            n_track, n_sec);
+                    return 0;
+                }
+
+                break;
+            }
+        }
+        if (i == n_sectors)
+        {
+            ef3xfer_log_printf("*** Error: Header %d:%d not found\n",
+                    n_track, n_sec);
+            return 0;
+        }
+    }
+    return 1;
+}
+
+/*****************************************************************************/
+/**
+ *
+ */
+static int check_checksums(uint8_t* p_buffer,
+                           uint8_t checksums[D64_MAX_SECTORS][12],
+                           int n_track, const uint8_t disk_id[2])
+{
+    uint8_t gcr[GCR_BPS];
+    long    offset;
+    int     n_sec, i, k;
+    unsigned lo, hi, carry;
+    int     n_sectors = a_sectors_per_track[n_track - 1];
+    uint8_t* p_header;
+
+    for (i = 0; i < n_sectors; ++i)
+    {
+        n_sec = checksums[i][2];
+
+        offset = (a_track_offset_in_d64[n_track - 1] + n_sec) * 256;
+        encode_sector_to_gcr(gcr, p_buffer + offset);
+
+        lo = hi = carry = 0;
+        for (k = 0; k < GCR_BPS; ++k)
+        {
+            lo ^= gcr[k];
+
+            /* quite verbose, heh? */
+            hi = (hi + 1) & 0xff;
+            hi = (hi << 1) | carry;
+            carry = hi >> 8;
+            hi &= 0xff;
+
+            lo = (lo << 1) | carry;
+            carry = lo >> 8;
+            lo &= 0xff;
+        }
+
+        if (checksums[i][10] != lo && checksums[i][11] != hi)
+        {
+            ef3xfer_log_printf("\n*** Error: Verification failed at %d:%d\n",
+                n_track, n_sec);
+            return 0;
+        }
+    }
+    return 1;
+}
+
+
+/*****************************************************************************/
+/**
+ *
+ */
+static int verify_d64(uint8_t* p_buffer,
+                      int n_num_tracks, const uint8_t disk_id[2])
+{
+    transfer_disk_status_t st;
+    transfer_disk_ts_t ts;
+    uint8_t s;
+    uint8_t checksums[D64_MAX_SECTORS][12];
+
+    ef3xfer_log_printf("Verifying...  ");
+    for (ts.track = 1; ts.track <= n_num_tracks; ++ts.track)
+    {
+        ef3xfer_log_printf(".");
+        if (check_c64_response(&st))
+        {
+            ef3xfer_read_from_ftdi(checksums, 256);
+            decode_headers_in_checksums(checksums);
+            if (!check_headers(checksums, ts.track, disk_id) ||
+                !check_checksums(p_buffer, checksums, ts.track, disk_id))
+            {
+                s = 0;
+                ef3xfer_write_to_ftdi(&s, 1);
+                return 0;
+            }
+            s = 1;
+            ef3xfer_write_to_ftdi(&s, 1);
+        }
+    }
+    ef3xfer_log_printf("\n");
+
+    return 1;
+}
+
+/*****************************************************************************/
+/**
+ *
+ */
+int ef3xfer_d64_write(const char* p_filename, int drv, int do_format)
 {
     transfer_disk_status_t st;
     uint8_t     options[4];
+    uint8_t     disk_id[2];
     uint8_t*    p_buffer = NULL;
-    uint8_t*    p_gcr_buffer = NULL;
     int         n_tracks;
     long        file_size;
     int         ret = 0; // <= error
@@ -333,14 +575,11 @@ int ef3xfer_d64_write(const char* p_filename, int do_format)
     if (!p_buffer)
         goto cleanup_and_ret;
 
-    p_gcr_buffer = malloc(GCR_BPS);
-    if (!p_gcr_buffer)
-        goto cleanup_and_ret;
-
     fp = fopen(p_filename, "rb");
     if (fp == NULL)
     {
-        ef3xfer_log_printf("Error: Cannot open %s for reading\n", p_filename);
+        ef3xfer_log_printf("*** Error: Cannot open %s for reading\n",
+                p_filename);
         goto cleanup_and_ret;
     }
 
@@ -359,41 +598,50 @@ int ef3xfer_d64_write(const char* p_filename, int do_format)
     else
     {
         ef3xfer_log_printf(
-                "Error: Only d64 files with 35 or 40 tracks w/o error info "
+                "*** Error: Only d64 files with 35 or 40 tracks w/o error info "
                 "are supported currently (but I got %d bytes).\n", file_size);
         goto cleanup_and_ret;
     }
     ef3xfer_log_printf("Tracks: %d\n", n_tracks);
 
+    /* take disk ID from 18/0 */
+    disk_id[0] = p_buffer[a_track_offset_in_d64[17] * 256 + 0xa2];
+    disk_id[1] = p_buffer[a_track_offset_in_d64[17] * 256 + 0xa3];
+
     /* options for D64 write = drive number, do_format, n_tracks, 0 */
     memset(options, 0, sizeof(options));
-    options[0] = 8; // drive number
+    options[0] = drv;
     options[1] = do_format ? n_tracks : 0;
-    options[2] = rand() % 0xff; /* disk ID */
-    options[3] = rand() % 0xff; /* disk ID */
+    options[2] = disk_id[0];
+    options[3] = disk_id[1];
     if (!ef3xfer_write_to_ftdi(options, sizeof(options)))
-        goto cleanup_and_ret;
-
-    /* Wait for initial "OK" */
-    if (!check_c64_response(&st))
         goto cleanup_and_ret;
 
     if (do_format)
     {
-        ef3xfer_log_printf("Format ok, %d raw bytes on zone 1 (%5f rpm)\n",
+        ef3xfer_log_printf("Formatting... ");
+
+        if (!check_c64_response(&st))
+            goto cleanup_and_ret;
+
+        ef3xfer_log_printf("OK, %d raw bytes on zone 1 (%.1f rpm), ID %02x %02x\n",
                 st.data.data16,
-                (double)st.data.data16 / 7692.0 * 300.0);
+                (double)st.data.data16 / 7692.0 * 300.0,
+                disk_id[0], disk_id[1]);
     }
 
-    ret = send_d64(p_buffer, p_gcr_buffer, n_tracks);
+    ret = send_d64(p_buffer, n_tracks);
+    if (ret)
+        ret = verify_d64(p_buffer, n_tracks, disk_id);
+
+    if (ret)
+        ef3xfer_log_printf("OK\n");
 
 cleanup_and_ret:
     if (fp)
         fclose(fp);
     if (p_buffer)
         free(p_buffer);
-    if (p_gcr_buffer)
-        free(p_gcr_buffer);
 
     return ret;
 }

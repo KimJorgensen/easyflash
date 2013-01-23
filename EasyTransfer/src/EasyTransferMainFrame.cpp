@@ -76,8 +76,8 @@ EasyTransferMainFrame::EasyTransferMainFrame(wxFrame* parent, const wxString& ti
     m_pNotebook = new wxNotebook(pPanel, wxID_ANY);
     pOuterSizer->Add(m_pNotebook, 0, wxEXPAND | wxALL, 20);
 
-    /*m_pTabStartPRG = new TabStartPRG(m_pNotebook);
-    m_pNotebook->AddPage(m_pTabStartPRG, wxT("Start PRG"));*/
+    m_pTabStartPRG = new TabStartPRG(m_pNotebook);
+    m_pNotebook->AddPage(m_pTabStartPRG, wxT("Start PRG"));
 
     m_pTabWriteCRT = new TabWriteCRT(m_pNotebook);
     m_pNotebook->AddPage(m_pTabWriteCRT, wxT("Write CRT"));
