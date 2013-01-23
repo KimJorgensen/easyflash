@@ -1,5 +1,7 @@
 
 
+.importzp   tmp1
+
 .export     eload_recv
 
 .include "config.s"
@@ -18,6 +20,7 @@
 ;       flags
 ;
 ; =============================================================================
+.align 32
 eload_recv:
         ; $dd00: | D_in | C_in | D_out | C_out || A_out | RS232 | VIC | VIC |
         ; Note about the timing: After 50 cycles a PAL C64 is about 1 cycle
@@ -46,26 +49,26 @@ eload_recv:
         and #$03
         ; an 1 MHz drive sees this 6..12 us after [1], so we have dt = 9
         sta $dd00               ; t = 0
-        sta @eor+1              ; 4
+        sta tmp1                ; 3
 
         nop
         nop
         nop
         nop
-        nop                     ; 14
+        nop                     ; 13
 
         ; receive bits
-        lda $dd00               ; 18 - b0 b1
+        lda $dd00               ; 17 - b0 b1
         lsr
         lsr
-        eor $dd00               ; 26 - b2 b3
+        eor $dd00               ; 25 - b2 b3
         lsr
         lsr
-        eor $dd00               ; 34 - b4 b5
+        eor $dd00               ; 33 - b4 b5
         lsr
         lsr
 @eor:
-        eor #$00
+        eor tmp1
         eor $dd00               ; 44 - b6 b7
         rts
 
