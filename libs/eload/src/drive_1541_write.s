@@ -61,7 +61,9 @@ loop:
         dex
         beq write_sector
         dex
-        beq track_checksum
+        bne :+
+        jmp track_checksum
+:
 ret:
         rts                     ; leave overlay code
 
@@ -75,11 +77,19 @@ write_sector:
         ldy #gcr_overflow_size
         lda #<gcr_overflow_buff
         ldx #>gcr_overflow_buff
-        jsr drv_1541_recv            ; 69 bytes
-        jsr drv_1541_recv_to_buffer  ; 256 bytes (Y = 0 from prev call)
+        jsr drv_1541_recv           ; 69 bytes
+        jsr drv_1541_recv_to_buffer ; 256 bytes (Y = 0 from prev call)
 
         ; write
         jsr drv_1541_restore_orig_job
+
+        lda $1c00                   ; read port B
+        and #$10                    ; isolate bit for 'write protect'
+        bne @wprot_ok
+        lda #ELOAD_WRITE_PROTECTED
+        sec
+        bcs status_motor_off_ret
+@wprot_ok:
         jsr drv_1541_prepare_read
         jsr drv_1541_search_header
         bcs status_motor_off_ret ; error: code in A already
@@ -259,6 +269,7 @@ checksum16:
         inx
         stx buff_ptr
         rts
+
 
 
 drive_code_1541_write_size  = * - drive_code_1541_write_start
