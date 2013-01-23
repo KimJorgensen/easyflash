@@ -16,8 +16,12 @@
 #define DISK_STATUS_VERIFY_ERR       0x07 /* Verify error */
 #define DISK_STATUS_WRITE_PROTECTED  0x08 /* Disk write protected */
 #define DISK_STATUS_HEADER_CHK_ERR   0x09 /* Checksum error in header block */
-#define DISK_STATUS_ID_MISMATCH      0x0b /* Id mismatch */
+#define DISK_STATUS_ID_MISMATCH      0x0b /* ID mismatch */
 #define DISK_STATUS_NO_DISK          0x0f /* Disk not inserted */
+/* Additional error codes */
+#define DISK_STATUS_ADDITIONAL_ERRORS 0x80 /* Marker */
+#define DISK_STATUS_DRV_WRONG        0xfd /* Drive type not supported */
+#define DISK_STATUS_DRV_NOT_FOUND    0xfe /* Drive not found */
 #define DISK_STATUS_UNKNOWN          0xff
 
 /**
@@ -49,6 +53,11 @@ int eload_read_byte(void);
 unsigned int __fastcall__ eload_read(void* buffer, unsigned int size);
 
 /**
+ * Receive a block of data.
+ */
+void __fastcall__ eload_recv_block(uint8_t* addr, uint8_t size);
+
+/**
  * Receive the status bytes for the previous asynchronous job, e.g. for
  * eload_write_sector. status must point to 4 bytes of memory.
  */
@@ -71,5 +80,6 @@ void eload_prepare_drive(void);
 void __fastcall__ eload_write_sector(unsigned ts, uint8_t* block);
 void __fastcall__ eload_write_sector_nodma(unsigned ts, uint8_t* block);
 void __fastcall__ eload_format(uint8_t n_tracks, uint16_t id);
+void __fastcall__ eload_checksum(uint8_t n_track);
 
 #endif /* ELOAD_H_ */
