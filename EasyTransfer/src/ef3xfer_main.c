@@ -53,7 +53,7 @@ static void usage(const char* p_str_prg)
            "  -x FILE  --exec FILE      Send a PRG file and execute it\n"
            "  -w FILE  --write FILE     Write a disk image (d64)\n"
            "\nOptions to be used with --write-disk:\n"
-           "           --no-format      Do not format disk before write\n"
+           /*"           --no-format      Do not format disk before write\n"*/
            "  -d NUM   --drive          Drive number to be used (8)\n"
            "\n"
           );
