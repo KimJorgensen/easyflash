@@ -19,7 +19,7 @@ int ef3xfer_read_from_ftdi(void* p_buffer, int size);
 
 int ef3xfer_write_to_ftdi(const void* p_buffer, int size);
 
-int ef3xfer_d64_write(const char* p_filename, int do_format);
+int ef3xfer_d64_write(const char* p_filename, int drv, int do_format);
 
 
 #endif /* EF3XFER_INTERNAL_H_ */

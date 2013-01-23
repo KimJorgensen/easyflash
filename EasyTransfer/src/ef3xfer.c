@@ -209,14 +209,6 @@ int ef3xfer_transfer_prg(const char* p_filename, int b_exec)
 
     fclose(fp);
     ef3xfer_log_printf("\nOK\n\n");
-
-    if (b_exec)
-    {
-        if (start[0] == 0x01 && start[1] == 0x08)
-            return ef3xfer_transfer_keys("<SHIFT-RETURN>run:<RETURN>");
-        else
-            return ef3xfer_transfer_sys(start[1] * 256 + start[0]);
-    }
     return 1;
 
 close_and_err:
