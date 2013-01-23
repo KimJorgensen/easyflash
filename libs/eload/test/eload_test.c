@@ -117,7 +117,6 @@ static void write_all_sectors(void)
 
             eload_write_sector_nodma((t << 8) | s, gcr);
             eload_recv_block(status, 3);
-            *((uint8_t*)0x0400 + 10 * 40 + s) = '0' + status[0];
         }
     }
 
@@ -216,7 +215,7 @@ static void test_format(void)
 static void test_checksums(void)
 {
     uint8_t n_track;
-    unsigned i;
+    unsigned i, pos, pass;
 
     if (init_eload() == 0)
         return;
@@ -234,19 +233,29 @@ static void test_checksums(void)
 
     write_all_sectors();
 
-
-    for (n_track = 1; n_track <= 35; ++n_track)
+    for (pass = 1; pass < 10; ++pass)
     {
-        eload_checksum(n_track);
-        eload_recv_block(status, 3);
-        if (status[0] == DISK_STATUS_OK)
+        printf("Verify pass %d\n", pass);
+        for (n_track = 1; n_track <= 35; ++n_track)
         {
-            eload_recv_block(block, 0);
-            printf("Track %d: %02x %02x %02x %02x \n", n_track,
-                    block[10], block[12+10], block[24+10], block[36+10]);
+            eload_checksum(n_track);
+            eload_recv_block(status, 3);
+            if (status[0] == DISK_STATUS_OK)
+            {
+                eload_recv_block(block, 0);
+                for (pos = 10; pos < 21 * 12 + 10; pos += 12)
+                {
+                    if (block[pos] != 0xcd || block[pos + 1] != 0x40)
+                    {
+                        printf("Track %d, pos %d: %02x %02x\n",
+                                n_track, pos,
+                                block[pos], block[pos + 1]);
+                    }
+                }
+            }
+            else
+                printf("Error received\n");
         }
-        else
-            return;
     }
     wait_key();
 }
