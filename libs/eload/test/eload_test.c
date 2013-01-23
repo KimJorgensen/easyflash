@@ -33,6 +33,10 @@
 
 #include "eload.h"
 
+static uint8_t status[3];
+static uint8_t block[256];
+static uint8_t gcr[325];
+
 // from gcr.s:
 void __fastcall__ convert_block_to_gcr(uint8_t* p_dst, uint8_t* p_src);
 
@@ -63,9 +67,12 @@ static void wait_key(void)
 
 
 
-static unsigned init_eload(uint8_t drv)
+static unsigned init_eload(void)
 {
     unsigned type;
+    uint8_t drv;
+
+    drv = get_drive_number();
 
     type = eload_set_drive_check_fastload(drv);
     printf("\n\nDrive type found: 0x%02x\n", type);
@@ -89,20 +96,41 @@ static uint8_t sectors_on_track(uint8_t t)
     return 21;
 }
 
+/* write the current GCR sector to the whole disk */
+static void write_all_sectors(void)
+{
+    uint8_t t, s, lim, rest, interleave;
+
+    // disable VIC-II DMA
+    VIC.ctrl1 &= 0xef;
+    while (VIC.rasterline != 255)
+    {}
+
+    for (t = 1; t < 36; ++t)
+    {
+        interleave = 4;
+        lim = sectors_on_track(t);
+
+        for (s = 0; s < lim; ++s)
+        {
+            /* fixme: hier fehlt was! Interleave! */
+
+            eload_write_sector_nodma((t << 8) | s, gcr);
+            eload_recv_block(status, 3);
+            *((uint8_t*)0x0400 + 10 * 40 + s) = '0' + status[0];
+        }
+    }
+
+    // enable VIC-II DMA
+    VIC.ctrl1 |= 0x10;
+}
+
 static void test_write_sector(void)
 {
-    static uint8_t block[256];
-    static uint8_t gcr[325];
-    static uint8_t status[3];
-    uint8_t drv, t, s, lim, rest, interleave;
     unsigned i;
 
-    drv = get_drive_number();
-
-    if (init_eload(drv) == 0)
-    {
+    if (init_eload() == 0)
         return;
-    }
 
     for (i = 0; i < 256; ++i)
     {
@@ -110,36 +138,8 @@ static void test_write_sector(void)
     }
     convert_block_to_gcr(gcr, block);
 
-    // disable VIC-II DMA
-    VIC.ctrl1 &= 0xef;
-    while (VIC.rasterline != 255)
-    {}
-
     eload_prepare_drive();
-
-    for (t = 1; t < 36; ++t)
-    {
-        interleave = 4;
-        lim = sectors_on_track(t);
-
-        s = 0;
-        for (rest = lim; rest; --rest)
-        {
-	        /* fixme: hier fehlt was! */
-            s += interleave;
-
-            if (s >= lim)
-                s = s - lim;
-
-            eload_write_sector_nodma((t << 8) | s, gcr);
-            eload_recv_status(status);
-            *((uint8_t*)0x0400 + 10 * 40 + s) = '0' + status[0];
-        }
-    }
-
-    // enable VIC-II DMA
-    VIC.ctrl1 |= 0x10;
-
+    write_all_sectors();
     eload_close();
 }
 
@@ -149,16 +149,11 @@ static void test_read_sector(void)
 {
     static uint8_t block[256];
     static uint8_t gcr[325];
-    static uint8_t status[3];
-    uint8_t drv, t, s, lim, rest, interleave;
+    uint8_t t, s, lim, rest, interleave;
     unsigned i;
 
-    drv = get_drive_number();
-
-    if (init_eload(drv) == 0)
-    {
+    if (init_eload() == 0)
         return;
-    }
 
     // disable VIC-II DMA
     SEI();
@@ -182,11 +177,12 @@ static void test_read_sector(void)
             if (s >= lim)
                 s = s - lim;
 
-            eload_read_gcr_sector((t << 8) | s);
-            eload_recv_status(status);
+            // todo
+            // eload_read_gcr_sector((t << 8) | s);
+            eload_recv_block(status, 3);
             if (status[0] == DISK_STATUS_OK)
             {
-                eload_recv_gcr_sector_nodma(gcr);
+                // todo eload_recv_gcr_sector_nodma(gcr);
             }
         }
     }
@@ -201,25 +197,57 @@ static void test_read_sector(void)
 
 static void test_format(void)
 {
-    static uint8_t status[3];
-    uint8_t drv;
-
-    drv = get_drive_number();
-
-    if (init_eload(drv) == 0)
-    {
+    if (init_eload() == 0)
         return;
-    }
 
     eload_prepare_drive();
 
     puts("formatting...");
     eload_format(40, 0x1234);
-    eload_recv_status(status);
+    eload_recv_block(status, 3);
     printf("result: %d, %d\n", status[0],
            status[1] | (status[2] << 8));
 
     eload_close();
+    wait_key();
+}
+
+
+static void test_checksums(void)
+{
+    uint8_t n_track;
+    unsigned i;
+
+    if (init_eload() == 0)
+        return;
+
+    eload_prepare_drive();
+
+    for (i = 0; i < 256; ++i)
+    {
+        block[i] = 0;
+    }
+    convert_block_to_gcr(gcr, block);
+
+    eload_format(35, 0x1234);
+    eload_recv_block(status, 3);
+
+    write_all_sectors();
+
+
+    for (n_track = 1; n_track <= 35; ++n_track)
+    {
+        eload_checksum(n_track);
+        eload_recv_block(status, 3);
+        if (status[0] == DISK_STATUS_OK)
+        {
+            eload_recv_block(block, 0);
+            printf("Track %d: %02x %02x %02x %02x \n", n_track,
+                    block[10], block[12+10], block[24+10], block[36+10]);
+        }
+        else
+            return;
+    }
     wait_key();
 }
 
@@ -235,12 +263,15 @@ int main(void)
         puts(" F : Low level format (no directory)");
         puts(" W : Write sectors");
         puts(" R : Read sectors");
+        puts(" C : Checksums");
 
         key = cgetc();
         if (key == 'w')
             test_write_sector();
         if (key == 'r')
             test_read_sector();
+        if (key == 'c')
+            test_checksums();
         else if (key == 'f')
             test_format();
 
