@@ -80,9 +80,16 @@ timeout:
         and #$f7                ; LED off
         sta $1c00
         lda #ELOAD_ERR_NO_SYNC
-        jmp send_status_and_loop
+        bne send_status_and_loop
 
 format_disk:
+        lda $1c00                   ; read port B
+        and #$10                    ; isolate bit for 'write protect'
+        bne @wprot_ok
+        lda #ELOAD_WRITE_PROTECTED
+        bne send_status_and_loop
+@wprot_ok:
+
         ; buffer content: | eload-job 2 | tracks | id1 | id2 |
         ldx buffer + 1
         inx

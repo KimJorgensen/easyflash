@@ -209,8 +209,7 @@ drv_1541_prepare_read:
 
         jsr $fe00               ; head to read mode
 activate_soe:
-        lda $1c0c
-        ora #$0e
+        lda #$ee
         sta $1c0c               ; activate SOE (byte ready)
         rts
 
