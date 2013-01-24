@@ -65,6 +65,8 @@ void* WorkerThread::Entry()
         ef3xfer_transfer_crt(m_stringInputFileName.mb_str());
     else if (m_stringTransferType == _("PRG"))
         ef3xfer_transfer_prg(m_stringInputFileName.mb_str(), 1);
+    else if (m_stringTransferType == _("D64"))
+        ef3xfer_d64_write(m_stringInputFileName.mb_str(), m_nDriveNumber, 1);
     LogComplete();
 
     return NULL;
@@ -95,7 +97,7 @@ void WorkerThread::LogComplete(void)
 /*
  * Tell the main thread that we're done.
  */
-void WorkerThread::LogProgress(int percent)
+void WorkerThread::LogProgress(int percent, int b_gui_only)
 {
     if (percent < 0)
         percent = 0;

@@ -37,6 +37,7 @@ public:
 
     void SetFileName(const wxString& str);
     void SetTransferType(const wxString& str);
+    void SetDriveNumber(int nDriveNumber);
 
     static WorkerThread* m_pTheWorkerThread;
 protected:
@@ -44,11 +45,12 @@ protected:
 
     static void LogComplete(void);
     static void LogText(const char* pStr);
-    static void LogProgress(int percent);
+    static void LogProgress(int percent, int b_gui_only);
 
     wxEvtHandler* m_pEventHandler;
     wxString m_stringInputFileName;
     wxString m_stringTransferType;
+    int      m_nDriveNumber;
 };
 
 /*****************************************************************************/
@@ -61,6 +63,12 @@ inline void WorkerThread::SetFileName(const wxString& str)
 inline void WorkerThread::SetTransferType(const wxString& str)
 {
     m_stringTransferType = str;
+}
+
+/*****************************************************************************/
+inline void WorkerThread::SetDriveNumber(int nDriveNumber)
+{
+    m_nDriveNumber = nDriveNumber;
 }
 
 #endif /* WORKERTHREAD_H_ */

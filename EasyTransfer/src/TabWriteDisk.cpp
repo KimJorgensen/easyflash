@@ -19,6 +19,9 @@ TabWriteDisk::TabWriteDisk(wxWindow* parent) :
 {
     wxFlexGridSizer*    pMainSizer;
     wxStaticText*       pText;
+    wxString            str;
+    wxArrayString       choices;
+    int                 i;
 
     pMainSizer = new wxFlexGridSizer(5, 2, 8, 8);
     pMainSizer->AddGrowableCol(1);
@@ -33,6 +36,20 @@ TabWriteDisk::TabWriteDisk(wxWindow* parent) :
             wxFLP_USE_TEXTCTRL | wxFLP_OPEN | wxFLP_FILE_MUST_EXIST);
     m_pInputFilePicker->SetMinSize(wxSize(300, m_pInputFilePicker->GetMinSize().GetHeight()));
     pMainSizer->Add(m_pInputFilePicker, 1, wxEXPAND | wxALL, 10);
+
+    // Drive number
+    pText = new wxStaticText(this, wxID_ANY, _("Drive Number"));
+    pMainSizer->Add(pText, 0,
+                    wxALIGN_CENTER_VERTICAL | wxALIGN_RIGHT | wxALL, 10);
+    for (i = 8; i < 16; ++i)
+    {
+        str = wxString::Format(_("Drive %d"), i);
+        choices.Add(str);
+    }
+    m_pDriveNumberChoice = new wxChoice(this, wxID_ANY,
+            wxDefaultPosition, wxDefaultSize, choices);
+    m_pDriveNumberChoice->Select(0);
+    pMainSizer->Add(m_pDriveNumberChoice, 1, wxALIGN_CENTER, 10);
 
     SetSizer(pMainSizer);
     pMainSizer->SetSizeHints(this);
@@ -51,5 +68,6 @@ void TabWriteDisk::OnButton(wxCommandEvent& event)
 
     pWorkerThread->SetFileName(m_pInputFilePicker->GetPath());
     pWorkerThread->SetTransferType(_("D64"));
+    pWorkerThread->SetDriveNumber(m_pDriveNumberChoice->GetSelection() + 8);
     pMainFrame->DoIt();
 }

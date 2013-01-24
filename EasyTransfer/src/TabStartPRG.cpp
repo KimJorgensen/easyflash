@@ -23,7 +23,7 @@ TabStartPRG::TabStartPRG(wxWindow* parent) :
     pMainSizer->AddGrowableCol(1);
 
     // Input file
-    pText = new wxStaticText(this, wxID_ANY, _("Input File"));
+    pText = new wxStaticText(this, wxID_ANY, _("Program File"));
     pMainSizer->Add(pText, 0,
                     wxALIGN_CENTER_VERTICAL | wxALIGN_RIGHT | wxALL, 10);
 
