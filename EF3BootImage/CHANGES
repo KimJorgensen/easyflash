@@ -1,5 +1,11 @@
 
-Version 1.0.3 - 07.01.2012
+Version 1.1.0 - xx.xx.2013
+- Menu: <Shift> leads to additional menu entries
+- <Shift>+V to display version numbers
+- D64 writer and PRG starter added
+- Contains EasyProg 1.7.0
+
+Version 1.0.4 - 07.01.2012
 - Contains EasyProg 1.6.3
 - Menu entries are also greyed out if the slot contains a torture test pattern
 
