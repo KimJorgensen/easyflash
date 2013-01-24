@@ -20,11 +20,11 @@ int main(void)
 {
     const char* p_str_cmd;
 
-    puts("USB tool started");
+    puts("USB Tool started");
 
     for (;;)
     {
-        puts("Waiting for command from USB...");
+        puts("\nWaiting for command from USB...");
         do
         {
             p_str_cmd = ef3usb_check_cmd();
