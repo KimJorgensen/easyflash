@@ -198,7 +198,6 @@ start_program_bank = * + 1
         bne @copy
         inc ptr1 + 1                    ; inc high byte of target
         inc ptr2 + 1
-        inc $d020
         lda ptr2 + 1
         cmp #$c0                        ; wrap $c000 => $8000
         bne @noBankInc
