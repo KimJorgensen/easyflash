@@ -31,7 +31,7 @@
 
 static void usage(const char* p_str_prg);
 static void log_str_stdout(const char* str);
-static void log_progress_stdout(int percent);
+static void log_progress_stdout(int percent, int b_gui_only);
 static void log_complete_stdout(void);
 
 /*****************************************************************************/
@@ -71,8 +71,11 @@ static void log_str_stdout(const char* str)
 /*****************************************************************************/
 /*
  */
-static void log_progress_stdout(int percent)
+static void log_progress_stdout(int percent, int b_gui_only)
 {
+    if (b_gui_only)
+        return;
+
     if (percent < 0)
         percent = 0;
     if (percent > 100)

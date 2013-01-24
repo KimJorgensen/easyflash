@@ -166,6 +166,46 @@ static void drive_gcr_decode(uint8_t* dst, const uint8_t* src)
 
 /*****************************************************************************/
 /**
+ * Report the progress in percent.
+ *
+ * phase        0 = 0%
+ *              1 = format (track information ignored) ~ 10 seconds
+ *              2 = write (plus track info) ~ 30 seconds
+ *              3 = verify (plus track info) ~ 10 seconds
+ * n_tracks     total number of tracks 35+
+ * n_track      current track 1..35+
+ */
+static void progress(int phase, int n_tracks, int n_track)
+{
+    int percent;
+
+    --n_tracks;
+    --n_track;
+
+    switch (phase)
+    {
+    case 0:
+        percent = 0;
+        break;
+
+    case 1: /* format = 20% */
+        percent = 5; /* mhh */
+        break;
+
+    case 2: /* write = 60% */
+        percent = (int)(20.0 + (double)n_track * 60.0 / (double)(n_tracks));
+        break;
+
+    default: /* verify = 20% */
+        percent = (int)(80.0 + (double)n_track * 20.0 / (double)(n_tracks));
+        break;
+    }
+    ef3xfer_log_progress(percent, 1);
+}
+
+
+/*****************************************************************************/
+/**
  * Calculate and return an EOR checksum of the given data.
  *
  */
@@ -357,6 +397,7 @@ static int send_d64(uint8_t* p_buffer,
     for (ts.track = 1; ts.track <= n_num_tracks; ++ts.track)
     {
         ef3xfer_log_printf("%d", ts.track % 10);
+        progress(2, n_num_tracks, ts.track);
 
         n_sectors_left = a_sectors_per_track[ts.track - 1];
         n_sectors = n_sectors_left;
@@ -535,7 +576,9 @@ static int verify_d64(uint8_t* p_buffer,
     ef3xfer_log_printf("Verifying...  ");
     for (ts.track = 1; ts.track <= n_num_tracks; ++ts.track)
     {
-        ef3xfer_log_printf(".");
+        ef3xfer_log_printf("%d", ts.track % 10);
+        progress(3, n_num_tracks, ts.track);
+
         if (check_c64_response(&st))
         {
             ef3xfer_read_from_ftdi(checksums, 256);
@@ -570,6 +613,8 @@ int ef3xfer_d64_write(const char* p_filename, int drv, int do_format)
     long        file_size;
     int         ret = 0; // <= error
     FILE*       fp = NULL;
+
+    progress(0, 0, 0);
 
     p_buffer = malloc(D64_BUFFER_SIZE);
     if (!p_buffer)
@@ -620,6 +665,7 @@ int ef3xfer_d64_write(const char* p_filename, int drv, int do_format)
     if (do_format)
     {
         ef3xfer_log_printf("Formatting... ");
+        progress(1, 0, 0);
 
         if (!check_c64_response(&st))
             goto cleanup_and_ret;
@@ -642,6 +688,7 @@ cleanup_and_ret:
         fclose(fp);
     if (p_buffer)
         free(p_buffer);
+    ef3xfer_disconnect_ftdi();
 
     return ret;
 }

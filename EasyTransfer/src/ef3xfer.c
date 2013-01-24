@@ -44,13 +44,13 @@ static int send_file(FILE* fp);
 /* function pointers which can be overridden from external apps */
 static void (*log_str)(const char* str);
 static void (*log_complete)(void);
-static void (*log_progress)(int percent);
+static void (*log_progress)(int percent, int b_gui_only);
 static void ef3xfer_msleep(unsigned msecs);
 
 /*****************************************************************************/
 void ef3xfer_set_callbacks(
         void (*custom_log_str)(const char* str),
-        void (*custom_log_progress)(int percent),
+        void (*custom_log_progress)(int percent, int b_gui_only),
         void (*custom_log_complete)(void))
 {
     log_str      = custom_log_str;
@@ -95,79 +95,11 @@ int ef3xfer_transfer_crt(const char* p_filename)
     return 1;
 
 close_and_err:
+    ef3xfer_disconnect_ftdi();
     fclose(fp);
     return 0;
 }
 
-/*****************************************************************************/
-int ef3xfer_transfer_keys(const char* keys)
-{
-    int     len, i, n_out, ret, subst_len;
-    char    key, out[11];
-    const str_to_key_t* p_tab;
-
-    if (keys == NULL)
-    {
-        ef3xfer_log_printf("Missing keys to be sent.\n");
-        return 0;
-    }
-
-    len = strlen(keys);
-
-    if (!ef3xfer_connect_ftdi())
-        return 0;
-
-    i = 0;
-    while (i < len)
-    {
-        /* send up to 10 keys at once */
-        n_out = 0;
-        while (n_out < 10 && i < len)
-        {
-            // check for entities which must be replaced by single keys
-            key = 0;
-            p_tab = str_to_key;
-            while (p_tab->str)
-            {
-                subst_len = strlen(p_tab->str);
-                if (strncmp(p_tab->str, keys + i, subst_len) == 0)
-                {
-                    key = p_tab->key;
-                    i += subst_len;
-                    break;
-                }
-                p_tab++;
-            }
-            if (key == 0)
-            {
-                key = keys[i++];
-                /* code conversion */
-                if (key >= 'A' && key <= 'Z')
-                    key = 193 + key - 'A';
-                else if (key >= 'a' && key <= 'z')
-                    key = 65 + key - 'a';
-            }
-            out[1 + n_out++] = key;
-        }
-
-        if (n_out)
-        {
-            out[0] = n_out;
-            if (!ef3xfer_do_handshake("KEY"))
-                return 0;
-
-            ret = ef3xfer_write_to_ftdi(out, 1 + n_out);
-            if (ret != 1 + n_out)
-                return 0;
-
-            if (i < len)
-                ef3xfer_msleep(50);
-        }
-    }
-
-    ef3xfer_log_printf("\nOK\n\n");
-    return 1;
-}
 
 /*****************************************************************************/
 int ef3xfer_transfer_prg(const char* p_filename, int b_exec)
@@ -212,16 +144,9 @@ int ef3xfer_transfer_prg(const char* p_filename, int b_exec)
     return 1;
 
 close_and_err:
+    ef3xfer_disconnect_ftdi();
     fclose(fp);
     return 0;
-}
-
-/*****************************************************************************/
-int ef3xfer_transfer_sys(unsigned addr)
-{
-    char str[40];
-    sprintf(str, "<SHIFT-RETURN>sys%u:<RETURN>", addr);
-    return ef3xfer_transfer_keys(str);
 }
 
 
@@ -265,6 +190,15 @@ void ef3xfer_log_printf(const char* p_str_format, ...)
 /**
  *
  */
+void ef3xfer_log_progress(int percent, int b_gui_only)
+{
+    log_progress(percent, b_gui_only);
+}
+
+/*****************************************************************************/
+/**
+ *
+ */
 int ef3xfer_connect_ftdi(void)
 {
     int ret;
@@ -286,6 +220,16 @@ int ef3xfer_connect_ftdi(void)
     ftdi_usb_purge_buffers(&m_ftdic);
 
     return 1;
+}
+
+
+/*****************************************************************************/
+/**
+ *
+ */
+void ef3xfer_disconnect_ftdi(void)
+{
+    ftdi_usb_close(&m_ftdic);
 }
 
 
@@ -523,7 +467,7 @@ static int send_file(FILE* fp)
             }
         }
         // todo: check overhead
-        log_progress((int)(100 * (ftell(fp) + 1) / size_file));
+        log_progress((int)(100 * (ftell(fp) + 1) / size_file), 0);
     }
     while (n_bytes_req > 0);
 

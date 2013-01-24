@@ -82,8 +82,8 @@ EasyTransferMainFrame::EasyTransferMainFrame(wxFrame* parent, const wxString& ti
     m_pTabWriteCRT = new TabWriteCRT(m_pNotebook);
     m_pNotebook->AddPage(m_pTabWriteCRT, wxT("Write CRT"));
 
-    /*m_pTabWriteDisk = new TabWriteDisk(m_pNotebook);
-    m_pNotebook->AddPage(m_pTabWriteDisk, wxT("Write Disk"));*/
+    m_pTabWriteDisk = new TabWriteDisk(m_pNotebook);
+    m_pNotebook->AddPage(m_pTabWriteDisk, wxT("Write Disk"));
 
     pMainSizer = new wxFlexGridSizer(5, 2, 8, 8);
     pMainSizer->AddGrowableCol(1);

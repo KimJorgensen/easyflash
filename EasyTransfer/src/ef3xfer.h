@@ -16,16 +16,14 @@ extern "C" {
 
 void ef3xfer_set_callbacks(
         void (*custom_log_str)(const char* str),
-        void (*custom_log_progress)(int percent),
+        void (*custom_log_progress)(int percent, int b_gui_only),
         void (*custom_log_complete)(void));
 
 int ef3xfer_transfer_crt(const char* p_filename);
 
-int ef3xfer_transfer_keys(const char* keys);
-
 int ef3xfer_transfer_prg(const char* p_filename, int b_exec);
 
-int ef3xfer_transfer_sys(unsigned addr);
+int ef3xfer_d64_write(const char* p_filename, int drv, int do_format);
 
 #ifdef __cplusplus
 }

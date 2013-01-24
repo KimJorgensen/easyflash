@@ -23,6 +23,7 @@ protected:
     void OnButton(wxCommandEvent& event);
 
     wxFilePickerCtrl*   m_pInputFilePicker;
+    wxChoice*           m_pDriveNumberChoice;
 
 };
 
