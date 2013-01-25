@@ -45,9 +45,11 @@ ifeq ($(win32), yes)
     host          := i686-w64-mingw32
     cxx           := $(host)-c++
     cc            := $(host)-gcc
+    windres       := $(host)-windres
     ldflags       += -static-libstdc++ -static-libgcc
     outbase       := $(top_dir)/out_win32
     archive_fmt   := zip
+    icon_resize   := -resize 32x32
 else
     app_name      := easytransfer
     ef3xfer_name  := ef3xfer
@@ -58,6 +60,7 @@ else
     cxxlibs       += $(shell wx-config --libs) -lftdi -lpthread
     clibs         += -lftdi 
     archive_fmt   := tar.bz2
+    icon_resize   :=
 endif
 
 archive_dir   := $(top_dir)/archive
@@ -180,6 +183,7 @@ outres  := $(addprefix $(outdir)/res/, $(res))
 
 ifeq "$(win32)" "yes"
 outdoc  := $(addsuffix .txt, $(addprefix $(outdir)/, $(doc)))
+obj     += $(objdir)/EasyTransfer.res.o
 else
 outdoc  := $(addprefix $(outdir)/, $(doc))
 endif
@@ -219,7 +223,6 @@ ef3xfer: $(outdir)/$(ef3xfer_name)
 $(outdir)/$(ef3xfer_name): $(ef3xfer_obj) | $(outdir) pre_deps
 	$(cc) $(ldflags) $(cflags) -o $@ $(ef3xfer_obj) $(clibs)
 
-
 $(outdir) $(objdir):
 	mkdir -p $@
 
@@ -229,8 +232,11 @@ $(objdir)/%.o: $(srcdir)/%.cpp $(headers) | $(objdir) pre_deps
 $(objdir)/%.o: $(srcdir)/%.c $(headers) | $(objdir) pre_deps
 	$(cc) -c $(cflags) -o $@ $<
 
+$(objdir)/%.res.o: $(srcdir)/%.rc | $(objdir) pre_deps
+	$(windres) -I $(objdir) $< $@
+
 $(objdir)/%.xpm: $(srcdir)/../res/%.png | $(objdir) pre_deps
-	convert $< $@.tmp.xpm
+	convert $(icon_resize) $< $@.tmp.xpm
 	cat $@.tmp.xpm | sed "\
 			s/static char/static const char/;\
 			s/[\._]tmp//;\
@@ -245,6 +251,11 @@ $(outdir)/%.txt: $(srcdir)/../%
 
 #$(outbase)/$(prj_name)/mingwm10.dll: /usr/share/doc/mingw32-runtime/mingwm10.dll.gz
 #	gunzip -c $^ > $@
+
+$(objdir)/EasyTransfer.res.o: $(objdir)/easytransfer.ico
+
+$(objdir)/%.ico: $(srcdir)/../res/%.png | $(objdir) pre_deps
+	convert $< $@
 
 $(outdir)/%.dll: $(tmp_install)/bin/%.dll pre_deps
 	cp $< $@
