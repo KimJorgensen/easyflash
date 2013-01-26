@@ -90,6 +90,7 @@ int ef3xfer_transfer_crt(const char* p_filename)
     if (!send_file(fp))
         goto close_and_err;
 
+    ef3xfer_disconnect_ftdi();
     fclose(fp);
     ef3xfer_log_printf("\nOK\n\n");
     return 1;
@@ -139,6 +140,7 @@ int ef3xfer_transfer_prg(const char* p_filename, int b_exec)
     if (!send_file(fp))
         goto close_and_err;
 
+    ef3xfer_disconnect_ftdi();
     fclose(fp);
     ef3xfer_log_printf("\nOK\n\n");
     return 1;
