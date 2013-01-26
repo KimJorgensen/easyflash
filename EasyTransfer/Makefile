@@ -61,6 +61,21 @@ else
     clibs         += -lftdi 
     archive_fmt   := tar.bz2
     icon_resize   :=
+
+	# Where to install on "make install"?
+	PREFIX        := /usr/local
+
+	bin_inst_dir  := $(PREFIX)/bin
+	res_inst_dir  := $(PREFIX)/share
+	doc_inst_dir  := $(PREFIX)/share/doc
+	desktop_inst_dir := $(PREFIX)/share/applications
+
+	check_uninstall += $(desktop_inst_dir)/$(app_name).desktop
+	check_uninstall += $(res_inst_dir)/$(app_name)
+	check_uninstall += $(doc_inst_dir)/$(app_name)
+	check_uninstall += $(bin_inst_dir)/$(app_name)
+	check_uninstall += $(bin_inst_dir)/$(ef3xfer_name)
+	uninstall_entries := $(sort $(foreach x,$(check_uninstall),$(wildcard $(x))))
 endif
 
 archive_dir   := $(top_dir)/archive
@@ -272,3 +287,51 @@ $(outdir)/%.tar.gz: $(archive_dir)/%.tar.gz
 .PHONY: clean
 clean:
 	rm -rf $(outbase)
+
+###############################################################################
+#
+# Install the application
+#
+.PHONY: install
+install: all
+ifneq "$(shell id -u)" "0"
+	@echo 'If it fails you may want to try again as root'
+	@echo
+endif
+	mkdir -p $(bin_inst_dir)
+	cp $(outdir)/$(app_name) $(bin_inst_dir)
+	cp $(outdir)/$(ef3xfer_name) $(bin_inst_dir)
+	mkdir -p $(res_inst_dir)/$(app_name)
+	cp -r $(outdir)/res $(res_inst_dir)/$(app_name)
+	mkdir -p $(doc_inst_dir)/$(app_name)
+	cp $(outdoc) $(doc_inst_dir)/$(app_name)
+	mkdir -p $(desktop_inst_dir)
+	cp $(srcdir)/../res/$(app_name).desktop $(desktop_inst_dir)
+	@echo Done.
+
+###############################################################################
+#
+# Uninstall the application
+#
+.PHONY: uninstall
+uninstall:
+ifeq "$(strip $(uninstall_entries))" ""
+	@echo
+	@echo '### No installed files found. ###'
+	@echo
+	@echo 'If you think this is wrong, use the right prefix:'
+	@echo '    make PREFIX=<prefix> clean'
+	@echo
+else
+	@echo ''
+	@echo 'Following files and directories will be deleted:'
+	@echo $(uninstall_entries)
+ifneq "$(shell id -u)" "0"
+	@echo 'If it fails you may want to try again as root'
+endif
+	@echo
+	@echo '### Are you sure that you want to delete them? (y|n)'
+	@read ans && test "$${ans}" = "y" || kill 0
+	rm -rf $(uninstall_entries)
+	@echo Done.
+endif

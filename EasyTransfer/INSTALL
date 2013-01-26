@@ -16,11 +16,11 @@ Linux and similar systems
 
    make ef3xfer
 
-3. NOT WORKING YET: install it (optional, as root) using this command:
+3. Install it (optional, as root) using this command:
 
    sudo make install
 
-Step 3 should even create a menu entry for Gnome, KDE or Xfce.
+Step 3 should create a menu entry for Gnome, KDE or Xfce.
 
 Windows
 =======
