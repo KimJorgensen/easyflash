@@ -34,8 +34,7 @@ reset:
         stx $d016
         jsr $ff84   ; Initialise I/O
 
-        ; These may not be needed - depending on what you'll do
-        jsr $ff87   ; Initialise System Constants
+        jsr init_system_constants_light ; faster replacement for $ff87
         jsr $ff8a   ; Restore Kernal Vectors
         jsr $ff81   ; Initialize screen editor
 
@@ -54,12 +53,46 @@ reset:
         sta sp + 1
 
         jsr initlib
+        cli
         jsr _main
 
 _exit:
         jsr donelib
 exit:
         jmp (reset_vector) ; reset, mhhh
+
+; ------------------------------------------------------------------------
+; faster replacement for $ff87
+init_system_constants_light:
+        ; from KERNAL @ FD50:
+        lda #$00
+        tay
+:
+        sta $0002,y
+        sta $0200,y
+        sta $0300,y
+        iny
+        bne :-
+        ldx #$3c
+        ldy #$03
+        stx $b2
+        sty $b3
+        tay
+
+        ; result from loop KERNAL @ FD6C:
+        lda #$00
+        sta $c1
+        sta $0283
+        lda #$a0
+        sta $c2
+        sta $0284
+
+        ; from KERNAL @ FD90:
+        lda #$08
+        sta $0282       ; pointer: bottom of memory for operating system
+        lda #$04
+        sta $0288       ; high byte of screen memory address
+        rts
 
 ; ------------------------------------------------------------------------
 ; This code is executed in Ultimax mode. It is called directly from the
