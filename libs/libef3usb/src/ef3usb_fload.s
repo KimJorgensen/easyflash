@@ -17,7 +17,8 @@ start_addr   = ptr4
 ; unsigned void* ef3usb_fload(void);
 ;
 ; Load a file from USB to its start address (taken from the first two bytes).
-; Return its start address. ptr1 contains the size on return.
+; Return its start address. ptr1 contains the size on return (without start
+; address).
 ;
 ; =============================================================================
 .proc   _ef3usb_fload
@@ -34,10 +35,16 @@ _ef3usb_fload:
 
         ; get number of bytes actually there
         wait_usb_rx_ok
-        ldx USB_DATA            ; low byte of transfer size
+        lda USB_DATA            ; low byte of transfer size
+        sec
+        sbc #2                  ; minus start address
+        tax
         stx size_zp
         wait_usb_rx_ok
         ldy USB_DATA            ; high byte of transfer size
+        bcs :+                  ; from sbc
+        dey
+:
         sty size_zp + 1
 
         bne @loadCont
@@ -53,7 +60,7 @@ _ef3usb_fload:
 
         txa
         clc
-        adc #3                  ; calc -size, add 2 more bytes (start addr)
+        adc #1                  ; calc -size
         sta xfer_size_zp
         lda xfer_size_zp + 1
         adc #0

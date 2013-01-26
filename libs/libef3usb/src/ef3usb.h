@@ -10,6 +10,8 @@
 
 #include <stdint.h>
 
+uint8_t ef3usb_is_floating(void);
+
 char* ef3usb_check_cmd(void);
 
 uint16_t __fastcall__ ef3usb_receive_data(void* buffer, uint16_t size);
