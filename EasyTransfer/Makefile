@@ -80,7 +80,7 @@ ifneq "$(release)" "yes"
 	version        := $(shell date +%y%m%d-%H%M)
 	version_suffix :=
 else
-	version        := 1.1.0pre1
+	version        := 1.1.0
 	version_suffix := -$(version)
 endif
 
