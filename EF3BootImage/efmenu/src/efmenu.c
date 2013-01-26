@@ -122,9 +122,11 @@ static efmenu_t all_shift_menus[] =
         {  0,  0,  0, NULL }
 };
 
+static uint8_t b_usb_jumpers_wrong;
 
 /******************************************************************************/
 static void show_version(void);
+static void show_jumper_warning(void);
 
 
 
@@ -225,6 +227,8 @@ static void show_menu(uint8_t shift)
         }
         ++menu;
     }
+    if (b_usb_jumpers_wrong)
+        show_jumper_warning();
 }
 
 
@@ -394,6 +398,17 @@ static void erase_text_areas(void)
 
 /******************************************************************************/
 /**
+ */
+static void show_jumper_warning(void)
+{
+    memset(P_GFX_BITMAP, 0, 320);
+    memset(P_GFX_COLOR, COLOR_RED << 4 | COLOR_BLACK, 40);
+    text_plot_puts(4, 0, 0, "*** Warning: Jumpers not in DATA position! ***");
+}
+
+
+/******************************************************************************/
+/**
  * Read the directory from the cartridge to our menu structures.
  * Return immediately if the signature cannot be found.
  */
@@ -465,6 +480,7 @@ void initNMI(void);
 int main(void)
 {
     init_screen();
+    b_usb_jumpers_wrong = ef3usb_is_floating();
     show_menu(shift_pressed());
 
 #if 0
