@@ -560,6 +560,24 @@ static int check_checksums(uint8_t* p_buffer,
     return 1;
 }
 
+static void dump_checksums(int n_track, uint8_t checksums[D64_MAX_SECTORS][12])
+{
+#ifdef DUMP_CHECKSUMS
+    int s, i, n_sectors;
+    uint8_t* p;
+
+    n_sectors = a_sectors_per_track[n_track - 1];
+    ef3xfer_log_printf("\nTrack %d:\n", n_track);
+    for (s = 0; s < n_sectors; ++s)
+    {
+        p = checksums[s];
+        ef3xfer_log_printf("%02d: i%02x e%02x s%02x t%02x %02x %02x  %02x %02x %02x %02x   %02x %02x\n",
+                s,
+                p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7], p[8], p[9],
+                p[10], p[11]);
+    }
+#endif
+}
 
 /*****************************************************************************/
 /**
@@ -583,6 +601,7 @@ static int verify_d64(uint8_t* p_buffer,
         {
             ef3xfer_read_from_ftdi(checksums, 256);
             decode_headers_in_checksums(checksums);
+            dump_checksums(ts.track, checksums);
             if (!check_headers(checksums, ts.track, disk_id) ||
                 !check_checksums(p_buffer, checksums, ts.track, disk_id))
             {
