@@ -137,18 +137,21 @@ status_motor_off_ret:
         bcs :+                  ; C set == error
         lda #ELOAD_OK
 :
-        ; send the return value from A and two bytes of status
-        jsr drv_1541_send
-        lda status
-        jsr drv_1541_send
-        lda status + 1
-        jsr drv_1541_send
+        jsr send_status
 motor_off_and_ret:
         jsr $f98f               ; prepare motor off (doesn't change C)
         lda $1c00
         and #$f7                ; LED off
         sta $1c00
         jmp loop
+
+send_status:
+        ; send the return value from A and two bytes of status
+        jsr drv_1541_send
+        lda job_track
+        jsr drv_1541_send
+        lda job_sector + 1
+        jmp drv_1541_send
 
 ; =============================================================================
 ;
@@ -204,11 +207,7 @@ track_checksum:
         ; fertig!
         ; send status
         lda #ELOAD_OK
-        jsr drv_1541_send
-        lda job_track
-        jsr drv_1541_send
-        lda job_sector
-        jsr drv_1541_send
+        jsr send_status
         ; send data block, always 256 bytes
         ldx #0
 @send_buffer:
