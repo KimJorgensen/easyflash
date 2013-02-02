@@ -318,16 +318,21 @@ drv_1541_move_head:
 ; =============================================================================
 .export drv_1541_move_head_direct
 drv_1541_move_head_direct:
+        cmp #0
+        beq @ret
         sta head_step_ctr
 @next_step:
         lda head_step_ctr
-        beq @ret                ; 0 => no steps
+        beq @delay_ret          ; 0 => no steps left
         jsr $fa2e               ; head step
-        ldy #7
-        jsr drv_delay
+        ldy #6
+        jsr drv_delay           ; ca. 8 ms per step (> 3)
         jmp @next_step
-@ret:
+@delay_ret:
         jsr activate_soe        ; deactivated by jsr $fa2e
+        ldy #23
+        jsr drv_delay           ; ca. 30 ms settle time (>= 15)
+@ret:
         rts
 
 .export drv_1541_bump
