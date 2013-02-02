@@ -1,6 +1,6 @@
 /*
  *
- * (c) 2011 Thomas Giesel
+ * (c) 2013 Thomas Giesel
  *
  * This software is provided 'as-is', without any express or implied
  * warranty.  In no event will the authors be held liable for any damages
@@ -182,7 +182,7 @@ int main(int argc, char** argv)
     if (p_crt_filename)
         return ef3xfer_transfer_crt(p_crt_filename);
     else if (p_exec_filename)
-        return ef3xfer_transfer_prg(p_exec_filename, 1);
+        return ef3xfer_transfer_prg(p_exec_filename);
     else if (p_write_filename)
         return ef3xfer_d64_write(p_write_filename, n_drv, 1);
 

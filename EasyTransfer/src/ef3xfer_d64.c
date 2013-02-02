@@ -1,3 +1,24 @@
+/*
+ * (c) 2013 Thomas Giesel
+ *
+ * This software is provided 'as-is', without any express or implied
+ * warranty.  In no event will the authors be held liable for any damages
+ * arising from the use of this software.
+ *
+ * Permission is granted to anyone to use this software for any purpose,
+ * including commercial applications, and to alter it and redistribute it
+ * freely, subject to the following restrictions:
+ *
+ * 1. The origin of this software must not be misrepresented; you must not
+ *    claim that you wrote the original software. If you use this software
+ *    in a product, an acknowledgment in the product documentation would be
+ *    appreciated but is not required.
+ * 2. Altered source versions must be plainly marked as such, and must not be
+ *    misrepresented as being the original software.
+ * 3. This notice may not be removed or altered from any source distribution.
+ *
+ * Thomas Giesel skoe@directbox.com
+ */
 
 
 #include <stdio.h>
@@ -38,6 +59,11 @@
 #define DISK_STATUS_DRV_WRONG        0xfd /* Drive type not supported */
 #define DISK_STATUS_DRV_NOT_FOUND    0xfe /* Drive not found */
 #define DISK_STATUS_UNKNOWN          0xff
+
+
+extern const unsigned char d64writer[];
+extern int d64writer_size;
+
 
 typedef struct transfer_disk_ts_s
 {
@@ -230,8 +256,8 @@ static unsigned drive_checksum(const uint8_t* p_data, unsigned len)
  * track        track number, 0-based
  * sector       sector
  */
-void encode_sector_to_gcr(uint8_t* p_dst,
-                          const uint8_t* p_src)
+static void encode_sector_to_gcr(uint8_t* p_dst,
+                                 const uint8_t* p_src)
 {
     unsigned n_in, n_out;
     uint8_t bin[8];
@@ -329,6 +355,24 @@ static const char* err_to_str(int i)
     default:
         return "Unknown error";
     }
+}
+
+
+/*****************************************************************************/
+/**
+ *
+ */
+static int get_num_tracks(long file_size)
+{
+    if (file_size == D64_SIZE_35_TRACKS)
+        return 35;
+    else if (file_size == D64_SIZE_40_TRACKS)
+        return 40;
+
+    ef3xfer_log_printf(
+            "*** Error: Only d64 files with 35 or 40 tracks w/o error info "
+            "are supported currently (but I got %d bytes).\n", file_size);
+    return 0;
 }
 
 /*****************************************************************************/
@@ -560,6 +604,11 @@ static int check_checksums(uint8_t* p_buffer,
     return 1;
 }
 
+
+/*****************************************************************************/
+/**
+ *
+ */
 static void dump_checksums(int n_track, uint8_t checksums[D64_MAX_SECTORS][12])
 {
 #ifdef DUMP_CHECKSUMS
@@ -578,6 +627,7 @@ static void dump_checksums(int n_track, uint8_t checksums[D64_MAX_SECTORS][12])
     }
 #endif
 }
+
 
 /*****************************************************************************/
 /**
@@ -618,6 +668,7 @@ static int verify_d64(uint8_t* p_buffer,
     return 1;
 }
 
+
 /*****************************************************************************/
 /**
  *
@@ -635,10 +686,6 @@ int ef3xfer_d64_write(const char* p_filename, int drv, int do_format)
 
     progress(0, 0, 0);
 
-    p_buffer = malloc(D64_BUFFER_SIZE);
-    if (!p_buffer)
-        goto cleanup_and_ret;
-
     fp = fopen(p_filename, "rb");
     if (fp == NULL)
     {
@@ -647,25 +694,18 @@ int ef3xfer_d64_write(const char* p_filename, int drv, int do_format)
         goto cleanup_and_ret;
     }
 
-    if (!ef3xfer_connect_ftdi())
-        goto cleanup_and_ret;
+    /* this may fail if the d64 writer runs already */
+    ef3xfer_transfer_prg_mem(d64writer, d64writer_size);
 
-    if (!ef3xfer_do_handshake("D64"))
+    p_buffer = malloc(D64_BUFFER_SIZE);
+    if (!p_buffer || !ef3xfer_do_handshake("D64"))
         goto cleanup_and_ret;
 
     file_size = fread(p_buffer, 1, D64_BUFFER_SIZE, fp);
 
-    if (file_size == D64_SIZE_35_TRACKS)
-        n_tracks = 35;
-    else if (file_size == D64_SIZE_40_TRACKS)
-        n_tracks = 40;
-    else
-    {
-        ef3xfer_log_printf(
-                "*** Error: Only d64 files with 35 or 40 tracks w/o error info "
-                "are supported currently (but I got %d bytes).\n", file_size);
+    n_tracks = get_num_tracks(file_size);
+    if (!n_tracks)
         goto cleanup_and_ret;
-    }
     ef3xfer_log_printf("Tracks: %d\n", n_tracks);
 
     /* take disk ID from 18/0 */

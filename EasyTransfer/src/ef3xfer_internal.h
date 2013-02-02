@@ -12,8 +12,6 @@ void ef3xfer_log_ftdi_error(int reason);
 void ef3xfer_log_printf(const char* p_str_format, ...);
 void ef3xfer_log_progress(int percent, int b_gui_only);
 
-int ef3xfer_connect_ftdi(void);
-
 void ef3xfer_disconnect_ftdi(void);
 
 int ef3xfer_do_handshake(const char* p_str_type);
