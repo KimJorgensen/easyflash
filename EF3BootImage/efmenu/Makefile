@@ -23,6 +23,7 @@ obj += obj/charset.o
 obj += obj/text_plot.o
 obj += obj/text_plot_asm.o
 obj += obj/sound.o
+obj += obj/joy.o
 
 inc      := src
 inc      += ../../libs/libef3usb/src
