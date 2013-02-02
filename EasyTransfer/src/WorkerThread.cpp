@@ -64,7 +64,7 @@ void* WorkerThread::Entry()
     if (m_stringTransferType == _("CRT"))
         ef3xfer_transfer_crt(m_stringInputFileName.mb_str());
     else if (m_stringTransferType == _("PRG"))
-        ef3xfer_transfer_prg(m_stringInputFileName.mb_str(), 1);
+        ef3xfer_transfer_prg(m_stringInputFileName.mb_str());
     else if (m_stringTransferType == _("D64"))
         ef3xfer_d64_write(m_stringInputFileName.mb_str(), m_nDriveNumber, 1);
     LogComplete();

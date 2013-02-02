@@ -155,6 +155,13 @@ ef3xfer_src += ef3xfer.c
 ef3xfer_src += ef3xfer_d64.c
 ef3xfer_src += str_to_key.c
 
+# additional object files
+obj	:=
+obj += $(objdir)/d64writer/d64writer.o
+
+ef3xfer_obj	:=
+ef3xfer_obj += $(objdir)/d64writer/d64writer.o
+
 # resource files to be built/copied
 res := easytransfer.png
 
@@ -186,13 +193,13 @@ src_archives += $(libftdi_dir).tar.gz
 # out/obj/foo.xpm
 #
 src_cpp := $(filter %.cpp,$(src))
-obj     := $(addprefix $(objdir)/, $(src_cpp:.cpp=.o))
+obj     += $(addprefix $(objdir)/, $(src_cpp:.cpp=.o))
 src_c   := $(filter %.c,$(src))
 obj     += $(addprefix $(objdir)/, $(src_c:.c=.o))
 src_png := $(filter %.png,$(src))
 xpm     := $(addprefix $(objdir)/, $(src_png:.png=.xpm))
 
-ef3xfer_obj := $(addprefix $(objdir)/, $(ef3xfer_src:.c=.o))
+ef3xfer_obj += $(addprefix $(objdir)/, $(ef3xfer_src:.c=.o))
 
 outres  := $(addprefix $(outdir)/res/, $(res))
 
@@ -247,6 +254,13 @@ $(objdir)/%.o: $(srcdir)/%.cpp $(headers) | $(objdir) pre_deps
 $(objdir)/%.o: $(srcdir)/%.c $(headers) | $(objdir) pre_deps
 	$(cc) -c $(cflags) -o $@ $<
 
+$(objdir)/%.o: $(objdir)/%.c $(headers) | pre_deps
+	$(cc) -c $(cflags) -o $@ $<
+
+$(objdir)/%.c: $(srcdir)/%.prg | $(objdir) pre_deps
+	mkdir -p $(dir $@)
+	python make/bin2c.py $< $@ $(notdir $(basename $@))
+
 $(objdir)/%.res.o: $(srcdir)/%.rc | $(objdir) pre_deps
 	$(windres) -I $(objdir) $< $@
 
@@ -267,6 +281,9 @@ $(outdir)/%.txt: $(srcdir)/../%
 #$(outbase)/$(prj_name)/mingwm10.dll: /usr/share/doc/mingw32-runtime/mingwm10.dll.gz
 #	gunzip -c $^ > $@
 
+$(srcdir)/d64writer/d64writer.prg: always
+	$(MAKE) -C $(dir $@)
+
 $(objdir)/EasyTransfer.res.o: $(objdir)/easytransfer.ico
 
 $(objdir)/%.ico: $(srcdir)/../res/%.png | $(objdir) pre_deps
@@ -281,12 +298,16 @@ $(outdir)/%.tar.bz2: $(archive_dir)/%.tar.bz2
 $(outdir)/%.tar.gz: $(archive_dir)/%.tar.gz
 	cp $^ $@
 
+.PHONY: always
+always:
+
 ###############################################################################
 # make clean the simple way
 #
 .PHONY: clean
 clean:
 	rm -rf $(outbase)
+	$(MAKE) -C src/d64writer clean
 
 ###############################################################################
 #
