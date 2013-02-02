@@ -33,9 +33,6 @@
 #include "memcfg.h"
 #include "efmenu.h"
 
-static void erase_text_areas(void);
-static void fill_directory(void);
-
 // from gfx.s
 extern const uint8_t* bitmap;
 extern const uint8_t* colmap;
@@ -43,16 +40,9 @@ extern const uint8_t* attrib;
 extern uint8_t background;
 
 
+#define N_MENU_PAGES 2
+
 static const char* m_pEFSignature = "EF-Directory V1:";
-
-typedef enum screen_state_e
-{
-    SCREEN_STATE_MENU,
-    SCREEN_STATE_SHIFT_MENU,
-    SCREEN_STATE_VERSION
-} screen_state_t;
-
-static screen_state_t screen_state;
 
 static efmenu_entry_t kernal_menu[] =
 {
@@ -79,56 +69,147 @@ static efmenu_entry_t ef_menu[] =
         { 0, 0, 0, 0, 0, "", "", "" }
 };
 
+/* key 0 => end, key 0xff => not selectable */
 static efmenu_entry_t special_menu[] =
 {
-        { 'r',  0,  0x10,   1,  MODE_AR,           "R", "Replay Slot 1",    "" },
-        { 'y',  0,  0x18,   1,  MODE_AR,           "Y", "Replay Slot 2",    "" },
-        { 's',  0,  0x20,   1,  MODE_SS5,          "S", "Super Snapshot 5", "" },
-        { 'p',  0,  9,      1,  MODE_EF_NO_RESET,  "P", "EasyProg",         "crt" },
-        { '?',  0,  0,      0,  MODE_EF,           "",  "",                 "" },
-        { '?',  0,  0,      0,  MODE_EF,           "",  "<SHIFT> for more",   "" },
+        { 'r',  0,  0x10, 1,  MODE_AR,           "R", "Replay Slot 1",    "" },
+        { 'y',  0,  0x18, 1,  MODE_AR,           "Y", "Replay Slot 2",    "" },
+        { 's',  0,  0x20, 1,  MODE_SS5,          "S", "Super Snapshot 5", "" },
+        { 'p',  0,  9,    1,  MODE_EF_NO_RESET,  "P", "EasyProg",         "crt" },
+        { 0xff, 0,  0,    0,  MODE_EF,           "",  "",                 "" },
+        { ' ',  0,  0,    0,  MODE_NEXT_PAGE,    "",  "<SPACE> for more","" },
         { 0, 0, 0, 0, 0, "", "", "" }
 };
 
 static efmenu_entry_t dummy_menu[] =
 {
-        // { '9',  0,  0x18,   1,  MODE_KERNAL,       "9", "EF3 KERNAL",       "key" },
-        // { '9',  0,  0x18,   1,  MODE_KERNAL,       "9", "EF3 KERNAL",       "prg" },
-        { '?',  0,  0x0b,   1,  MODE_EF,           "?", "USB Tool",         "d64" },
-        { '?',  0,  0x0b,   1,  MODE_EF,           "?", "USB Tool",         "prg" },
+        { 0xff, 0,  0,    1,  MODE_EF,           "?", "USB Tool",         "prg" },
         { 0, 0, 0, 0, 0, "", "", "" }
 };
 
-static efmenu_entry_t special_shift_menu[] =
+static efmenu_entry_t page1_menu[] =
 {
-        { 128 + 'v', 0, 0,  0,  MODE_SHOW_VERSION, "V", "Show Versions",    "" },
-        { 128 + 'k', 0, 0,  1,  MODE_KILL,         "K", "Kill Cartridge",   "" },
-        { 128 + 'z', 0, 0,  1,  MODE_GO128,        "Z", "To C128 Mode",     "" },
+        { 'v', 0, 0, 0,  MODE_SHOW_VERSION, "V", "Show Versions",    "" },
+        { 'k', 0, 0, 1,  MODE_KILL,         "K", "Kill Cartridge",   "" },
+        { 'z', 0, 0, 1,  MODE_GO128,        "Z", "To C128 Mode",     "" },
         { 0, 0, 0, 0, 0, "", "", "" }
 };
 
 static efmenu_t all_menus[] =
 {
-        {  2,  2, 10, kernal_menu },
-        { 22, 13,  9, ef_menu },
-        {  2, 15,  8, special_menu },
-        {  0,  0,  0, dummy_menu },
-        {  0,  0,  0, NULL }
+        { 0,   2,  2, 10, kernal_menu },
+        { 0,   2, 15,  8, special_menu },
+        { 0,  22, 13,  9, ef_menu },
+        { 1,   2, 15,  8, page1_menu },
+        { 2,   0,  0,  0, dummy_menu },
+        { 0,   0,  0,  0, NULL }
 };
 
-static efmenu_t all_shift_menus[] =
-{
-        {  2, 15,  8, special_shift_menu },
-        {  0,  0,  0, NULL }
-};
+/* This is the currently selected menu index in all_menus */
+static uint8_t n_current_menu;
 
-static uint8_t b_usb_jumpers_wrong;
+/* This is the currently selected menu entry index in current menu */
+static uint8_t n_current_entry;
+
+/* Currently active menu page */
+static uint8_t n_current_page;
 
 /******************************************************************************/
 static void show_version(void);
-static void show_jumper_warning(void);
+static void version_display_loop(void);
+uint8_t menu_entry_is_valid(const efmenu_entry_t* entry);
+static uint8_t current_entry_is_selectable(void);
+static void erase_text_areas(uint8_t colors);
+static void fill_directory(void);
+
+/******************************************************************************/
+/**
+ *
+ */
+static efmenu_entry_t* get_current_menu_entry(void)
+{
+    return all_menus[n_current_menu].pp_entries + n_current_entry;
+}
 
 
+/******************************************************************************/
+/**
+ * Set n_current_menu/n_current_entry to the previous menu entry
+ * ("joystick up").
+ */
+static void select_prev_entry()
+{
+    efmenu_entry_t* p;
+
+    do
+    {
+        if (n_current_entry == 0)
+        {
+            // prev menu
+            if (n_current_menu == 0)
+            {
+                // last menu
+                while (all_menus[n_current_menu + 1].pp_entries)
+                    ++n_current_menu;
+            }
+            else
+                --n_current_menu;
+
+            p = all_menus[n_current_menu].pp_entries;
+            // last entry
+            while (p[n_current_entry + 1].key)
+                ++n_current_entry;
+        }
+        else
+            --n_current_entry;
+    }
+    while (!current_entry_is_selectable());
+
+    n_current_page = all_menus[n_current_menu].n_page;
+}
+
+
+/******************************************************************************/
+/**
+ * Set n_current_menu/n_current_entry to the previous menu entry
+ * ("joystick down").
+ */
+static void select_next_entry()
+{
+    do
+    {
+        ++n_current_entry;
+        if (!all_menus[n_current_menu].pp_entries[n_current_entry].key)
+        {
+            n_current_entry = 0;
+            ++n_current_menu;
+            if (!all_menus[n_current_menu].pp_entries)
+                n_current_menu = 0;
+        }
+    }
+    while (!current_entry_is_selectable());
+
+    n_current_page = all_menus[n_current_menu].n_page;
+}
+
+
+/******************************************************************************/
+/**
+ */
+static void select_next_page(void)
+{
+    uint8_t new_page;
+
+    new_page = n_current_page + 1;
+    if (new_page >= N_MENU_PAGES)
+        new_page = 0;
+
+    /* evil implementation: select an entry from that page */
+    while (n_current_page != new_page)
+        select_next_entry();
+
+    n_current_page = new_page;
+}
 
 /******************************************************************************/
 /**
@@ -146,7 +227,8 @@ uint8_t menu_entry_is_valid(const efmenu_entry_t* entry)
 
     if (entry->mode == MODE_EF_NO_RESET ||
         entry->mode == MODE_KILL ||
-        entry->mode == MODE_SHOW_VERSION)
+        entry->mode == MODE_SHOW_VERSION ||
+        entry->mode == MODE_NEXT_PAGE)
         return 1;
 
     if (is_c128())
@@ -183,39 +265,47 @@ uint8_t menu_entry_is_valid(const efmenu_entry_t* entry)
 /******************************************************************************/
 /**
  */
-static void show_menu(uint8_t shift)
+static uint8_t current_entry_is_selectable(void)
+{
+    efmenu_entry_t* p = get_current_menu_entry();
+    return menu_entry_is_valid(p) && (p->key != 0xff);
+}
+
+/******************************************************************************/
+/**
+ * If full_update is not set, only the colors are updated.
+ */
+static void show_menu(uint8_t n_page, uint8_t full_update)
 {
     uint8_t y, color;
-    const efmenu_t* menu;
-    const efmenu_entry_t* entry;
+    efmenu_t* menu;
+    efmenu_entry_t* entry;
 
-    erase_text_areas();
-    fill_directory();
-
-    if (shift)
+    if (full_update)
     {
-        menu = all_shift_menus;
-        screen_state = SCREEN_STATE_SHIFT_MENU;
-    }
-    else
-    {
-        menu = all_menus;
-        screen_state = SCREEN_STATE_MENU;
+        erase_text_areas(COLOR_GRAY2 << 4 | COLOR_GRAY3);
+        fill_directory();
     }
 
+    menu = all_menus;
     while (menu->pp_entries)
     {
-        if (menu->n_max_entries) /* hidden otherwise */
+        if (menu->n_max_entries && menu->n_page == n_page) /* hidden otherwise */
         {
             y = menu->y_pos + 1;
 
             entry = menu->pp_entries;
             while (entry->key)
             {
-                text_plot_puts(menu->x_pos,     4, y, entry->label);
-                text_plot_puts(menu->x_pos + 2, 0, y, entry->name);
+                if (full_update)
+                {
+                    text_plot_puts(menu->x_pos,     4, y, entry->label);
+                    text_plot_puts(menu->x_pos + 2, 0, y, entry->name);
+                }
 
-                if (menu_entry_is_valid(entry))
+                if (entry == get_current_menu_entry())
+                    color = COLOR_BLACK << 4 | COLOR_YELLOW;
+                else if (menu_entry_is_valid(entry))
                     color = COLOR_BLACK << 4 | COLOR_GRAY3;
                 else
                     color = COLOR_GRAY2 << 4 | COLOR_GRAY3;
@@ -227,8 +317,6 @@ static void show_menu(uint8_t shift)
         }
         ++menu;
     }
-    if (b_usb_jumpers_wrong)
-        show_jumper_warning();
 }
 
 
@@ -249,7 +337,11 @@ static void __fastcall__ start_menu_entry(const efmenu_entry_t* entry)
     }
     else if (entry->mode == MODE_SHOW_VERSION)
     {
-        show_version();
+        version_display_loop();
+    }
+    else if (entry->mode == MODE_NEXT_PAGE)
+    {
+        select_next_page();
     }
     else
     {
@@ -261,37 +353,66 @@ static void __fastcall__ start_menu_entry(const efmenu_entry_t* entry)
 
 /******************************************************************************/
 /**
+ * return 1 if something was started, 0 if not
  */
-static void __fastcall__ start_menu_entry_ex(uint8_t key, const char* type)
+static uint8_t __fastcall__ start_menu_entry_ex(uint8_t key, const char* type)
 {
-    const efmenu_t* menu_list[] = {all_menus, all_shift_menus, NULL};
     const efmenu_t* menu;
     const efmenu_entry_t* entry;
-    uint8_t i;
 
-    for (i = 0; menu_list[i]; ++i)
+    if (key == CH_ENTER)
     {
-        menu = menu_list[i];
+        entry = get_current_menu_entry();
+        start_menu_entry(entry);
+        return 1;
+    }
 
-        while (menu->pp_entries)
+    menu = all_menus;
+    while (menu->pp_entries)
+    {
+        entry = menu->pp_entries;
+        while (entry->key)
         {
-            entry = menu->pp_entries;
-            while (entry->key)
+            if (menu_entry_is_valid(entry))
             {
-                if (menu_entry_is_valid(entry))
+                if (key  && entry->key == key)
                 {
-                    if (key  && entry->key == key)
-                        start_menu_entry(entry);
-                    if (type && strcmp(entry->type, type) == 0)
-                    {
-                        ef3usb_send_str("wait");
-                        start_menu_entry(entry);
-                    }
+                    start_menu_entry(entry);
+                    return 1;
                 }
-                ++entry;
+                if (type && strcmp(entry->type, type) == 0)
+                {
+                    ef3usb_send_str("wait");
+                    start_menu_entry(entry);
+                    return 1;
+                }
             }
-            ++menu;
+            ++entry;
         }
+        ++menu;
+    }
+    return 0;
+}
+
+
+/******************************************************************************/
+/**
+ */
+static void poll_usb(void)
+{
+    const char* pType;
+
+    pType = ef3usb_check_cmd();
+    if (pType)
+    {
+        if (strcmp(pType, "rst") == 0)
+        {
+            /* means: reset to menu, nothing to do here */
+            ef3usb_send_str("done");
+            return;
+        }
+        else
+            start_menu_entry_ex(0, pType);
     }
 }
 
@@ -306,7 +427,7 @@ static void show_version(void)
     static char str_version[6];
     uint8_t vcode = EF3_CPLD_VERSION;
 
-    erase_text_areas();
+    erase_text_areas(COLOR_BLACK << 4 | COLOR_GRAY3);
     x = all_menus[0].x_pos + 1;
     y = all_menus[0].y_pos + 1;
 
@@ -331,39 +452,27 @@ static void show_version(void)
     text_plot_puts(x, 0, y, str_version);
     y += 3;
     text_plot_puts(x, 0, y, EFVERSION);
-
-    screen_state = SCREEN_STATE_VERSION;
 }
 
 
 /******************************************************************************/
 /**
  */
-static void main_loop(void)
+static void version_display_loop(void)
 {
-    const char* pType;
     uint8_t key;
 
+    show_version();
     do
     {
         if (kbhit())
         {
             key = cgetc();
-            if (screen_state == SCREEN_STATE_VERSION && key == CH_STOP)
-                show_menu(shift_pressed());
-            else
-                start_menu_entry_ex(key, NULL);
+            if (key == CH_STOP || key == CH_ENTER)
+                return;
         }
-        if (shift_pressed() && screen_state == SCREEN_STATE_MENU)
-            show_menu(1);
-        else if (!shift_pressed() && screen_state == SCREEN_STATE_SHIFT_MENU)
-            show_menu(0);
 
-        pType = ef3usb_check_cmd();
-        if (pType)
-        {
-            start_menu_entry_ex(0, pType);
-        }
+        poll_usb();
     }
     while (1);
 }
@@ -372,7 +481,59 @@ static void main_loop(void)
 /******************************************************************************/
 /**
  */
-static void erase_text_areas(void)
+static void main_loop(void)
+{
+    uint8_t key, update, full_update, n_old_page;
+
+    do
+    {
+        update = full_update = 0;
+        n_old_page = n_current_page;
+        if (kbhit())
+        {
+            key = cgetc();
+            switch (key)
+            {
+            case CH_CURS_UP:
+                select_prev_entry();
+                update = 1;
+                break;
+
+            case CH_CURS_DOWN:
+                select_next_entry();
+                update = 1;
+                break;
+
+            case CH_CURS_LEFT:
+            case CH_CURS_RIGHT:
+                select_next_page();
+                break;
+
+            default:
+                if (start_menu_entry_ex(key, NULL))
+                    full_update = 1;
+                break;
+            }
+        }
+
+        if (n_current_page != n_old_page)
+            full_update = 1;
+
+        update |= full_update;
+
+        if (update)
+            show_menu(n_current_page, full_update);
+
+        poll_usb();
+    }
+    while (1);
+}
+
+
+/******************************************************************************/
+/**
+ */
+static void erase_text_areas(uint8_t colors)
 {
     uint8_t  n;
 	uint16_t offset;
@@ -388,22 +549,10 @@ static void erase_text_areas(void)
         {
             memset(P_GFX_BITMAP + offset, 0, 16 * 8);
             offset += 320;
-            text_set_line_color(menu->x_pos, menu->y_pos + n,
-                                COLOR_BLACK << 4 | COLOR_GRAY3);
+            text_set_line_color(menu->x_pos, menu->y_pos + n, colors);
         }
         ++menu;
     }
-}
-
-
-/******************************************************************************/
-/**
- */
-static void show_jumper_warning(void)
-{
-    memset(P_GFX_BITMAP, 0, 320);
-    memset(P_GFX_COLOR, COLOR_RED << 4 | COLOR_BLACK, 40);
-    text_plot_puts(4, 0, 0, "*** Warning: Jumpers not in DATA position! ***");
 }
 
 
@@ -480,8 +629,16 @@ void initNMI(void);
 int main(void)
 {
     init_screen();
-    b_usb_jumpers_wrong = ef3usb_is_floating();
-    show_menu(shift_pressed());
+
+    n_current_menu = 2; /* EasyFlash menu index in all_menus */
+    n_current_entry = 0;
+
+    /* make sure a valid entry is selected and n_current_page initialized */
+    select_next_entry();
+    select_prev_entry();
+
+    show_menu(n_current_page, 1);
+    joy_init_irq();
 
 #if 0
     set_bank(0x0f);

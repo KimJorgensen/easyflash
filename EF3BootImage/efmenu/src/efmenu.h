@@ -21,6 +21,7 @@
 #define MODE_KILL           7
 /* dummy modes */
 #define MODE_SHOW_VERSION   128
+#define MODE_NEXT_PAGE      129
 
 
 #define EF_DIR_BANK         0x10
@@ -40,6 +41,8 @@ void __fastcall__ start_program(uint8_t bank);
 void wait_for_no_key(void);
 uint8_t is_c128(void);
 uint8_t shift_pressed(void);
+
+void joy_init_irq(void);
 
 typedef struct efmenu_dir_s
 {
@@ -65,6 +68,7 @@ typedef struct efmenu_entry_s
 
 typedef struct efmenu_s
 {
+    uint8_t          n_page;
     uint16_t         x_pos;
     uint8_t          y_pos;
     uint8_t          n_max_entries;
