@@ -13,7 +13,6 @@ endif
 obj :=
 obj += obj/d64writer.o
 obj += obj/write_disk.o
-obj += obj/ef3reset.o
 
 inc      := src
 inc      += ../../../libs/libef3usb/src
