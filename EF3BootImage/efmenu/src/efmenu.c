@@ -211,6 +211,41 @@ static void select_next_page(void)
     n_current_page = new_page;
 }
 
+
+/******************************************************************************/
+/**
+ */
+static void select_prev_menu(void)
+{
+    uint8_t n_old, watchdog;
+
+    n_old = n_current_menu;
+    watchdog = 0;
+    do
+    {
+        select_prev_entry();
+    }
+    while (n_old == n_current_menu && ++watchdog != 0);
+}
+
+
+/******************************************************************************/
+/**
+ */
+static void select_next_menu(void)
+{
+    uint8_t n_old, watchdog;
+
+    n_old = n_current_menu;
+    watchdog = 0;
+    do
+    {
+        select_next_entry();
+    }
+    while (n_old == n_current_menu && ++watchdog != 0);
+}
+
+
 /******************************************************************************/
 /**
  * Return 1 if the entry is valid. This is the case if it contains a mode
@@ -505,8 +540,13 @@ static void main_loop(void)
                 break;
 
             case CH_CURS_LEFT:
+                select_prev_menu();
+                update = 1;
+                break;
+
             case CH_CURS_RIGHT:
-                select_next_page();
+                select_next_menu();
+                update = 1;
                 break;
 
             default:

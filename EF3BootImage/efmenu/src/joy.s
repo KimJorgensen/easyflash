@@ -2,7 +2,7 @@
 
 DEBOUNCE_DELAY  =   3
 REPEAT_DELAY    =  25
-REPEAT_TIME     =  10
+REPEAT_TIME     =   8
 
 CH_CURS_UP      = 145
 CH_CURS_DOWN    =  17
