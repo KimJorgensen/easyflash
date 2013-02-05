@@ -79,7 +79,7 @@ $(dirname).zip: $(prj)-init.crt $(prj)-menu.crt CHANGES
 menu_image  := trampoline.bin                           0x00 0x1F00 H
 menu_image  += efmenu/efmenu.bin                        0x08 0x0000 LH
 menu_image  += $(easyprog)                              0x09 0x0000 LH
-menu_image  += usbtool/usbtool.bin                      0x0b 0x0000 LH
+menu_image  += prgstart/prgstart.bin                    0x0b 0x0000 LH
 #menu_image  += ef3kernal/out/ef3kernal_b0.bin           0x18 0x0000 L
 #menu_image  += ef3kernal/out/ef3kernal_b1.bin           0x19 0x0000 L
 
@@ -90,7 +90,7 @@ menu_image  += usbtool/usbtool.bin                      0x0b 0x0000 LH
 menu_deps   := trampoline.bin
 menu_deps   += efmenu/efmenu.bin
 menu_deps   += $(easyprog)
-menu_deps   += usbtool/usbtool.bin
+menu_deps   += prgstart/prgstart.bin
 #menu_deps   += ef3kernal_phony
 
 ###############################################################################
@@ -185,8 +185,8 @@ always:
 
 ###############################################################################
 #
-usbtool/usbtool.bin: always
-	$(MAKE) -C usbtool version=$(version)
+prgstart/prgstart.bin: always
+	$(MAKE) -C prgstart version=$(version)
 
 ###############################################################################
 #
@@ -207,7 +207,7 @@ clean:
 	-rm -f images/empty.bin
 	#-$(MAKE) -C ef3kernal clean
 	-$(MAKE) -C efmenu clean
-	-$(MAKE) -C usbtool clean
+	-$(MAKE) -C prgstart clean
 	-$(MAKE) -C $(dir $(easyprog)) clean
 
 ###############################################################################

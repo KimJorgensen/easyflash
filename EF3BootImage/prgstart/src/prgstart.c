@@ -5,22 +5,14 @@
 
 #include <ef3usb.h>
 
-#include "usbtool.h"
-
-static void start_prg()
-{
-    void* p_start_addr;
-    puts("Loading");
-    usbtool_prg_load_and_run();
-}
-
+#include "prgstart.h"
 
 
 int main(void)
 {
     const char* p_str_cmd;
 
-    puts("USB Tool started");
+    puts("PRG starter");
 
     for (;;)
     {
@@ -35,14 +27,12 @@ int main(void)
         if (strcmp(p_str_cmd, "prg") == 0)
         {
             ef3usb_send_str("load");
-            start_prg();
-        }
-        else if (strcmp(p_str_cmd, "d64") == 0)
-        {
-            write_disk_d64();
+            puts("Loading");
+            usbtool_prg_load_and_run();
         }
         else
         {
+            /* todo: reset */
             ef3usb_send_str("etyp");
         }
     }

@@ -1,4 +1,8 @@
 
+Version ?.?.?
+- Menu can be controlled with joystick in port 2
+- Disk write is no longer part of the menu, it comes along with EasyTransfer
+
 Version 1.1.0 - 26.01.2013
 - Menu: <Shift> leads to additional menu entries
 - <Shift>+V to display version numbers
