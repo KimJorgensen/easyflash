@@ -2,7 +2,7 @@
 # do not remove intermediate targets
 .SECONDARY:
 
-name := usbtool
+name := prgstart
 
 ifneq "$(release)" "yes"
 	version := $(shell date +%y%m%d-%H%M)
@@ -12,20 +12,17 @@ endif
 bin2efcrt = ../../EasySDK/tools/bin2efcrt
 
 obj :=
-obj += obj/usbtool.o
-obj += obj/usbtool_prg.o
-obj += obj/write_disk.o
+obj += obj/prgstart.o
+obj += obj/prg.o
 
 inc      := src
 inc      += ../../libs/libef3usb/src
-inc      += ../../libs/eload/src
 
 INCLUDE  := $(addprefix -I,$(inc))
 
 DEFINE   := -DEFVERSION=\"${version}\"
 
 libef3usb := ../../libs/libef3usb/libef3usb.lib
-libeload  := ../../libs/eload/eload.lib
 
 .PHONY: all
 all: $(name).crt
@@ -57,9 +54,6 @@ obj/%.o: src/%.s | obj
 $(libef3usb): force
 	$(MAKE) -C $(dir $@)
 
-$(libeload): force
-	$(MAKE) -C $(dir $@)
-
 .PHONY: force
 force:
 
@@ -67,15 +61,9 @@ force:
 obj:
 	mkdir -p $@
 
-$(name).bin: obj/crt0.crt.o $(obj) src/ld.crt.cfg $(libef3usb) $(libeload)
+$(name).bin: obj/crt0.crt.o $(obj) src/ld.crt.cfg $(libef3usb)
 	ld65 -o $@ -m $@.map -C src/ld.crt.cfg obj/crt0.crt.o $(obj) \
-		--lib  $(libef3usb) $(libeload) \
-		-L /usr/local/lib/cc65/lib --lib c64.lib
-	cat $@.map | grep -e "^Name\|^CODE\|^DATA\|^BSS\|^RODATA\|^LOWCODE"
-
-$(name).prg: obj/crt0.prg.o $(obj) src/ld.prg.cfg $(libef3usb) $(libeload)
-	ld65 -o $@ -m $@.map -C src/ld.prg.cfg obj/crt0.prg.o $(obj) \
-		--lib  $(libef3usb) $(libeload) \
+		--lib  $(libef3usb) \
 		-L /usr/local/lib/cc65/lib --lib c64.lib
 	cat $@.map | grep -e "^Name\|^CODE\|^DATA\|^BSS\|^RODATA\|^LOWCODE"
 
@@ -85,5 +73,4 @@ clean:
 	rm -f $(obj)
 	rm -rf obj
 	-$(MAKE) -C $(dir $(libef3usb)) clean
-	-$(MAKE) -C $(dir $(libeload)) clean
 
