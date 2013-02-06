@@ -20,7 +20,8 @@ Linux and similar systems
 
    sudo make install
 
-Step 3 should create a menu entry for Gnome, KDE or Xfce.
+Step 3 should create a menu entry for Gnome, KDE or Xfce. Note that make
+install does not work for ef3xfer only.
 
 Windows
 =======
