@@ -30,6 +30,8 @@ _joy_init_irq:
 
 ;----------------
 irq:
+    lda #$7f
+    sta $dc00
     lda $dc00
     and #$1f
     cmp #$1f
