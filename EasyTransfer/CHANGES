@@ -1,4 +1,9 @@
 
-Version 1.1.0 - xx.xx.2013
+Version 1.2.0 - 06.02.2013
+- Fixed verify error which occurred on some drives, because the head
+  settle time was too short
+- The C64 code for disk write is now contained in the PC tools
+
+Version 1.1.0 - 26.01.2013
 - Initial version
 
