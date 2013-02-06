@@ -1,5 +1,5 @@
 
-Version ?.?.?
+Version 1.2.0 - 06.02.2013
 - Menu can be controlled with joystick in port 2
 - Disk write is no longer part of the menu, it comes along with EasyTransfer
 

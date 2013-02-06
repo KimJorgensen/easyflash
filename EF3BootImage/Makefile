@@ -44,7 +44,7 @@ easyprog    := ../EasyProg/easyprog
 ifneq "$(release)" "yes"
 	version := $(shell date +%y%m%d-%H%M)
 else
-	version := 1.1.0
+	version := 1.2.0
 endif
 
 ifeq "$(variant)" "jb"
@@ -64,13 +64,14 @@ else
 all: $(prj)-init.crt $(prj)-menu.crt
 endif
 
-$(dirname).zip: $(prj)-init.crt $(prj)-menu.crt CHANGES
+$(dirname).zip: $(prj)-init.crt $(prj)-menu.crt CHANGES.txt README.txt
 	rm -rf $(dirname)
 	rm -f $@
 	mkdir $(dirname)
 	cp $(prj)-init.crt $(dirname)/$(prj)-init-$(version).crt
 	cp $(prj)-menu.crt $(dirname)/$(prj)-menu-$(version).crt
-	cp CHANGES $(dirname)
+	cp CHANGES.txt $(dirname)
+	cp README.txt $(dirname)
 	zip -v -r $@ $(dirname)
 
 ###############################################################################
