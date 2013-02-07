@@ -83,7 +83,7 @@ static efmenu_entry_t special_menu[] =
 
 static efmenu_entry_t dummy_menu[] =
 {
-        { 0xff, 0,  0,    1,  MODE_EF,           "?", "USB Tool",         "prg" },
+        { 0xff, 0,  0x0b,   1,  MODE_EF,           "?", "USB Tool",         "prg" },
         { 0, 0, 0, 0, 0, "", "", "" }
 };
 
