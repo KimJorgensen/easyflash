@@ -30,9 +30,9 @@
 #include "ef3xfer.h"
 
 static void usage(const char* p_str_prg);
-static void log_str_stdout(const char* str);
-static void log_progress_stdout(int percent, int b_gui_only);
-static void log_complete_stdout(void);
+static void log_str(const char* str);
+static void log_progress(int percent, int b_gui_only);
+static void log_complete(void);
 
 /*****************************************************************************/
 static int m_argc;
@@ -52,6 +52,7 @@ static void usage(const char* p_str_prg)
            "  -c FILE  --crt FILE       Write a CRT image to flash\n"
            "  -x FILE  --exec FILE      Send a PRG file and execute it\n"
            "  -w FILE  --write FILE     Write a disk image (d64)\n"
+           "           --sendraw FILE   For enthusi\n"
            "\nOptions to be used with --write-disk:\n"
            /*"           --no-format      Do not format disk before write\n"*/
            "  -d NUM   --drive          Drive number to be used (8)\n"
@@ -61,17 +62,17 @@ static void usage(const char* p_str_prg)
 
 
 /*****************************************************************************/
-static void log_str_stdout(const char* str)
+static void log_str(const char* str)
 {
-    printf("%s", str);
-    fflush(stdout);
+    fprintf(stderr, "%s", str);
+    fflush(stderr);
 }
 
 
 /*****************************************************************************/
 /*
  */
-static void log_progress_stdout(int percent, int b_gui_only)
+static void log_progress(int percent, int b_gui_only)
 {
     if (b_gui_only)
         return;
@@ -81,8 +82,8 @@ static void log_progress_stdout(int percent, int b_gui_only)
     if (percent > 100)
         percent = 100;
 
-    printf("\r%3d%%", percent);
-    fflush(stdout);
+    fprintf(stderr, "\r%3d%%", percent);
+    fflush(stderr);
 }
 
 
@@ -90,7 +91,7 @@ static void log_progress_stdout(int percent, int b_gui_only)
 /*
  * Tell the main thread that we're done.
  */
-static void log_complete_stdout(void)
+static void log_complete(void)
 {
 }
 
@@ -110,6 +111,7 @@ int main(int argc, char** argv)
     const char* p_crt_filename = NULL;
     const char* p_write_filename = NULL;
     const char* p_exec_filename = NULL;
+    const char* p_rawsend_filename = NULL;
     int         n_actions = 0;
     int         n_drv = 8;
     char dummy;
@@ -121,8 +123,7 @@ int main(int argc, char** argv)
     m_n_next_arg = 1;
 
     /* default callback functions for stdout */
-    ef3xfer_set_callbacks(log_str_stdout, log_progress_stdout,
-                          log_complete_stdout);
+    ef3xfer_set_callbacks(log_str, log_progress, log_complete);
     if (argc == 1)
     {
         usage(argv[0]);
@@ -149,6 +150,11 @@ int main(int argc, char** argv)
         else if (strcmp(arg, "-w") == 0 || strcmp(arg, "--write") == 0)
         {
             p_write_filename = get_next_arg();
+            n_actions++;
+        }
+        else if (strcmp(arg, "--sendraw") == 0)
+        {
+            p_rawsend_filename = get_next_arg();
             n_actions++;
         }
         else if (strcmp(arg, "-d") == 0 || strcmp(arg, "--drive") == 0)
@@ -180,11 +186,13 @@ int main(int argc, char** argv)
     }
 
     if (p_crt_filename)
-        return ef3xfer_transfer_crt(p_crt_filename);
+        return !ef3xfer_transfer_crt(p_crt_filename);
     else if (p_exec_filename)
-        return ef3xfer_transfer_prg(p_exec_filename);
+        return !ef3xfer_transfer_prg(p_exec_filename);
     else if (p_write_filename)
-        return ef3xfer_d64_write(p_write_filename, n_drv, 1);
+        return !ef3xfer_d64_write(p_write_filename, n_drv, 1);
+    else if (p_rawsend_filename)
+        return !ef3xfer_raw_send(p_rawsend_filename);
 
-    return 1;
+    return 0;
 }
