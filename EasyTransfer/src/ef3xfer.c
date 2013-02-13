@@ -61,6 +61,56 @@ void ef3xfer_set_callbacks(
     log_complete = custom_log_complete;
 }
 
+
+/*****************************************************************************/
+/*
+ * Return 1 on success, 0 otherwise.
+ */
+int ef3xfer_raw_send(const char* p_filename)
+{
+    FILE*         fp;
+    size_t        i, size;
+    uint8_t*      p;
+    uint8_t       buffer[256];
+
+    if (p_filename == NULL)
+    {
+        ef3xfer_log_printf("Missing file name.\n");
+        return 0;
+    }
+
+    ef3xfer_log_printf("Send raw file:  %s\n", p_filename);
+
+    fp = fopen(p_filename, "rb");
+    if (fp == NULL)
+    {
+        ef3xfer_log_printf("Error: Cannot open %s for reading\n", p_filename);
+        return 0;
+    }
+
+    do
+    {
+        size = fread(buffer, 1, sizeof(buffer), fp);
+        printf("\n%d\n", size);
+        if (size)
+        {
+            if (ef3xfer_write_to_ftdi(buffer, size) != size)
+                goto close_and_err;
+        }
+    }
+    while (size);
+
+    ef3xfer_disconnect_ftdi();
+    fclose(fp);
+    ef3xfer_log_printf("\nOK\n\n");
+    return 1;
+
+close_and_err:
+    ef3xfer_disconnect_ftdi();
+    fclose(fp);
+    return 0;
+}
+
 /*****************************************************************************/
 int ef3xfer_transfer_crt(const char* p_filename)
 {
