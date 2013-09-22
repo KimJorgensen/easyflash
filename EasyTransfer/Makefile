@@ -151,8 +151,11 @@ src += easytransfer.png
 
 ef3xfer_src :=
 ef3xfer_src += ef3xfer_main.c
-ef3xfer_src += ef3xfer.c
+ef3xfer_src += ef3xfer_log.c
+ef3xfer_src += ef3xfer_transport.c
+ef3xfer_src += ef3xfer_file.c
 ef3xfer_src += ef3xfer_d64.c
+ef3xfer_src += ef3xfer_usb_test.c
 ef3xfer_src += str_to_key.c
 
 # additional object files

@@ -32,7 +32,6 @@
 static void usage(const char* p_str_prg);
 static void log_str(const char* str);
 static void log_progress(int percent, int b_gui_only);
-static void log_complete(void);
 
 /*****************************************************************************/
 static int m_argc;
@@ -53,6 +52,7 @@ static void usage(const char* p_str_prg)
            "  -x FILE  --exec FILE      Send a PRG file and execute it\n"
            "  -w FILE  --write FILE     Write a disk image (d64)\n"
            "           --sendraw FILE   For enthusi\n"
+           "           --usbtest        Use with EasyProg USB test\n"
            "\nOptions to be used with --write-disk:\n"
            /*"           --no-format      Do not format disk before write\n"*/
            "  -d NUM   --drive          Drive number to be used (8)\n"
@@ -86,16 +86,6 @@ static void log_progress(int percent, int b_gui_only)
     fflush(stderr);
 }
 
-
-/*****************************************************************************/
-/*
- * Tell the main thread that we're done.
- */
-static void log_complete(void)
-{
-}
-
-
 /*****************************************************************************/
 static const char* get_next_arg(void)
 {
@@ -112,6 +102,7 @@ int main(int argc, char** argv)
     const char* p_write_filename = NULL;
     const char* p_exec_filename = NULL;
     const char* p_rawsend_filename = NULL;
+    int         do_usb_test = 0;
     int         n_actions = 0;
     int         n_drv = 8;
     char dummy;
@@ -123,7 +114,7 @@ int main(int argc, char** argv)
     m_n_next_arg = 1;
 
     /* default callback functions for stdout */
-    ef3xfer_set_callbacks(log_str, log_progress, log_complete);
+    ef3xfer_set_callbacks(log_str, log_progress);
     if (argc == 1)
     {
         usage(argv[0]);
@@ -172,6 +163,11 @@ int main(int argc, char** argv)
                 return 1;
             }
         }
+        else if (strcmp(arg, "--usbtest") == 0)
+        {
+            do_usb_test = 1;
+            n_actions++;
+        }
         else
         {
             fprintf(stderr, "*** Unknown action: %s\n", arg);
@@ -193,6 +189,8 @@ int main(int argc, char** argv)
         return !ef3xfer_d64_write(p_write_filename, n_drv, 1);
     else if (p_rawsend_filename)
         return !ef3xfer_raw_send(p_rawsend_filename);
+    else if (do_usb_test)
+        return ef3xfer_usb_test();
 
     return 0;
 }
