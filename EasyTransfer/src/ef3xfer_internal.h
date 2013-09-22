@@ -8,7 +8,7 @@
 #ifndef EF3XFER_INTERNAL_H_
 #define EF3XFER_INTERNAL_H_
 
-void ef3xfer_log_ftdi_error(int reason);
+void ef3xfer_log_ftdi_error(int reason, struct ftdi_context* p_ftdic);
 void ef3xfer_log_printf(const char* p_str_format, ...);
 void ef3xfer_log_progress(int percent, int b_gui_only);
 
