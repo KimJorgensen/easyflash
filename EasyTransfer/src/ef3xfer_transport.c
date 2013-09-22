@@ -23,7 +23,6 @@
 
 #include <stdio.h>
 #include <string.h>
-#include <stdlib.h>
 #include <stdint.h>
 #include <unistd.h>
 
@@ -40,8 +39,6 @@ static int connect_ftdi(void);
 static int send_command(const char* p_str_request);
 static void receive_response(unsigned char* p_resp,
                              int timeout_secs);
-static int send_file(FILE* fp);
-static int send_data(const unsigned char* p_data, int size);
 
 /* function pointers which can be overridden from external apps */
 static void ef3xfer_msleep(unsigned msecs);
@@ -290,63 +287,6 @@ static void receive_response(unsigned char* p_resp,
 
     ef3xfer_log_printf("Time out.\n", ret, retry);
     p_resp[0] = 0;
-}
-
-
-
-
-/*****************************************************************************/
-/**
- *
- */
-static int send_data(const unsigned char* p_data, int size)
-{
-    const unsigned char* p;
-    unsigned char a_buffer_size[2];
-    int           n_bytes_req;
-    int           ret, count, rest;
-
-    rest = size;
-    p = p_data;
-    do
-    {
-        /* read the number of bytes requested by the client (0..256) */
-        if (!ef3xfer_read_from_ftdi(a_buffer_size, 2))
-        {
-            return 0;
-        }
-        n_bytes_req = a_buffer_size[0] + a_buffer_size[1] * 256;
-
-        if (n_bytes_req > 0)
-        {
-            if (n_bytes_req < rest)
-                count = n_bytes_req;
-            else
-                count = rest;
-
-            a_buffer_size[0] = count & 0xff;
-            a_buffer_size[1] = count >> 8;
-            // send length indication
-            ret = ef3xfer_write_to_ftdi(a_buffer_size, 2);
-            if (ret != 2)
-            {
-                return 0;
-            }
-            // send payload
-            ret = ef3xfer_write_to_ftdi(p, count);
-            if (ret != count)
-            {
-                return 0;
-            }
-            p += count;
-            rest -= count;
-        }
-        // todo: check overhead
-        log_progress((int)(100 * ((size - rest) + 1) / size), 0);
-    }
-    while (n_bytes_req > 0);
-
-    return 1;
 }
 
 
