@@ -46,6 +46,7 @@
 #include "filedlg.h"
 #include "slots.h"
 #include "sprites.h"
+#include "usbtest.h"
 #include "util.h"
 
 #undef SHOW_HEAP_FREE
@@ -214,6 +215,12 @@ ScreenMenu menuExpert =
             "R&AM test",
             tortureTestRAM,
             returnTrue,
+            0
+        },
+        {
+            "US&B test",
+            usbTest,
+            isEF3,
             0
         },
         {

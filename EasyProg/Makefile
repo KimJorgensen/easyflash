@@ -33,6 +33,7 @@ obj += obj/slots.o
 obj += obj/hex.o
 obj += obj/torturetest.o
 obj += obj/write.o
+obj += obj/usbtest.o
 obj += obj/util.o
 
 ld65_version := $(shell [ `ld65 -V 2>&1 | sed -e 's/\(ld65 V\)\([0-9\.]*\)\( .*\)/\2/g; q'` \< "2.13.9" ] && echo old)
