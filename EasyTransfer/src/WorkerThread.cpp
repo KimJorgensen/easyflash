@@ -44,7 +44,7 @@ WorkerThread::WorkerThread(wxEvtHandler* pEventHandler) :
             m_stringInputFileName(_T(""))
 {
     m_pTheWorkerThread = this;
-    ef3xfer_set_callbacks(LogText, LogProgress, LogComplete);
+    ef3xfer_set_callbacks(LogText, LogProgress);
 }
 
 /*****************************************************************************/
@@ -67,6 +67,8 @@ void* WorkerThread::Entry()
         ef3xfer_transfer_prg(m_stringInputFileName.mb_str());
     else if (m_stringTransferType == _("D64"))
         ef3xfer_d64_write(m_stringInputFileName.mb_str(), m_nDriveNumber, 1);
+    else if (m_stringTransferType == _("USBTEST"))
+        ef3xfer_usb_test();
     LogComplete();
 
     return NULL;

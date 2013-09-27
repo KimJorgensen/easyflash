@@ -95,7 +95,7 @@ ifneq "$(release)" "yes"
 	version        := $(shell date +%y%m%d-%H%M)
 	version_suffix :=
 else
-	version        := 1.2.0
+	version        := 1.3.0
 	version_suffix := -$(version)
 endif
 
@@ -144,8 +144,12 @@ src += WorkerThread.cpp
 src += TabStartPRG.cpp
 src += TabWriteCRT.cpp
 src += TabWriteDisk.cpp
-src += ef3xfer.c
+src += TabUSBTest.cpp
+src += ef3xfer_transport.c
+src += ef3xfer_log.c
+src += ef3xfer_file.c
 src += ef3xfer_d64.c
+src += ef3xfer_usb_test.c
 src += str_to_key.c
 src += easytransfer.png
 

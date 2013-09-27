@@ -37,6 +37,7 @@ class WorkerThread;
 class TabStartPRG;
 class TabWriteCRT;
 class TabWriteDisk;
+class TabUSBTest;
 
 BEGIN_DECLARE_EVENT_TYPES()
     DECLARE_EVENT_TYPE(wxEVT_EASY_TRANSFER_LOG,      -1)
@@ -66,6 +67,7 @@ protected:
     TabStartPRG*        m_pTabStartPRG;
     TabWriteCRT*        m_pTabWriteCRT;
     TabWriteDisk*       m_pTabWriteDisk;
+    TabUSBTest*         m_pTabSpecial;
 
     wxButton*           m_pButtonStart;
     wxButton*           m_pButtonQuit;
