@@ -64,13 +64,14 @@ int run_usb_test()
 {
     int     test_loop, success;
 
+    ef3xfer_log_printf("Testing...\n");
     for (test_loop = 0; test_loop < 100; ++test_loop)
     {
         success = test_sequence();
         if (!success)
             return 0;
 
-        ef3xfer_log_progress(test_loop, 0);
+        ef3xfer_log_progress(test_loop + 1, 0);
     }
     return success;
 }

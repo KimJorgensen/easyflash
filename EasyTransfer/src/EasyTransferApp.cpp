@@ -25,7 +25,7 @@
 #include <ApplicationServices/ApplicationServices.h>
 #endif // __WXMAC__
 
-#include <wx/menu.h>
+#include <wx/wx.h>
 #include <wx/icon.h>
 #include <wx/stdpaths.h>
 #include <wx/filename.h>

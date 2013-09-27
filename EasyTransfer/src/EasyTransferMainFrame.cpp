@@ -35,6 +35,7 @@
 #include "TabStartPRG.h"
 #include "TabWriteCRT.h"
 #include "TabWriteDisk.h"
+#include "TabUSBTest.h"
 
 
 DEFINE_EVENT_TYPE(wxEVT_EASY_TRANSFER_LOG)
@@ -84,6 +85,9 @@ EasyTransferMainFrame::EasyTransferMainFrame(wxFrame* parent, const wxString& ti
 
     m_pTabWriteDisk = new TabWriteDisk(m_pNotebook);
     m_pNotebook->AddPage(m_pTabWriteDisk, wxT("Write Disk"));
+
+    m_pTabSpecial = new TabUSBTest(m_pNotebook);
+    m_pNotebook->AddPage(m_pTabSpecial, wxT("USB Test"));
 
     pMainSizer = new wxFlexGridSizer(5, 2, 8, 8);
     pMainSizer->AddGrowableCol(1);
