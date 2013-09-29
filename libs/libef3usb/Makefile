@@ -11,7 +11,6 @@ obj += obj/ef3usb_send_str.o
 obj += obj/ef3usb_fread.o
 obj += obj/ef3usb_fload.o
 obj += obj/ef3usb_fclose.o
-obj += obj/ef3usb_is_floating.o
 
 .PHONY: all
 all: $(libname).lib
