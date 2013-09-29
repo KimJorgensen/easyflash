@@ -20,11 +20,14 @@
  * Thomas Giesel skoe@directbox.com
  */
 
+#include "usbtest.h"
+
 #include <stdint.h>
 #include <conio.h>
 #include <ef3usb.h>
+
 #include "util.h"
-#include "usbtest.h"
+
 
 void usbTest(void)
 {
@@ -34,7 +37,7 @@ void usbTest(void)
     for (;;)
     {
         clrscr();
-        cputs("USB Test\r\n");
+        cputs("USB Test (Reset to exit)\r\n");
         for (i = 16; i; --i)
         {
             ef3usb_receive_data(&ch, 1);

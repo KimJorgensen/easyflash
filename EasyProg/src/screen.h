@@ -78,6 +78,7 @@ void __fastcall__ screenPrintSimpleDialog(const char* apStrLines[]);
 uint8_t __fastcall__ screenPrintTwoLinesDialog(const char* p1, const char* p2);
 uint8_t __fastcall__ screenAskEraseDialog(void);
 uint8_t __fastcall__ screenWaitKey(uint8_t flags);
+uint8_t __fastcall__ screenIsStopPressed(void);
 const char* __fastcall__ screenReadInput(const char* pStrTitle,
                                          const char* pStrDefault);
 void __fastcall__ screenDoMenu(ScreenMenu* pMenu);

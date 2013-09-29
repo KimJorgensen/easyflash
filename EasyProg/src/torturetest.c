@@ -73,7 +73,7 @@ static uint8_t tortureTestWriteData(void)
                         return 0;
                     }
 
-                    if (kbhit() && cgetc() == CH_STOP)
+                    if (screenIsStopPressed())
                         return 0;
                 }
             }
@@ -121,7 +121,7 @@ static uint8_t tortureTestVerify(void)
                 if (!flashVerifyBlock(&addr))
                     return 0;
             }
-            if (kbhit() && cgetc() == CH_STOP)
+            if (screenIsStopPressed())
                 return 0;
         }
     }
@@ -270,7 +270,7 @@ void tortureTestRAM(void)
             refreshMainScreen();
         }
 
-        if (kbhit() && cgetc() == CH_STOP)
+        if (screenIsStopPressed())
             return;
     }
 }

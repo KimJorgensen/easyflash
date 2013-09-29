@@ -532,6 +532,17 @@ uint8_t __fastcall__ screenWaitKey(uint8_t flags)
 
 /******************************************************************************/
 /**
+ */
+uint8_t __fastcall__ screenIsStopPressed(void)
+{
+    if (kbhit() && cgetc() == CH_STOP)
+        return 1;
+    return 0;
+}
+
+
+/******************************************************************************/
+/**
  * Return the string entered. The maximal length of the string is
  * FILENAME_MAX, i.e. 16+1.
  */
