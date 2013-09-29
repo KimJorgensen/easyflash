@@ -1,4 +1,8 @@
 
+Version 1.7.1 - 29.09.2013
+- USB test added
+- Auto test + init executes the torture test before flashing
+
 Version 1.7.0 - 26.01.2013
 - USB transfer of CRT files implemented
 
