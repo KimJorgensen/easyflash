@@ -10,7 +10,12 @@
 
 #include <stdint.h>
 
-uint8_t ef3usb_is_floating(void);
+#define USB_ID      *((uint8_t*) 0xde08)
+#define USB_STATUS  *((uint8_t*) 0xde09)
+#define USB_DATA    *((uint8_t*) 0xde0a)
+
+#define USB_RX_READY 0x80
+#define USB_TX_READY 0x40
 
 char* ef3usb_check_cmd(void);
 
