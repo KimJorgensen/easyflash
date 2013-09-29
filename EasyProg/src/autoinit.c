@@ -24,6 +24,7 @@
 
 #include <string.h>
 
+#include "screen.h"
 #include "autoinit.h"
 #include "filedlg.h"
 #include "torturetest.h"
@@ -35,7 +36,10 @@ void autoInit(void)
 {
     uint8_t nSlot;
 
-    //tortureTestAuto();
+    if (screenAskEraseDialog() != BUTTON_ENTER)
+        return;
+
+    tortureTestAuto();
     eraseAll();
 
     for (nSlot = 0; nSlot < g_nSlots; ++nSlot)
