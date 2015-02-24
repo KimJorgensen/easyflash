@@ -1,5 +1,5 @@
 
-EAPI := out/eapi-am29f040-14 out/eapi-m29w160t-03 out/eapi-mx29640b-12
+EAPI := out/eapi-am29f040-14 out/eapi-m29w160t-03 out/eapi-mx29640b-12 out/eapi-sst39sf040-10
 
 .PHONY: all
 all: $(EAPI)
@@ -12,6 +12,9 @@ out/eapi-m29w160t-03: eapi-m29w160t.s | out
 	acme -l $@.labels -o $@ $<
 
 out/eapi-mx29640b-12: eapi-mx29640b.s | out
+	acme -l $@.labels -o $@ $<
+
+out/eapi-sst39sf040-10: eapi-sst39sf040.s | out
 	acme -l $@.labels -o $@ $<
 
 ###############################################################################

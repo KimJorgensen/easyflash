@@ -486,5 +486,10 @@ EAPICode3:
 .incbin "obj/eapi-mx29640b-12", 2
 .res $0300 - (* - @CodeStart), $ff
 
+EAPICode4:
+@CodeStart:
+.incbin "obj/eapi-sst39sf040-10", 2
+.res $0300 - (* - @CodeStart), $ff
+
 EAPICodeEnd:
 .byte 0

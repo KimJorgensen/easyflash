@@ -51,6 +51,7 @@ bin_acme += obj/sprites.bin
 eapi := eapi-am29f040-14
 eapi += eapi-m29w160t-03
 eapi += eapi-mx29640b-12
+eapi += eapi-sst39sf040-10
 
 eapi_dir := ../EasySDK/eapi
 eapi_src := $(addprefix $(eapi_dir)/out/,$(eapi))
@@ -154,4 +155,5 @@ clean:
 	rm -rf obj
 	$(MAKE) -C $(dir $(eload)) clean
 	$(MAKE) -C $(dir $(libprint)) clean
+	$(MAKE) -C $(eapi_dir) clean
 
