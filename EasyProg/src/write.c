@@ -305,6 +305,7 @@ static uint8_t __fastcall__ writeBinImage(uint8_t nStartBank,
 {
     EasyFlashAddr addr;
     int      nBytes;
+    uint8_t  pad;
 
     g_strCartName[0] = '\0';
 
@@ -321,7 +322,14 @@ static uint8_t __fastcall__ writeBinImage(uint8_t nStartBank,
 
         if (nBytes > 0)
         {
-            // the last block may be smaller than 265 bytes, then we write padding
+            // the last block may be smaller than 265 bytes, pad with 0xff (unprogrammed)
+            if(nBytes & 0x00ff){
+                pad = nBytes;
+                do{
+                    BLOCK_BUFFER[pad] = 0xff;
+                }while(++pad);
+            }
+
             if (!flashWriteBlock(&addr))
                 goto retError;
 
