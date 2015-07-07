@@ -1,4 +1,4 @@
-\documentclass[a4paper]{memoir}
+\documentclass[a4paper,oneside]{memoir}
 
 \setlength{\trimtop}{0pt}
 \setlength{\trimedge}{\stockwidth}
@@ -63,21 +63,21 @@ can be hard to upgrade the functionality in the KERNAL.
 
 On the Commodore 64, the KERNAL is used to access the serial bus and
 therefore the disk drives. Most often, people look to KERNAL
-upgrades to address slow disk access issues.  The standard KERNAL
+upgrades to address slow disk access issues. The standard KERNAL
 drivers in the C64 offer only slow transfer functionality, while
 there are many replacement KERNAL offerings that allow greatly
-enhanced transfer functionality.  However, this is not the only
-reason a KERNAL replacement might be desired.  Auto-boot
+enhanced transfer functionality. However, this is not the only
+reason a KERNAL replacement might be desired. Auto-boot
 functionality, customized screen layout, or other reasons might
 demand a KERNAL replacement.
 
 While there are alternative ways to
 replace some KERNAL functionality, those mechanisms limit
-usefulness.  Changing KERNAL vectors that are located in RAM only
+usefulness. Changing KERNAL vectors that are located in RAM only
 applies to callers that utilize those vectors, and only vectorized
-functionality can be enhanced.  As well, new functionality must
+functionality can be enhanced. As well, new functionality must
 exist in the address space, which might conflict with application
-code.  Thus, cartridges like Action Replay, Fastload, or The Final
+code. Thus, cartridges like Action Replay, Fastload, or The Final
 Cartridge III cannot always offer the level of compatibility
 desired.
 
@@ -91,7 +91,7 @@ Disk drives typically socket their DOS ROM, for easy replacements.
 However, many computer systems do not socket the KERNAL ROM, making
 replacement much harder.
 
-A KERNAL cartridge can address these issues.  The cartridge would
+A KERNAL cartridge can address these issues. The cartridge would
 allow the same functionality as a KERNAL replacement, but would not
 require disassembly of the computer system or soldering of a socket
 to the circuit board to allow replacement.
@@ -337,7 +337,7 @@ figure \ref {fig:addr250407} and figure \ref {fig:addr250469}.
 
 \begin{figure}
     \centering
-    \includegraphics[width=1.1\textwidth]{src/phi2-data-bus-250469}
+    \includegraphics[width=1.1\textwidth]{obj/phi2-data-bus-250469}
     \caption{Address Bus after H-Edge of Phi2, Board 250469}
     \label{fig:addr250469}
 \end{figure}
@@ -381,7 +381,7 @@ from another clock domain, the accuracy is also only 40 ns. Fig
 
 \begin{figure}
     \centering
-    \includegraphics[width=10cm]{src/implemented-timing}
+    \includegraphics[width=10cm]{obj/implemented-timing}
     \caption{Timing of the External KERNAL Cartridge}
     \label{fig:timing}
 \end{figure}
@@ -404,6 +404,24 @@ license. It is also available in that repository:
 \url{https://bitbucket.org/skoe/easyflash/src/tip/Hardware/ef3-vhdl}.
 The file \texttt{architecture.txt} in the repository contains a
 detailed description of the implementation.
+
+\section{Implemented Timing}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=1.1\textwidth]{obj/la-detect}
+    \caption{HIRAM Detection Captured with a Logic Analyzer}
+    \label{fig:la-detect}
+\end{figure}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=1.1\textwidth]{obj/la-read}
+    \caption{Read Access Captured with a Logic Analyzer}
+    \label{fig:la-read}
+\end{figure}
+
+
 
 \cite[Ch.~3]{HS10}
 
