@@ -9,9 +9,9 @@
    xmlns="http://www.w3.org/2000/svg"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
-   width="210mm"
-   height="297mm"
-   viewBox="0 0 744.09448819 1052.3622047"
+   width="441.10919"
+   height="280.76883"
+   viewBox="0 0 441.1092 280.76883"
    id="svg2"
    version="1.1"
    inkscape:version="0.48.4 r9939"
@@ -26,16 +26,20 @@
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
      inkscape:zoom="4"
-     inkscape:cx="305.57246"
-     inkscape:cy="780.1692"
+     inkscape:cx="158.6663"
+     inkscape:cy="228.59391"
      inkscape:document-units="px"
      inkscape:current-layer="layer3"
      showgrid="true"
-     inkscape:window-width="1325"
+     inkscape:window-width="1301"
      inkscape:window-height="744"
-     inkscape:window-x="41"
+     inkscape:window-x="65"
      inkscape:window-y="24"
-     inkscape:window-maximized="1">
+     inkscape:window-maximized="1"
+     fit-margin-top="0"
+     fit-margin-left="0"
+     fit-margin-right="0"
+     fit-margin-bottom="0">
     <inkscape:grid
        type="xygrid"
        id="grid3336"
@@ -45,7 +49,9 @@
        empspacing="10"
        visible="true"
        enabled="true"
-       snapvisiblegridlinesonly="true" />
+       snapvisiblegridlinesonly="true"
+       originx="0.73167228mm"
+       originy="-214.96803mm" />
   </sodipodi:namedview>
   <metadata
      id="metadata7">
@@ -63,7 +69,8 @@
      inkscape:groupmode="layer"
      id="layer2"
      inkscape:label="Grid"
-     sodipodi:insensitive="true">
+     sodipodi:insensitive="true"
+     transform="translate(2.5925396,-9.8956356)">
     <path
        style="fill:#b3b3b3;stroke:#0000ff;stroke-width:0.17716534;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none"
        d="m 70.866141,24.803138 -3e-6,219.685032"
@@ -207,7 +214,8 @@
      inkscape:label="Signals"
      inkscape:groupmode="layer"
      id="layer1"
-     sodipodi:insensitive="true">
+     sodipodi:insensitive="true"
+     transform="translate(2.5925396,-9.8956356)">
     <path
        style="fill:none;stroke:#0000ff;stroke-width:0.70866144;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none"
        d="m 67.322835,95.669269 3.543307,0 3.543307,-17.716535 350.787401,0 3.54331,17.716535 3.5433,0"
@@ -254,7 +262,8 @@
   <g
      inkscape:groupmode="layer"
      id="layer3"
-     inkscape:label="Notes">
+     inkscape:label="Notes"
+     transform="translate(2.5925396,-9.8956356)">
     <text
        xml:space="preserve"
        style="font-size:40px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans"

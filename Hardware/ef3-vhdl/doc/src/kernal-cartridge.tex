@@ -42,7 +42,7 @@ Thomas 'skoe' Giesel
 \vfill
 
 % Bottom of the page
-{\large First Edition \\[0.5cm] \today}
+{\large Version 1.0 \\[0.5cm] \today}
 
 \end{center}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -125,7 +125,7 @@ is read. If it is high (1), KERNAL ROM is read. Figure \ref
 \begin{figure}
     \centering
     \includegraphics[width=11cm]{src/memory-map-hiram}
-    \caption{HIRAM controls access to KERNAL memory space}
+    \caption{\#HIRAM controls access to KERNAL memory space}
     \label{fig:memory-map-hiram}
 \end{figure}
 
@@ -138,8 +138,8 @@ or have to use a wire which must be connected to the \#HIRAM signal
 inside the C64.
 
 For a compatible KERNAL cartridge with no additional wire, the
-cartridge must use another method to determine the state of /HIRAM.
-Since a write to address \$01 sets the state of /HIRAM, one obvious
+cartridge must use another method to determine the state of \#HIRAM.
+Since a write to address \$01 sets the state of \#HIRAM, one obvious
 idea involves tracking any writes to \$01. However, writes to \$00
 and \$01 do not present data on the C64 data bus, rendering such a
 solution ineffective.
@@ -154,14 +154,15 @@ configuring the memory map.
 
 Pulled up via resistors inside the C64, the two lines can be
 configured via an external cartridge. When there is no cartridge
-attached both of them are high (1). When a cartridge is attached it
+attached, both of them are high (1). When a cartridge is attached, it
 can pull one or both of these lines low (0) to change the memory
 configuration. When a cartridge is attached, the memory
 configuration can still be configured with the 6510 I/O port, e.g.,
 to hide the cartridge ROM.
 
-There are two more control lines on the Expansion Port: \#ROML and
-\#ROMH. Excepting Ultimax mode, \#ROML selects an external
+There are two more control lines on the Expansion 
+Port\footnote{In fact there are even more, but these two are interesting now.}:
+\#ROML and \#ROMH. Excepting Ultimax mode, \#ROML selects an external
 cartridge ROM into \$8000-\$9FFF, while \#ROMH selects a ROM into
 \$A000-\$BFFF. Whenever the C64, via the address mapping logic in
 the Programmable Logic Array (PLA), decides that data from a
@@ -176,8 +177,7 @@ the program wants to read a byte at \$A123, which is in the upper
 cartridge ROM, the PLA determines that this byte must be read from
 the external cartridge and brings \#ROMH active (0).
 
-Table \ref {tab:game-exrom} shows the configurations which can be
-set by a cartridge using \#GAME and \#EXROM.
+Table \ref {tab:game-exrom} shows the configurations which can be set by a cartridge using \#GAME and \#EXROM.
 
 \begin{table}
     \centering
@@ -196,18 +196,17 @@ set by a cartridge using \#GAME and \#EXROM.
     \label{tab:game-exrom}
 \end{table}
 
-In \cite[Ch.~3]{HS10} xxxxxxxxx several different 
-memory configurations are described. Some interesting cases are
-shown in table \ref {tab:mem-configs}. In columns (1), (2) and (3) no cartridge is
-attached, i.e. \#GAME and \#EXROM are 1. Only \#HIRAM controls
-whether there is RAM or KERNAL ROM visible to the CPU at \$E000 in
-this these cases.
+In \cite[Appendix~A]{PLA12} several different memory configurations are described.
+Some interesting cases are shown in table \ref {tab:mem-configs}.
+In columns (1), (2) and (3) no cartridge is attached, i.e., \#GAME and \#EXROM are 1.
+Only \#HIRAM controls whether there is RAM or KERNAL ROM visible to the CPU at \$E000 in this these cases.
 
 \begin{table}
     \centering
     \begin{tabularx}{\textwidth}{lccccccc}
 
         \toprule
+                & (1) & (2) & (3) & (4) & (5) & (6) & (7) \\[3pt]
         \#LORAM & 1 & x & 0 & x & 0 & 1 & x \\[3pt]
         \#HIRAM & 1 & 0 & 1 & 1 & 0 & 0 & x \\[3pt]
         \#GAME  & 1 & 1 & 1 & 0 & 0 & 0 & 0 \\[3pt]
@@ -223,9 +222,9 @@ this these cases.
     \label{tab:mem-configs}
 \end{table}
 
-There is also a memory area controlled by HIRAM which results in a
+There is also a memory area controlled by \#HIRAM which results in a
 control signal visible at the Expansion Port: When a 16 KiB
-cartridge is attached to the Expansion Port, /HIRAM is used to
+cartridge is attached to the Expansion Port, \#HIRAM is used to
 select whether the \#ROMH part of the cartridge or the internal RAM
 is mapped to \$A000. This is shown in columns (4), (5) and (6).
 
@@ -251,7 +250,7 @@ line drivers and could overheat them when being used excessively.
 The 6510 CPU has the ability to turn off its address line
 drivers, via a control input called Address Enable Control (AEC). If
 this input is low, the CPU effectively deactivates the address line
-drivers. Unfortunately AEC is not connected to the Expansion
+drivers. AEC is not connected to the Expansion
 Port directly. But it is driven by the \#DMA signal, which is
 available on the Expansion Port. Unfortunately, \#DMA also changes
 the state of another CPU control line, Ready (RDY), which will stop
@@ -270,20 +269,20 @@ Obviously, the use of the RDY line as described above renders the CPU unstable.
 
 As a next step a method was tried which does not involve \#DMA.
 Whenever a CPU read access to the address range \$F000-\$FFFF is detected, 
-the cartridge pulls down the address line A13 for a fraction of the clock cycle.
+the cartridge pulls down the address line A14 for a fraction of the clock cycle.
 This changes any address between \$F000-\$FFFF to an address between \$A000-\$BFFF.
 After this is done, the state of \#HIRAM can be read from \#ROMH.
 
 With these findings we can lay out the steps for cartridge operation:
 
 \begin{itemize}
-\item Set /GAME and /EXROM high (memory map: no cartridge attached)
+\item Set \#GAME and \#EXROM high (memory map: no cartridge attached)
 \item Wait until Phi2 is high (CPU cycle) and address bus is stable
-\item If it is a read access and the address is in KERNAL space $E000..$FFFF:
+\item If it is a read access and the address is in KERNAL space \$E000-\$FFFF:
     \begin{itemize}
-    \item Pull down A13 to alter the address bus to an address in the range 0xA000..0xBFFF
-    \item set /GAME and /EXROM to 0 to act like a 16 KiB cartridge, wait
-    \item Look at /ROMH to see whether ROM or RAM is selected by HIRAM
+    \item Pull down A14 to alter the address bus to an address in the range \$A000-\$BFFF
+    \item Set \#GAME and \#EXROM to 0 to act like a 16 KiB cartridge, wait
+    \item Look at \#ROMH to see whether ROM or RAM is selected by HIRAM
     \item \textit{How to send the right byte to the CPU?}
     \end{itemize}
 \end{itemize}
@@ -297,87 +296,62 @@ If RAM is to be read instead, the cartridge releases all lines to allow an ordin
 When the Phi2 cycle ends, the cartridge releases all lines in any case to return to idle state.
 
 \begin{itemize}
-\item Set /GAME and /EXROM high (memory map: no cartridge attached)
+\item Set \#GAME and \#EXROM high (memory map: no cartridge attached)
 \item Wait until Phi2 is high (CPU cycle) and address bus is stable
-\item If it is a read access and the address is in KERNAL space $E000..$FFFF:
+\item If it is a read access and the address is in KERNAL space \$E000..\$FFFF:
     \begin{itemize}
-    \item Pull down A13 to alter the address bus to an address in the range 0xA000..0xBFFF
-    \item Set /GAME and /EXROM to 0 to act like a 16 KiB cartridge, wait
-    \item Look at /ROMH to see whether ROM or RAM is selected by HIRAM
-    \item Release /EXROM to go to Ultimax mode
-    \item When /ROMH is asserted, put the data byte from KERNAL ROM on the bus
+    \item Pull down A14 to alter the address bus to an address in the range \$A000..\$BFFF
+    \item Set \#GAME and \#EXROM to 0 to act like a 16 KiB cartridge, wait
+    \item Look at \#ROMH to see whether ROM or RAM is selected by HIRAM
+    \item Release A14 and \#EXROM to go to Ultimax mode
+    \item When \#ROMH is asserted, put the data byte from KERNAL ROM on the bus
     \item Release all lines after Phi2 cycle has ended
     \end{itemize}
 \end{itemize}
 
 \section{Timing Considerations}
 
-Some of the steps needed for the external Kernal implementation have
-to consider timing requirements of the components of the C64. Most
-of them can be found in data-sheets.
+\label{sec:timing}Some of the steps needed for the external KERNAL implementation have
+to consider timing requirements of the components of the C64. 
+Most of them can be found in datasheets.
 
 \begin{itemize}
 \item Wait until Phi2 is high (CPU cycle) and address bus is stable
 \end{itemize}
 
-When Phi2 goes high the VIC sets AEC high when it wants to allow a
+When Phi2 goes high, the VIC-II sets AEC high when it wants to allow a
 CPU cycle. After this signal reached the CPU, it takes up to $T_{AES} =
-75 ns$ according to the 6510 data-sheet until the address bus shows
-the final value. However, measurements done on different types of
-C64s have shown that the time between the rising edge of Phi2 and a
-stable address bus is significantly smaller. Examples are shown in
-figure \ref {fig:addr250407} and figure \ref {fig:addr250469}.
-
-\begin{figure}
-    \centering
-    \includegraphics[width=1.1\textwidth]{src/phi2-data-bus-250407}
-    \caption{Address Bus after H-Edge of Phi2, Board 250407}
-    \label{fig:addr250407}
-\end{figure}
-
-\begin{figure}
-    \centering
-    \includegraphics[width=1.1\textwidth]{obj/phi2-data-bus-250469}
-    \caption{Address Bus after H-Edge of Phi2, Board 250469}
-    \label{fig:addr250469}
-\end{figure}
-
-To be on the safe side the external Kernal Cartridge will sample the
-address bus at $t \ge 80 ns$, where $t = 0$ is the rising edge of Phi2.
-
-\begin{itemize}
-\item Assert the /DMA line, wait
-\end{itemize}
-
-When the Kernal cartridge pulls down /DMA at $t >= 80 ns$, the CPU
-will tristate its address output. The 6510 datasheet states that
-this takes up to $T_{AED} = 120 ns$. Interestingly the VIC-II takes over
-the address bus already about 50 ns after it disabled AEC. The external
-KERNAL implementation modifies the address bus after 80 ns.
-
-\begin{itemize}
-\item Look at /ROMH to see whether ROM or RAM is selected by HIRAM
-\end{itemize}
-
-The data-sheet of the Signetics 82S100 PLA specifies a typical
+75 ns$ according to the 6510 datasheet until the address bus shows
+the final value. 
+At this time the external KERNAL will not modify the address bus yet, 
+because the signals RAS and CAS are set by the VIC-II to set up the address into the SDRAM chips.
+CAS ends $T_{CHL} \le 220 ns$ after Phi2, according to \cite{VICII}.
+CAS is further delayed by approximately 35 ns by the PLA, resulting in the signal CASRAM\footnote{The datasheet of the Signetics 82S100 PLA \cite{Si75} specifies a typical
 propagation delay TPD of 35 ns and a maximum delay of 80 ns. The
 Sharp custom IC used in newer C64s has different timings for
-different output lines, but in the same ballpark.
+different output lines, but in the same ballpark. None of them actually needs 80 ns under normal conditions, as shown in \cite{PLA12}}.
+This means that the addresses need to remain stable for this time plus the address hold time of the DRAMs. 
 
-We will read the result 80 ns after having set all
-input conditions. This is also the time when we release \#DMA to
-allow the CPU to restore the address bus. Less than $T_{AES} = 75 ns$
-later the address lines are stable again, the flash or RAM memory
-chip can select the right data byte. As soon as the PLA pulls down
-\#ROMH again. \#OE of the right memory chip is pulled down and the
-cartridge can put the data byte onto the bus. When a 55 ns flash is
-used, these delays will be together less than about 130 ns. The
-remaining time is the Data Stability Time Period ($T_{DSU} \ge 100 ns$)
-for the 6510 data lines. All times to measured by the cartridge can
-be implemeted as multiple of 40 ns. Therefore a CPLD with a 25 MHz
-clock may be used to build the cartridge. As the C64 signals come
-from another clock domain, the accuracy is also only 40 ns. Fig
-\ref {fig:timing} shows the expected timing.
+The external KERNAL cartridge samples the address bus at approximately $280 ns < t \le 320 ns$ after the rising edge of Phi2.
+At this time it also sets \#GAME, \#EXROM and A14.
+To hide the latency of the flash memory, the cartridge starts a speculative read of the KERNAL memory content at this address.
+The resulting data byte is prepared in the external KERNAL cartridge, but not put onto the C64's data bus yet.
+
+\begin{itemize}
+\item Look at \#ROMH to see whether ROM or RAM is selected by HIRAM
+\end{itemize}
+
+We will read the result 80 ns after having set all input conditions.
+This is also the time when the cartridge releases A14 and \#EXROM and puts the data byte, which has been prepared already, onto the bus.
+The remaining time is the Data Stability Time Period ($T_{DSU} \ge 100 ns$) for the 6510 data lines. 
+
+Not all of these timings work under the worst cases listed in the datasheets.
+Fortunately in real world they proofed to work reliable, as shown in section \ref{sec:ef3}.
+
+All times measured by the cartridge can be implemented as multiples of 40 ns.
+Therefore a CPLD with a 25 MHz clock can be used to build the cartridge.
+As the C64 signals come from another clock domain, the precision is also 40 ns.
+Figure \ref {fig:timing} shows the expected timing.
 
 \begin{figure}
     \centering
@@ -386,26 +360,27 @@ from another clock domain, the accuracy is also only 40 ns. Fig
     \label{fig:timing}
 \end{figure}
 
-\chapter{Implementation}
+\chapter{Actual Implementation}
 
 \section{EasyFlash 3}
 
-The multi-function cartridge EasyFlash 3 contains, among other 
-cartridge modes, a KERNAL implementation based on this document. The
-cartridge contains flash memory, SRAM, a 25~MHz clock source and a
-144 macrocell CPLD.
+\label{sec:ef3} The multi-function cartridge EasyFlash~3 contains a KERNAL implementation based on this document, among other cartridge modes.
+The cartridge contains flash memory, SRAM, a 25~MHz clock source and a 144 macrocell CPLD.
 
-The hardware design files are released under the Creative Commons
-license CC~BY-SA~3.0. They are available at the public repository
+The hardware design files are released under the Creative Commons license CC~BY-SA~3.0.
+They are available at the public repository
 \url{https://bitbucket.org/skoe/easyflash/src/tip/Hardware/ef3-kicad/}.
 
-The CPLD core implemented in VHDL is licensed under the zlib
-license. It is also available in that repository:
+The CPLD core implemented in VHDL is licensed under the zlib license.
+It is also available in that repository:
 \url{https://bitbucket.org/skoe/easyflash/src/tip/Hardware/ef3-vhdl}.
-The file \texttt{architecture.txt} in the repository contains a
+The file \texttt{Hardware/ef3-vhdl/architecture.txt} in the repository contains a
 detailed description of the implementation.
 
 \section{Implemented Timing}
+
+Figures \ref{fig:la-detect} and \ref{fig:la-read} show timing diagrams taken from the EasyFlash~3.
+The implementation corresponds to the description given in section \ref{sec:timing}.
 
 \begin{figure}
     \centering
@@ -421,22 +396,25 @@ detailed description of the implementation.
     \label{fig:la-read}
 \end{figure}
 
+\section{Compatibility}
 
-
-\cite[Ch.~3]{HS10}
+As the time of writing, there are at least 500 EasyFlash~3 cartridges out there, sold by different vendors and built by several hobbyists.
+There were many confirmations that the feature works reliable but no negative feedback.
+It does not work on the Commodore 128 because it uses a completely different circuitry.
+A few very early C64s have issues, because their reset line is driven with a push-pull output, which interferes with the external reset.
 
 \begin{thebibliography}{999}
-\bibitem [HS10]{HS10} Charles Hawkins, Jaume Segura. Introduction to Modern
-Digital Electronics. Scitech Pub Inc, Preliminary, 2010
+
+\bibitem [Si75]{Si75} Signetics, 1975, part of \textit{Mos and Bipolar ROM / PROM 1975}
+\url{http://www.datasheetarchive.com/82S100-datasheet.html}.
+
+\bibitem [PLA12]{PLA12} Thomas 'skoe' Giesel, 2012, \textit{The C64 PLA Dissected},
+\url{http://skoe.de/docs/c64-dissected/pla/}.
+
+\bibitem [VICII]{VICII} Commodore Semiconductor Group, \textit{6567 Video Interface Chip Specification Sheet}.
+
 \end{thebibliography}
 
-
-Commodore 64 Programmer's Reference Guide
-Commodore Computers (Author)
-Publisher: Financial Times Prentice Hall (April 1983)
-ISBN-10: 0672220563
-ISBN-13: 978-0672220562
- Product Dimensions:  21.6 x 15.5 x 3.3 cm
 
 
 \end{document}
