@@ -99,11 +99,12 @@ to the circuit board to allow replacement.
 \section{KERNAL Cartridge Design Challenges}
 
 When not in "Ultimax" mode, which radically changes the memory map
-to mimic the layout in the Commodore Ultimax system, The KERNAL can
+to mimic the layout in the Commodore Ultimax system, the KERNAL can
 be found in the C64 address space at \$E000 to \$FFFF, an 8KiB
-section of memory. But the KERNAL is not the only memory in this
-address space. There is also RAM below the KERNAL. Programs can
-decide if they want to read the KERNAL ROM or the RAM there by
+section of memory.
+But the KERNAL is not the only memory in this address space.
+There is also RAM below the KERNAL.
+Programs can decide if they want to read the KERNAL ROM or the RAM there by
 setting the HIRAM bit in the I/O register \$01 of the 6510 CPU.
 Figure \ref{fig:memory-map-plain} shows the memory map of the C64
 with no cartridge attached.
@@ -199,7 +200,7 @@ Table \ref {tab:game-exrom} shows the configurations which can be set by a cartr
 In \cite[Appendix~A]{PLA12} several different memory configurations are described.
 Some interesting cases are shown in table \ref {tab:mem-configs}.
 In columns (1), (2) and (3) no cartridge is attached, i.e., \#GAME and \#EXROM are 1.
-Only \#HIRAM controls whether there is RAM or KERNAL ROM visible to the CPU at \$E000 in this these cases.
+Only \#HIRAM controls whether there is RAM or KERNAL ROM visible to the CPU at \$E000 in these cases.
 
 \begin{table}
     \centering
@@ -222,7 +223,7 @@ Only \#HIRAM controls whether there is RAM or KERNAL ROM visible to the CPU at \
     \label{tab:mem-configs}
 \end{table}
 
-There is also a memory area controlled by \#HIRAM which results in a
+There is also a memory area controlled by \#HIRAM, which results in a
 control signal visible at the Expansion Port: When a 16 KiB
 cartridge is attached to the Expansion Port, \#HIRAM is used to
 select whether the \#ROMH part of the cartridge or the internal RAM
@@ -267,25 +268,11 @@ The mechanism was tested on different C64 models.
 It turned out that some machines got unstable and crashed occasionally.
 Obviously, the use of the RDY line as described above renders the CPU unstable.
 
-As a next step a method was tried which does not involve \#DMA.
+Bacause of that, a method was tried which does not involve \#DMA.
 Whenever a CPU read access to the address range \$F000-\$FFFF is detected, 
 the cartridge pulls down the address line A14 for a fraction of the clock cycle.
 This changes any address between \$F000-\$FFFF to an address between \$A000-\$BFFF.
 After this is done, the state of \#HIRAM can be read from \#ROMH.
-
-With these findings we can lay out the steps for cartridge operation:
-
-\begin{itemize}
-\item Set \#GAME and \#EXROM high (memory map: no cartridge attached)
-\item Wait until Phi2 is high (CPU cycle) and address bus is stable
-\item If it is a read access and the address is in KERNAL space \$E000-\$FFFF:
-    \begin{itemize}
-    \item Pull down A14 to alter the address bus to an address in the range \$A000-\$BFFF
-    \item Set \#GAME and \#EXROM to 0 to act like a 16 KiB cartridge, wait
-    \item Look at \#ROMH to see whether ROM or RAM is selected by HIRAM
-    \item \textit{How to send the right byte to the CPU?}
-    \end{itemize}
-\end{itemize}
 
 If the CPU accesses the KERNAL ROM, the cartridge must place the external KERNAL ROM into the address space at \$E000-\$FFFF.
 The memory map shows a way to accomplish that.
@@ -294,6 +281,14 @@ In this mode, any read access in the range \$E000-\$FFFF will activate the \#ROM
 Therefore, if a valid KERNAL read access is requested, the cartridge must set \#GAME to active (0) and release \#EXROM.
 If RAM is to be read instead, the cartridge releases all lines to allow an ordinary RAM access.
 When the Phi2 cycle ends, the cartridge releases all lines in any case to return to idle state.
+
+\begin{figure}
+    \centering
+    \includegraphics[width=8cm]{obj/working-principle}
+    \caption{Working principle}
+    \label{fig:working-principle}
+\end{figure}
+
 
 \begin{itemize}
 \item Set \#GAME and \#EXROM high (memory map: no cartridge attached)
