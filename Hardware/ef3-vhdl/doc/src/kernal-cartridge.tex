@@ -42,7 +42,7 @@ Thomas 'skoe' Giesel
 \vfill
 
 % Bottom of the page
-{\large Version 1.0 \\[0.5cm] \today}
+{\large Version 1.1 \\[0.5cm] \today}
 
 \end{center}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -151,14 +151,12 @@ solution ineffective.
 
 \#HIRAM does not act alone in re-arranging the memory map. Two lines
 on the expansion port, \#GAME and \#EXROM, also play a part in
-configuring the memory map.
+configuring it.
 
-Pulled up via resistors inside the C64, the two lines can be
-configured via an external cartridge. When there is no cartridge
-attached, both of them are high (1). When a cartridge is attached, it
-can pull one or both of these lines low (0) to change the memory
-configuration. When a cartridge is attached, the memory
-configuration can still be configured with the 6510 I/O port, e.g.,
+Pulled up via resistors inside the C64, these two lines can be configured via an external cartridge.
+When there is no cartridge attached, both of them are high (1).
+When a cartridge is attached, it can pull one or both of these lines low (0) to change the memory configuration. 
+In this case, the memory configuration can still be changed with the 6510 I/O port, e.g.,
 to hide the cartridge ROM.
 
 There are two more control lines on the Expansion 
@@ -199,24 +197,22 @@ Table \ref {tab:game-exrom} shows the configurations which can be set by a cartr
 
 In \cite[Appendix~A]{PLA12} several different memory configurations are described.
 Some interesting cases are shown in table \ref {tab:mem-configs}.
-In columns (1), (2) and (3) no cartridge is attached, i.e., \#GAME and \#EXROM are 1.
+In configurations (1), (2) and (3) no cartridge is attached, i.e., \#GAME and \#EXROM are 1.
 Only \#HIRAM controls whether there is RAM or KERNAL ROM visible to the CPU at \$E000 in these cases.
 
 \begin{table}
-    \centering
-    \begin{tabularx}{\textwidth}{lccccccc}
-
+    \begin{tabularx}{1.04\textwidth}{ccccccc}
         \toprule
-                & (1) & (2) & (3) & (4) & (5) & (6) & (7) \\[3pt]
-        \#LORAM & 1 & x & 0 & x & 0 & 1 & x \\[3pt]
-        \#HIRAM & 1 & 0 & 1 & 1 & 0 & 0 & x \\[3pt]
-        \#GAME  & 1 & 1 & 1 & 0 & 0 & 0 & 0 \\[3pt]
-        \#EXROM & 1 & 1 & 1 & 0 & 0 & 0 & 1 \\[3pt]
+        Config & \#LORAM & \#HIRAM & \#GAME & \#EXROM & \$A000..\$BFFF & \$E000..\$FFFF \\[3pt]
+        (1)    & 1       & 1       & 1      & 1       & BASIC          & KERNAL \\[3pt]
+        (2)    & x       & 0       & 1      & 1       & RAM            & RAM    \\[3pt]
+        (3)    & 0       & 1       & 1      & 1       & RAM            & KERNAL \\[3pt]
         \midrule
-        E000-FFFF & \textbf{Kernal} & \textbf{RAM} & \textbf{Kernal} &
-          Kernal         & Kernal        & RAM           & \textbf{ROMH} \\[3pt]
-        A000-BFFF & BASIC            & RAM           & RAM              &
-          \textbf{ROMH} & \textbf{RAM} & \textbf{RAM} & --- \\[3pt]
+        (4)    & x       & 1       & 0      & 0       & ROMH           & KERNAL \\[3pt]
+        (5)    & 0       & 0       & 0      & 0       & RAM            & KERNAL \\[3pt]
+        (6)    & 1       & 0       & 0      & 0       & RAM            & RAM    \\[3pt]
+        \midrule
+        (7)    & x       & x       & 0      & 1       & ---            & ROMH   \\[3pt]
         \bottomrule
     \end{tabularx}
     \caption{Memory configurations}
@@ -227,7 +223,7 @@ There is also a memory area controlled by \#HIRAM, which results in a
 control signal visible at the Expansion Port: When a 16 KiB
 cartridge is attached to the Expansion Port, \#HIRAM is used to
 select whether the \#ROMH part of the cartridge or the internal RAM
-is mapped to \$A000. This is shown in columns (4), (5) and (6).
+is mapped to \$A000. This is shown in configurations (4), (5) and (6).
 
 This proves invaluable for external KERNAL cartridge design. If the
 cartridge sets the \#GAME and \#EXROM lines low, and a read
@@ -259,16 +255,12 @@ the CPU.
 
 The 6500 CPU family datasheet shows that when RDY is asserted during a Phi2 cycle and released before the cycle ends, 
 it should be ignored and should not stop the CPU. 
-Thus, it seems like if the cartridge asserts \#DMA during a Phi2 cycle but releases it before the cycle ends, 
-it could drive the address bus during that cycle.
-With access to the address bus, the cartridge could drive the address bus to a location within \$A000-\$BFFF
-during the cycle, and capture the state of \#HIRAM on the \#ROMH Expansion Port line.
-
-The mechanism was tested on different C64 models. 
+Thus, it seems like if the cartridge asserts \#DMA during a Phi2 cycle but releases it before the cycle ends, it could drive the address bus during that cycle.
+This mechanism was tested on different C64 models. 
 It turned out that some machines got unstable and crashed occasionally.
 Obviously, the use of the RDY line as described above renders the CPU unstable.
 
-Bacause of that, a method was tried which does not involve \#DMA.
+Fortunately, a method was found which does not involve \#DMA.
 Whenever a CPU read access to the address range \$F000-\$FFFF is detected, 
 the cartridge pulls down the address line A14 for a fraction of the clock cycle.
 This changes any address between \$F000-\$FFFF to an address between \$A000-\$BFFF.
@@ -282,27 +274,23 @@ Therefore, if a valid KERNAL read access is requested, the cartridge must set \#
 If RAM is to be read instead, the cartridge releases all lines to allow an ordinary RAM access.
 When the Phi2 cycle ends, the cartridge releases all lines in any case to return to idle state.
 
+The whole procedure is shown in figure \ref {fig:working-principle}. Note that also the signal BA must be evaluated, to distinguish a CPU read access from a VIC-II read access. As the VIC-II always reads from RAM but never from KERNAL, the mechanism must ignore read accesses by the VIC-II.
+ 
 \begin{figure}
     \centering
-    \includegraphics[width=8cm]{obj/working-principle}
-    \caption{Working principle}
+    \includegraphics[width=10cm]{obj/working-principle}
+    \caption{Working principle (simplified)}
     \label{fig:working-principle}
 \end{figure}
 
+\section{Optimization}
 
-\begin{itemize}
-\item Set \#GAME and \#EXROM high (memory map: no cartridge attached)
-\item Wait until Phi2 is high (CPU cycle) and address bus is stable
-\item If it is a read access and the address is in KERNAL space \$E000..\$FFFF:
-    \begin{itemize}
-    \item Pull down A14 to alter the address bus to an address in the range \$A000..\$BFFF
-    \item Set \#GAME and \#EXROM to 0 to act like a 16 KiB cartridge, wait
-    \item Look at \#ROMH to see whether ROM or RAM is selected by HIRAM
-    \item Release A14 and \#EXROM to go to Ultimax mode
-    \item When \#ROMH is asserted, put the data byte from KERNAL ROM on the bus
-    \item Release all lines after Phi2 cycle has ended
-    \end{itemize}
-\end{itemize}
+\label{sec:optimization}As mentioned already, write accesses to the CPU I/O register \$01 and the data direction register \$00 can be detected on the address bus and the R\#W line.
+The only thing missing is the actual data byte written there. 
+The cartridge utilizes this fact for an optimization.
+The \#HIRAM detection is not done for every cycle when the CPU reads KERNAL space.
+Instead, it only needs to be detected once, when the KERNAL address space is read the first time after \$00 or \$01 have been written.
+For all additional CPU read accesses at this address range, the previously detected state of \#HIRAM is used, which significantly reduces the bus traffic, especially on the address line A14.
 
 \section{Timing Considerations}
 
@@ -310,48 +298,37 @@ When the Phi2 cycle ends, the cartridge releases all lines in any case to return
 to consider timing requirements of the components of the C64. 
 Most of them can be found in datasheets.
 
-\begin{itemize}
-\item Wait until Phi2 is high (CPU cycle) and address bus is stable
-\end{itemize}
-
 When Phi2 goes high, the VIC-II sets AEC high when it wants to allow a
-CPU cycle. After this signal reached the CPU, it takes up to $T_{AES} =
-75 ns$ according to the 6510 datasheet until the address bus shows
-the final value. 
-At this time the external KERNAL will not modify the address bus yet, 
-because the signals RAS and CAS are set by the VIC-II to set up the address into the SDRAM chips.
+CPU cycle. After this signal reached the CPU, it brings the address bus to the final value. 
+The signals RAS and CAS by the VIC-II are used to set up the address into the DRAM chips.
 CAS ends $T_{CHL} \le 220 ns$ after Phi2, according to \cite{VICII}.
 CAS is further delayed by approximately 35 ns by the PLA, resulting in the signal CASRAM\footnote{The datasheet of the Signetics 82S100 PLA \cite{Si75} specifies a typical
 propagation delay TPD of 35 ns and a maximum delay of 80 ns. The
 Sharp custom IC used in newer C64s has different timings for
 different output lines, but in the same ballpark. None of them actually needs 80 ns under normal conditions, as shown in \cite{PLA12}}.
-This means that the addresses need to remain stable for this time plus the address hold time of the DRAMs. 
+This means that the addresses need to remain stable for this time plus the address hold time of the DRAMs, which is typically 10 ns to 20 ns.
 
-The external KERNAL cartridge samples the address bus at approximately $280 ns < t \le 320 ns$ after the rising edge of Phi2.
-At this time it also sets \#GAME, \#EXROM and A14.
-To hide the latency of the flash memory, the cartridge starts a speculative read of the KERNAL memory content at this address.
-The resulting data byte is prepared in the external KERNAL cartridge, but not put onto the C64's data bus yet.
+This means that the external KERNAL cartridge must not modify the address bus less than 280 ns after the rising edge of Phi2.
+At this time it sets \#GAME, \#EXROM and A14.
+To hide the latency of the flash memory used on the cartridge, it starts a speculative read of the KERNAL memory content at this address.
+The resulting data byte is prepared in the external KERNAL cartridge, but only put onto the C64's data bus when \#ROMH gets low, which happens asynchronously about 35 ns after A14 has been modified,   which is about 315 ns after the rising edge of Phi2.
+The results in enough time for the the Data Stability Time Period ($T_{DSU} \ge 100 ns$) for the 6510 data lines. 
 
-\begin{itemize}
-\item Look at \#ROMH to see whether ROM or RAM is selected by HIRAM
-\end{itemize}
+The PLA output is evaluated by the cartridge 80 ns after having set all input conditions.
+This is also the time when the cartridge releases A14 and \#EXROM if it is a KERNAL access, and all lines if it is a RAM access. This happens about 360 ns after Phi2.
 
-We will read the result 80 ns after having set all input conditions.
-This is also the time when the cartridge releases A14 and \#EXROM and puts the data byte, which has been prepared already, onto the bus.
-The remaining time is the Data Stability Time Period ($T_{DSU} \ge 100 ns$) for the 6510 data lines. 
+Even though the timing is very tight, it conforms to the values listed in the datasheets.
+Also in real world it proofed to work reliable, as shown in section \ref{sec:ef3}.
 
-Not all of these timings work under the worst cases listed in the datasheets.
-Fortunately in real world they proofed to work reliable, as shown in section \ref{sec:ef3}.
+All times measured by the cartridge are implemented as multiples of 40 ns.
+A CPLD with a 25 MHz clock is used for that.
+As the C64 signals come from another clock domain, up to 40 ns may be added to the times relative to Phi2 described above.
+Figure \ref {fig:timing} shows the expected timing including the worst case addition of 40 ns.
 
-All times measured by the cartridge can be implemented as multiples of 40 ns.
-Therefore a CPLD with a 25 MHz clock can be used to build the cartridge.
-As the C64 signals come from another clock domain, the precision is also 40 ns.
-Figure \ref {fig:timing} shows the expected timing.
-
-\begin{figure}
+\begin{figure}[!hb]
     \centering
     \includegraphics[width=10cm]{obj/implemented-timing}
-    \caption{Timing of the External KERNAL Cartridge}
+    \caption{Timing of the External KERNAL Cartridge (worst case)}
     \label{fig:timing}
 \end{figure}
 
@@ -360,7 +337,7 @@ Figure \ref {fig:timing} shows the expected timing.
 \section{EasyFlash 3}
 
 \label{sec:ef3} The multi-function cartridge EasyFlash~3 contains a KERNAL implementation based on this document, among other cartridge modes.
-The cartridge contains flash memory, SRAM, a 25~MHz clock source and a 144 macrocell CPLD.
+The cartridge contains flash memory, SRAM, a 25~MHz clock source, a 144 macrocell CPLD and a USB device interface for data connections to PCs.
 
 The hardware design files are released under the Creative Commons license CC~BY-SA~3.0.
 They are available at the public repository
@@ -372,19 +349,28 @@ It is also available in that repository:
 The file \texttt{Hardware/ef3-vhdl/architecture.txt} in the repository contains a
 detailed description of the implementation.
 
+Figures \ref{fig:ef311} and \ref{fig:ef313} show two versions of the EasyFlash 3.
+
+\begin{figure}[!h]
+    \centering
+    \includegraphics[width=10cm]{src/ef3-1-1}
+    \caption{EasyFlash 3, short version}
+    \label{fig:ef311}
+\end{figure}
+
 \section{Implemented Timing}
 
-Figures \ref{fig:la-detect} and \ref{fig:la-read} show timing diagrams taken from the EasyFlash~3.
-The implementation corresponds to the description given in section \ref{sec:timing}.
+A logic analyzer was used to capture the signals from an EasyFlash~3 to verify the correct implementation and to compare it to the theory. 
+The implementation corresponds to the description given in section \ref{sec:timing}. Figure \ref{fig:la-detect} shows a cycle with a \#HIRAM detection, followed by a read access to the external KERNAL. Figure \ref{fig:la-read} shows a read access from the external KERNAL without a \#HIRAM detection. In this case a previously detected \#HIRAM state was used, as described in section \ref {sec:optimization}.
 
-\begin{figure}
+\begin{figure}[!h]
     \centering
     \includegraphics[width=1.1\textwidth]{obj/la-detect}
     \caption{HIRAM Detection Captured with a Logic Analyzer}
     \label{fig:la-detect}
 \end{figure}
 
-\begin{figure}
+\begin{figure}[!h]
     \centering
     \includegraphics[width=1.1\textwidth]{obj/la-read}
     \caption{Read Access Captured with a Logic Analyzer}
@@ -397,6 +383,13 @@ As the time of writing, there are at least 500 EasyFlash~3 cartridges out there,
 There were many confirmations that the feature works reliable but no negative feedback.
 It does not work on the Commodore 128 because it uses a completely different circuitry.
 A few very early C64s have issues, because their reset line is driven with a push-pull output, which interferes with the external reset.
+
+\begin{figure}[!h]
+    \centering
+    \includegraphics[width=7cm]{src/ef3-1-3}
+    \caption{EasyFlash 3, long version}
+    \label{fig:ef313}
+\end{figure}
 
 \begin{thebibliography}{999}
 
