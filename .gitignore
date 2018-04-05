@@ -1,8 +1,7 @@
-syntax: glob
-obj/*
-out/*
-out_win32/*
-archive/*
+obj/
+out/
+out_win32/
+archive/
 a.out
 *.tar.*
 *~
@@ -29,17 +28,17 @@ a.out
 
 EasyProg/easyprog
 
-EasyLoader/build/*
-EasyLoader/.deps/*
+EasyLoader/build/
+EasyLoader/.deps/
 
 Hardware/*gerber*
 Hardware/*/*gerber*
 *.pho
 *.cache.dcm
-synth/*
-log/*
-isim/*
-_xmsgs/*
+synth/
+log/
+isim/
+_xmsgs/
 
 # test files and compiled releases
 EasyProg/test
