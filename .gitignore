@@ -28,8 +28,8 @@ a.out
 
 EasyProg/easyprog
 
-EasyLoader/build/
-EasyLoader/.deps/
+3rdParty/EasyLoader/build/
+3rdParty/EasyLoader/.deps/
 
 Hardware/*gerber*
 Hardware/*/*gerber*
