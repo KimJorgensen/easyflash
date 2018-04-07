@@ -1,7 +1,13 @@
 ;
 ; EasyFlash - spritesasm.s - Sprites
 ;
-; (c) 2009 Thomas 'skoe' Giesel
+; EasyProg version 1.8.0, April 2018, are
+; Copyright (c) 2018 Kim Jorgensen, are derived from EasyProg 1.7.1,
+; and are distributed according to the same disclaimer and license as
+; EasyProg 1.7.1
+;
+; EasyProg versions 1.2 September 2009, through 1.7.1, September 2013, are
+; Copyright (c) 2009-2013 Thomas 'skoe' Giesel
 ;
 ; This software is provided 'as-is', without any express or implied
 ; warranty.  In no event will the authors be held liable for any damages
@@ -108,11 +114,11 @@ spSet:
         rts
 
 spritePos:
-    .byte 145 + 0 * 24, 102
-    .byte 145 + 1 * 24, 102
-    .byte 145 + 2 * 24, 102
-    .byte 145 + 3 * 24, 102
-    .byte 145 +     36, 102
+    .byte 137 + 0 * 24, 94
+    .byte 137 + 1 * 24, 94
+    .byte 137 + 2 * 24, 94
+    .byte 137 + 3 * 24, 94
+    .byte 137 +     36, 94
 
 spriteCol:
     .byte 0, 0, 0, 0, 8

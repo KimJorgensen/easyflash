@@ -1,7 +1,13 @@
 /*
  * EasyProg - write.c - Write cartridge image to flash
  *
- * (c) 2009 Thomas Giesel
+ * EasyProg version 1.8.0, April 2018, are
+ * Copyright (c) 2018 Kim Jorgensen, are derived from EasyProg 1.7.1,
+ * and are distributed according to the same disclaimer and license as
+ * EasyProg 1.7.1
+ *
+ * EasyProg versions 1.2 September 2009, through 1.7.1, September 2013, are
+ * Copyright (c) 2009-2013 Thomas Giesel
  *
  * This software is provided 'as-is', without any express or implied
  * warranty.  In no event will the authors be held liable for any damages
@@ -51,6 +57,7 @@
 
 #define EF3_AR_BANK     0x10
 #define EF3_SS5_BANK    0x20
+#define EF3_FC3_BANK    0x28
 
 /******************************************************************************/
 /* Static variables */
@@ -563,6 +570,24 @@ void checkWriteSS5Image(void)
 
 /******************************************************************************/
 /**
+ * Write a FC3 image file to the flash.
+ */
+void checkWriteFC3Image(void)
+{
+    uint8_t rv;
+
+    slotSelect(0);
+    if (writeOpenFile("BIN") == CART_RV_OK)
+    {
+        rv = writeBinImage(EF3_FC3_BANK, 0, EP_INTERLEAVED);
+        if (rv == CART_RV_OK)
+            screenPrintSimpleDialog(apStrWriteComplete);
+    }
+}
+
+
+/******************************************************************************/
+/**
  */
 void eraseAll(void)
 {
@@ -673,6 +698,24 @@ void checkEraseSS5(void)
         checkFlashType();
         eraseSector(EF3_SS5_BANK, 0);
         eraseSector(EF3_SS5_BANK, 1);
+        resetCartInfo();
+    }
+}
+
+
+/******************************************************************************/
+/**
+ */
+void checkEraseFC3(void)
+{
+    slotSelect(0);
+    if (screenAskEraseDialog() == BUTTON_ENTER)
+    {
+        checkFlashType();
+        eraseSector(EF3_FC3_BANK, 0);
+        eraseSector(EF3_FC3_BANK, 1);
+        eraseSector(EF3_FC3_BANK + 8, 0);
+        eraseSector(EF3_FC3_BANK + 8, 1);
         resetCartInfo();
     }
 }

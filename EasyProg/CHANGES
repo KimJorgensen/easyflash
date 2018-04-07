@@ -1,4 +1,8 @@
 
+Version 1.8.0 - 07.04.2018
+- Release from https://github.com/KimJorgensen/easyflash
+- Support for Final Cartridge III
+
 Version 1.7.1 - 29.09.2013
 - USB test added
 - Auto test + init executes the torture test before flashing

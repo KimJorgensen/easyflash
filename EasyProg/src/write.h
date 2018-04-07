@@ -1,7 +1,13 @@
 /*
  * EasyProg - write.h - Write cartridge image to flash
  *
- * (c) 2009 Thomas Giesel
+ * EasyProg version 1.8.0, April 2018, are
+ * Copyright (c) 2018 Kim Jorgensen, are derived from EasyProg 1.7.1,
+ * and are distributed according to the same disclaimer and license as
+ * EasyProg 1.7.1
+ *
+ * EasyProg versions 1.2 September 2009, through 1.7.1, September 2013, are
+ * Copyright (c) 2009-2013 Thomas Giesel
  *
  * This software is provided 'as-is', without any express or implied
  * warranty.  In no event will the authors be held liable for any damages
@@ -59,11 +65,13 @@ void checkWriteHIROMImage(void);
 void checkWriteKERNALImage(void);
 void checkWriteARImage(void);
 void checkWriteSS5Image(void);
+void checkWriteFC3Image(void);
 void eraseAll(void);
 void checkEraseAll(void);
 void checkEraseSlot(void);
 void checkEraseKERNAL(void);
 void checkEraseAR(void);
 void checkEraseSS5(void);
+void checkEraseFC3(void);
 
 #endif /* WRITE_H_ */
