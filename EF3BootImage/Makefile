@@ -16,30 +16,20 @@
 # .                     .
 # 0f <--------------- Sound --------------->
 # ==========================================
-# 10                    |   Action Replay
-# .     Directory       |      Slot 0
-# .     (64k reserved)  |      (64 k)
-# 17                    |
+# 10     Directory      |  Action Replay 0
+# .        (64K)        |       (64K)
 # ==========================================
-# 18    EF3 KERNAL      |   Action Replay
-# .                     |      Slot 1
-# .     Reserved        |      (64 k)
-# 1f                    |
+# 18     EF3 KERNAL     |  Action Replay 1
+# .    (64K reserved)   |       (64K)
 # ==========================================
-# 20
-# .              Super Snapsot
-# .             (128 k reserved)
-# 27
+# 20            Super Snapshot 5
+# .                  (128K)
 # ==========================================
-# 28
-# .            Final Cartridge III
-# .             (256 k reserved)
-# 37
+# 28           Final Cartridge III
+# .                  (256K)
 # ==========================================
-# 38
-# .               Not reserved
-# .                 (128 k)
-# 3f
+# 38              Unallocated
+# .                  (128K)
 # ==========================================
 
 # uncompressed version of EasyProg
