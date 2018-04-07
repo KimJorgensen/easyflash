@@ -33,10 +33,14 @@
 # ==========================================
 # 28
 # .            Final Cartridge III
-# .                    (?)
-# 2f
+# .             (256 k reserved)
+# 37
 # ==========================================
-
+# 38
+# .               Not reserved
+# .                 (128 k)
+# 3f
+# ==========================================
 
 # uncompressed version of EasyProg
 easyprog    := ../EasyProg/easyprog
@@ -44,7 +48,7 @@ easyprog    := ../EasyProg/easyprog
 ifneq "$(release)" "yes"
 	version := $(shell date +%y%m%d-%H%M)
 else
-	version := 1.2.0
+	version := 1.3.0
 endif
 
 ifeq "$(variant)" "jb"
@@ -81,12 +85,11 @@ menu_image  := trampoline.bin                           0x00 0x1F00 H
 menu_image  += efmenu/efmenu.bin                        0x08 0x0000 LH
 menu_image  += $(easyprog)                              0x09 0x0000 LH
 menu_image  += prgstart/prgstart.bin                    0x0b 0x0000 LH
-#menu_image  += ef3kernal/out/ef3kernal_b0.bin           0x18 0x0000 L
-#menu_image  += ef3kernal/out/ef3kernal_b1.bin           0x19 0x0000 L
+#menu_image += ef3kernal/out/ef3kernal_b0.bin           0x18 0x0000 L
+#menu_image += ef3kernal/out/ef3kernal_b1.bin           0x19 0x0000 L
 
 #menu_image += waterdrop.raw        0x0f 0x0000
 #menu_image += bing.raw        0x0f 0x0000
-
 
 menu_deps   := trampoline.bin
 menu_deps   += efmenu/efmenu.bin
@@ -112,8 +115,8 @@ ifeq "$(variant)" "jb"
     init_image  += images/empty.bin                     0x18 0x0000 H
     init_image  += images/empty.bin                     0x20 0x0000 L
     init_image  += images/empty.bin                     0x20 0x0000 H
-    init_image  += images/empty.bin                     0x30 0x0000 L
-    init_image  += images/empty.bin                     0x30 0x0000 H
+    init_image  += images/empty.bin                     0x28 0x0000 L
+    init_image  += images/empty.bin                     0x28 0x0000 H
     init_image  += images/empty.bin                     0x38 0x0000 L
     init_image  += images/empty.bin                     0x38 0x0000 H
 else
@@ -124,21 +127,22 @@ else
     init_image  += images/ttn2crom.bin                  0x02 0x0000 L
 
     init_image  += images/rr38ppal.bin                  0x10 0x0000 H
+    init_image  += images/empty.bin                     0x18 0x0000 L
     #init_image += images/apower.bin                    0x18 0x0000 H
     init_image  += images/ar.bin                        0x18 0x0000 H
 
-    init_image  += images/empty.bin                     0x18 0x0000 L
     #init_image += images/ss522-2-pal.bin               0x20 0x0000 LH
     init_image  += images/empty.bin                     0x20 0x0000 L
     init_image  += images/empty.bin                     0x20 0x0000 H
+
+    #init_image += images/fc3-1988-12.bin               0x28 0x0000 LH
+    init_image  += images/empty.bin                     0x28 0x0000 L
+    init_image  += images/empty.bin                     0x28 0x0000 H
+
+    init_image  += images/empty.bin                     0x38 0x0000 L
+    init_image  += images/empty.bin                     0x38 0x0000 H
 endif
 
-init_image      += images/empty.bin                     0x28 0x0000 L
-init_image      += images/empty.bin                     0x28 0x0000 H
-init_image      += images/empty.bin                     0x30 0x0000 L
-init_image      += images/empty.bin                     0x30 0x0000 H
-init_image      += images/empty.bin                     0x38 0x0000 L
-init_image      += images/empty.bin                     0x38 0x0000 H
 
 ###############################################################################
 # The menu image: Contains menu and tools

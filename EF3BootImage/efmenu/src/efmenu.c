@@ -1,5 +1,11 @@
 /*
- * (c) 2010 Thomas Giesel
+ * EasyFash 3 Menu version 1.3.0, April 2018, are
+ * Copyright (c) 2018 Kim Jorgensen, are derived from EasyFash 3 Menu 1.2.0,
+ * and are distributed according to the same disclaimer and license as
+ * EasyFash 3 Menu 1.2.0
+ *
+ * EasyFash 3 Menu versions 1.0.4, January 2012, through 1.2.0, February 2013, are
+ * Copyright (c) 2012-2013 Thomas Giesel
  *
  * This software is provided 'as-is', without any express or implied
  * warranty.  In no event will the authors be held liable for any damages
@@ -72,37 +78,50 @@ static efmenu_entry_t ef_menu[] =
 /* key 0 => end, key 0xff => not selectable */
 static efmenu_entry_t special_menu[] =
 {
-        { 'r',  0,  0x10, 1,  MODE_AR,           "R", "Replay Slot 1",    "" },
-        { 'y',  0,  0x18, 1,  MODE_AR,           "Y", "Replay Slot 2",    "" },
-        { 's',  0,  0x20, 1,  MODE_SS5,          "S", "Super Snapshot 5", "" },
-        { 'p',  0,  9,    1,  MODE_EF_NO_RESET,  "P", "EasyProg",         "crt" },
-        { 0xff, 0,  0,    0,  MODE_EF,           "",  "",                 "" },
-        { ' ',  0,  0,    0,  MODE_NEXT_PAGE,    "",  "<SPACE> for more","" },
+        { 'r',  0, 0x10,  1,  MODE_AR,        "R", "Replay Slot 1",     "" },
+        { 'y',  0, 0x18,  1,  MODE_AR,        "Y", "Replay Slot 2",     "" },
+        { 's',  0, 0x20,  1,  MODE_SS5,       "S", "Super Snapshot 5",  "" },
+        { 'l',  0, 0x28,  1,  MODE_FC3,       "L", "Final Cartridge 3", "" },
+        { 0xff, 0, 0,     0,  MODE_EF,        "",  "",                  "" },
+        { ' ',  0, 0,     0,  MODE_NEXT_PAGE, "",  "<SPACE> for more",  "" },
+        { 0, 0, 0, 0, 0, "", "", "" }
+};
+
+static efmenu_entry_t version_menu[] =
+{
+        { 0,  0,  0,  0,  MODE_SHOW_VERSION,  "",  "",  "" },
+        { 0, 0, 0, 0, 0, "", "", "" }
+};
+
+/* key v => next page to maintain compatibility with old show version mode */
+static efmenu_entry_t page1_menu[] =
+{
+        { 'p',  0, 9, 1,  MODE_EF_NO_RESET, "P", "EasyProg",          "crt" },
+        { 'k',  0, 0, 1,  MODE_KILL,        "K", "Kill Cartridge",    "" },
+        { 'z',  0, 0, 1,  MODE_GO128,       "Z", "To C128 Mode",      "" },
+        { 0xff, 0, 0, 0,  MODE_EF,          "",  "",                  "" },
+        { 0xff, 0, 0, 0,  MODE_EF,          "",  "",                  "" },
+        { 'v',  0, 0, 0,  MODE_NEXT_PAGE,   "",  "<SPACE> for back",  "" },
         { 0, 0, 0, 0, 0, "", "", "" }
 };
 
 static efmenu_entry_t dummy_menu[] =
 {
-        { 0xff, 0,  0x0b,   1,  MODE_EF,           "?", "USB Tool",         "prg" },
-        { 0, 0, 0, 0, 0, "", "", "" }
-};
-
-static efmenu_entry_t page1_menu[] =
-{
-        { 'v', 0, 0, 0,  MODE_SHOW_VERSION, "V", "Show Versions",    "" },
-        { 'k', 0, 0, 1,  MODE_KILL,         "K", "Kill Cartridge",   "" },
-        { 'z', 0, 0, 1,  MODE_GO128,        "Z", "To C128 Mode",     "" },
+        { 0xff, 0, 0x0b, 1,  MODE_EF,       "",  "USB Tool",          "prg" },
         { 0, 0, 0, 0, 0, "", "", "" }
 };
 
 static efmenu_t all_menus[] =
 {
-        { 0,   2,  2, 10, kernal_menu },
-        { 0,   2, 15,  8, special_menu },
-        { 0,  22, 13,  9, ef_menu },
-        { 1,   2, 15,  8, page1_menu },
-        { 2,   0,  0,  0, dummy_menu },
-        { 0,   0,  0,  0, NULL }
+        { 0,  2,  2, 10, kernal_menu },
+        { 0,  2, 15,  8, special_menu },
+        { 0, 22, 13,  9, ef_menu },
+
+        { 1,  2,  2, 10, version_menu },
+        { 1,  2, 15,  8, page1_menu },
+
+        { 2,  0,  0,  0, dummy_menu },
+        { 0,  0,  0,  0, NULL }
 };
 
 /* This is the currently selected menu index in all_menus */
@@ -115,8 +134,7 @@ static uint8_t n_current_entry;
 static uint8_t n_current_page;
 
 /******************************************************************************/
-static void show_version(void);
-static void version_display_loop(void);
+static void show_version(uint8_t x_pos, uint8_t y_pos);
 uint8_t menu_entry_is_valid(const efmenu_entry_t* entry);
 static uint8_t current_entry_is_selectable(void);
 static void erase_text_areas(uint8_t colors);
@@ -262,9 +280,11 @@ uint8_t menu_entry_is_valid(const efmenu_entry_t* entry)
 
     if (entry->mode == MODE_EF_NO_RESET ||
         entry->mode == MODE_KILL ||
-        entry->mode == MODE_SHOW_VERSION ||
         entry->mode == MODE_NEXT_PAGE)
         return 1;
+
+    if (entry->mode == MODE_SHOW_VERSION)
+        return 0;
 
     if (is_c128())
     {
@@ -330,6 +350,11 @@ static void show_menu(uint8_t n_page, uint8_t full_update)
             y = menu->y_pos + 1;
 
             entry = menu->pp_entries;
+            if(entry->mode == MODE_SHOW_VERSION && full_update)
+            {
+                show_version(menu->x_pos, y);
+            }
+
             while (entry->key)
             {
                 if (full_update)
@@ -369,10 +394,6 @@ static void __fastcall__ start_menu_entry(const efmenu_entry_t* entry)
     {
         // PONR
         start_program(entry->bank);
-    }
-    else if (entry->mode == MODE_SHOW_VERSION)
-    {
-        version_display_loop();
     }
     else if (entry->mode == MODE_NEXT_PAGE)
     {
@@ -455,22 +476,27 @@ static void poll_usb(void)
 /******************************************************************************/
 /**
  */
-static void show_version(void)
+static void show_version(uint8_t x_pos, uint8_t y_pos)
 {
-    uint16_t x;
-    uint8_t  y;
+    uint8_t x;
+    uint8_t y;
     static char str_version[6];
     uint8_t vcode = EF3_CPLD_VERSION;
+    uint8_t color = COLOR_GRAY1 << 4 | COLOR_GRAY3;
 
-    erase_text_areas(COLOR_BLACK << 4 | COLOR_GRAY3);
-    x = all_menus[0].x_pos + 1;
-    y = all_menus[0].y_pos + 1;
+    x = x_pos + 1;
+    y = y_pos;
 
     text_plot_puts(x, 0, y, "CPLD Core Version:");
+    text_set_line_color(x_pos, y, color);
     y += 3;
     text_plot_puts(x, 0, y, "Menu Version:");
-    y += 4;
-    text_plot_puts(x, 0, y, "Press <Run/Stop>");
+    text_set_line_color(x_pos, y, color);
+    y += 3;
+    text_plot_puts(x, 0, y, "Unofficial version");
+    y++;
+    x += 2;
+    text_plot_puts(x, 0, y, "from git.io/vxHD7");
 
     if (vcode != EF3_OLD_VERSION)
     {
@@ -482,34 +508,12 @@ static void show_version(void)
     }
     else
         strcpy(str_version, "0.x.x");
-    y = all_menus[0].y_pos + 2;
-    x += 6;
+
+    y = y_pos + 1;
+    x += 3;
     text_plot_puts(x, 0, y, str_version);
     y += 3;
     text_plot_puts(x, 0, y, EFVERSION);
-}
-
-
-/******************************************************************************/
-/**
- */
-static void version_display_loop(void)
-{
-    uint8_t key;
-
-    show_version();
-    do
-    {
-        if (kbhit())
-        {
-            key = cgetc();
-            if (key == CH_STOP || key == CH_ENTER)
-                return;
-        }
-
-        poll_usb();
-    }
-    while (1);
 }
 
 
