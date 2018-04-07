@@ -114,11 +114,11 @@ spSet:
         rts
 
 spritePos:
-    .byte 137 + 0 * 24, 94
-    .byte 137 + 1 * 24, 94
-    .byte 137 + 2 * 24, 94
-    .byte 137 + 3 * 24, 94
-    .byte 137 +     36, 94
+    .byte 145 + 0 * 24, 94
+    .byte 145 + 1 * 24, 94
+    .byte 145 + 2 * 24, 94
+    .byte 145 + 3 * 24, 94
+    .byte 145 +     36, 94
 
 spriteCol:
     .byte 0, 0, 0, 0, 8
