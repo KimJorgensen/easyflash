@@ -48,7 +48,8 @@ extern uint8_t background;
 
 #define N_MENU_PAGES 2
 
-static const char* m_pEFSignature = "EF-Directory V1:";
+static const char* m_pEFDirV1 = "EF-Directory V1:";
+static const char* m_pEFDirV2 = "EF-Directory V2:";
 
 static efmenu_entry_t kernal_menu[] =
 {
@@ -611,12 +612,20 @@ static void fill_directory(void)
     int i;
     efmenu_entry_t* p_entry;
     char*           p_name;
+    uint8_t         isV2 = 0;
 
     set_slot(EF_DIR_SLOT);
     set_bank(EF_DIR_BANK);
 
-    if (memcmp(p_dir->signature, m_pEFSignature, sizeof(p_dir->signature)))
-        return;
+    if (memcmp(p_dir->signature, m_pEFDirV1, sizeof(p_dir->signature)) != 0)
+    {
+        if (memcmp(p_dir->signature,
+                   m_pEFDirV2, sizeof(p_dir->signature)) != 0)
+        {
+            return;
+        }
+        isV2 = 1;
+    }
 
     // we show slot 1 to 7 only
     p_name  = p_dir->slots[1];
@@ -641,11 +650,9 @@ static void fill_directory(void)
     }
 
     // and freezers 1 to 4
-    p_name  = p_dir->freezers[0];
-
-    // check for end of directory struct for compatibility with older version
-    if(p_name[0] != 0x00 && p_name[0] != 0x11)
+    if (isV2)
     {
+        p_name  = p_dir->freezers[0];
         p_entry = freezer_menu;
         for (i = 0; i < 4; ++i)
         {

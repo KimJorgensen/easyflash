@@ -2,7 +2,7 @@
 * = $0000
 
 ; 16 bytes signature
-!pet "EF-Directory V1:"
+!pet "EF-Directory V2:"
 
 ; 16 EasyFlash slots
 !pet "System Area"      ; slot 0
@@ -65,6 +65,9 @@
 !align 15, 0, 0
 !pet "FC3 Slot"         ; Final Cartridge III
 !align 15, 0, 0
+
+; Boot mode - reserved, must be 0
+!byte $00
 
 ; $4711 = no checksum
 !word $4711

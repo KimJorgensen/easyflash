@@ -51,7 +51,8 @@ uint8_t g_nSlots;
 // copy of EF directory in RAM
 static efmenu_dir_t m_EFDir;
 
-static const char* m_pEFSignature = "EF-Directory V1:";
+static const char* m_pEFDirV1 = "EF-Directory V1:";
+static const char* m_pEFDirV2 = "EF-Directory V2:";
 
 /******************************************************************************/
 /**
@@ -70,31 +71,9 @@ void slotsFillEFDir(void)
 
     efCopyCartROM(&m_EFDir, (void*)(0x8000), sizeof(m_EFDir));
     if (memcmp(m_EFDir.signature,
-               m_pEFSignature, sizeof(m_EFDir.signature)) != 0)
+               m_pEFDirV2, sizeof(m_EFDir.signature)) != 0)
     {
         // initialize new directory
-        memcpy(m_EFDir.signature,
-                m_pEFSignature, sizeof(m_EFDir.signature));
-        for (i = 1; i < EF_DIR_NUM_SLOTS; ++i)
-        {
-            strcpy(utilStr, "EF Slot ");
-            utilAppendDecimal(i);
-            strcpy(m_EFDir.slots[i], utilStr);
-        }
-        for (i = 0; i < EF_DIR_NUM_KERNALS; ++i)
-        {
-            strcpy(utilStr, "KERNAL ");
-            utilAppendDecimal(i + 1);
-            strcpy(m_EFDir.kernals[i], utilStr);
-        }
-
-        // initialize freezers below
-        m_EFDir.freezers[0][0] = 0x00;
-    }
-
-    // check for end of directory struct for compatibility with older version
-    if(m_EFDir.freezers[0][0] == 0x00 || m_EFDir.freezers[0][0] == 0x11)
-    {
         strcpy(utilStr, "Replay Slot 1");
         strcpy(m_EFDir.freezers[0], utilStr);
         strcpy(utilStr, "Replay Slot 2");
@@ -103,13 +82,32 @@ void slotsFillEFDir(void)
         strcpy(m_EFDir.freezers[2], utilStr);
         strcpy(utilStr, "FC3 Slot");
         strcpy(m_EFDir.freezers[3], utilStr);
+
+        if (memcmp(m_EFDir.signature,
+                   m_pEFDirV1, sizeof(m_EFDir.signature)) != 0)
+        {
+            for (i = 1; i < EF_DIR_NUM_SLOTS; ++i)
+            {
+                strcpy(utilStr, "EF Slot ");
+                utilAppendDecimal(i);
+                strcpy(m_EFDir.slots[i], utilStr);
+            }
+            for (i = 0; i < EF_DIR_NUM_KERNALS; ++i)
+            {
+                strcpy(utilStr, "KERNAL ");
+                utilAppendDecimal(i + 1);
+                strcpy(m_EFDir.kernals[i], utilStr);
+            }
+        }
+
+        memcpy(m_EFDir.signature,
+                m_pEFDirV2, sizeof(m_EFDir.signature));
+        m_EFDir.boot_mode = 0;
+        m_EFDir.checksum = 0x4711;
     }
 
     // slot 0 always gets this name
     strcpy(m_EFDir.slots[0], "System Area");
-
-    // Set dummy checksum
-    m_EFDir.checksum = 0x4711;
 
     g_nSelectedSlot = nSlot;
 }

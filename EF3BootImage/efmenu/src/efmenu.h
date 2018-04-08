@@ -72,6 +72,7 @@ typedef struct efmenu_dir_s
     char        slots[EF_DIR_NUM_SLOTS][EF_DIR_ENTRY_SIZE];
     char        kernals[EF_DIR_NUM_KERNALS][EF_DIR_ENTRY_SIZE];
     char        freezers[EF_DIR_NUM_FREEZERS][EF_DIR_ENTRY_SIZE];
+    uint8_t     boot_mode;
     uint16_t    checksum;
 } efmenu_dir_t;
 
