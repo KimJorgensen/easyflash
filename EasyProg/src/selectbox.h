@@ -1,7 +1,11 @@
 /*
- * EasyProg
+ * EasyProg version 1.8.0, April 2018, are
+ * Copyright (c) 2018 Kim Jorgensen, are derived from EasyProg 1.7.1,
+ * and are distributed according to the same disclaimer and license as
+ * EasyProg 1.7.1
  *
- * (c) 2009 - 2011 Thomas Giesel
+ * EasyProg versions 1.2 September 2009, through 1.7.1, September 2013, are
+ * Copyright (c) 2009-2013 Thomas Giesel
  *
  * This software is provided 'as-is', without any express or implied
  * warranty.  In no event will the authors be held liable for any damages
@@ -28,7 +32,8 @@
 #include <stdint.h>
 
 typedef struct SelectBoxEntry_s {
-    char          label[17];     /* Label in PETSCII, 0-terminated */
+    char          label[17];    /* Label in PETSCII, 0-terminated */
+    char          type[5];      /* Type in PETSCII, 0-terminated */
     void*         cookie;
 } SelectBoxEntry;
 

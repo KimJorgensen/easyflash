@@ -406,7 +406,7 @@ uint8_t autoWriteCRTImage(uint8_t nSlot)
     {
         if (g_nSlots > 1 && g_nSelectedSlot != 0)
         {
-            slotSaveName(g_strCartName, ~0);
+            slotSaveName(g_strCartName, 0xff, 0xff);
         }
     }
     return 1;
@@ -432,7 +432,7 @@ void checkWriteCRTImage(void)
             if (g_nSlots > 1 && g_nSelectedSlot != 0)
             {
                 slotSaveName(screenReadInput("Cartridge Name", g_strCartName),
-                    ~0);
+                    0xff, 0xff);
             }
             screenPrintSimpleDialog(apStrWriteComplete);
         }
@@ -459,7 +459,7 @@ void checkWriteCRTImageFromUSB(void)
             if (g_nSlots > 1 && g_nSelectedSlot != 0)
             {
                 slotSaveName(screenReadInput("Cartridge Name", g_strCartName),
-                    ~0);
+                    0xff, 0xff);
             }
             screenPrintSimpleDialog(apStrWriteComplete);
         }
@@ -520,7 +520,7 @@ void checkWriteKERNALImage(void)
             if (rv == CART_RV_OK)
             {
                 slotSaveName(screenReadInput("KERNAL Name", g_strFileName),
-                             nKERNAL);
+                             nKERNAL, 0xff);
                 screenPrintSimpleDialog(apStrWriteComplete);
             }
         }
@@ -530,58 +530,32 @@ void checkWriteKERNALImage(void)
 
 /******************************************************************************/
 /**
- * Write a AR/RR/NP image file to the flash.
+ * Write a freezer image file to the flash.
  */
-void checkWriteARImage(void)
+void checkWriteFreezerImage(void)
 {
-    uint8_t nAR, rv;
+    uint8_t nFreezer, rv;
 
     slotSelect(0);
-    nAR = selectARSlotDialog();
-    if (nAR != 0xff)
+    nFreezer = selectFreezerSlotDialog();
+    if (nFreezer != 0xff)
     {
         if (writeOpenFile("BIN") == CART_RV_OK)
         {
-            rv = writeBinImage(nAR * 8 + EF3_AR_BANK, 1, EP_NON_INTERLEAVED);
+            if (nFreezer <= 1)
+                rv = writeBinImage(nFreezer * 8 + EF3_AR_BANK, 1, EP_NON_INTERLEAVED);
+            else if (nFreezer == 2)
+                rv = writeBinImage(EF3_SS5_BANK, 0, EP_INTERLEAVED);
+            else
+                rv = writeBinImage(EF3_FC3_BANK, 0, EP_INTERLEAVED);
+
             if (rv == CART_RV_OK)
+            {
+                slotSaveName(screenReadInput("Freezer Name", g_strFileName),
+                             0xff, nFreezer);
                 screenPrintSimpleDialog(apStrWriteComplete);
+            }
         }
-    }
-}
-
-
-/******************************************************************************/
-/**
- * Write a SS5 image file to the flash.
- */
-void checkWriteSS5Image(void)
-{
-    uint8_t rv;
-
-    slotSelect(0);
-    if (writeOpenFile("BIN") == CART_RV_OK)
-    {
-        rv = writeBinImage(EF3_SS5_BANK, 0, EP_INTERLEAVED);
-        if (rv == CART_RV_OK)
-            screenPrintSimpleDialog(apStrWriteComplete);
-    }
-}
-
-
-/******************************************************************************/
-/**
- * Write a FC3 image file to the flash.
- */
-void checkWriteFC3Image(void)
-{
-    uint8_t rv;
-
-    slotSelect(0);
-    if (writeOpenFile("BIN") == CART_RV_OK)
-    {
-        rv = writeBinImage(EF3_FC3_BANK, 0, EP_INTERLEAVED);
-        if (rv == CART_RV_OK)
-            screenPrintSimpleDialog(apStrWriteComplete);
     }
 }
 
@@ -633,9 +607,9 @@ void checkEraseSlot(void)
 
         if (g_nSelectedSlot > 0)
         {
-            strcpy(utilStr, "Slot ");
+            strcpy(utilStr, "EF Slot ");
             utilAppendDecimal(g_nSelectedSlot);
-            slotSaveName(utilStr, 0xff);
+            slotSaveName(utilStr, 0xff, 0xff);
         }
         resetCartInfo();
     }
@@ -660,7 +634,7 @@ void checkEraseKERNAL(void)
             eraseSector(nKERNAL | FLASH_8K_SECTOR_BIT, 0);
             strcpy(utilStr, "KERNAL ");
             utilAppendDecimal(nKERNAL + 1);
-            slotSaveName(utilStr, nKERNAL);
+            slotSaveName(utilStr, nKERNAL, 0xff);
             resetCartInfo();
         }
     }
@@ -668,54 +642,42 @@ void checkEraseKERNAL(void)
 
 /******************************************************************************/
 /**
+ * Ask the user if it is okay to erase a freezer and do so if yes.
  */
-void checkEraseAR(void)
+void checkEraseFreezer(void)
 {
-    uint8_t nAR;
+    uint8_t nFreezer;
 
     slotSelect(0);
-    nAR = selectARSlotDialog();
-    if (nAR != 0xff)
+    nFreezer = selectFreezerSlotDialog();
+    if (nFreezer != 0xff)
     {
         if (screenAskEraseDialog() == BUTTON_ENTER)
         {
             checkFlashType();
-            eraseSector(nAR * 8 + EF3_AR_BANK, 1);
+            if (nFreezer <= 1)
+            {
+                eraseSector(nFreezer * 8 + EF3_AR_BANK, 1);
+                strcpy(utilStr, "Replay Slot ");
+                utilAppendDecimal(nFreezer + 1);
+            }
+            else if (nFreezer == 2)
+            {
+                eraseSector(EF3_SS5_BANK, 0);
+                eraseSector(EF3_SS5_BANK, 1);
+                strcpy(utilStr, "SS5 Slot");
+            }
+            else
+            {
+                eraseSector(EF3_FC3_BANK, 0);
+                eraseSector(EF3_FC3_BANK, 1);
+                eraseSector(EF3_FC3_BANK + 8, 0);
+                eraseSector(EF3_FC3_BANK + 8, 1);
+                strcpy(utilStr, "FC3 Slot");
+            }
+
+            slotSaveName(utilStr, 0xff, nFreezer);
             resetCartInfo();
         }
-    }
-}
-
-
-/******************************************************************************/
-/**
- */
-void checkEraseSS5(void)
-{
-    slotSelect(0);
-    if (screenAskEraseDialog() == BUTTON_ENTER)
-    {
-        checkFlashType();
-        eraseSector(EF3_SS5_BANK, 0);
-        eraseSector(EF3_SS5_BANK, 1);
-        resetCartInfo();
-    }
-}
-
-
-/******************************************************************************/
-/**
- */
-void checkEraseFC3(void)
-{
-    slotSelect(0);
-    if (screenAskEraseDialog() == BUTTON_ENTER)
-    {
-        checkFlashType();
-        eraseSector(EF3_FC3_BANK, 0);
-        eraseSector(EF3_FC3_BANK, 1);
-        eraseSector(EF3_FC3_BANK + 8, 0);
-        eraseSector(EF3_FC3_BANK + 8, 1);
-        resetCartInfo();
     }
 }

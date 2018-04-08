@@ -1,7 +1,11 @@
 /*
- * EasyProg
+ * EasyProg version 1.8.0, April 2018, are
+ * Copyright (c) 2018 Kim Jorgensen, are derived from EasyProg 1.7.1,
+ * and are distributed according to the same disclaimer and license as
+ * EasyProg 1.7.1
  *
- * (c) 2009 - 2011 Thomas Giesel
+ * EasyProg versions 1.2 September 2009, through 1.7.1, September 2013, are
+ * Copyright (c) 2009-2013 Thomas Giesel
  *
  * This software is provided 'as-is', without any express or implied
  * warranty.  In no event will the authors be held liable for any damages
@@ -79,9 +83,13 @@ static void __fastcall__ selectBoxPrintEntry(uint8_t nEntry)
     // clear line
     cclear(SELECTBOX_W - 2);
 
-    // name
+    // label
     gotox(SELECTBOX_X + 2);
     cputs(pEntry->label);
+
+    // type
+    gotox(SELECTBOX_X + 19);
+    cputs(pEntry->type);
 
     revers(0);
 }

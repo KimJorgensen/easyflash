@@ -7,19 +7,19 @@
 ; 16 EasyFlash slots
 !pet "System Area"      ; slot 0
 !align 15, 0, 0
-!pet "Slot 1"           ; slot 1
+!pet "EF Slot 1"        ; slot 1
 !align 15, 0, 0
-!pet "Slot 2"           ; slot 2
+!pet "EF Slot 2"        ; slot 2
 !align 15, 0, 0
-!pet "Slot 3"           ; slot 3
+!pet "EF Slot 3"        ; slot 3
 !align 15, 0, 0
-!pet "Slot 4"           ; slot 4
+!pet "EF Slot 4"        ; slot 4
 !align 15, 0, 0
-!pet "Slot 5"           ; slot 5
+!pet "EF Slot 5"        ; slot 5
 !align 15, 0, 0
-!pet "Slot 6"           ; slot 6
+!pet "EF Slot 6"        ; slot 6
 !align 15, 0, 0
-!pet "Slot 7"           ; slot 7
+!pet "EF Slot 7"        ; slot 7
 !align 15, 0, 0
 !pet "Slot 8"           ; slot 8
 !align 15, 0, 0
@@ -54,6 +54,16 @@
 !pet "KERNAL 7"         ; KERNAL 7
 !align 15, 0, 0
 !pet "KERNAL 8"         ; KERNAL 8
+!align 15, 0, 0
+
+; 4 freezer slots
+!pet "Retro Replay 3.8" ; Action Replay slot 1
+!align 15, 0, 0
+!pet "Action Replay 6"  ; Action Replay slot 2
+!align 15, 0, 0
+!pet "SS5 Slot"         ; Super Snapshot 5
+!align 15, 0, 0
+!pet "FC3 Slot"         ; Final Cartridge III
 !align 15, 0, 0
 
 ; $4711 = no checksum

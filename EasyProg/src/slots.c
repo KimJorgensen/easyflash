@@ -1,7 +1,13 @@
 /*
- * EasyProg - filedlg.c - File open dialog
+ * EasyProg - slots.c
  *
- * (c) 2011 Thomas Giesel
+ * EasyProg version 1.8.0, April 2018, are
+ * Copyright (c) 2018 Kim Jorgensen, are derived from EasyProg 1.7.1,
+ * and are distributed according to the same disclaimer and license as
+ * EasyProg 1.7.1
+ *
+ * EasyProg versions 1.2 September 2009, through 1.7.1, September 2013, are
+ * Copyright (c) 2009-2013 Thomas Giesel
  *
  * This software is provided 'as-is', without any express or implied
  * warranty.  In no event will the authors be held liable for any damages
@@ -36,8 +42,8 @@
 #include "selectbox.h"
 #include "util.h"
 
-#define MAX_KERNALS 8
-#define MAX_ARS     2
+#define MAX_KERNALS     8
+#define MAX_FREEZERS    4
 
 uint8_t g_nSelectedSlot;
 uint8_t g_nSlots;
@@ -71,7 +77,7 @@ void slotsFillEFDir(void)
                 m_pEFSignature, sizeof(m_EFDir.signature));
         for (i = 1; i < EF_DIR_NUM_SLOTS; ++i)
         {
-            strcpy(utilStr, "Slot ");
+            strcpy(utilStr, "EF Slot ");
             utilAppendDecimal(i);
             strcpy(m_EFDir.slots[i], utilStr);
         }
@@ -81,10 +87,29 @@ void slotsFillEFDir(void)
             utilAppendDecimal(i + 1);
             strcpy(m_EFDir.kernals[i], utilStr);
         }
+
+        // initialize freezers below
+        m_EFDir.freezers[0][0] = 0x00;
+    }
+
+    // check for end of directory struct for compatibility with older version
+    if(m_EFDir.freezers[0][0] == 0x00 || m_EFDir.freezers[0][0] == 0x11)
+    {
+        strcpy(utilStr, "Replay Slot 1");
+        strcpy(m_EFDir.freezers[0], utilStr);
+        strcpy(utilStr, "Replay Slot 2");
+        strcpy(m_EFDir.freezers[1], utilStr);
+        strcpy(utilStr, "SS5 Slot");
+        strcpy(m_EFDir.freezers[2], utilStr);
+        strcpy(utilStr, "FC3 Slot");
+        strcpy(m_EFDir.freezers[3], utilStr);
     }
 
     // slot 0 always gets this name
     strcpy(m_EFDir.slots[0], "System Area");
+
+    // Set dummy checksum
+    m_EFDir.checksum = 0x4711;
 
     g_nSelectedSlot = nSlot;
 }
@@ -123,6 +148,9 @@ uint8_t __fastcall__ selectSlotDialog(void)
             pEntry->label[0] = '-';
     }
 
+    // Add type to System Area
+    strcpy(pEntries[0].type, "(SYS)");
+
     rv = selectBox(pEntries, "a slot");
     free(pEntries);
     return rv;
@@ -151,7 +179,7 @@ uint8_t selectKERNALSlotDialog(void)
 
     // termination for strings with strlen() == EF_DIR_ENTRY_SIZE
     // and termination for list
-    memset(pEntries, 0, (FLASH_MAX_SLOTS + 1) * sizeof(SelectBoxEntry));
+    memset(pEntries, 0, (MAX_KERNALS + 1) * sizeof(SelectBoxEntry));
 
     pEntry = pEntries;
     pLabel = m_EFDir.kernals[0];
@@ -175,20 +203,50 @@ uint8_t selectKERNALSlotDialog(void)
 
 /******************************************************************************/
 /**
- * Let the user select a KERNAL slot. Return the slot number.
+ * Let the user select a freezer slot. Return the slot number.
  * Return 0xff if the user canceled the selection.
  */
-uint8_t selectARSlotDialog(void)
+uint8_t selectFreezerSlotDialog(void)
 {
-    const SelectBoxEntry aEntries[3] =
-    {
-            { "AR/RR/NP 1", 0 },
-            { "AR/RR/NP 2", 0 },
-            { "", 0 }
-    };
-    uint8_t rv;
+    SelectBoxEntry* pEntries;
+    SelectBoxEntry* pEntry;
+    char*           pLabel;
+    uint8_t         nSlot, rv;
 
-    rv = selectBox(aEntries, "an AR/RR/NP slot");
+    slotsFillEFDir();
+    pEntries = malloc((MAX_FREEZERS + 1) * sizeof(SelectBoxEntry));
+    if (!pEntries)
+    {
+        screenPrintSimpleDialog(apStrOutOfMemory);
+        return 0;
+    }
+
+    // termination for strings with strlen() == EF_DIR_ENTRY_SIZE
+    // and termination for list
+    memset(pEntries, 0, (MAX_FREEZERS + 1) * sizeof(SelectBoxEntry));
+
+    pEntry = pEntries;
+    pLabel = m_EFDir.freezers[0];
+    for (nSlot = 1; nSlot <= MAX_FREEZERS; ++nSlot)
+    {
+        // take care: target must be at least as large as source
+        memcpy(pEntry->label, pLabel, sizeof(m_EFDir.freezers[0]));
+        // empty slots get a '-' because the menu needs a string
+        if (pEntry->label[0] == 0)
+            pEntry->label[0] = '-';
+
+        ++pEntry;
+        pLabel += sizeof(m_EFDir.freezers[0]);
+    }
+
+    // Add types
+    strcpy(pEntries[0].type, " (AR)");
+    strcpy(pEntries[1].type, " (AR)");
+    strcpy(pEntries[2].type, "(SS5)");
+    strcpy(pEntries[3].type, "(FC3)");
+
+    rv = selectBox(pEntries, "a freezer slot");
+    free(pEntries);
     return rv;
 }
 
@@ -247,11 +305,11 @@ void __fastcall__ slotSelect(uint8_t slot)
  * Read the slot directory from flash, set the name of an EF slot or a KERNAL
  * in the slot directory and write it back to flash.
  *
- * If nKERNAL is 0xff, the name is written to EF Slot number g_nSelectedSlot.
- * Otherwise nKERNAL contains the KERNAL slot number.
+ * If nKERNAL and nFreezer is 0xff, the name is written to EF Slot number
+ * g_nSelectedSlot. Otherwise nKERNAL or nFreezer contains the slot number.
  *
  **/
-void __fastcall__ slotSaveName(const char* name, uint8_t nKERNAL)
+void __fastcall__ slotSaveName(const char* name, uint8_t nKERNAL, uint8_t nFreezer)
 {
     EasyFlashAddr addr;
     uint8_t  nSlot;
@@ -262,6 +320,8 @@ void __fastcall__ slotSaveName(const char* name, uint8_t nKERNAL)
     slotsFillEFDir();
     if (nKERNAL != 0xff)
         strncpy(m_EFDir.kernals[nKERNAL], name, sizeof(m_EFDir.kernals[0]));
+    else if (nFreezer != 0xff)
+        strncpy(m_EFDir.freezers[nFreezer], name, sizeof(m_EFDir.freezers[0]));
     else
         strncpy(m_EFDir.slots[nSlot], name, sizeof(m_EFDir.slots[0]));
 
@@ -286,13 +346,14 @@ void __fastcall__ slotSaveName(const char* name, uint8_t nKERNAL)
  */
 void slotsEditDirectory(void)
 {
-    const SelectBoxEntry aEntries[3] =
+    const SelectBoxEntry aEntries[4] =
     {
-            { "KERNALs", 0 },
-            { "EasyFlash Slots", 0 },
-            { "", 0 }
+            { "EasyFlash Slots", "", 0 },
+            { "KERNALs", "", 0 },
+            { "Freezers", "", 0 },
+            { "", "", 0 }
     };
-    uint8_t rv, nDir, nKERNAL;
+    uint8_t rv, nDir, nKERNAL, nFreezer;
 
 
     nDir = selectBox(aEntries, "what to edit");
@@ -303,16 +364,8 @@ void slotsEditDirectory(void)
     {
         if (nDir == 0)
         {
-            nKERNAL = selectKERNALSlotDialog();
-            if (nKERNAL == 0xff)
-                return;
-
-            memset(utilStr, 0, UTIL_STR_SIZE);
-            memcpy(utilStr, m_EFDir.kernals[nKERNAL], EF_DIR_ENTRY_SIZE);
-        }
-        else
-        {
             nKERNAL = 0xff;
+            nFreezer = 0xff;
             rv = selectSlotDialog();
             if (rv == 0xff)
                 return;
@@ -329,6 +382,27 @@ void slotsEditDirectory(void)
                 memcpy(utilStr, m_EFDir.slots[g_nSelectedSlot], EF_DIR_ENTRY_SIZE);
             }
         }
-        slotSaveName(screenReadInput("Name", utilStr), nKERNAL);
+        else if (nDir == 1)
+        {
+            nFreezer = 0xff;
+            nKERNAL = selectKERNALSlotDialog();
+            if (nKERNAL == 0xff)
+                return;
+
+            memset(utilStr, 0, UTIL_STR_SIZE);
+            memcpy(utilStr, m_EFDir.kernals[nKERNAL], EF_DIR_ENTRY_SIZE);
+        }
+        else
+        {
+            nKERNAL = 0xff;
+            nFreezer = selectFreezerSlotDialog();
+            if (nFreezer == 0xff)
+                return;
+
+            memset(utilStr, 0, UTIL_STR_SIZE);
+            memcpy(utilStr, m_EFDir.freezers[nFreezer], EF_DIR_ENTRY_SIZE);
+        }
+
+        slotSaveName(screenReadInput("Name", utilStr), nKERNAL, nFreezer);
     }
 }

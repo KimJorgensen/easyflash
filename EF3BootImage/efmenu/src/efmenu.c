@@ -52,14 +52,14 @@ static const char* m_pEFSignature = "EF-Directory V1:";
 
 static efmenu_entry_t kernal_menu[] =
 {
-        { '1',  0,  0,  0,  MODE_KERNAL,    "1", "Empty", "" },
-        { '2',  0,  1,  0,  MODE_KERNAL,    "2", "Empty", "" },
-        { '3',  0,  2,  0,  MODE_KERNAL,    "3", "Empty", "" },
-        { '4',  0,  3,  0,  MODE_KERNAL,    "4", "Empty", "" },
-        { '5',  0,  4,  0,  MODE_KERNAL,    "5", "Empty", "" },
-        { '6',  0,  5,  0,  MODE_KERNAL,    "6", "Empty", "" },
-        { '7',  0,  6,  0,  MODE_KERNAL,    "7", "Empty", "" },
-        { '8',  0,  7,  0,  MODE_KERNAL,    "8", "Empty", "" },
+        { '1',  0,  0,  0,  MODE_KERNAL,    "1", "KERNAL 1", "" },
+        { '2',  0,  1,  0,  MODE_KERNAL,    "2", "KERNAL 2", "" },
+        { '3',  0,  2,  0,  MODE_KERNAL,    "3", "KERNAL 3", "" },
+        { '4',  0,  3,  0,  MODE_KERNAL,    "4", "KERNAL 4", "" },
+        { '5',  0,  4,  0,  MODE_KERNAL,    "5", "KERNAL 5", "" },
+        { '6',  0,  5,  0,  MODE_KERNAL,    "6", "KERNAL 6", "" },
+        { '7',  0,  6,  0,  MODE_KERNAL,    "7", "KERNAL 7", "" },
+        { '8',  0,  7,  0,  MODE_KERNAL,    "8", "KERNAL 8", "" },
         { 0, 0, 0, 0, 0, "", "", "" }
 };
 
@@ -76,7 +76,7 @@ static efmenu_entry_t ef_menu[] =
 };
 
 /* key 0 => end, key 0xff => not selectable */
-static efmenu_entry_t special_menu[] =
+static efmenu_entry_t freezer_menu[] =
 {
         { 'r',  0, 0x10,  1,  MODE_AR,        "R", "Replay Slot 1",     "" },
         { 'y',  0, 0x18,  1,  MODE_AR,        "Y", "Replay Slot 2",     "" },
@@ -114,7 +114,7 @@ static efmenu_entry_t dummy_menu[] =
 static efmenu_t all_menus[] =
 {
         { 0,  2,  2, 10, kernal_menu },
-        { 0,  2, 15,  8, special_menu },
+        { 0,  2, 15,  8, freezer_menu },
         { 0, 22, 13,  9, ef_menu },
 
         { 1,  2,  2, 10, version_menu },
@@ -629,7 +629,7 @@ static void fill_directory(void)
         p_entry->name[sizeof(ef_menu[0].name) - 1] = '\0';
     }
 
-    // and KERNAL 1 to 8
+    // KERNAL 1 to 8
     p_name  = p_dir->kernals[0];
     p_entry = kernal_menu;
     for (i = 0; i < 8; ++i)
@@ -638,6 +638,22 @@ static void fill_directory(void)
         ++p_entry;
         p_name += sizeof(p_dir->slots[0]);
         p_entry->name[sizeof(kernal_menu[0].name) - 1] = '\0';
+    }
+
+    // and freezers 1 to 4
+    p_name  = p_dir->freezers[0];
+
+    // check for end of directory struct for compatibility with older version
+    if(p_name[0] != 0x00 && p_name[0] != 0x11)
+    {
+        p_entry = freezer_menu;
+        for (i = 0; i < 4; ++i)
+        {
+            memcpy(p_entry->name, p_name, sizeof(p_dir->freezers[0]));
+            ++p_entry;
+            p_name += sizeof(p_dir->slots[0]);
+            p_entry->name[sizeof(freezer_menu[0].name) - 1] = '\0';
+        }
     }
 }
 

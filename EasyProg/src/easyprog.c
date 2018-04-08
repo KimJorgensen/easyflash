@@ -116,20 +116,8 @@ ScreenMenu menuMain =
             0
         },
         {
-            "Write A&R/RR/NP to flash",
-            checkWriteARImage,
-            isEF3,
-            0
-        },
-        {
-            "Write SS&5 to flash",
-            checkWriteSS5Image,
-            isEF3,
-            0
-        },
-        {
-            "Write &FC3 to flash",
-            checkWriteFC3Image,
+            "Write &freezer to flash",
+            checkWriteFreezerImage,
             isEF3,
             0
         },
@@ -146,26 +134,14 @@ ScreenMenu menuMain =
             0
         },
         {
-            "Erase KERNAL",
+            "Erase KERNA&L",
             checkEraseKERNAL,
             isEF3,
             0
         },
         {
-            "Erase AR/RR/NP",
-            checkEraseAR,
-            isEF3,
-            0
-        },
-        {
-            "Erase SS5",
-            checkEraseSS5,
-            isEF3,
-            0
-        },
-        {
-            "Erase FC3",
-            checkEraseFC3,
+            "Erase freeze&r",
+            checkEraseFreezer,
             isEF3,
             0
         },

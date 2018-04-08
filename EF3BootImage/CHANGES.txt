@@ -1,8 +1,9 @@
 
-Version 1.3.0 - 07.04.2018
+Version 1.3.0 - 08.04.2018
 - Release from https://github.com/KimJorgensen/easyflash
 - Final Cartridge III slot added
 - Display version numbers numbers on page 2
+- Possible to name freezer slots
 
 Version 1.2.0 - 06.02.2013
 - Menu can be controlled with joystick in port 2

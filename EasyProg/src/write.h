@@ -63,15 +63,11 @@ void checkWriteCRTImageFromUSB(void);
 void checkWriteLOROMImage(void);
 void checkWriteHIROMImage(void);
 void checkWriteKERNALImage(void);
-void checkWriteARImage(void);
-void checkWriteSS5Image(void);
-void checkWriteFC3Image(void);
+void checkWriteFreezerImage(void);
 void eraseAll(void);
 void checkEraseAll(void);
 void checkEraseSlot(void);
 void checkEraseKERNAL(void);
-void checkEraseAR(void);
-void checkEraseSS5(void);
-void checkEraseFC3(void);
+void checkEraseFreezer(void);
 
 #endif /* WRITE_H_ */
