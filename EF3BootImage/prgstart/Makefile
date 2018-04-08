@@ -11,6 +11,14 @@ else
 endif
 bin2efcrt = ../../EasySDK/tools/bin2efcrt
 
+ld65_version := $(shell [ `ld65 -V 2>&1 | sed -e 's/\(ld65 V\)\([0-9\.]*\)\( .*\)/\2/g; q'` \< "2.13.9" ] && echo old)
+
+ifeq "$(ld65_version)" "old"
+        ld_config := src/ld.crt.cfg
+else
+        ld_config := src/ld2.crt.cfg
+endif
+
 obj :=
 obj += obj/prgstart.o
 obj += obj/prg.o
@@ -61,8 +69,8 @@ force:
 obj:
 	mkdir -p $@
 
-$(name).bin: obj/crt0.crt.o $(obj) src/ld.crt.cfg $(libef3usb)
-	ld65 -o $@ -m $@.map -C src/ld.crt.cfg obj/crt0.crt.o $(obj) \
+$(name).bin: obj/crt0.crt.o $(obj) $(ld_config) $(libef3usb)
+	ld65 -o $@ -m $@.map -C $(ld_config) obj/crt0.crt.o $(obj) \
 		--lib  $(libef3usb) \
 		-L /usr/local/lib/cc65/lib --lib c64.lib
 	cat $@.map | grep -e "^Name\|^CODE\|^DATA\|^BSS\|^RODATA\|^LOWCODE"
