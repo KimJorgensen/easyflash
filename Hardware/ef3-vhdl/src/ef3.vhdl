@@ -1,6 +1,12 @@
 ----------------------------------------------------------------------------------
 --
--- (c) 2011 Thomas 'skoe' Giesel
+-- EasyFlash 3 CPLD Firmware version 1.2.0, April 2018, are
+-- Copyright (c) 2018 Kim Jorgensen, are derived from EasyFlash 3 CPLD Firmware 1.1.1,
+-- and are distributed according to the same disclaimer and license as
+-- EasyFlash 3 CPLD Firmware 1.1.1
+--
+-- EasyFlash 3 CPLD Firmware versions 0.9.0, December 2011, through 1.1.1, August 2012, are
+-- Copyright (c) 2011-2012 Thomas 'skoe' Giesel
 --
 -- This software is provided 'as-is', without any express or implied
 -- warranty.  In no event will the authors be held liable for any damages
@@ -75,6 +81,7 @@ architecture ef3_arc of ef3 is
     signal enable_menu:         std_logic;
     signal enable_ef:           std_logic;
     signal enable_kernal:       std_logic;
+    signal enable_fc3:          std_logic;
     signal enable_ar:           std_logic;
     signal enable_ss5:          std_logic;
 
@@ -167,6 +174,15 @@ architecture ef3_arc of ef3 is
     signal kernal_flash_read:   std_logic;
     signal kernal_start_reset:  std_logic;
     signal kernal_test:         std_logic;
+
+    signal fc3_n_game:          std_logic;
+    signal fc3_n_exrom:         std_logic;
+    signal fc3_start_reset:     std_logic;
+    signal fc3_start_freezer:   std_logic;
+    signal fc3_set_bank_lo:     std_logic;
+    signal fc3_new_bank_lo:     std_logic_vector(2 downto 0);
+    signal fc3_flash_read:      std_logic;
+    signal fc3_led:             std_logic;
 
     signal ar_ram_bank:         std_logic_vector(1 downto 0);
     signal ar_n_game:           std_logic;
@@ -318,6 +334,33 @@ architecture ef3_arc of ef3 is
             start_reset:        out std_logic;
             flash_read:         out std_logic;
             test:               out std_logic
+        );
+    end component;
+
+    component cart_fc3 is
+        port (
+            clk:                in  std_logic;
+            n_reset:            in  std_logic;
+            enable:             in  std_logic;
+            n_io1:              in  std_logic;
+            n_io2:              in  std_logic;
+            n_roml:             in  std_logic;
+            n_romh:             in  std_logic;
+            rd:                 in  std_logic;
+            wp:                 in  std_logic;
+            addr:               in  std_logic_vector(15 downto 0);
+            data:               in  std_logic_vector(7 downto 0);
+            button_crt_reset:   in  std_logic;
+            button_special_fn:  in  std_logic;
+            freezer_ready:      in  std_logic;
+            set_bank_lo:        out std_logic;
+            new_bank_lo:        out std_logic_vector(2 downto 0);
+            n_game:             out std_logic;
+            n_exrom:            out std_logic;
+            start_reset:        out std_logic;
+            start_freezer:      out std_logic;
+            flash_read:         out std_logic;
+            led:                out std_logic
         );
     end component;
 
@@ -522,6 +565,32 @@ begin
         test                    => kernal_test
     );
 
+    u_cart_fc3: cart_fc3 port map
+    (
+        clk                     => clk,
+        n_reset                 => n_reset,
+        enable                  => enable_fc3,
+        n_io1                   => n_io1,
+        n_io2                   => n_io2,
+        n_roml                  => n_roml,
+        n_romh                  => n_romh,
+        rd                      => rd,
+        wp                      => wp,
+        addr                    => addr,
+        data                    => data,
+        button_crt_reset        => button_crt_reset,
+        button_special_fn       => button_special_fn,
+        freezer_ready           => freezer_ready,
+        set_bank_lo             => fc3_set_bank_lo,
+        new_bank_lo             => fc3_new_bank_lo,
+        n_game                  => fc3_n_game,
+        n_exrom                 => fc3_n_exrom,
+        start_reset             => fc3_start_reset,
+        start_freezer           => fc3_start_freezer,
+        flash_read              => fc3_flash_read,
+        led                     => fc3_led
+    );
+
     u_cart_ar: cart_ar port map
     (
         clk                     => clk,
@@ -669,6 +738,7 @@ begin
         if n_sys_reset = '0' then
             enable_ef       <= '1';
             enable_menu     <= '1';
+            enable_fc3      <= '0';
             enable_ar       <= '0';
             enable_ss5      <= '0';
             enable_kernal   <= '0';
@@ -679,6 +749,7 @@ begin
             if start_reset_to_menu = '1' then
                 enable_ef       <= '1';
                 enable_menu     <= '1';
+                enable_fc3      <= '0';
                 enable_ar       <= '0';
                 enable_ss5      <= '0';
                 enable_kernal   <= '0';
@@ -687,6 +758,7 @@ begin
                     when x"f" =>
                         enable_ef       <= '0';
                         enable_menu     <= '0';
+                        enable_fc3      <= '0';
                         enable_ar       <= '0';
                         enable_ss5      <= '0';
                         enable_kernal   <= '0';
@@ -704,9 +776,9 @@ begin
                                 enable_kernal <= '1';
                                 sw_start_reset <= '1';
 
-                            --when x"3" =>
-                                -- FC not implemented
-                                --sw_start_reset <= '1';
+                            when x"3" =>
+                                enable_fc3 <= '1';
+                                sw_start_reset <= '1';
 
                             when x"4" =>
                                 enable_ar <= '1';
@@ -739,22 +811,22 @@ begin
     ---------------------------------------------------------------------------
     ram_read        <= io2_ram_read or ar_ram_read or ss5_ram_read;
     ram_write       <= io2_ram_write or ar_ram_write or ss5_ram_write;
-    flash_read      <= ef_flash_read or kernal_flash_read or ar_flash_read or ss5_flash_read;
+    flash_read      <= ef_flash_read or kernal_flash_read or fc3_flash_read or ar_flash_read or ss5_flash_read;
     flash_write     <= ef_flash_write;
-    n_exrom_out     <= ef_n_exrom and kernal_n_exrom and ar_n_exrom and ss5_n_exrom;
-    n_game_out      <= ef_n_game and kernal_n_game and ar_n_game and ss5_n_game and n_reset_game;
+    n_exrom_out     <= ef_n_exrom and kernal_n_exrom and fc3_n_exrom and ar_n_exrom and ss5_n_exrom;
+    n_game_out      <= ef_n_game and kernal_n_game and fc3_n_game and ar_n_game and ss5_n_game and n_reset_game;
 
     data_out        <= ef_data_out or usb_data_out or ar_data_out;
     data_out_valid  <= ef_data_out_valid or usb_data_out_valid or ar_data_out_valid;
 
-    start_reset     <= ef_start_reset or kernal_start_reset or ar_start_reset or
-                       ss5_start_reset or
+    start_reset     <= ef_start_reset or kernal_start_reset or fc3_start_reset or
+                       ar_start_reset or ss5_start_reset or
                        start_reset_to_menu or sw_start_reset;
 
-    start_freezer   <= ar_start_freezer or ss5_start_freezer;
+    start_freezer   <= fc3_start_freezer or ar_start_freezer or ss5_start_freezer;
     reset_freezer   <= ar_reset_freezer or ss5_reset_freezer;
 
-    n_led <= not (ef_led or ar_led or ss5_led);
+    n_led <= not (ef_led or fc3_led or ar_led or ss5_led);
 
     n_exrom <= n_exrom_out;
 
@@ -772,10 +844,12 @@ begin
         if n_sys_reset = '0' or start_reset_to_menu = '1' then
             bank_lo <= (others => '0');
         elsif rising_edge(clk) then
-            if (ef_set_bank_lo = '1' or ar_set_bank_lo = '1' or
-                kernal_set_bank_lo = '1' or ss5_set_bank_lo = '1') then
-                    bank_lo <= ef_new_bank_lo or ar_new_bank_lo or
-                               kernal_new_bank_lo or ss5_new_bank_lo;
+            if (ef_set_bank_lo = '1' or kernal_set_bank_lo = '1' or
+                fc3_set_bank_lo = '1' or ar_set_bank_lo = '1' or
+                ss5_set_bank_lo = '1') then
+                    bank_lo <= ef_new_bank_lo or kernal_new_bank_lo or
+                                fc3_new_bank_lo or ar_new_bank_lo or
+                                ss5_new_bank_lo;
             end if;
         end if;
     end process;
@@ -793,7 +867,6 @@ begin
         mem_addr <= (others => '0');
         mem_addr(12 downto 0) <= addr(12 downto 0);
 
-
         if n_ram_cs_i = '0' then
             if enable_io2ram = '1' then
                 mem_addr(14 downto 13) <= io2ram_ram_bank;
@@ -804,18 +877,23 @@ begin
             end if;
         else
             mem_addr(22 downto 17) <= slot & bank_hi;
+            mem_addr(15 downto 14) <= bank_lo(2 downto 1);
 
-            if enable_kernal = '1' then
-                mem_addr(16) <= '0';
-            elsif enable_ef = '1' then
-                mem_addr(16) <= n_roml;
-            elsif enable_ar = '1' then
-                mem_addr(16) <= '1';
-            elsif enable_ss5 = '1' then
-                mem_addr(16) <= addr(13);
+            if enable_fc3 = '1' then
+                mem_addr(13) <= addr(13);
+            else
+                if enable_kernal = '1' then
+                    mem_addr(16) <= '0';
+                elsif enable_ef = '1' then
+                    mem_addr(16) <= n_roml;
+                elsif enable_ar = '1' then
+                    mem_addr(16) <= '1';
+                elsif enable_ss5 = '1' then
+                    mem_addr(16) <= addr(13);
+                end if;
+
+                mem_addr(13) <= bank_lo(0);
             end if;
-
-            mem_addr(15 downto 13) <= bank_lo;
         end if;
     end process;
 

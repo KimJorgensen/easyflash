@@ -1,7 +1,11 @@
 
-EasyFlash 3 CPLD Firmware
+EasyFlash 3 CPLD Firmware version 1.2.0, April 2018, are
+Copyright (c) 2018 Kim Jorgensen, are derived from EasyFlash 3 CPLD Firmware 1.1.1,
+and are distributed according to the same disclaimer and license as
+EasyFlash 3 CPLD Firmware 1.1.1
 
-(C) Thomas 'skoe' Giesel
+EasyFlash 3 CPLD Firmware versions 0.9.0, December 2011, through 1.1.1, August 2012, are
+Copyright (c) 2011-2012 Thomas 'skoe' Giesel
 
 License
 =======
@@ -25,6 +29,11 @@ License
 
 Changes
 =======
+
+Version 1.2.0 - 19.04.2018
+
+- Release from https://github.com/KimJorgensen/easyflash
+- Final Cartridge III support (incomplete)
 
 Version 1.1.1 - 18.08.2012
 

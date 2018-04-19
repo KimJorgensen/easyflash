@@ -1,6 +1,12 @@
 ----------------------------------------------------------------------------------
 --
--- (c) 2011 Thomas 'skoe' Giesel
+-- EasyFlash 3 CPLD Firmware version 1.2.0, April 2018, are
+-- Copyright (c) 2018 Kim Jorgensen, are derived from EasyFlash 3 CPLD Firmware 1.1.1,
+-- and are distributed according to the same disclaimer and license as
+-- EasyFlash 3 CPLD Firmware 1.1.1
+--
+-- EasyFlash 3 CPLD Firmware versions 0.9.0, December 2011, through 1.1.1, August 2012, are
+-- Copyright (c) 2011-2012 Thomas 'skoe' Giesel
 --
 -- This software is provided 'as-is', without any express or implied
 -- warranty.  In no event will the authors be held liable for any damages
@@ -57,7 +63,7 @@ begin
     --
     -- Version register: $a1 = 10100001 = old versions
     --                   AA BBB CCC
-    --                   01 001 001 = 1.1.1 = $49
+    --                   01 010 000 = 1.2.0 = $50
     --
     -- Control register: 7   6   5   4   3   2   1   0
     --                   RXR TXR 0   0   0   0   0   0
@@ -74,7 +80,7 @@ begin
                 case addr(3 downto 0) is
                     when x"8" =>
                         -- $de08 - read ID register
-                        data_out <= x"49";
+                        data_out <= x"50";
 
                     when x"9" =>
                         -- $de09 - read control register
