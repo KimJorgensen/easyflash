@@ -33,7 +33,7 @@ Changes
 Version 1.2.0 - 19.04.2018
 
 - Release from https://github.com/KimJorgensen/easyflash
-- Final Cartridge III support (incomplete)
+- Final Cartridge III support
 
 Version 1.1.1 - 18.08.2012
 

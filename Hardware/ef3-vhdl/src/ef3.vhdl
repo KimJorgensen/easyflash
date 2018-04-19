@@ -830,7 +830,7 @@ begin
     ---------------------------------------------------------------------------
     --
     ---------------------------------------------------------------------------
-    set_mem_addr: process(cart_mode,
+    set_mem_addr: process(addr, cart_mode,
                           enable_io2ram, io2ram_ram_bank,
                           enable_ar, ar_ram_bank,
                           enable_ss5, ss5_ram_bank,
