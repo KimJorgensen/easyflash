@@ -43,6 +43,7 @@ entity cart_fc3 is
         wp:                 in  std_logic;
         addr:               in  std_logic_vector(15 downto 0);
         data:               in  std_logic_vector(7 downto 0);
+        bank_lo:            in  std_logic_vector(2 downto 0);
         button_crt_reset:   in  std_logic;
         button_special_fn:  in  std_logic;
         freezer_ready:      in  std_logic;
@@ -63,16 +64,23 @@ architecture behav of cart_fc3 is
     signal ctrl_game:           std_logic;
     signal ctrl_exrom:          std_logic;
 
+    signal write_enable:        std_logic;
     signal cart_dfff_write:     std_logic;
+
+    attribute KEEP : string; -- keep buffer from being optimized out
+    attribute KEEP of cart_dfff_write: signal is "TRUE";
 begin
 
-    -- Write to register $dfff
-    cart_dfff_write <= '1' when
-        ctrl_hide = '0' and wp = '1' and n_io2 = '0' and addr(7 downto 0) = x"ff"
+    write_enable <= '1' when ctrl_hide = '0' or button_special_fn = '1'
         else '0';
 
+    -- Write to register $dfff
+    cart_dfff_write <= '1' when write_enable = '1' and wp = '1' and n_io2 = '0'
+        and addr(7 downto 0) = x"ff" else '0';
+
+    ctrl_nmi    <= bank_lo(0);
     start_reset <= enable and button_crt_reset;
-    led <= enable and not ctrl_hide;
+    led         <= enable and write_enable;
 
     ---------------------------------------------------------------------------
     -- Combinatorial process to prepare output signals set_bank_low and
@@ -85,8 +93,10 @@ begin
         new_bank_lo <= (others => '0');
 
         if enable = '1' then
-            -- todo: support FC3+
+            -- todo: support FC3+ (data bit 2+3)
             new_bank_lo(2 downto 1) <= data(1 downto 0);
+            -- optimization: use unused bit in bank_lo to store ctrl_nmi
+            new_bank_lo(0) <= data(6);
 
             if cart_dfff_write = '1' then
                 set_bank_lo <= '1';
@@ -105,8 +115,7 @@ begin
     begin
         start_freezer <= '0';
 
-        -- todo: also check ctrl_nmi (no room in CPLD!)
-        if enable = '1' and button_special_fn = '1' then
+        if enable = '1' and (button_special_fn = '1' or ctrl_nmi = '1') then
             start_freezer <= '1';
         end if;
     end process;
@@ -129,23 +138,20 @@ begin
     begin
         if n_reset = '0' then
             ctrl_hide       <= '0';
-            ctrl_nmi        <= '0';
             ctrl_game       <= '0';
             ctrl_exrom      <= '0';
         elsif rising_edge(clk) then
             if enable = '1' then
                 if freezer_ready = '1' then
                     ctrl_hide       <= '0';
-                    ctrl_nmi        <= '0';
                     ctrl_game       <= '0';
                     ctrl_exrom      <= '0';
                 end if;
 
                 if cart_dfff_write = '1' then
                     -- write control register $dfff
-                    -- for bank refer to combinatorial logic new_bank_lo
+                    -- for bank & nmi refer to combinatorial logic new_bank_lo
                     ctrl_hide       <= data(7);
-                    ctrl_nmi        <= data(6);
                     ctrl_game       <= data(5);
                     ctrl_exrom      <= data(4);
                 end if;
@@ -179,12 +185,9 @@ begin
     begin
         flash_read <= '0';
 
-        if enable = '1' then
-
-             --todo: should also check n_roml and n_romh (no room in CPLD!)
-            if (n_io1 = '0' or n_io2 = '0')
-                and rd = '1' then
-                    flash_read <= '1';
+        if enable = '1' and rd = '1' then
+            if n_io1 = '0' or n_io2 = '0' or n_roml = '0' or n_romh = '0' then
+                flash_read <= '1';
             end if;
         end if;
     end process;

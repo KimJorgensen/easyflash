@@ -78,7 +78,18 @@ architecture ef3_arc of ef3 is
     signal bank_lo:             std_logic_vector(2 downto 0);
 
     -- Current cartridge mode
+    constant MODE_EF:           std_logic_vector (2 downto 0) := o"0";
+    constant MODE_EF_NO_RESET:  std_logic_vector (2 downto 0) := o"1";
+    constant MODE_KERNAL:       std_logic_vector (2 downto 0) := o"2";
+    constant MODE_FC3:          std_logic_vector (2 downto 0) := o"3";
+    constant MODE_AR:           std_logic_vector (2 downto 0) := o"4";
+    constant MODE_SS5:          std_logic_vector (2 downto 0) := o"5";
+    constant MODE_GO128:        std_logic_vector (2 downto 0) := o"6";
+    constant MODE_KILL:         std_logic_vector (2 downto 0) := o"7";
+
+    signal cart_mode:           std_logic_vector (2 downto 0);
     signal enable_menu:         std_logic;
+
     signal enable_ef:           std_logic;
     signal enable_kernal:       std_logic;
     signal enable_fc3:          std_logic;
@@ -134,7 +145,7 @@ architecture ef3_arc of ef3 is
     -- Reset the machine to enter the menu mode
     signal start_reset_to_menu: std_logic;
 
-    -- This is '1' when software starts the reset generator
+    -- This is '1' when software or menu button starts the reset generator
     signal sw_start_reset:      std_logic;
 
     signal n_reset:             std_logic;
@@ -222,6 +233,7 @@ architecture ef3_arc of ef3 is
     attribute KEEP : string; -- keep buffer from being optimized out
     attribute KEEP of io1_addr_0x: signal is "TRUE";
     attribute KEEP of n_mem_oe_i: signal is "TRUE";
+    attribute KEEP of enable_ef: signal is "TRUE";
 
     component exp_bus_ctrl is
         port (
@@ -350,6 +362,7 @@ architecture ef3_arc of ef3 is
             wp:                 in  std_logic;
             addr:               in  std_logic_vector(15 downto 0);
             data:               in  std_logic_vector(7 downto 0);
+            bank_lo:            in  std_logic_vector(2 downto 0);
             button_crt_reset:   in  std_logic;
             button_special_fn:  in  std_logic;
             freezer_ready:      in  std_logic;
@@ -578,6 +591,7 @@ begin
         wp                      => wp,
         addr                    => addr,
         data                    => data,
+        bank_lo                 => bank_lo,
         button_crt_reset        => button_crt_reset,
         button_special_fn       => button_special_fn,
         freezer_ready           => freezer_ready,
@@ -677,6 +691,14 @@ begin
         data_out_valid          => usb_data_out_valid
     );
 
+    enable_ef       <= '1' when cart_mode = MODE_EF or
+                        cart_mode = MODE_EF_NO_RESET else '0';
+    enable_kernal   <= '1' when cart_mode = MODE_KERNAL else '0';
+    enable_fc3      <= '1' when cart_mode = MODE_FC3 else '0';
+    enable_ar       <= '1' when cart_mode = MODE_AR else '0';
+    enable_ss5      <= '1' when cart_mode = MODE_SS5 else '0';
+    go_64           <= '0' when cart_mode = MODE_GO128 else '1';
+
     enable_usb      <= enable_ef or enable_kernal;
     enable_io2ram   <= enable_ef or enable_kernal;
 
@@ -688,9 +710,9 @@ begin
     addr <= (others => 'Z');
     n_dma <= 'Z';
 
-    n_reset_io  <= 'Z' when n_generated_reset = '1' else '0';
-    n_nmi       <= 'Z' when freezer_irq = '0'       else '0';
-    n_irq       <= 'Z' when freezer_irq = '0'       else '0';
+    n_reset_io  <= 'Z' when n_generated_reset = '1'                 else '0';
+    n_nmi       <= 'Z' when freezer_irq = '0'                       else '0';
+    n_irq       <= 'Z' when freezer_irq = '0' or enable_fc3 = '1'   else '0';
 
     -- for readable optimizations: '1' for n_io1 $de00..$de0f
     io1_addr_0x <= '1' when
@@ -723,85 +745,37 @@ begin
     ---------------------------------------------------------------------------
     -- This button will always enter the menu mode.
     ---------------------------------------------------------------------------
-    check_button_menu_mode: process(clk)
-    begin
-        if rising_edge(clk) then
-            start_reset_to_menu <= button_menu;
-        end if;
-    end process;
+    start_reset_to_menu <= button_menu;
 
     ---------------------------------------------------------------------------
-    -- Register $de03 selects the cartridge mode when enable_menu is set.
+    -- Register $de0f selects the cartridge mode when enable_menu is set.
     ---------------------------------------------------------------------------
     check_cartridge_mode: process(clk, n_sys_reset)
     begin
         if n_sys_reset = '0' then
-            enable_ef       <= '1';
             enable_menu     <= '1';
-            enable_fc3      <= '0';
-            enable_ar       <= '0';
-            enable_ss5      <= '0';
-            enable_kernal   <= '0';
+            cart_mode       <= MODE_EF;
             sw_start_reset  <= '0';
         elsif rising_edge(clk) then
             sw_start_reset  <= '0';
-            go_64           <= '1';
+
             if start_reset_to_menu = '1' then
-                enable_ef       <= '1';
                 enable_menu     <= '1';
-                enable_fc3      <= '0';
-                enable_ar       <= '0';
-                enable_ss5      <= '0';
-                enable_kernal   <= '0';
+                cart_mode       <= MODE_EF;
+                sw_start_reset  <= '1';
+
             elsif wp = '1' and io1_addr_0x = '1' and enable_menu = '1' then
-                case addr(3 downto 0) is
-                    when x"f" =>
-                        enable_ef       <= '0';
-                        enable_menu     <= '0';
-                        enable_fc3      <= '0';
-                        enable_ar       <= '0';
-                        enable_ss5      <= '0';
-                        enable_kernal   <= '0';
-                        -- $de0f = cartridge mode
-                        case data(3 downto 0) is
-                            when x"0" =>
-                                enable_ef <= '1';
-                                sw_start_reset <= '1';
+                -- $de0f = cartridge mode
+                if addr(3 downto 0) = x"f" then
+                    enable_menu     <= '0';
+                    cart_mode       <= data(2 downto 0);
+                    sw_start_reset  <= '1';
 
-                            when x"1" =>
-                                enable_ef <= '1';
-                                -- without reset, hide this register only
-
-                            when x"2" =>
-                                enable_kernal <= '1';
-                                sw_start_reset <= '1';
-
-                            when x"3" =>
-                                enable_fc3 <= '1';
-                                sw_start_reset <= '1';
-
-                            when x"4" =>
-                                enable_ar <= '1';
-                                sw_start_reset <= '1';
-
-                            when x"5" =>
-                                enable_ss5 <= '1';
-                                sw_start_reset <= '1';
-
-                            when x"6" =>
-                                -- everything disabled, go to C128 mode
-                                sw_start_reset <= '1';
-                                go_64 <= '0';
-
-                            when x"7" =>
-                                -- everything disabled, stay in C64 mode
-                                sw_start_reset <= '1';
-
-                            when others => null;
-                        end case;
-
-                    when others => null;
-                end case;
+                    if data(2 downto 0) = MODE_EF_NO_RESET then
+                        -- without reset, hide this register only
+                        sw_start_reset <= '0';
+                    end if;
+                end if;
             end if;
         end if;
     end process;
@@ -820,8 +794,7 @@ begin
     data_out_valid  <= ef_data_out_valid or usb_data_out_valid or ar_data_out_valid;
 
     start_reset     <= ef_start_reset or kernal_start_reset or fc3_start_reset or
-                       ar_start_reset or ss5_start_reset or
-                       start_reset_to_menu or sw_start_reset;
+                       ar_start_reset or ss5_start_reset or sw_start_reset;
 
     start_freezer   <= fc3_start_freezer or ar_start_freezer or ss5_start_freezer;
     reset_freezer   <= ar_reset_freezer or ss5_reset_freezer;
@@ -857,9 +830,8 @@ begin
     ---------------------------------------------------------------------------
     --
     ---------------------------------------------------------------------------
-    set_mem_addr: process(enable_ef,
+    set_mem_addr: process(cart_mode,
                           enable_io2ram, io2ram_ram_bank,
-                          enable_kernal,
                           enable_ar, ar_ram_bank,
                           enable_ss5, ss5_ram_bank,
                           slot, bank_lo, bank_hi, n_ram_cs_i, n_roml)
@@ -877,23 +849,25 @@ begin
             end if;
         else
             mem_addr(22 downto 17) <= slot & bank_hi;
-            mem_addr(15 downto 14) <= bank_lo(2 downto 1);
+            mem_addr(15 downto 13) <= bank_lo;
 
-            if enable_fc3 = '1' then
-                mem_addr(13) <= addr(13);
-            else
-                if enable_kernal = '1' then
+            case cart_mode is
+                when mode_kernal =>
                     mem_addr(16) <= '0';
-                elsif enable_ef = '1' then
-                    mem_addr(16) <= n_roml;
-                elsif enable_ar = '1' then
-                    mem_addr(16) <= '1';
-                elsif enable_ss5 = '1' then
-                    mem_addr(16) <= addr(13);
-                end if;
 
-                mem_addr(13) <= bank_lo(0);
-            end if;
+                when mode_fc3 =>
+                    mem_addr(16) <= '0';
+                    mem_addr(13) <= addr(13);
+
+                when mode_ar =>
+                    mem_addr(16) <= '1';
+
+                when mode_ss5 =>
+                    mem_addr(16) <= addr(13);
+
+                when others =>
+                    mem_addr(16) <= n_roml;
+            end case;
         end if;
     end process;
 
