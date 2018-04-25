@@ -67,6 +67,7 @@ static uint8_t  m_nBank;
 static uint16_t m_nAddress;
 static uint16_t m_nSize;
 static BankHeader bankHeader;
+static uint8_t m_bFileUSB;
 
 /******************************************************************************/
 /**
@@ -184,7 +185,7 @@ err:
 /******************************************************************************/
 /**
  * Do all preparations to write a file to flash.
- * If pStrImageType points to "U", read the file from USB.
+ * If m_bFileUSB is true, read the file from USB.
  *
  * If this function returns CART_RV_OK, the file has been opened successfully.
  */
@@ -194,7 +195,7 @@ static uint8_t writeOpenFile(const char* pStrImageType)
 
     checkFlashType();
 
-    if (strcmp(pStrImageType, "U") == 0)
+    if (m_bFileUSB)
     {
         utilOpenFile(UTIL_USE_USB);
     }
@@ -421,7 +422,7 @@ void checkWriteCRTImage(void)
 {
     uint8_t rv;
 
-    if (checkAskForSlot() && (writeOpenFile("CRT") == CART_RV_OK))
+    if (checkAskForEFSlot() && (writeOpenFile("CRT") == CART_RV_OK))
     {
         rv = writeCrtImage();
         utilCloseFile();
@@ -436,67 +437,6 @@ void checkWriteCRTImage(void)
             }
             screenPrintSimpleDialog(apStrWriteComplete);
         }
-    }
-}
-
-
-/******************************************************************************/
-/**
- * todo: merge functions!
- */
-void checkWriteCRTImageFromUSB(void)
-{
-    uint8_t rv;
-
-    if (checkAskForSlot() && (writeOpenFile("U") == CART_RV_OK))
-    {
-        rv = writeCrtImage();
-        utilCloseFile();
-        timerStop();
-
-        if (rv == CART_RV_OK)
-        {
-            if (g_nSlots > 1 && g_nSelectedSlot != 0)
-            {
-                slotSaveName(screenReadInput("Cartridge Name", g_strCartName),
-                    0xff, 0xff);
-            }
-            screenPrintSimpleDialog(apStrWriteComplete);
-        }
-    }
-}
-
-
-/******************************************************************************/
-/**
- * Write a BIN image file to the LOROM flash.
- */
-void checkWriteLOROMImage(void)
-{
-    uint8_t rv;
-
-    if (checkAskForSlot() && (writeOpenFile("BIN") == CART_RV_OK))
-    {
-        rv = writeBinImage(0, 0, EP_NON_INTERLEAVED);
-        if (rv == CART_RV_OK)
-            screenPrintSimpleDialog(apStrWriteComplete);
-    }
-}
-
-
-/******************************************************************************/
-/**
- * Write a BIN image file to the HIROM flash.
- */
-void checkWriteHIROMImage(void)
-{
-    uint8_t rv;
-
-    if (checkAskForSlot() && (writeOpenFile("BIN") == CART_RV_OK))
-    {
-        rv = writeBinImage(0, 1, EP_NON_INTERLEAVED);
-        if (rv == CART_RV_OK)
-            screenPrintSimpleDialog(apStrWriteComplete);
     }
 }
 
@@ -562,6 +502,71 @@ void checkWriteFreezerImage(void)
 
 /******************************************************************************/
 /**
+ * Write an image from USB to flash.
+ */
+void checkWriteImageFromUSB(void)
+{
+    uint8_t nType;
+
+    nType = selectSlotTypeDialog();
+    if (nType == 0xff)
+        return;
+
+    m_bFileUSB = 1;
+
+    if (nType == EF_SLOTS)
+    {
+        checkWriteCRTImage();
+    }
+    else if (nType == KERNAL_SLOTS)
+    {
+        checkWriteKERNALImage();
+    }
+    else
+    {
+        checkWriteFreezerImage();
+    }
+
+    m_bFileUSB = 0;
+}
+
+
+/******************************************************************************/
+/**
+ * Write a BIN image file to the LOROM flash.
+ */
+void checkWriteLOROMImage(void)
+{
+    uint8_t rv;
+
+    if (checkAskForEFSlot() && (writeOpenFile("BIN") == CART_RV_OK))
+    {
+        rv = writeBinImage(0, 0, EP_NON_INTERLEAVED);
+        if (rv == CART_RV_OK)
+            screenPrintSimpleDialog(apStrWriteComplete);
+    }
+}
+
+
+/******************************************************************************/
+/**
+ * Write a BIN image file to the HIROM flash.
+ */
+void checkWriteHIROMImage(void)
+{
+    uint8_t rv;
+
+    if (checkAskForEFSlot() && (writeOpenFile("BIN") == CART_RV_OK))
+    {
+        rv = writeBinImage(0, 1, EP_NON_INTERLEAVED);
+        if (rv == CART_RV_OK)
+            screenPrintSimpleDialog(apStrWriteComplete);
+    }
+}
+
+
+/******************************************************************************/
+/**
  */
 void eraseAll(void)
 {
@@ -596,7 +601,7 @@ void checkEraseSlot(void)
 {
     if (g_nSlots > 1)
     {
-        if (!checkAskForSlot())
+        if (!checkAskForEFSlot())
             return;
     }
 

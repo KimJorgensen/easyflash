@@ -114,10 +114,31 @@ void slotsFillEFDir(void)
 
 /******************************************************************************/
 /**
- * Let the user select a slot. Return the slot number.
+ * Let the user select a slot type. Return the slot type.
  * Return 0xff if the user canceled the selection.
  */
-uint8_t __fastcall__ selectSlotDialog(void)
+uint8_t __fastcall__ selectSlotTypeDialog(void)
+{
+    const SelectBoxEntry aEntries[4] =
+    {
+            { "EasyFlash", "", 0 },   // EF_SLOTS
+            { "KERNAL", "", 0 },      // KERNAL_SLOTS
+            { "Freezer", "", 0 },     // FREEZER_SLOTS
+            { "", "", 0 }
+    };
+    uint8_t rv;
+
+    rv = selectBox(aEntries, "slot type");
+    return rv;
+}
+
+
+/******************************************************************************/
+/**
+ * Let the user select a EF slot. Return the slot number.
+ * Return 0xff if the user canceled the selection.
+ */
+uint8_t __fastcall__ selectEFSlotDialog(void)
 {
 	SelectBoxEntry* pEntries;
     SelectBoxEntry* pEntry;
@@ -149,7 +170,7 @@ uint8_t __fastcall__ selectSlotDialog(void)
     // Add type to System Area
     strcpy(pEntries[0].type, "(SYS)");
 
-    rv = selectBox(pEntries, "a slot");
+    rv = selectBox(pEntries, "an EF slot");
     free(pEntries);
     return rv;
 }
@@ -160,7 +181,7 @@ uint8_t __fastcall__ selectSlotDialog(void)
  * Let the user select a KERNAL slot. Return the slot number.
  * Return 0xff if the user canceled the selection.
  */
-uint8_t selectKERNALSlotDialog(void)
+uint8_t __fastcall__ selectKERNALSlotDialog(void)
 {
     SelectBoxEntry* pEntries;
     SelectBoxEntry* pEntry;
@@ -204,7 +225,7 @@ uint8_t selectKERNALSlotDialog(void)
  * Let the user select a freezer slot. Return the slot number.
  * Return 0xff if the user canceled the selection.
  */
-uint8_t selectFreezerSlotDialog(void)
+uint8_t __fastcall__ selectFreezerSlotDialog(void)
 {
     SelectBoxEntry* pEntries;
     SelectBoxEntry* pEntry;
@@ -251,11 +272,11 @@ uint8_t selectFreezerSlotDialog(void)
 
 /******************************************************************************/
 /**
- * If we have more than one slot, ask the user which one he wants to use.
+ * If we have more than one EF slot, ask the user which one he wants to use.
  *
  * Return 0 if the user canceled the selection.
  **/
-uint8_t __fastcall__ checkAskForSlot(void)
+uint8_t __fastcall__ checkAskForEFSlot(void)
 {
     uint8_t s;
 
@@ -264,7 +285,7 @@ uint8_t __fastcall__ checkAskForSlot(void)
         for (;;)
         {
             refreshMainScreen();
-            s = selectSlotDialog();
+            s = selectEFSlotDialog();
             if (s == 0xff)
                 return 0;
 
@@ -344,30 +365,22 @@ void __fastcall__ slotSaveName(const char* name, uint8_t nKERNAL, uint8_t nFreez
  */
 void slotsEditDirectory(void)
 {
-    const SelectBoxEntry aEntries[4] =
-    {
-            { "EasyFlash Slots", "", 0 },
-            { "KERNALs", "", 0 },
-            { "Freezers", "", 0 },
-            { "", "", 0 }
-    };
-    uint8_t rv, nDir, nKERNAL, nFreezer;
+    uint8_t nType, nSlot, nKERNAL, nFreezer;
 
-
-    nDir = selectBox(aEntries, "what to edit");
-    if (nDir == 0xff)
+    nType = selectSlotTypeDialog();
+    if (nType == 0xff)
         return;
 
     for (;;)
     {
-        if (nDir == 0)
+        if (nType == EF_SLOTS)
         {
             nKERNAL = 0xff;
             nFreezer = 0xff;
-            rv = selectSlotDialog();
-            if (rv == 0xff)
+            nSlot = selectEFSlotDialog();
+            if (nSlot == 0xff)
                 return;
-            g_nSelectedSlot = rv;
+            g_nSelectedSlot = nSlot;
 
             if (g_nSelectedSlot == 0)
             {
@@ -380,7 +393,7 @@ void slotsEditDirectory(void)
                 memcpy(utilStr, m_EFDir.slots[g_nSelectedSlot], EF_DIR_ENTRY_SIZE);
             }
         }
-        else if (nDir == 1)
+        else if (nType == KERNAL_SLOTS)
         {
             nFreezer = 0xff;
             nKERNAL = selectKERNALSlotDialog();

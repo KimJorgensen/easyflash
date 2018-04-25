@@ -1,8 +1,9 @@
 
-Version 1.8.0 - 08.04.2018
+Version 1.8.0 - 25.04.2018
 - Release from https://github.com/KimJorgensen/easyflash
 - Support for Final Cartridge III
 - Possible to name freezer slots
+- USB transfer of KERNAL and freezer images
 
 Version 1.7.1 - 29.09.2013
 - USB test added
