@@ -231,9 +231,9 @@ architecture ef3_arc of ef3 is
     signal io1_addr_0x:         std_logic;
 
     attribute KEEP : string; -- keep buffer from being optimized out
-    attribute KEEP of io1_addr_0x: signal is "TRUE";
-    attribute KEEP of n_mem_oe_i: signal is "TRUE";
-    attribute KEEP of enable_ef: signal is "TRUE";
+    attribute KEEP of io1_addr_0x:  signal is "TRUE";
+    attribute KEEP of n_mem_oe_i:   signal is "TRUE";
+    attribute KEEP of enable_ef:    signal is "TRUE";
 
     component exp_bus_ctrl is
         port (
@@ -692,12 +692,12 @@ begin
     );
 
     enable_ef       <= '1' when cart_mode = MODE_EF or
-                        cart_mode = MODE_EF_NO_RESET else '0';
+                           cart_mode = MODE_EF_NO_RESET else '0';
     enable_kernal   <= '1' when cart_mode = MODE_KERNAL else '0';
-    enable_fc3      <= '1' when cart_mode = MODE_FC3 else '0';
-    enable_ar       <= '1' when cart_mode = MODE_AR else '0';
-    enable_ss5      <= '1' when cart_mode = MODE_SS5 else '0';
-    go_64           <= '0' when cart_mode = MODE_GO128 else '1';
+    enable_fc3      <= '1' when cart_mode = MODE_FC3    else '0';
+    enable_ar       <= '1' when cart_mode = MODE_AR     else '0';
+    enable_ss5      <= '1' when cart_mode = MODE_SS5    else '0';
+    go_64           <= '0' when cart_mode = MODE_GO128  else '1';
 
     enable_usb      <= enable_ef or enable_kernal;
     enable_io2ram   <= enable_ef or enable_kernal;
@@ -707,8 +707,8 @@ begin
     button_special_fn <= buttons_enabled and button_c;
 
     -- unused signals and defaults
-    addr <= (others => 'Z');
-    n_dma <= 'Z';
+    addr    <= (others => 'Z');
+    n_dma   <= 'Z';
 
     n_reset_io  <= 'Z' when n_generated_reset = '1'                 else '0';
     n_nmi       <= 'Z' when freezer_irq = '0'                       else '0';
@@ -785,25 +785,30 @@ begin
     ---------------------------------------------------------------------------
     ram_read        <= io2_ram_read or ar_ram_read or ss5_ram_read;
     ram_write       <= io2_ram_write or ar_ram_write or ss5_ram_write;
-    flash_read      <= ef_flash_read or kernal_flash_read or fc3_flash_read or ar_flash_read or ss5_flash_read;
+    flash_read      <= ef_flash_read or kernal_flash_read or fc3_flash_read or
+                       ar_flash_read or ss5_flash_read;
     flash_write     <= ef_flash_write;
-    n_exrom_out     <= ef_n_exrom and kernal_n_exrom and fc3_n_exrom and ar_n_exrom and ss5_n_exrom;
-    n_game_out      <= ef_n_game and kernal_n_game and fc3_n_game and ar_n_game and ss5_n_game and n_reset_game;
+
+    n_exrom_out     <= ef_n_exrom and kernal_n_exrom and fc3_n_exrom and
+                       ar_n_exrom and ss5_n_exrom;
+    n_game_out      <= ef_n_game and kernal_n_game and fc3_n_game and
+                       ar_n_game and ss5_n_game and n_reset_game;
 
     data_out        <= ef_data_out or usb_data_out or ar_data_out;
-    data_out_valid  <= ef_data_out_valid or usb_data_out_valid or ar_data_out_valid;
+    data_out_valid  <= ef_data_out_valid or usb_data_out_valid or
+                       ar_data_out_valid;
 
-    start_reset     <= ef_start_reset or kernal_start_reset or fc3_start_reset or
-                       ar_start_reset or ss5_start_reset or sw_start_reset;
+    start_reset     <= ef_start_reset or kernal_start_reset or
+                       fc3_start_reset or ar_start_reset or ss5_start_reset or
+                       sw_start_reset;
 
-    start_freezer   <= fc3_start_freezer or ar_start_freezer or ss5_start_freezer;
+    start_freezer   <= fc3_start_freezer or ar_start_freezer or
+                       ss5_start_freezer;
     reset_freezer   <= ar_reset_freezer or ss5_reset_freezer;
 
-    n_led <= not (ef_led or fc3_led or ar_led or ss5_led);
-
+    n_led   <= not (ef_led or fc3_led or ar_led or ss5_led);
     n_exrom <= n_exrom_out;
-
-    n_game <= n_game_out;
+    n_game  <= n_game_out;
 
     addr(14) <= kernal_a14;
 
@@ -821,8 +826,8 @@ begin
                 fc3_set_bank_lo = '1' or ar_set_bank_lo = '1' or
                 ss5_set_bank_lo = '1') then
                     bank_lo <= ef_new_bank_lo or kernal_new_bank_lo or
-                                fc3_new_bank_lo or ar_new_bank_lo or
-                                ss5_new_bank_lo;
+                               fc3_new_bank_lo or ar_new_bank_lo or
+                               ss5_new_bank_lo;
             end if;
         end if;
     end process;

@@ -83,7 +83,7 @@ begin
     led         <= enable and write_enable;
 
     ---------------------------------------------------------------------------
-    -- Combinatorial process to prepare output signals set_bank_low and
+    -- Combinatorial process to prepare output signals set_bank_lo and
     -- new_bank_lo.
     ---------------------------------------------------------------------------
     update_bank_lo: process(enable, data, freezer_ready, addr,
@@ -137,23 +137,23 @@ begin
     w_control_reg: process(clk, n_reset, enable, cart_dfff_write)
     begin
         if n_reset = '0' then
-            ctrl_hide       <= '0';
-            ctrl_game       <= '0';
-            ctrl_exrom      <= '0';
+            ctrl_hide   <= '0';
+            ctrl_game   <= '0';
+            ctrl_exrom  <= '0';
         elsif rising_edge(clk) then
             if enable = '1' then
                 if freezer_ready = '1' then
-                    ctrl_hide       <= '0';
-                    ctrl_game       <= '0';
-                    ctrl_exrom      <= '0';
+                    ctrl_hide   <= '0';
+                    ctrl_game   <= '0';
+                    ctrl_exrom  <= '0';
                 end if;
 
                 if cart_dfff_write = '1' then
                     -- write control register $dfff
                     -- for bank & nmi refer to combinatorial logic new_bank_lo
-                    ctrl_hide       <= data(7);
-                    ctrl_game       <= data(5);
-                    ctrl_exrom      <= data(4);
+                    ctrl_hide   <= data(7);
+                    ctrl_game   <= data(5);
+                    ctrl_exrom  <= data(4);
                 end if;
             end if; -- enable
        end if; -- clk
@@ -167,7 +167,7 @@ begin
         if enable = '1' then
             if freezer_ready = '1' then
                 n_exrom <= '0';
-                n_game <= '0';
+                n_game  <= '0';
             else
                 n_exrom <= ctrl_exrom;
                 n_game  <= ctrl_game;
