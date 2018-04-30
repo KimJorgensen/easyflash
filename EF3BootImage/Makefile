@@ -17,19 +17,19 @@
 # 0f <--------------- Sound --------------->
 # ==========================================
 # 10     Directory      |  Action Replay 0
-# .        (64K)        |       (64K)
+# .        (64k)        |       (64k)
 # ==========================================
 # 18     EF3 KERNAL     |  Action Replay 1
-# .    (64K reserved)   |       (64K)
+# .    (64k reserved)   |       (64k)
 # ==========================================
 # 20            Super Snapshot 5
-# .                  (128K)
+# .                  (128k)
 # ==========================================
 # 28           Final Cartridge III
-# .                  (256K)
+# .                  (128k)
 # ==========================================
-# 38              Unallocated
-# .                  (128K)
+# 30              Unallocated
+# .                  (256k)
 # ==========================================
 
 # uncompressed version of EasyProg
@@ -78,8 +78,8 @@ menu_image  += prgstart/prgstart.bin                    0x0b 0x0000 LH
 #menu_image += ef3kernal/out/ef3kernal_b0.bin           0x18 0x0000 L
 #menu_image += ef3kernal/out/ef3kernal_b1.bin           0x19 0x0000 L
 
-#menu_image += waterdrop.raw        0x0f 0x0000
-#menu_image += bing.raw        0x0f 0x0000
+#menu_image += waterdrop.raw                            0x0f 0x0000
+#menu_image += bing.raw                                 0x0f 0x0000
 
 menu_deps   := trampoline.bin
 menu_deps   += efmenu/efmenu.bin
@@ -107,6 +107,8 @@ ifeq "$(variant)" "jb"
     init_image  += images/empty.bin                     0x20 0x0000 H
     init_image  += images/empty.bin                     0x28 0x0000 L
     init_image  += images/empty.bin                     0x28 0x0000 H
+    init_image  += images/empty.bin                     0x30 0x0000 L
+    init_image  += images/empty.bin                     0x30 0x0000 H
     init_image  += images/empty.bin                     0x38 0x0000 L
     init_image  += images/empty.bin                     0x38 0x0000 H
 else
@@ -129,6 +131,8 @@ else
     init_image  += images/empty.bin                     0x28 0x0000 L
     init_image  += images/empty.bin                     0x28 0x0000 H
 
+    init_image  += images/empty.bin                     0x30 0x0000 L
+    init_image  += images/empty.bin                     0x30 0x0000 H
     init_image  += images/empty.bin                     0x38 0x0000 L
     init_image  += images/empty.bin                     0x38 0x0000 H
 endif

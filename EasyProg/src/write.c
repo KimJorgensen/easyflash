@@ -676,8 +676,6 @@ void checkEraseFreezer(void)
             {
                 eraseSector(EF3_FC3_BANK, 0);
                 eraseSector(EF3_FC3_BANK, 1);
-                eraseSector(EF3_FC3_BANK + 8, 0);
-                eraseSector(EF3_FC3_BANK + 8, 1);
                 strcpy(utilStr, "FC3 Slot");
             }
 
