@@ -1,6 +1,6 @@
 ----------------------------------------------------------------------------------
 --
--- EasyFlash 3 CPLD Firmware version 1.2.0, April 2018, are
+-- EasyFlash 3 CPLD Firmware version 1.2.0, May 2018, are
 -- Copyright (c) 2018 Kim Jorgensen, are derived from EasyFlash 3 CPLD Firmware 1.1.1,
 -- and are distributed according to the same disclaimer and license as
 -- EasyFlash 3 CPLD Firmware 1.1.1
@@ -78,7 +78,7 @@ begin
     cart_dfff_write <= '1' when write_enable = '1' and wp = '1' and n_io2 = '0'
         and addr(7 downto 0) = x"ff" else '0';
 
-    ctrl_nmi    <= bank_lo(0);
+    ctrl_nmi    <= bank_lo(2);
     start_reset <= enable and button_crt_reset;
     led         <= enable and write_enable;
 
@@ -93,10 +93,11 @@ begin
         new_bank_lo <= (others => '0');
 
         if enable = '1' then
-            -- todo: support FC3+ (data bit 2+3)
-            new_bank_lo(2 downto 1) <= data(1 downto 0);
             -- optimization: use unused bit in bank_lo to store ctrl_nmi
-            new_bank_lo(0) <= data(6);
+            new_bank_lo(2) <= data(6);
+
+            -- todo: support FC3+ (data bit 2+3)
+            new_bank_lo(1 downto 0) <= data(1 downto 0);
 
             if cart_dfff_write = '1' then
                 set_bank_lo <= '1';
@@ -115,7 +116,7 @@ begin
     begin
         start_freezer <= '0';
 
-        if enable = '1' and (button_special_fn = '1' or ctrl_nmi = '1') then
+        if enable = '1' and (button_special_fn = '1' or ctrl_nmi = '0') then
             start_freezer <= '1';
         end if;
     end process;

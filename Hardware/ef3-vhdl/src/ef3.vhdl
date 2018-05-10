@@ -1,6 +1,6 @@
 ----------------------------------------------------------------------------------
 --
--- EasyFlash 3 CPLD Firmware version 1.2.0, April 2018, are
+-- EasyFlash 3 CPLD Firmware version 1.2.0, May 2018, are
 -- Copyright (c) 2018 Kim Jorgensen, are derived from EasyFlash 3 CPLD Firmware 1.1.1,
 -- and are distributed according to the same disclaimer and license as
 -- EasyFlash 3 CPLD Firmware 1.1.1
@@ -857,17 +857,17 @@ begin
             mem_addr(15 downto 13) <= bank_lo;
 
             case cart_mode is
-                when mode_kernal =>
+                when MODE_KERNAL =>
                     mem_addr(16) <= '0';
 
-                when mode_fc3 =>
-                    mem_addr(16) <= '0';
-                    mem_addr(13) <= addr(13);
+                when MODE_FC3 =>
+                    mem_addr(16) <= addr(13);
+                    mem_addr(15) <= '0';
 
-                when mode_ar =>
+                when MODE_AR =>
                     mem_addr(16) <= '1';
 
-                when mode_ss5 =>
+                when MODE_SS5 =>
                     mem_addr(16) <= addr(13);
 
                 when others =>
