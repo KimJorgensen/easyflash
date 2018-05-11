@@ -1,5 +1,11 @@
 ;
-; (c) 2010 Thomas Giesel
+; EasyFash 3 Menu version 1.3.0, May 2018, are
+; Copyright (c) 2018 Kim Jorgensen, are derived from EasyFash 3 Menu 1.2.0,
+; and are distributed according to the same disclaimer and license as
+; EasyFash 3 Menu 1.2.0
+;
+; EasyFash 3 Menu versions 1.0.4, January 2012, through 1.2.0, February 2013, are
+; Copyright (c) 2012-2013 Thomas Giesel
 ;
 ; This software is provided 'as-is', without any express or implied
 ; warranty.  In no event will the authors be held liable for any damages
@@ -100,6 +106,13 @@ _set_bank_change_mode:
         sta tmp1
 
         sei
+        ; reset CIA and VIC-II registers
+        ldx #$00
+        stx $dc02
+        stx $dc03
+        stx $d011
+        stx $d016
+
         ldx #sbcm_codeEnd - sbcm_code
 sbcm_copy:
         ; copy code on stack

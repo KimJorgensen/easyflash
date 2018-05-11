@@ -1,7 +1,7 @@
 /*
  * efmenu.h
  *
- * EasyFash 3 Menu version 1.3.0, April 2018, are
+ * EasyFash 3 Menu version 1.3.0, May 2018, are
  * Copyright (c) 2018 Kim Jorgensen, are derived from EasyFash 3 Menu 1.2.0,
  * and are distributed according to the same disclaimer and license as
  * EasyFash 3 Menu 1.2.0
