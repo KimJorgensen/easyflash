@@ -186,10 +186,12 @@ architecture ef3_arc of ef3 is
     signal kernal_start_reset:  std_logic;
     signal kernal_test:         std_logic;
 
+    signal fc3_n_nmi:           std_logic;
     signal fc3_n_game:          std_logic;
     signal fc3_n_exrom:         std_logic;
     signal fc3_start_reset:     std_logic;
     signal fc3_start_freezer:   std_logic;
+    signal fc3_reset_freezer:   std_logic;
     signal fc3_set_bank_lo:     std_logic;
     signal fc3_new_bank_lo:     std_logic_vector(2 downto 0);
     signal fc3_flash_read:      std_logic;
@@ -368,10 +370,12 @@ architecture ef3_arc of ef3 is
             freezer_ready:      in  std_logic;
             set_bank_lo:        out std_logic;
             new_bank_lo:        out std_logic_vector(2 downto 0);
+            n_nmi:              out std_logic;
             n_game:             out std_logic;
             n_exrom:            out std_logic;
             start_reset:        out std_logic;
             start_freezer:      out std_logic;
+            reset_freezer:      out std_logic;
             flash_read:         out std_logic;
             led:                out std_logic
         );
@@ -597,10 +601,12 @@ begin
         freezer_ready           => freezer_ready,
         set_bank_lo             => fc3_set_bank_lo,
         new_bank_lo             => fc3_new_bank_lo,
+        n_nmi                   => fc3_n_nmi,
         n_game                  => fc3_n_game,
         n_exrom                 => fc3_n_exrom,
         start_reset             => fc3_start_reset,
         start_freezer           => fc3_start_freezer,
+        reset_freezer           => fc3_reset_freezer,
         flash_read              => fc3_flash_read,
         led                     => fc3_led
     );
@@ -710,9 +716,9 @@ begin
     addr    <= (others => 'Z');
     n_dma   <= 'Z';
 
-    n_reset_io  <= 'Z' when n_generated_reset = '1'                 else '0';
-    n_nmi       <= 'Z' when freezer_irq = '0'                       else '0';
-    n_irq       <= 'Z' when freezer_irq = '0' or enable_fc3 = '1'   else '0';
+    n_reset_io  <= '0' when n_generated_reset = '0'                 else 'Z';
+    n_nmi       <= '0' when freezer_irq = '1' or fc3_n_nmi = '0'    else 'Z';
+    n_irq       <= '0' when freezer_irq = '1' and enable_fc3 = '0'  else 'Z';
 
     -- for readable optimizations: '1' for n_io1 $de00..$de0f
     io1_addr_0x <= '1' when
@@ -804,7 +810,8 @@ begin
 
     start_freezer   <= fc3_start_freezer or ar_start_freezer or
                        ss5_start_freezer;
-    reset_freezer   <= ar_reset_freezer or ss5_reset_freezer;
+    reset_freezer   <= fc3_reset_freezer or ar_reset_freezer or
+                       ss5_reset_freezer;
 
     n_led   <= not (ef_led or fc3_led or ar_led or ss5_led);
     n_exrom <= n_exrom_out;

@@ -49,10 +49,12 @@ entity cart_fc3 is
         freezer_ready:      in  std_logic;
         set_bank_lo:        out std_logic;
         new_bank_lo:        out std_logic_vector(2 downto 0);
+        n_nmi:              out std_logic;
         n_game:             out std_logic;
         n_exrom:            out std_logic;
         start_reset:        out std_logic;
         start_freezer:      out std_logic;
+        reset_freezer:      out std_logic;
         flash_read:         out std_logic;
         led:                out std_logic
     );
@@ -78,31 +80,33 @@ begin
     cart_dfff_write <= '1' when write_enable = '1' and wp = '1' and n_io2 = '0'
         and addr(7 downto 0) = x"ff" else '0';
 
-    ctrl_nmi    <= bank_lo(2);
-    start_reset <= enable and button_crt_reset;
-    led         <= enable and write_enable;
+    ctrl_nmi        <= bank_lo(2);
+    start_reset     <= enable and button_crt_reset;
+    reset_freezer   <= enable and freezer_ready and cart_dfff_write;
+    led             <= enable and write_enable;
 
     ---------------------------------------------------------------------------
     -- Combinatorial process to prepare output signals set_bank_lo and
     -- new_bank_lo.
     ---------------------------------------------------------------------------
-    update_bank_lo: process(enable, data, freezer_ready, addr,
-                            button_crt_reset, cart_dfff_write)
+    update_bank_lo: process(enable, data, addr, button_crt_reset,
+                            cart_dfff_write)
     begin
         set_bank_lo <= '0';
         new_bank_lo <= (others => '0');
 
         if enable = '1' then
-            -- optimization: use unused bit in bank_lo to store ctrl_nmi
+            -- optimization: use unused bit in bank_lo for ctrl_nmi
             new_bank_lo(2) <= data(6);
 
             -- todo: support FC3+ (data bit 2+3)
             new_bank_lo(1 downto 0) <= data(1 downto 0);
 
+
             if cart_dfff_write = '1' then
                 set_bank_lo <= '1';
             end if;
-            if button_crt_reset = '1' or freezer_ready = '1' then
+            if button_crt_reset = '1' then
                 set_bank_lo <= '1';
                 new_bank_lo <= (others => '0');
             end if;
@@ -112,11 +116,11 @@ begin
     ---------------------------------------------------------------------------
     --
     ---------------------------------------------------------------------------
-    do_freezer: process(enable, button_special_fn, ctrl_nmi)
+    do_freezer: process(enable, button_special_fn)
     begin
         start_freezer <= '0';
 
-        if enable = '1' and (button_special_fn = '1' or ctrl_nmi = '0') then
+        if enable = '1' and button_special_fn = '1' then
             start_freezer <= '1';
         end if;
     end process;
@@ -143,12 +147,6 @@ begin
             ctrl_exrom  <= '0';
         elsif rising_edge(clk) then
             if enable = '1' then
-                if freezer_ready = '1' then
-                    ctrl_hide   <= '0';
-                    ctrl_game   <= '0';
-                    ctrl_exrom  <= '0';
-                end if;
-
                 if cart_dfff_write = '1' then
                     -- write control register $dfff
                     -- for bank & nmi refer to combinatorial logic new_bank_lo
@@ -163,17 +161,19 @@ begin
     ---------------------------------------------------------------------------
     --
     ---------------------------------------------------------------------------
-    set_game_exrom: process(enable, ctrl_exrom, ctrl_game, freezer_ready)
+    set_game_exrom_nmi: process(enable, ctrl_nmi, ctrl_exrom, ctrl_game, freezer_ready)
     begin
         if enable = '1' then
+            n_nmi   <= ctrl_nmi;
+            n_exrom <= ctrl_exrom;
+
             if freezer_ready = '1' then
-                n_exrom <= '0';
                 n_game  <= '0';
             else
-                n_exrom <= ctrl_exrom;
                 n_game  <= ctrl_game;
             end if;
         else
+            n_nmi   <= '1';
             n_exrom <= '1';
             n_game  <= '1';
         end if;
