@@ -1,7 +1,7 @@
 /*
  * EasyProg - write.c - Write cartridge image to flash
  *
- * EasyProg version 1.8.0, April 2018, are
+ * EasyProg version 1.8.0, April 2018, through 1.8.1, May 2018, are
  * Copyright (c) 2018 Kim Jorgensen, are derived from EasyProg 1.7.1,
  * and are distributed according to the same disclaimer and license as
  * EasyProg 1.7.1
@@ -676,6 +676,8 @@ void checkEraseFreezer(void)
             {
                 eraseSector(EF3_FC3_BANK, 0);
                 eraseSector(EF3_FC3_BANK, 1);
+                eraseSector(EF3_FC3_BANK + 8, 0);
+                eraseSector(EF3_FC3_BANK + 8, 1);
                 strcpy(utilStr, "FC3 Slot");
             }
 

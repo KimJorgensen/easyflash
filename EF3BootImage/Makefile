@@ -25,11 +25,11 @@
 # 20            Super Snapshot 5
 # .                  (128k)
 # ==========================================
-# 28           Final Cartridge III
-# .                  (128k)
-# ==========================================
-# 30              Unallocated
+# 28         Final Cartridge III(+)
 # .                  (256k)
+# ==========================================
+# 38              Unallocated
+# .                  (128k)
 # ==========================================
 
 # uncompressed version of EasyProg
@@ -38,7 +38,7 @@ easyprog    := ../EasyProg/easyprog
 ifneq "$(release)" "yes"
 	version := $(shell date +%y%m%d-%H%M)
 else
-	version := 1.3.0
+	version := 1.3.1
 endif
 
 ifeq "$(variant)" "jb"
