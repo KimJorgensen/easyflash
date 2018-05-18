@@ -1,6 +1,6 @@
 ----------------------------------------------------------------------------------
 --
--- EasyFlash 3 CPLD Firmware version 1.2.0, May 2018, are
+-- EasyFlash 3 CPLD Firmware version 1.2.0, May 2018, through 1.2.1, May 2018, are
 -- Copyright (c) 2018 Kim Jorgensen, are derived from EasyFlash 3 CPLD Firmware 1.1.1,
 -- and are distributed according to the same disclaimer and license as
 -- EasyFlash 3 CPLD Firmware 1.1.1
@@ -169,7 +169,8 @@ architecture ef3_arc of ef3 is
     signal ef_start_reset:      std_logic;
     signal io2_ram_read:        std_logic;
     signal io2_ram_write:       std_logic;
-    signal ef_set_bank_lo:      std_logic;
+    signal ef_set_bank:         std_logic;
+    signal ef_new_bank_hi:      std_logic_vector(2 downto 0);
     signal ef_new_bank_lo:      std_logic_vector(2 downto 0);
     signal ef_flash_read:       std_logic;
     signal ef_flash_write:      std_logic;
@@ -192,7 +193,8 @@ architecture ef3_arc of ef3 is
     signal fc3_start_reset:     std_logic;
     signal fc3_start_freezer:   std_logic;
     signal fc3_reset_freezer:   std_logic;
-    signal fc3_set_bank_lo:     std_logic;
+    signal fc3_set_bank:        std_logic;
+    signal fc3_new_bank_hi:     std_logic;
     signal fc3_new_bank_lo:     std_logic_vector(2 downto 0);
     signal fc3_flash_read:      std_logic;
     signal fc3_led:             std_logic;
@@ -303,8 +305,8 @@ architecture ef3_arc of ef3 is
             button_crt_reset:   in  std_logic;
             button_special_fn:  in  std_logic;
             slot:               out std_logic_vector(2 downto 0);
-            bank_hi:            out std_logic_vector(2 downto 0);
-            set_bank_lo:        out std_logic;
+            set_bank:           out std_logic;
+            new_bank_hi:        out std_logic_vector(2 downto 0);
             new_bank_lo:        out std_logic_vector(2 downto 0);
             n_game:             out std_logic;
             n_exrom:            out std_logic;
@@ -364,11 +366,11 @@ architecture ef3_arc of ef3 is
             wp:                 in  std_logic;
             addr:               in  std_logic_vector(15 downto 0);
             data:               in  std_logic_vector(7 downto 0);
-            bank_lo:            in  std_logic_vector(2 downto 0);
             button_crt_reset:   in  std_logic;
             button_special_fn:  in  std_logic;
             freezer_ready:      in  std_logic;
-            set_bank_lo:        out std_logic;
+            set_bank:           out std_logic;
+            new_bank_hi:        out std_logic;
             new_bank_lo:        out std_logic_vector(2 downto 0);
             n_nmi:              out std_logic;
             n_game:             out std_logic;
@@ -537,8 +539,8 @@ begin
         button_crt_reset        => button_crt_reset,
         button_special_fn       => button_special_fn,
         slot                    => slot,
-        bank_hi                 => bank_hi,
-        set_bank_lo             => ef_set_bank_lo,
+        set_bank                => ef_set_bank,
+        new_bank_hi             => ef_new_bank_hi,
         new_bank_lo             => ef_new_bank_lo,
         n_game                  => ef_n_game,
         n_exrom                 => ef_n_exrom,
@@ -595,11 +597,11 @@ begin
         wp                      => wp,
         addr                    => addr,
         data                    => data,
-        bank_lo                 => bank_lo,
         button_crt_reset        => button_crt_reset,
         button_special_fn       => button_special_fn,
         freezer_ready           => freezer_ready,
-        set_bank_lo             => fc3_set_bank_lo,
+        set_bank                => fc3_set_bank,
+        new_bank_hi             => fc3_new_bank_hi,
         new_bank_lo             => fc3_new_bank_lo,
         n_nmi                   => fc3_n_nmi,
         n_game                  => fc3_n_game,
@@ -820,17 +822,27 @@ begin
     addr(14) <= kernal_a14;
 
     ---------------------------------------------------------------------------
-    --
-    -- Note that bank_lo is not reset on (all) generated resets because e.g.
+    -- Note that bank is not reset on (all) generated resets because e.g.
     -- the active KERNAL slot may have to be kept.
     ---------------------------------------------------------------------------
     set_bank_lo: process(clk, n_sys_reset, start_reset_to_menu)
     begin
         if n_sys_reset = '0' or start_reset_to_menu = '1' then
+            bank_hi <= (others => '0');
             bank_lo <= (others => '0');
         elsif rising_edge(clk) then
-            if (ef_set_bank_lo = '1' or kernal_set_bank_lo = '1' or
-                fc3_set_bank_lo = '1' or ar_set_bank_lo = '1' or
+            if (ef_set_bank = '1') then
+                bank_hi <= ef_new_bank_hi;
+            elsif (fc3_set_bank = '1') then
+                if (fc3_new_bank_hi = '0') then
+                    bank_hi(1 downto 0) <= "01";
+                else
+                    bank_hi(1 downto 0) <= "10";
+                end if;
+            end if;
+
+            if (ef_set_bank = '1' or kernal_set_bank_lo = '1' or
+                fc3_set_bank = '1' or ar_set_bank_lo = '1' or
                 ss5_set_bank_lo = '1') then
                     bank_lo <= ef_new_bank_lo or kernal_new_bank_lo or
                                fc3_new_bank_lo or ar_new_bank_lo or
@@ -869,7 +881,6 @@ begin
 
                 when MODE_FC3 =>
                     mem_addr(16) <= addr(13);
-                    mem_addr(15) <= '0';
 
                 when MODE_AR =>
                     mem_addr(16) <= '1';

@@ -1,6 +1,6 @@
 ----------------------------------------------------------------------------------
 --
--- EasyFlash 3 CPLD Firmware version 1.2.0, May 2018, are
+-- EasyFlash 3 CPLD Firmware version 1.2.0, May 2018, through 1.2.1, May 2018, are
 -- Copyright (c) 2018 Kim Jorgensen, are derived from EasyFlash 3 CPLD Firmware 1.1.1,
 -- and are distributed according to the same disclaimer and license as
 -- EasyFlash 3 CPLD Firmware 1.1.1
@@ -43,11 +43,11 @@ entity cart_fc3 is
         wp:                 in  std_logic;
         addr:               in  std_logic_vector(15 downto 0);
         data:               in  std_logic_vector(7 downto 0);
-        bank_lo:            in  std_logic_vector(2 downto 0);
         button_crt_reset:   in  std_logic;
         button_special_fn:  in  std_logic;
         freezer_ready:      in  std_logic;
-        set_bank_lo:        out std_logic;
+        set_bank:           out std_logic;
+        new_bank_hi:        out std_logic;
         new_bank_lo:        out std_logic_vector(2 downto 0);
         n_nmi:              out std_logic;
         n_game:             out std_logic;
@@ -80,34 +80,31 @@ begin
     cart_dfff_write <= '1' when write_enable = '1' and wp = '1' and n_io2 = '0'
         and addr(7 downto 0) = x"ff" else '0';
 
-    ctrl_nmi        <= bank_lo(2);
     start_reset     <= enable and button_crt_reset;
     reset_freezer   <= enable and freezer_ready and cart_dfff_write;
     led             <= enable and write_enable;
 
     ---------------------------------------------------------------------------
-    -- Combinatorial process to prepare output signals set_bank_lo and
-    -- new_bank_lo.
+    -- Combinatorial process to prepare output signals set_bank, new_bank_lo
+    -- and new_bank_hi.
     ---------------------------------------------------------------------------
-    update_bank_lo: process(enable, data, addr, button_crt_reset,
+    update_bank: process(enable, data, addr, button_crt_reset,
                             cart_dfff_write)
     begin
-        set_bank_lo <= '0';
+        set_bank    <= '0';
+        new_bank_hi <= '0';
         new_bank_lo <= (others => '0');
 
         if enable = '1' then
-            -- optimization: use unused bit in bank_lo for ctrl_nmi
-            new_bank_lo(2) <= data(6);
-
-            -- todo: support FC3+ (data bit 2+3)
-            new_bank_lo(1 downto 0) <= data(1 downto 0);
-
+            new_bank_hi <= data(3);
+            new_bank_lo <= data(2 downto 0);
 
             if cart_dfff_write = '1' then
-                set_bank_lo <= '1';
+                set_bank <= '1';
             end if;
             if button_crt_reset = '1' then
-                set_bank_lo <= '1';
+                set_bank    <= '1';
+                new_bank_hi <= '0';
                 new_bank_lo <= (others => '0');
             end if;
         end if;
@@ -143,14 +140,16 @@ begin
     begin
         if n_reset = '0' then
             ctrl_hide   <= '0';
+            ctrl_nmi    <= '0';
             ctrl_game   <= '0';
             ctrl_exrom  <= '0';
         elsif rising_edge(clk) then
             if enable = '1' then
                 if cart_dfff_write = '1' then
                     -- write control register $dfff
-                    -- for bank & nmi refer to combinatorial logic new_bank_lo
+                    -- for bank refer to combinatorial logic new_bank
                     ctrl_hide   <= data(7);
+                    ctrl_nmi    <= data(6);
                     ctrl_game   <= data(5);
                     ctrl_exrom  <= data(4);
                 end if;

@@ -1,6 +1,6 @@
 ----------------------------------------------------------------------------------
 --
--- EasyFlash 3 CPLD Firmware version 1.2.0, May 2018, are
+-- EasyFlash 3 CPLD Firmware version 1.2.0, May 2018, through 1.2.1, May 2018, are
 -- Copyright (c) 2018 Kim Jorgensen, are derived from EasyFlash 3 CPLD Firmware 1.1.1,
 -- and are distributed according to the same disclaimer and license as
 -- EasyFlash 3 CPLD Firmware 1.1.1
@@ -51,8 +51,8 @@ entity cart_easyflash is
             button_crt_reset:   in  std_logic;
             button_special_fn:  in  std_logic;
             slot:               out std_logic_vector(2 downto 0);
-            bank_hi:            out std_logic_vector(2 downto 0);
-            set_bank_lo:        out std_logic;
+            set_bank:           out std_logic;
+            new_bank_hi:        out std_logic_vector(2 downto 0);
             new_bank_lo:        out std_logic_vector(2 downto 0);
             n_game:             out std_logic;
             n_exrom:            out std_logic;
@@ -95,7 +95,6 @@ architecture behav of cart_easyflash is
     signal start_reset_i:       std_logic;
 
     signal slot_i:              std_logic_vector(2 downto 0);
-    signal bank_hi_i:           std_logic_vector(2 downto 0);
     signal ctrl_game:           std_logic;
     signal ctrl_exrom:          std_logic;
     signal ctrl_no_vicii:       std_logic;
@@ -126,23 +125,28 @@ begin
     start_reset <= start_reset_i;
 
     ---------------------------------------------------------------------------
-    -- Combinatorial process to prepare output signals set_bank_low and
-    -- new_bank_lo.
+    -- Combinatorial process to prepare output signals set_bank, new_bank_hi
+    -- and new_bank_lo.
     ---------------------------------------------------------------------------
-    update_bank_lo: process(enable, addr, data, wp, io1_addr_0x,
+    update_bank: process(enable, addr, data, wp, io1_addr_0x,
                             start_reset_i, reset_to_menu)
     begin
-        set_bank_lo <= '0';
+        set_bank    <= '0';
+        new_bank_hi <= (others => '0');
         new_bank_lo <= (others => '0');
 
         if enable = '1' then
             if wp = '1' and io1_addr_0x = '1' and addr(3 downto 0) = x"0" then
+                -- $de00
+                set_bank    <= '1';
+                new_bank_hi <= data(5 downto 3);
                 new_bank_lo <= data(2 downto 0);
-                set_bank_lo <= '1';
             end if;
         end if;
         if start_reset_i = '1' or reset_to_menu = '1' then
-            set_bank_lo <= '1';
+            -- Reset Bank (not Slot) when current EF is restarted
+            set_bank    <= '1';
+            new_bank_hi <= (others => '0');
             new_bank_lo <= (others => '0');
         end if;
     end process;
@@ -162,7 +166,7 @@ begin
     -- Process to read and write control registers.
     ---------------------------------------------------------------------------
     rw_control_regs: process(clk, n_reset, n_sys_reset, enable,
-                             easyflash_boot, reset_to_menu, start_reset_i)
+                             easyflash_boot, reset_to_menu)
     begin
         if n_reset = '0' then
             ctrl_exrom <= '0';
@@ -174,11 +178,6 @@ begin
                 -- Slot and Bank are used for all cartridges, so reset them in
                 -- these situations only
                 slot_i <= (others => '0');
-                bank_hi_i <= (others => '0');
-            end if;
-            if start_reset_i = '1' then
-                -- Reset Bank (not Slot) when current EF is restarted
-                bank_hi_i <= (others => '0');
             end if;
         elsif rising_edge(clk) then
             if enable = '1' then
@@ -186,10 +185,7 @@ begin
                     if wp = '1' then
                         -- write control register
                         case addr(3 downto 0) is
-                            when x"0" =>
-                                -- $de00
-                                bank_hi_i <= data(5 downto 3);
-                                -- for bank_lo refer to combinatorial logic new_bank_lo
+                            -- for bank refer to combinatorial logic update_bank
 
                             when x"1" =>
                                 -- $de01
@@ -228,7 +224,6 @@ begin
 
     data_out_valid <= data_out_valid_i;
     slot <= slot_i;
-    bank_hi <= bank_hi_i;
 
     ---------------------------------------------------------------------------
     -- Leave GAME and EXROM in VIC-II cycles to avoid flickering when software
